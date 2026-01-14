@@ -15,8 +15,52 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 40px 20px;
+            padding: 0;
+            margin: 0;
             color: #333;
+        }
+
+        nav {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        nav a:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: white;
+        }
+
+        nav a.active {
+            background: white;
+            color: #667eea;
+        }
+
+        .main-content {
+            padding: 40px 20px;
         }
 
         .container {
@@ -299,6 +343,17 @@
     </style>
 </head>
 <body>
+    <nav>
+        <ul>
+            <li><a href="docs-hub.html">📊 Hub</a></li>
+            <li><a href="report.html">🔍 Report</a></li>
+            <li><a href="fix.html" class="active">🛠️ Fixes</a></li>
+            <li><a href="worth.html">💰 Worth</a></li>
+            <li><a href="feature-worth.html">⭐ Features</a></li>
+            <li><a href="monetization.html">💳 Monetization</a></li>
+        </ul>
+    </nav>
+    <div class="main-content">
     <div class="container">
         <header>
             <h1>🛠️ ShadowTalk AI - Recommended Fixes & Roadmap</h1>
@@ -560,6 +615,7 @@
             <p>ShadowTalk AI - Fixes & Roadmap | Generated January 14, 2026</p>
             <p>For detailed implementation steps, see IMPLEMENTATION_GUIDE.md</p>
         </footer>
+    </div>
     </div>
 </body>
 </html>
