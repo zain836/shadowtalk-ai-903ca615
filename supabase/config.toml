@@ -1,0 +1,34 @@
+project_id = "axsudmhjpfzffcicfvuj"
+
+[functions.chat]
+verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.check-subscription]
+verify_jwt = false
+
+[functions.customer-portal]
+verify_jwt = false
+
+[functions.assign-admin-role]
+verify_jwt = false
+
+[functions.send-feedback-notification]
+verify_jwt = false
+
+[functions.web-search]
+verify_jwt = false
+
+[functions.gemini-load-balancer]
+verify_jwt = false
+
+[functions.reset-gemini-keys]
+verify_jwt = false
+
+[functions.test-gemini-key]
+verify_jwt = false
+
+[functions.gemini-key-alert]
+verify_jwt = false
