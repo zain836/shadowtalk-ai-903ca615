@@ -12,6 +12,7 @@ import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
 import { CodeCanvas } from "@/components/chat/CodeCanvas";
 import { CodeWorkspace } from "@/components/chat/CodeWorkspace";
+import { Canvas } from "@/components/chat/Canvas";
 import { ImageGenerator } from "@/components/chat/ImageGenerator";
 import { EditMessageDialog } from "@/components/chat/EditMessageDialog";
 import { AdBanner } from "@/components/chat/AdBanner";
@@ -110,6 +111,7 @@ const ChatbotPage = () => {
   const [showGeminiAnalytics, setShowGeminiAnalytics] = useState(false);
   const [codeCanvas, setCodeCanvas] = useState<{ code: string; language: string } | null>(null);
   const [codeWorkspace, setCodeWorkspace] = useState<{ code: string; language: string } | null>(null);
+  const [canvasState, setCanvasState] = useState<{ content: string; type: "document" | "code"; language?: string } | null>(null);
   const [editingMessage, setEditingMessage] = useState<{ index: number; content: string } | null>(null);
   
   // Special mode state
@@ -590,6 +592,7 @@ const ChatbotPage = () => {
             onOpenModelFineTuning={() => checkAccess('modelFineTuning') && setShowModelFineTuning(true)}
             onOpenWhiteLabelBranding={() => checkAccess('whiteLabelBranding') && setShowWhiteLabelBranding(true)}
             onOpenGeminiAnalytics={() => setShowGeminiAnalytics(true)}
+            onOpenCanvas={(type) => setCanvasState({ content: "", type, language: "javascript" })}
             aiProvider={aiProvider}
             onProviderChange={setAiProvider}
             maxChats={maxChats}
@@ -684,6 +687,74 @@ const ChatbotPage = () => {
       {showModelFineTuning && <ModelFineTuning onClose={() => setShowModelFineTuning(false)} />}
       {showWhiteLabelBranding && <WhiteLabelBranding onClose={() => setShowWhiteLabelBranding(false)} />}
       {showGeminiAnalytics && <GeminiKeyAnalytics onClose={() => setShowGeminiAnalytics(false)} />}
+      
+      {/* Canvas - ChatGPT-like document/code editor */}
+      <Canvas
+        isOpen={!!canvasState}
+        onClose={() => setCanvasState(null)}
+        initialContent={canvasState?.content || ""}
+        initialType={canvasState?.type || "document"}
+        initialLanguage={canvasState?.language || "javascript"}
+        onSave={(content, type) => {
+          // Save canvas content as a message in the chat
+          setMessages(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'user',
+            content: type === 'code' 
+              ? `\`\`\`${canvasState?.language || 'javascript'}\n${content}\n\`\`\``
+              : content,
+            timestamp: new Date()
+          }]);
+          setCanvasState(null);
+        }}
+        onAIAssist={async (prompt, content) => {
+          // Use the chat API to get AI assistance
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const resp = await fetch(CHAT_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
+              },
+              body: JSON.stringify({
+                messages: [{ role: "user", content: prompt }],
+                personality: "professional",
+                mode: "code"
+              })
+            });
+            
+            if (!resp.ok) throw new Error("Failed to get AI response");
+            
+            const reader = resp.body?.getReader();
+            const decoder = new TextDecoder();
+            let result = "";
+            
+            while (reader) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value, { stream: true });
+              
+              // Parse SSE data
+              const lines = chunk.split('\n');
+              for (const line of lines) {
+                if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                  try {
+                    const data = JSON.parse(line.slice(6));
+                    const content = data.choices?.[0]?.delta?.content;
+                    if (content) result += content;
+                  } catch {}
+                }
+              }
+            }
+            
+            return result || content;
+          } catch (error) {
+            console.error('Canvas AI assist error:', error);
+            throw error;
+          }
+        }}
+      />
     </div>
   );
 };
