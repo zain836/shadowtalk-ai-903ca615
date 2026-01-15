@@ -32,3 +32,24 @@ verify_jwt = false
 
 [functions.gemini-key-alert]
 verify_jwt = false
+
+[functions.lemonsqueezy-checkout]
+verify_jwt = false
+
+[functions.lemonsqueezy-webhook]
+verify_jwt = false
+
+[functions.lemonsqueezy-portal]
+verify_jwt = false
+
+[functions.check-lemonsqueezy-subscription]
+verify_jwt = false
+
+[functions.save-custom-model]
+verify_jwt = false
+
+[functions.save-workspace-branding]
+verify_jwt = false
+
+[functions.sso-configure]
+verify_jwt = false
