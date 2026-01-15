@@ -32,12 +32,17 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  Key
+  Key,
+  Megaphone,
+  User
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { FeedbackAnalytics } from '@/components/FeedbackAnalytics';
 import { GeminiKeysManager } from '@/components/admin/GeminiKeysManager';
+import { UserRoleManager } from '@/components/admin/UserRoleManager';
+import { ProfileManager } from '@/components/admin/ProfileManager';
+import { AnnouncementManager } from '@/components/admin/AnnouncementManager';
 
 interface UserData {
   id: string;
@@ -402,6 +407,18 @@ const AdminPage = () => {
               <Key className="h-4 w-4" />
               Gemini Keys
             </TabsTrigger>
+            <TabsTrigger value="roles" className="gap-2">
+              <Shield className="h-4 w-4" />
+              Roles
+            </TabsTrigger>
+            <TabsTrigger value="profiles" className="gap-2">
+              <User className="h-4 w-4" />
+              Profiles
+            </TabsTrigger>
+            <TabsTrigger value="announcements" className="gap-2">
+              <Megaphone className="h-4 w-4" />
+              Announcements
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="feedback">
@@ -593,6 +610,18 @@ const AdminPage = () => {
 
           <TabsContent value="gemini-keys">
             <GeminiKeysManager />
+          </TabsContent>
+
+          <TabsContent value="roles">
+            <UserRoleManager />
+          </TabsContent>
+
+          <TabsContent value="profiles">
+            <ProfileManager />
+          </TabsContent>
+
+          <TabsContent value="announcements">
+            <AnnouncementManager />
           </TabsContent>
         </Tabs>
       </main>
