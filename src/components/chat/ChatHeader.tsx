@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2, FileEdit, PenLine, Search, Image, Play, Eye, Wand2, Sparkles, Globe } from "lucide-react";
+import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2, FileEdit, PenLine, Search, Image, Play, Eye, Wand2, Sparkles, Globe, Terminal, Mic } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +77,8 @@ interface ChatHeaderProps {
   onOpenCreativeSynthesis: () => void;
   onOpenImageEditor: () => void;
   onOpenPerplexityPages: () => void;
+  onOpenClaudeCowork: () => void;
+  onOpenGeminiLive: () => void;
   aiProvider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
   maxChats: string;
@@ -149,6 +151,8 @@ export const ChatHeader = ({
   onOpenCreativeSynthesis,
   onOpenImageEditor,
   onOpenPerplexityPages,
+  onOpenClaudeCowork,
+  onOpenGeminiLive,
   aiProvider,
   onProviderChange,
   maxChats,
@@ -209,6 +213,16 @@ export const ChatHeader = ({
           icon={<Globe className="h-5 w-5 text-cyan-500" />}
           label="Create Shareable Page"
           onClick={() => handleMenuAction(onOpenPerplexityPages)}
+        />
+        <MenuItem
+          icon={<Terminal className="h-5 w-5 text-amber-500" />}
+          label="Claude Cowork (W)"
+          onClick={() => handleMenuAction(onOpenClaudeCowork)}
+        />
+        <MenuItem
+          icon={<Mic className="h-5 w-5 text-red-500" />}
+          label="Gemini Live (L)"
+          onClick={() => handleMenuAction(onOpenGeminiLive)}
         />
       </div>
 
@@ -449,6 +463,20 @@ export const ChatHeader = ({
                 <Image className="h-4 w-4 mr-2 text-orange-500" />
                 Image Editor
                 <span className="ml-auto text-xs text-muted-foreground">⇧E</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenPerplexityPages}>
+                <Globe className="h-4 w-4 mr-2 text-cyan-500" />
+                Create Shareable Page
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenClaudeCowork}>
+                <Terminal className="h-4 w-4 mr-2 text-amber-500" />
+                Claude Cowork
+                <span className="ml-auto text-xs text-muted-foreground">⇧W</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenGeminiLive}>
+                <Mic className="h-4 w-4 mr-2 text-red-500" />
+                Gemini Live
+                <span className="ml-auto text-xs text-muted-foreground">⇧L</span>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />

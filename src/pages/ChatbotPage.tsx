@@ -240,6 +240,14 @@ const ChatbotPage = () => {
           e.preventDefault();
           setCanvasState({ content: "", type: "code", language: "javascript" });
           break;
+        case 'w': // Claude Cowork
+          e.preventDefault();
+          setShowClaudeCowork(true);
+          break;
+        case 'l': // Gemini Live
+          e.preventDefault();
+          setShowGeminiLive(true);
+          break;
       }
     };
 
@@ -661,6 +669,8 @@ const ChatbotPage = () => {
             onOpenCreativeSynthesis={() => setShowCreativeSynthesis(true)}
             onOpenImageEditor={() => setShowImageEditor(true)}
             onOpenPerplexityPages={() => setShowPerplexityPages(true)}
+            onOpenClaudeCowork={() => setShowClaudeCowork(true)}
+            onOpenGeminiLive={() => setShowGeminiLive(true)}
             aiProvider={aiProvider}
             onProviderChange={setAiProvider}
             maxChats={maxChats}
@@ -823,6 +833,22 @@ const ChatbotPage = () => {
           onClose={() => setShowPerplexityPages(false)}
           messages={messages}
           conversationTitle={conversations.find(c => c.id === currentConversationId)?.title}
+        />
+      )}
+      
+      {/* Claude Cowork Mode */}
+      {showClaudeCowork && (
+        <ClaudeCowork
+          isOpen={showClaudeCowork}
+          onClose={() => setShowClaudeCowork(false)}
+        />
+      )}
+      
+      {/* Gemini Live Mode */}
+      {showGeminiLive && (
+        <GeminiLiveMode
+          isOpen={showGeminiLive}
+          onClose={() => setShowGeminiLive(false)}
         />
       )}
       
