@@ -32,6 +32,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useUsageTracking } from "@/hooks/useUsageTracking";
 import { useOfflineAuth } from "@/hooks/useOfflineAuth";
 import { useOfflineAI } from "@/hooks/useOfflineAI";
+import { useOfflineChatHistory } from "@/hooks/useOfflineChatHistory";
 
 // Types
 interface SpeechRecognitionEvent extends Event {
@@ -118,16 +119,49 @@ const ChatbotPage = () => {
   
   // Hooks
   const { canAccess, checkAccess, getDailyMessageLimit, isProOrHigher, isElite } = useFeatureGating();
-  const { isOffline, isOfflineModeAvailable, getOfflineResponse } = useOfflineMode();
+  const { isOffline, isOfflineModeAvailable, getOfflineResponse, cacheConversation, getCachedConversation, cachedConversations } = useOfflineMode();
   const { requestPermission } = usePushNotifications();
   const { trackChatMessage, trackImageGeneration, trackVoiceInput, trackTextToSpeech, trackCodeExecution, trackFileUpload, trackModeSwitch, trackConversationCreated } = useUsageTracking();
   const { getOfflineSession } = useOfflineAuth();
   const offlineAI = useOfflineAI();
+  const offlineChatHistory = useOfflineChatHistory();
   
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-initialize offline AI when going offline
+  useEffect(() => {
+    if (isOffline && offlineAI.isSupported && !offlineAI.isModelLoaded && !offlineAI.isLoading) {
+      console.log('[ChatbotPage] Auto-initializing offline AI...');
+      offlineAI.initializeModel();
+    }
+  }, [isOffline, offlineAI.isSupported, offlineAI.isModelLoaded, offlineAI.isLoading]);
+
+  // Load cached conversations when offline
+  useEffect(() => {
+    if (isOffline && cachedConversations.length > 0 && messages.length <= 1) {
+      console.log('[ChatbotPage] Loading cached conversations for offline mode');
+      // Load the most recent cached conversation
+      const mostRecent = cachedConversations[0];
+      if (mostRecent && mostRecent.messages.length > 0) {
+        const loadedMessages: Message[] = mostRecent.messages.map(m => ({
+          id: m.id,
+          type: m.type,
+          content: m.content,
+          timestamp: new Date(m.timestamp)
+        }));
+        setMessages(loadedMessages);
+        setCurrentConversationId(mostRecent.id);
+        setConversations(cachedConversations.map(c => ({
+          id: c.id,
+          title: c.title,
+          created_at: c.cachedAt
+        })));
+      }
+    }
+  }, [isOffline, cachedConversations]);
 
   // Initialize
   useEffect(() => {

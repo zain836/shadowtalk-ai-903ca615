@@ -13,7 +13,7 @@ interface OfflineAIState {
   loadStage: string;
   error: string | null;
   isSupported: boolean;
-  fallbackMode: boolean; // NEW: indicates using fallback instead of WebLLM
+  fallbackMode: boolean;
 }
 
 // Model configuration - using smaller, more compatible models
@@ -21,18 +21,29 @@ const MODEL_ID = 'SmolLM2-360M-Instruct-q4f16_1-MLC';
 const FALLBACK_MODEL = 'SmolLM2-135M-Instruct-q4f16_1-MLC';
 const TERTIARY_MODEL = 'TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC';
 
-// Simple rule-based fallback responses
+// Enhanced rule-based fallback responses
 const FALLBACK_RESPONSES = {
   greeting: [
     "Hello! I'm running in offline mode with limited capabilities. How can I help you?",
     "Hi there! I'm working offline right now. What can I assist you with?",
+    "Hey! 👋 I'm ShadowTalk AI running locally. My capabilities are limited offline, but I'll do my best!",
   ],
   help: [
-    "I'm currently in offline mode. I can provide basic assistance, but my capabilities are limited compared to when I'm online.",
+    "I'm currently in offline mode. I can:\n\n✅ **Available:**\n- Basic Q&A from cached knowledge\n- Simple text processing\n- Chat memory within this session\n\n❌ **Not Available:**\n- Internet search\n- Image generation\n- Complex reasoning\n\nConnect to the internet for full capabilities!",
+  ],
+  code: [
+    "I can help with basic coding questions offline, but for complex debugging or code generation, please connect to the internet for better assistance.",
+  ],
+  weather: [
+    "I can't check the weather in offline mode. Please connect to the internet for real-time weather information.",
+  ],
+  search: [
+    "I can't search the web while offline. Please connect to the internet if you need current information.",
   ],
   default: [
-    "I understand you're asking about that. However, I'm running in offline mode and my capabilities are limited. For the best experience, please connect to the internet.",
+    "I understand you're asking about that. I'm running in offline mode with limited capabilities. For the best experience, please connect to the internet.",
     "I'm working offline right now, so I can't provide a detailed response. Please try again when you're online for a better answer.",
+    "That's an interesting question! Unfortunately, my offline capabilities are limited. I'd be able to help better once you're connected to the internet.",
   ],
 };
 
@@ -49,15 +60,26 @@ export const useOfflineAI = () => {
   
   const engineRef = useRef<any>(null);
   const initPromiseRef = useRef<Promise<boolean> | null>(null);
+  const autoInitAttempted = useRef(false);
 
-  // Check WebGPU support
+  // Check WebGPU support and auto-initialize when offline
   useEffect(() => {
-    const checkSupport = async () => {
+    const checkSupportAndAutoInit = async () => {
       try {
         if ('gpu' in navigator) {
           const adapter = await (navigator as any).gpu?.requestAdapter();
           if (adapter) {
             setState(prev => ({ ...prev, isSupported: true }));
+            
+            // Auto-initialize if offline
+            if (!navigator.onLine && !autoInitAttempted.current) {
+              autoInitAttempted.current = true;
+              console.log('[Offline AI] Network offline, auto-initializing model...');
+              // Delay to allow component to mount fully
+              setTimeout(() => {
+                initializeModelInternal();
+              }, 1000);
+            }
             return;
           }
         }
@@ -82,13 +104,29 @@ export const useOfflineAI = () => {
         }));
       }
     };
-    checkSupport();
+    
+    checkSupportAndAutoInit();
+
+    // Listen for offline events to auto-initialize
+    const handleOffline = () => {
+      if (!autoInitAttempted.current) {
+        autoInitAttempted.current = true;
+        console.log('[Offline AI] Went offline, auto-initializing model...');
+        initializeModelInternal();
+      }
+    };
+
+    window.addEventListener('offline', handleOffline);
+    return () => window.removeEventListener('offline', handleOffline);
   }, []);
 
-  // Initialize the model
-  const initializeModel = useCallback(async (): Promise<boolean> => {
+  // Internal initialize function that doesn't depend on state
+  const initializeModelInternal = async (): Promise<boolean> => {
+    // Get current state
+    const currentState = state;
+    
     // If in fallback mode, no need to load model
-    if (state.fallbackMode) {
+    if (currentState.fallbackMode) {
       return true;
     }
 
@@ -98,18 +136,18 @@ export const useOfflineAI = () => {
     }
 
     // Already loaded
-    if (state.isModelLoaded && engineRef.current) {
+    if (currentState.isModelLoaded && engineRef.current) {
       return true;
     }
 
-    if (!state.isSupported) {
+    if (!currentState.isSupported) {
       // Switch to fallback mode
       setState(prev => ({ ...prev, fallbackMode: true, isModelLoaded: true }));
       return true;
     }
 
     initPromiseRef.current = (async () => {
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
+      setState(prev => ({ ...prev, isLoading: true, error: null, loadStage: 'Starting model download...' }));
 
       try {
         // Dynamically import WebLLM to avoid loading it on page load
@@ -124,18 +162,16 @@ export const useOfflineAI = () => {
         };
 
         // Try primary model first, then fallback, then tertiary
-        let modelToUse = MODEL_ID;
-        let loadSuccess = false;
-        
         const modelsToTry = [MODEL_ID, FALLBACK_MODEL, TERTIARY_MODEL];
         
         for (const model of modelsToTry) {
           try {
             console.log('[Offline AI] Attempting to load:', model);
+            setState(prev => ({ ...prev, loadStage: `Loading ${model}...` }));
             
-            // Set timeout for model loading (60 seconds)
+            // Set timeout for model loading (90 seconds)
             const timeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Model loading timeout')), 60000)
+              setTimeout(() => reject(new Error('Model loading timeout')), 90000)
             );
             
             const loadPromise = webllm.CreateMLCEngine(model, {
@@ -143,9 +179,18 @@ export const useOfflineAI = () => {
             });
             
             engineRef.current = await Promise.race([loadPromise, timeoutPromise]);
-            modelToUse = model;
-            loadSuccess = true;
-            break;
+            
+            setState(prev => ({
+              ...prev,
+              isModelLoaded: true,
+              isLoading: false,
+              loadProgress: 100,
+              loadStage: `${model} ready!`,
+              fallbackMode: false,
+            }));
+
+            console.log('[Offline AI] Model loaded:', model);
+            return true;
           } catch (e: any) {
             console.warn(`[Offline AI] Failed to load ${model}:`, e.message);
             if (model === modelsToTry[modelsToTry.length - 1]) {
@@ -162,19 +207,6 @@ export const useOfflineAI = () => {
               return true;
             }
           }
-        }
-
-        if (loadSuccess) {
-          setState(prev => ({
-            ...prev,
-            isModelLoaded: true,
-            isLoading: false,
-            loadProgress: 100,
-            loadStage: 'Model ready!',
-            fallbackMode: false,
-          }));
-
-          console.log('[Offline AI] Model loaded:', modelToUse);
         }
         
         return true;
@@ -198,20 +230,79 @@ export const useOfflineAI = () => {
     })();
 
     return initPromiseRef.current;
+  };
+
+  // Initialize the model (exposed callback)
+  const initializeModel = useCallback(async (): Promise<boolean> => {
+    return initializeModelInternal();
   }, [state.isSupported, state.isModelLoaded, state.fallbackMode]);
 
-  // Simple fallback response generator
+  // Enhanced fallback response generator with pattern matching
   const generateFallbackResponse = (messages: WebLLMMessage[]): string => {
     const lastMessage = messages[messages.length - 1]?.content?.toLowerCase() || '';
     
-    // Check for greetings
-    if (lastMessage.match(/\b(hi|hello|hey|greetings)\b/i)) {
+    // Greeting patterns
+    if (lastMessage.match(/\b(hi|hello|hey|greetings|good morning|good afternoon|good evening)\b/i)) {
       return FALLBACK_RESPONSES.greeting[Math.floor(Math.random() * FALLBACK_RESPONSES.greeting.length)];
     }
     
-    // Check for help requests
-    if (lastMessage.match(/\b(help|assist|support)\b/i)) {
+    // Help patterns
+    if (lastMessage.match(/\b(help|assist|support|what can you do|capabilities)\b/i)) {
       return FALLBACK_RESPONSES.help[0];
+    }
+    
+    // Code patterns
+    if (lastMessage.match(/\b(code|programming|function|debug|error|javascript|python|react|typescript)\b/i)) {
+      return FALLBACK_RESPONSES.code[0];
+    }
+    
+    // Weather patterns
+    if (lastMessage.match(/\b(weather|temperature|rain|sunny|forecast)\b/i)) {
+      return FALLBACK_RESPONSES.weather[0];
+    }
+    
+    // Search patterns
+    if (lastMessage.match(/\b(search|google|find|look up|lookup|internet)\b/i)) {
+      return FALLBACK_RESPONSES.search[0];
+    }
+    
+    // Time/date patterns
+    if (lastMessage.match(/\b(what time|current time|tell me the time)\b/i)) {
+      return `The current time is: ${new Date().toLocaleTimeString()}`;
+    }
+    if (lastMessage.match(/\b(what date|today's date|what day)\b/i)) {
+      return `Today is: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+    }
+    
+    // Math patterns (simple)
+    const mathMatch = lastMessage.match(/(\d+)\s*([+\-*/×÷])\s*(\d+)/);
+    if (mathMatch) {
+      const [, a, op, b] = mathMatch;
+      const num1 = parseFloat(a);
+      const num2 = parseFloat(b);
+      let result: number;
+      switch (op) {
+        case '+': result = num1 + num2; break;
+        case '-': result = num1 - num2; break;
+        case '*':
+        case '×': result = num1 * num2; break;
+        case '/':
+        case '÷': result = num2 !== 0 ? num1 / num2 : NaN; break;
+        default: result = NaN;
+      }
+      if (!isNaN(result)) {
+        return `${num1} ${op} ${num2} = **${result}**`;
+      }
+    }
+    
+    // Thank you patterns
+    if (lastMessage.match(/\b(thank|thanks|thx|appreciate)\b/i)) {
+      return "You're welcome! Let me know if there's anything else I can help with. 😊";
+    }
+    
+    // Bye patterns
+    if (lastMessage.match(/\b(bye|goodbye|see you|farewell)\b/i)) {
+      return "Goodbye! Feel free to come back anytime. Take care! 👋";
     }
     
     // Default response
@@ -244,7 +335,14 @@ export const useOfflineAI = () => {
       
       // If we switched to fallback during init
       if (state.fallbackMode) {
-        return generateFallbackResponse(messages);
+        const response = generateFallbackResponse(messages);
+        if (onChunk) {
+          for (let i = 0; i < response.length; i += 3) {
+            onChunk(response.substring(i, i + 3));
+            await new Promise(resolve => setTimeout(resolve, 20));
+          }
+        }
+        return response;
       }
     }
 
@@ -252,7 +350,7 @@ export const useOfflineAI = () => {
       const formattedMessages = [
         {
           role: 'system' as const,
-          content: 'You are ShadowTalk AI, a helpful assistant running offline on the user\'s device. Be concise and helpful.',
+          content: 'You are ShadowTalk AI, a helpful assistant running offline on the user\'s device. Be concise and helpful. You have limited knowledge as you are running locally.',
         },
         ...messages,
       ];
@@ -289,7 +387,14 @@ export const useOfflineAI = () => {
       
       // Fall back to simple responses on error
       setState(prev => ({ ...prev, fallbackMode: true }));
-      return generateFallbackResponse(messages);
+      const response = generateFallbackResponse(messages);
+      if (onChunk) {
+        for (let i = 0; i < response.length; i += 3) {
+          onChunk(response.substring(i, i + 3));
+          await new Promise(resolve => setTimeout(resolve, 20));
+        }
+      }
+      return response;
     }
   }, [initializeModel, state.fallbackMode]);
 
