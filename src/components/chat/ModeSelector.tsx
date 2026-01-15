@@ -1,4 +1,4 @@
-import { Code, Languages, FileText, Bug, Lightbulb, Image, MessageSquare, Pen, Music, Brain, Leaf, Shield, Search } from "lucide-react";
+import { Code, Languages, FileText, Bug, Lightbulb, Image, MessageSquare, Pen, Music, Brain, Leaf, Shield, Search, Video, Camera, Table, Calculator, GraduationCap, Mail, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,7 +22,14 @@ export type ChatMode =
   | "research"
   | "cpf"
   | "ppag"
-  | "hsca";
+  | "hsca"
+  | "math"
+  | "video"
+  | "camera"
+  | "organize"
+  | "academic"
+  | "email"
+  | "proofread";
 
 interface ModeSelectorProps {
   mode: ChatMode;
@@ -49,14 +56,14 @@ const modes: { value: ChatMode; label: string; icon: React.ReactNode; prompt: st
     value: "translate", 
     label: "Translate", 
     icon: <Languages className="h-4 w-4" />,
-    prompt: "You are in translation mode. Translate text accurately while preserving meaning and tone. Auto-detect the source language if not specified.",
+    prompt: "You are in translation mode. Translate text accurately while preserving meaning, tone, and cultural nuances. Auto-detect the source language if not specified. Explain any idioms or cultural references that may not translate directly.",
     color: "text-cyan-500"
   },
   { 
     value: "summarize", 
     label: "Summarize", 
     icon: <FileText className="h-4 w-4" />,
-    prompt: "You are in summarization mode. Provide concise, clear summaries that capture the key points and main ideas.",
+    prompt: "You are in summarization mode. Provide concise, clear summaries that capture the key points and main ideas. Use bullet points for clarity when appropriate.",
     color: "text-green-500"
   },
   { 
@@ -70,7 +77,7 @@ const modes: { value: ChatMode; label: string; icon: React.ReactNode; prompt: st
     value: "brainstorm", 
     label: "Brainstorm", 
     icon: <Lightbulb className="h-4 w-4" />,
-    prompt: "You are in brainstorming mode. Generate creative ideas, explore possibilities, and think outside the box.",
+    prompt: "You are in brainstorming mode. Generate creative ideas, explore possibilities, and think outside the box. Be a great 'rubber duck' for bouncing ideas.",
     color: "text-yellow-500"
   },
   { 
@@ -84,14 +91,14 @@ const modes: { value: ChatMode; label: string; icon: React.ReactNode; prompt: st
     value: "explain", 
     label: "Explain", 
     icon: <MessageSquare className="h-4 w-4" />,
-    prompt: "You are in explanation mode. Explain concepts clearly and simply, using analogies and examples when helpful.",
+    prompt: "You are in explanation mode. Explain concepts clearly and simply, using analogies and examples when helpful. Break down complex topics into understandable parts.",
     color: "text-pink-500"
   },
   { 
     value: "creative", 
     label: "Creative Writing", 
     icon: <Pen className="h-4 w-4" />,
-    prompt: "You are in creative writing mode. Write engaging, imaginative content with vivid language and compelling narratives.",
+    prompt: "You are in creative writing mode. Write engaging, imaginative content with vivid language and compelling narratives. Draft everything from professional emails and resumes to poetry, scripts, and essays.",
     color: "text-orange-500"
   },
   { 
@@ -100,6 +107,55 @@ const modes: { value: ChatMode; label: string; icon: React.ReactNode; prompt: st
     icon: <Music className="h-4 w-4" />,
     prompt: "You are in music recommendation mode. Suggest songs, artists, and playlists based on user preferences. Include YouTube or Spotify links when possible.",
     color: "text-rose-500"
+  },
+  { 
+    value: "math", 
+    label: "🧮 Math & Science", 
+    icon: <Calculator className="h-4 w-4" />,
+    prompt: "You are in math and science mode. Help with logic puzzles, mathematical equations, and scientific concepts. Use LaTeX notation for mathematical expressions (wrap in $...$ for inline or $$...$$ for display). For example: $$\\sigma = \\sqrt{\\frac{\\sum (x_i - \\mu)^2}{N}}$$. Explain step-by-step solutions clearly.",
+    color: "text-indigo-500"
+  },
+  { 
+    value: "video", 
+    label: "🎬 Create Video", 
+    icon: <Video className="h-4 w-4" />,
+    prompt: "You are in video creation mode. Help users create prompts for AI video generation. Describe scenes, movements, camera angles, and atmosphere in detail.",
+    color: "text-fuchsia-500"
+  },
+  { 
+    value: "camera", 
+    label: "📷 Camera Analysis", 
+    icon: <Camera className="h-4 w-4" />,
+    prompt: "You are in camera analysis mode. Analyze images from the camera and provide helpful information about what you see. Identify objects, plants, animals, text, products, or problems that need fixing.",
+    color: "text-teal-500"
+  },
+  { 
+    value: "organize", 
+    label: "📊 Organize Data", 
+    icon: <Table className="h-4 w-4" />,
+    prompt: "You are in data organization mode. Turn messy notes, lists, and unstructured text into clean, structured tables, CSV format, or JSON. Ask clarifying questions about the desired output format.",
+    color: "text-amber-500"
+  },
+  { 
+    value: "academic", 
+    label: "🎓 Academic", 
+    icon: <GraduationCap className="h-4 w-4" />,
+    prompt: "You are in academic mode. Synthesize complex topics, explain scientific concepts, and provide historical context. Cite sources when possible and maintain academic rigor in explanations.",
+    color: "text-sky-500"
+  },
+  { 
+    value: "email", 
+    label: "✉️ Email Draft", 
+    icon: <Mail className="h-4 w-4" />,
+    prompt: "You are in email drafting mode. Help write professional, clear, and effective emails for any purpose - business, personal, formal, or casual. Adjust tone based on context.",
+    color: "text-slate-500"
+  },
+  { 
+    value: "proofread", 
+    label: "✓ Proofread", 
+    icon: <FileCheck className="h-4 w-4" />,
+    prompt: "You are in proofreading mode. Check text for grammar, spelling, punctuation, and style errors. Suggest improvements while maintaining the author's voice. Explain any corrections made.",
+    color: "text-lime-500"
   },
   { 
     value: "research", 
@@ -137,8 +193,9 @@ export const getModePrompt = (mode: ChatMode): string => {
 
 export const ModeSelector = ({ mode, onModeChange, disabled }: ModeSelectorProps) => {
   const currentMode = modes.find(m => m.value === mode) || modes[0];
-  const standardModes = modes.filter(m => !['cpf', 'ppag', 'hsca', 'research'].includes(m.value));
-  const specialModes = modes.filter(m => ['research', 'cpf', 'ppag', 'hsca'].includes(m.value));
+const standardModes = modes.filter(m => !['cpf', 'ppag', 'hsca', 'research', 'math', 'video', 'camera', 'organize', 'academic'].includes(m.value));
+  const specialModes = modes.filter(m => ['research', 'math', 'video', 'camera', 'organize', 'academic'].includes(m.value));
+  const advancedModes = modes.filter(m => ['cpf', 'ppag', 'hsca'].includes(m.value));
 
   return (
     <DropdownMenu>
@@ -174,6 +231,26 @@ export const ModeSelector = ({ mode, onModeChange, disabled }: ModeSelectorProps
         </div>
         <div className="p-1 space-y-1">
           {specialModes.map((m) => (
+            <DropdownMenuItem
+              key={m.value}
+              onClick={() => onModeChange(m.value)}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-md cursor-pointer ${
+                mode === m.value 
+                  ? "bg-primary/10 border border-primary/30" 
+                  : "hover:bg-muted"
+              }`}
+            >
+              <span className={m.color}>{m.icon}</span>
+              <span className="font-medium">{m.label}</span>
+            </DropdownMenuItem>
+          ))}
+        </div>
+        <DropdownMenuSeparator className="my-1" />
+        <div className="px-2 py-1.5 text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+          Pro Features
+        </div>
+        <div className="p-1 space-y-1">
+          {advancedModes.map((m) => (
             <DropdownMenuItem
               key={m.value}
               onClick={() => onModeChange(m.value)}
