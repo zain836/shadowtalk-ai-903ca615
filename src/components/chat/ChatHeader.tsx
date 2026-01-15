@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity } from "lucide-react";
+import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,9 @@ import {
 import { Heart, Laugh, Briefcase, Sparkles, Search, Lightbulb, Scale, MessageCircle, Target, HelpCircle } from "lucide-react";
 import { OfflineModeIndicator } from "./OfflineModeIndicator";
 import { ProviderSelector, AIProvider } from "./ProviderSelector";
+import { ModelSelector, AIModel } from "./ModelSelector";
+import { MemoryPanel } from "./MemoryPanel";
+import { CustomInstructions } from "./CustomInstructions";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive";
