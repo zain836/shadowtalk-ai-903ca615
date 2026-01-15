@@ -527,7 +527,26 @@ const ChatbotPage = () => {
           signal: abortControllerRef.current.signal,
         });
 
-        if (!resp.ok) throw new Error((await resp.json()).error || "Failed to get response");
+        if (!resp.ok) {
+          const errorData = await resp.json();
+          if (resp.status === 402) {
+            // AI credits exhausted - show upgrade prompt
+            const upgradeMessage = `## ⚡ AI Credits Exhausted
+
+Your AI credits have been used up for now. Don't worry - they refresh regularly!
+
+**Options to continue chatting:**
+- 🔄 Wait for credits to refresh
+- ⬆️ **[Upgrade to Pro](/pricing)** for unlimited messages
+- 🔌 Switch to **Gemini provider** (use your own API keys)
+
+*Pro users get unlimited AI messages, priority support, and advanced features!*`;
+            setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: upgradeMessage, timestamp: new Date() }]);
+            setIsLoading(false);
+            return;
+          }
+          throw new Error(errorData.error || "Failed to get response");
+        }
 
         const reader = resp.body?.getReader();
         const decoder = new TextDecoder();
