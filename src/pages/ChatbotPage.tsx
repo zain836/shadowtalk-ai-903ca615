@@ -841,6 +841,14 @@ const ChatbotPage = () => {
         <ClaudeCowork
           isOpen={showClaudeCowork}
           onClose={() => setShowClaudeCowork(false)}
+          onInsertToChat={(content) => {
+            setMessages(prev => [...prev, { 
+              id: crypto.randomUUID(), 
+              type: 'ai', 
+              content, 
+              timestamp: new Date() 
+            }]);
+          }}
         />
       )}
       
@@ -849,6 +857,14 @@ const ChatbotPage = () => {
         <GeminiLiveMode
           isOpen={showGeminiLive}
           onClose={() => setShowGeminiLive(false)}
+          onInsertToChat={(content) => {
+            setMessages(prev => [...prev, { 
+              id: crypto.randomUUID(), 
+              type: 'ai', 
+              content, 
+              timestamp: new Date() 
+            }]);
+          }}
         />
       )}
       
