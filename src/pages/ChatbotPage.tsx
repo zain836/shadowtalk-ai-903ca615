@@ -14,6 +14,7 @@ import { CodeCanvas } from "@/components/chat/CodeCanvas";
 import { CodeWorkspace } from "@/components/chat/CodeWorkspace";
 import { Canvas } from "@/components/chat/Canvas";
 import { ImageGenerator } from "@/components/chat/ImageGenerator";
+import { ImageEditor } from "@/components/chat/ImageEditor";
 import { EditMessageDialog } from "@/components/chat/EditMessageDialog";
 import { AdBanner } from "@/components/chat/AdBanner";
 import { AnalyticsDashboard } from "@/components/chat/AnalyticsDashboard";
@@ -23,6 +24,10 @@ import { AIAgentWorkflows } from "@/components/chat/AIAgentWorkflows";
 import { ModelFineTuning } from "@/components/chat/ModelFineTuning";
 import { WhiteLabelBranding } from "@/components/chat/WhiteLabelBranding";
 import { GeminiKeyAnalytics } from "@/components/chat/GeminiKeyAnalytics";
+import { DeepResearchPanel } from "@/components/chat/DeepResearchPanel";
+import { AgenticTaskRunner } from "@/components/chat/AgenticTaskRunner";
+import { VisualReasoning } from "@/components/chat/VisualReasoning";
+import { CreativeSynthesis } from "@/components/chat/CreativeSynthesis";
 import CognitiveLoadPanel from "@/components/chat/CognitiveLoadPanel";
 import PlanetaryActionPanel from "@/components/chat/PlanetaryActionPanel";
 import SecurityAuditPanel from "@/components/chat/SecurityAuditPanel";
@@ -113,6 +118,12 @@ const ChatbotPage = () => {
   const [codeWorkspace, setCodeWorkspace] = useState<{ code: string; language: string } | null>(null);
   const [canvasState, setCanvasState] = useState<{ content: string; type: "document" | "code"; language?: string } | null>(null);
   const [editingMessage, setEditingMessage] = useState<{ index: number; content: string } | null>(null);
+  const [showDeepResearch, setShowDeepResearch] = useState(false);
+  const [showAgenticRunner, setShowAgenticRunner] = useState(false);
+  const [showVisualReasoning, setShowVisualReasoning] = useState(false);
+  const [showCreativeSynthesis, setShowCreativeSynthesis] = useState(false);
+  const [showImageEditor, setShowImageEditor] = useState(false);
+  const [imageToEdit, setImageToEdit] = useState<string | undefined>(undefined);
   
   // Special mode state
   const [isAnalyzingTask, setIsAnalyzingTask] = useState(false);
