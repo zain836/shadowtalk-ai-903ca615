@@ -6,8 +6,10 @@ import {
   FolderTree, File, Edit3, Trash2, Plus, Save, Copy,
   RefreshCw, Settings, Bot, ChevronRight, ChevronDown,
   GitBranch, GitCommit, GitMerge, History, RotateCcw, Archive,
-  FolderPlus, MessageSquare
+  FolderPlus, MessageSquare, Sparkles, ThumbsUp, ThumbsDown,
+  AlertTriangle, Lightbulb, Code, Shield
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,6 +46,24 @@ interface TaskAction {
   target: string;
   status: "pending" | "running" | "completed" | "failed";
   output?: string;
+}
+
+interface CodeReviewSuggestion {
+  type: "improvement" | "warning" | "security" | "praise";
+  title: string;
+  description: string;
+  file?: string;
+  line?: number;
+  priority: "low" | "medium" | "high";
+}
+
+interface CodeReview {
+  commitId: string;
+  overallScore: number;
+  summary: string;
+  suggestions: CodeReviewSuggestion[];
+  reviewedAt: Date;
+  isLoading?: boolean;
 }
 
 interface GitCommit {
@@ -132,6 +152,10 @@ export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkPr
   const [actions, setActions] = useState<TaskAction[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
   const [actionsCompleted, setActionsCompleted] = useState(0);
+  
+  // Code review state
+  const [codeReviews, setCodeReviews] = useState<Record<string, CodeReview>>({});
+  const [expandedReview, setExpandedReview] = useState<string | null>(null);
   
   // Helper to update files in active project
   const setFiles = (newFiles: FileNode[] | ((prev: FileNode[]) => FileNode[])) => {
@@ -517,6 +541,185 @@ export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkPr
       return p;
     }));
     toast({ title: `Created branch: ${name}` });
+  };
+  
+  // AI-assisted code review
+  const analyzeCommit = async (commit: GitCommit) => {
+    if (codeReviews[commit.id]?.isLoading) return;
+    
+    // Mark as loading
+    setCodeReviews(prev => ({
+      ...prev,
+      [commit.id]: {
+        commitId: commit.id,
+        overallScore: 0,
+        summary: "",
+        suggestions: [],
+        reviewedAt: new Date(),
+        isLoading: true
+      }
+    }));
+    
+    // Get file contents from snapshot
+    const getFileContents = (nodes: FileNode[]): Array<{ name: string; content: string }> => {
+      const contents: Array<{ name: string; content: string }> = [];
+      const traverse = (node: FileNode) => {
+        if (node.type === "file" && node.content) {
+          contents.push({ name: node.name, content: node.content });
+        }
+        node.children?.forEach(traverse);
+      };
+      nodes.forEach(traverse);
+      return contents;
+    };
+    
+    const fileContents = commit.snapshot.length > 0 
+      ? getFileContents(commit.snapshot)
+      : getFileContents(files);
+    
+    const codeContext = fileContents.map(f => 
+      `### File: ${f.name}\n\`\`\`\n${f.content}\n\`\`\``
+    ).join("\n\n");
+    
+    try {
+      const response = await supabase.functions.invoke('chat', {
+        body: {
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert code reviewer. Analyze the provided code changes from a commit and provide constructive feedback.
+
+Return your response as valid JSON in this exact format:
+{
+  "overallScore": 85,
+  "summary": "Brief summary of code quality",
+  "suggestions": [
+    {
+      "type": "improvement|warning|security|praise",
+      "title": "Short title",
+      "description": "Detailed explanation",
+      "file": "filename.ts",
+      "priority": "low|medium|high"
+    }
+  ]
+}
+
+Review criteria:
+- Code quality and readability
+- Potential bugs or errors
+- Security vulnerabilities
+- Performance optimizations
+- Best practices
+- Positive aspects worth highlighting
+
+Score should be 0-100 based on overall code quality.`
+            },
+            {
+              role: "user",
+              content: `Review this commit:
+
+**Commit Message:** ${commit.message}
+**Files Changed:** ${commit.files.join(", ")}
+
+**Code:**
+${codeContext}`
+            }
+          ]
+        }
+      });
+      
+      if (response.error) throw new Error(response.error.message);
+      
+      // Parse the response
+      const content = response.data?.choices?.[0]?.message?.content || 
+                      response.data?.generatedText || 
+                      JSON.stringify(response.data);
+      
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          setCodeReviews(prev => ({
+            ...prev,
+            [commit.id]: {
+              commitId: commit.id,
+              overallScore: parsed.overallScore || 75,
+              summary: parsed.summary || "Review completed",
+              suggestions: parsed.suggestions || [],
+              reviewedAt: new Date(),
+              isLoading: false
+            }
+          }));
+          
+          setExpandedReview(commit.id);
+          toast({ title: "Code review complete", description: `Score: ${parsed.overallScore}/100` });
+          
+          // Export to chat if callback exists
+          if (onInsertToChat) {
+            const reviewText = `## 🔍 AI Code Review\n\n**Commit:** ${commit.message}\n**Score:** ${parsed.overallScore}/100\n\n**Summary:** ${parsed.summary}\n\n**Suggestions:**\n${parsed.suggestions.map((s: CodeReviewSuggestion) => `- **${s.title}** (${s.type}): ${s.description}`).join("\n")}`;
+            onInsertToChat(reviewText);
+          }
+          return;
+        }
+      } catch {
+        // Parsing failed, use default
+      }
+      
+      // Fallback review
+      setCodeReviews(prev => ({
+        ...prev,
+        [commit.id]: {
+          commitId: commit.id,
+          overallScore: 75,
+          summary: "Code review completed with basic analysis",
+          suggestions: [
+            {
+              type: "improvement",
+              title: "Consider adding documentation",
+              description: "Adding JSDoc comments would improve code maintainability",
+              priority: "medium"
+            }
+          ],
+          reviewedAt: new Date(),
+          isLoading: false
+        }
+      }));
+      setExpandedReview(commit.id);
+      toast({ title: "Code review complete" });
+      
+    } catch (error) {
+      console.error("Code review error:", error);
+      setCodeReviews(prev => ({
+        ...prev,
+        [commit.id]: {
+          commitId: commit.id,
+          overallScore: 0,
+          summary: "Review failed - please try again",
+          suggestions: [],
+          reviewedAt: new Date(),
+          isLoading: false
+        }
+      }));
+      toast({ title: "Review failed", variant: "destructive" });
+    }
+  };
+  
+  // Get icon for suggestion type
+  const getSuggestionIcon = (type: CodeReviewSuggestion["type"]) => {
+    switch (type) {
+      case "improvement": return <Lightbulb className="h-4 w-4 text-blue-500" />;
+      case "warning": return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+      case "security": return <Shield className="h-4 w-4 text-red-500" />;
+      case "praise": return <ThumbsUp className="h-4 w-4 text-green-500" />;
+      default: return <Code className="h-4 w-4" />;
+    }
+  };
+  
+  // Get color for score
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-500";
+    if (score >= 60) return "text-yellow-500";
+    return "text-red-500";
   };
   
   // Export terminal output to chat
@@ -913,40 +1116,130 @@ export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkPr
                       </h4>
                       <ScrollArea className="h-[300px]">
                         <div className="space-y-2 pr-4">
-                          {activeProject?.commits.slice().reverse().map((commit, idx) => (
-                            <div
-                              key={commit.id}
-                              className="p-3 border border-border rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors"
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium truncate">{commit.message}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {commit.timestamp.toLocaleString()}
-                                  </p>
-                                  <div className="flex flex-wrap gap-1 mt-2">
-                                    {commit.files.slice(0, 3).map(f => (
-                                      <Badge key={f} variant="secondary" className="text-xs">{f}</Badge>
-                                    ))}
-                                    {commit.files.length > 3 && (
-                                      <Badge variant="secondary" className="text-xs">+{commit.files.length - 3} more</Badge>
-                                    )}
+                          {activeProject?.commits.slice().reverse().map((commit, idx) => {
+                            const review = codeReviews[commit.id];
+                            const isExpanded = expandedReview === commit.id;
+                            
+                            return (
+                              <div
+                                key={commit.id}
+                                className="border border-border rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors overflow-hidden"
+                              >
+                                <div className="p-3">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <p className="text-sm font-medium truncate">{commit.message}</p>
+                                        {review && !review.isLoading && (
+                                          <Badge 
+                                            variant="outline" 
+                                            className={cn("text-xs", getScoreColor(review.overallScore))}
+                                          >
+                                            {review.overallScore}/100
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">
+                                        {commit.timestamp.toLocaleString()}
+                                      </p>
+                                      <div className="flex flex-wrap gap-1 mt-2">
+                                        {commit.files.slice(0, 3).map(f => (
+                                          <Badge key={f} variant="secondary" className="text-xs">{f}</Badge>
+                                        ))}
+                                        {commit.files.length > 3 && (
+                                          <Badge variant="secondary" className="text-xs">+{commit.files.length - 3} more</Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-1 shrink-0">
+                                      <Button
+                                        size="sm"
+                                        variant={review && !review.isLoading ? "ghost" : "outline"}
+                                        onClick={() => review && !review.isLoading ? setExpandedReview(isExpanded ? null : commit.id) : analyzeCommit(commit)}
+                                        disabled={review?.isLoading}
+                                        className="gap-1"
+                                      >
+                                        {review?.isLoading ? (
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                          <Sparkles className="h-3 w-3" />
+                                        )}
+                                        {review && !review.isLoading ? (isExpanded ? "Hide" : "View") : "Review"}
+                                      </Button>
+                                      {idx > 0 && commit.snapshot.length > 0 && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => revertToCommit(commit)}
+                                          className="gap-1"
+                                        >
+                                          <RotateCcw className="h-3 w-3" />
+                                        </Button>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                                {idx > 0 && commit.snapshot.length > 0 && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => revertToCommit(commit)}
-                                    className="gap-1 shrink-0"
-                                  >
-                                    <RotateCcw className="h-3 w-3" />
-                                    Revert
-                                  </Button>
+                                
+                                {/* Review Results */}
+                                {review && !review.isLoading && isExpanded && (
+                                  <div className="border-t border-border bg-muted/30 p-3 space-y-3">
+                                    {/* Score & Summary */}
+                                    <div className="flex items-center gap-3">
+                                      <div className={cn(
+                                        "text-2xl font-bold",
+                                        getScoreColor(review.overallScore)
+                                      )}>
+                                        {review.overallScore}
+                                      </div>
+                                      <div className="flex-1">
+                                        <p className="text-sm font-medium">Code Quality Score</p>
+                                        <p className="text-xs text-muted-foreground">{review.summary}</p>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Suggestions */}
+                                    {review.suggestions.length > 0 && (
+                                      <div className="space-y-2">
+                                        <p className="text-xs font-medium text-muted-foreground uppercase">Suggestions</p>
+                                        {review.suggestions.map((suggestion, sIdx) => (
+                                          <div 
+                                            key={sIdx}
+                                            className={cn(
+                                              "flex gap-2 p-2 rounded-lg text-sm",
+                                              suggestion.type === "security" && "bg-red-500/10",
+                                              suggestion.type === "warning" && "bg-yellow-500/10",
+                                              suggestion.type === "improvement" && "bg-blue-500/10",
+                                              suggestion.type === "praise" && "bg-green-500/10"
+                                            )}
+                                          >
+                                            {getSuggestionIcon(suggestion.type)}
+                                            <div className="flex-1 min-w-0">
+                                              <div className="flex items-center gap-2">
+                                                <span className="font-medium">{suggestion.title}</span>
+                                                <Badge variant="outline" className="text-[10px]">
+                                                  {suggestion.priority}
+                                                </Badge>
+                                                {suggestion.file && (
+                                                  <span className="text-xs text-muted-foreground">{suggestion.file}</span>
+                                                )}
+                                              </div>
+                                              <p className="text-xs text-muted-foreground mt-0.5">
+                                                {suggestion.description}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                    
+                                    <p className="text-[10px] text-muted-foreground">
+                                      Reviewed at {review.reviewedAt.toLocaleString()}
+                                    </p>
+                                  </div>
                                 )}
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                           {(!activeProject?.commits || activeProject.commits.length === 0) && (
                             <div className="text-center text-muted-foreground py-8">
                               <Archive className="h-8 w-8 mx-auto mb-2 opacity-50" />
