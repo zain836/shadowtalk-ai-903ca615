@@ -1,10 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-signature",
-};
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import { getPlanFromLemonVariant } from "../_shared/plans.ts";
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -28,9 +25,12 @@ async function verifySignature(payload: string, signature: string, secret: strin
 }
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsOptions(origin);
   }
+
+  const corsHeaders = getCorsHeaders(origin);
 
   try {
     logStep("Webhook received");
@@ -74,13 +74,8 @@ serve(async (req) => {
 
         logStep("Subscription event", { customerId, userId, variantId, status });
 
-        // Determine plan based on variant ID (you'll need to map these)
-        let plan = "free";
-        const variantPlanMap: Record<string, string> = {
-          // Add your Lemon Squeezy variant IDs here
-          // "variant_id": "plan_name"
-        };
-        plan = variantPlanMap[variantId] || "pro";
+        // Determine plan based on variant ID using shared mapping
+        const plan = getPlanFromLemonVariant(variantId);
 
         // Update subscriber in database
         if (userId) {

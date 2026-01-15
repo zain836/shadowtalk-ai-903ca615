@@ -23,6 +23,7 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { logClientError } from '@/lib/logging';
 
 interface IntegrationSource {
   id: string;
@@ -126,7 +127,12 @@ const EmailCalendarIntegration: React.FC<EmailCalendarIntegrationProps> = ({ onI
       }
       setConnectionStatus('idle');
     } catch (error) {
-      console.error('Error checking connections:', error);
+      logClientError(error, {
+        feature: 'integrations',
+        action: 'checkExistingConnections',
+        userId: user?.id,
+        severity: 'warning',
+      });
       setConnectionStatus('error');
     }
   };
@@ -186,7 +192,12 @@ const EmailCalendarIntegration: React.FC<EmailCalendarIntegrationProps> = ({ onI
       await simulateConnection(integrationId);
       
     } catch (error: any) {
-      console.error('OAuth error:', error);
+      logClientError(error, {
+        feature: 'integrations',
+        action: 'oauth-connect',
+        userId: user?.id,
+        severity: 'error',
+      });
       
       // If OAuth fails (provider not configured), fall back to demo mode
       if (error.message?.includes('not enabled') || error.message?.includes('not configured')) {
@@ -259,7 +270,12 @@ const EmailCalendarIntegration: React.FC<EmailCalendarIntegrationProps> = ({ onI
       
       toast.info(`Disconnected from ${integration.name}. All synced data has been removed.`);
     } catch (error) {
-      console.error('Disconnect error:', error);
+      logClientError(error, {
+        feature: 'integrations',
+        action: 'disconnect',
+        userId: user?.id,
+        severity: 'warning',
+      });
       // Still update UI even if database delete fails
       setIntegrations(prev => prev.map(int => 
         int.id === integrationId 
@@ -277,131 +293,135 @@ const EmailCalendarIntegration: React.FC<EmailCalendarIntegrationProps> = ({ onI
     }
 
     setIsSyncing(true);
-    
+
     // Update all connected integrations to syncing state
-    setIntegrations(prev => prev.map(int => 
+    setIntegrations(prev => prev.map(int =>
       int.connected ? { ...int, status: 'syncing', syncProgress: 0 } : int
     ));
 
     try {
       const allTasks: string[] = [];
       const newSyncedItems: SyncedItem[] = [];
-      
-      // Realistic email subjects with priority indicators
-      const emailData = {
-        gmail: [
-          { title: "URGENT: Q4 Budget Review - Action Required by EOD", priority: 'high' as const },
-          { title: "Project Alpha: Client requesting proposal revisions", priority: 'high' as const },
-          { title: "Team Standup Notes - 3 action items assigned to you", priority: 'medium' as const },
-          { title: "HR: Benefits enrollment deadline Dec 20th - Complete required", priority: 'high' as const },
-          { title: "Invoice #4521 requires your payment authorization", priority: 'medium' as const },
-          { title: "Meeting follow-up: Strategy decisions pending", priority: 'medium' as const },
-          { title: "Customer escalation: Priority support ticket #8823", priority: 'high' as const },
-          { title: "Weekly digest: 12 unread items need attention", priority: 'low' as const },
-          { title: "Security alert: New login from unknown device", priority: 'high' as const },
-          { title: "Newsletter: Industry updates this week", priority: 'low' as const },
-        ],
-        outlook: [
-          { title: "RE: Contract Renewal - Signature Required", priority: 'high' as const },
-          { title: "FW: Compliance Training Due This Week", priority: 'medium' as const },
-          { title: "Team Update: Sprint Planning Tomorrow", priority: 'medium' as const },
-          { title: "Expense Report Approval Needed", priority: 'medium' as const },
-          { title: "IT: System Maintenance Window This Weekend", priority: 'low' as const },
-          { title: "Performance Review Schedule", priority: 'high' as const },
-          { title: "Vendor Payment: Awaiting Your Approval", priority: 'high' as const },
-          { title: "Office Closure Notice", priority: 'low' as const },
-        ]
-      };
 
-      const calendarData = {
-        gcal: [
-          { title: "Tomorrow 10AM: Quarterly planning - Prepare slides", priority: 'high' as const },
-          { title: "Today 3PM: 1-on-1 performance review with manager", priority: 'high' as const },
-          { title: "Friday: Project milestone deadline - Final deliverables", priority: 'high' as const },
-          { title: "Monday 9AM: Client presentation - Review deck", priority: 'high' as const },
-          { title: "Wednesday: Team offsite - RSVP required", priority: 'medium' as const },
-          { title: "Thursday 2PM: Interview candidate - Review resume", priority: 'medium' as const },
-          { title: "Next Week: All-hands meeting", priority: 'low' as const },
-        ],
-        'outlook-cal': [
-          { title: "Today 4PM: Budget review with Finance", priority: 'high' as const },
-          { title: "Tomorrow: Vendor demo - Prepare questions", priority: 'medium' as const },
-          { title: "Friday 11AM: Architecture review meeting", priority: 'medium' as const },
-          { title: "Monday: Security audit walkthrough", priority: 'high' as const },
-          { title: "Wednesday: Lunch & Learn session", priority: 'low' as const },
-        ]
-      };
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        toast.error('You must be signed in to sync data');
+        return;
+      }
 
-      // Simulate progressive sync for each integration
       for (const integration of connectedIntegrations) {
-        for (let progress = 0; progress <= 100; progress += 25) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-          setIntegrations(prev => prev.map(int => 
-            int.id === integration.id ? { ...int, syncProgress: progress } : int
+        try {
+          // Progress animation while request is in-flight
+          for (let progress = 0; progress <= 75; progress += 25) {
+            await new Promise(resolve => setTimeout(resolve, 150));
+            setIntegrations(prev => prev.map(int =>
+              int.id === integration.id ? { ...int, syncProgress: progress } : int
+            ));
+          }
+
+          const isEmail = integration.type === 'email';
+          let endpoint: string | null = null;
+
+          if (integration.provider === 'google') {
+            endpoint = isEmail ? 'email-sync' : 'calendar-sync';
+          }
+
+          if (!endpoint) {
+            // For non-supported providers, skip gracefully for now
+            setIntegrations(prev => prev.map(int =>
+              int.id === integration.id ? { ...int, status: 'idle', syncProgress: undefined } : int
+            ));
+            continue;
+          }
+
+          const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${endpoint}`, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            console.error(`[Sync] ${endpoint} failed`, err);
+            toast.error(`Failed to sync ${integration.name}: ${err?.error || resp.statusText}`);
+            setIntegrations(prev => prev.map(int =>
+              int.id === integration.id ? { ...int, status: 'error', syncProgress: undefined } : int
+            ));
+            continue;
+          }
+
+          const data = await resp.json() as { items?: SyncedItem[] };
+          const items = (data.items || []).map((item, idx) => ({
+            ...item,
+            id: item.id || `${integration.id}-${Date.now()}-${idx}`,
+            source: integration.name,
+          }));
+
+          items.forEach((item) => {
+            allTasks.push(item.title);
+            newSyncedItems.push(item);
+          });
+
+          setIntegrations(prev => prev.map(int =>
+            int.id === integration.id
+              ? {
+                  ...int,
+                  lastSync: new Date().toLocaleTimeString(),
+                  itemCount: items.length,
+                  status: 'idle',
+                  syncProgress: 100,
+                }
+              : int
+          ));
+        } catch (err) {
+          logClientError(err, {
+            feature: 'integrations',
+            action: 'sync-integration',
+            userId: user?.id,
+            severity: 'warning',
+            extra: { integrationId: integration.id },
+          });
+          setIntegrations(prev => prev.map(int =>
+            int.id === integration.id ? { ...int, status: 'error', syncProgress: undefined } : int
           ));
         }
-
-        const isEmail = integration.type === 'email';
-        const dataSource = isEmail 
-          ? (emailData[integration.id as keyof typeof emailData] || emailData.gmail)
-          : (calendarData[integration.id as keyof typeof calendarData] || calendarData.gcal);
-
-        const selectedItems = dataSource.slice(0, Math.floor(Math.random() * 4) + 3);
-        
-        selectedItems.forEach((item, idx) => {
-          allTasks.push(item.title);
-          newSyncedItems.push({
-            id: `${integration.id}-${Date.now()}-${idx}`,
-            title: item.title,
-            source: integration.name,
-            type: isEmail ? 'email' : 'event',
-            date: new Date().toISOString(),
-            priority: item.priority,
-          });
-        });
-
-        // Update integration with sync results
-        setIntegrations(prev => prev.map(int => 
-          int.id === integration.id 
-            ? { 
-                ...int, 
-                lastSync: new Date().toLocaleTimeString(),
-                itemCount: selectedItems.length,
-                status: 'idle',
-                syncProgress: undefined
-              }
-            : int
-        ));
       }
 
       // Update synced items state
       setSyncedItems(prev => [...newSyncedItems, ...prev].slice(0, 100));
-      
+
       // Update totals
       const emails = newSyncedItems.filter(i => i.type === 'email').length;
       const events = newSyncedItems.filter(i => i.type === 'event').length;
-      setTotalSynced(prev => ({ 
-        emails: prev.emails + emails, 
-        events: prev.events + events 
+      setTotalSynced(prev => ({
+        emails: prev.emails + emails,
+        events: prev.events + events,
       }));
       setLastFullSync(new Date().toLocaleString());
 
       // Import tasks to cognitive filter
       if (allTasks.length > 0) {
-        const emailTasks = allTasks.filter((_, i) => i < emails);
-        const calendarTasks = allTasks.filter((_, i) => i >= emails);
-        
+        const emailTasks = newSyncedItems.filter(i => i.type === 'email').map(i => i.title);
+        const calendarTasks = newSyncedItems.filter(i => i.type === 'event').map(i => i.title);
+
         if (emailTasks.length > 0) onImportTasks('Email', emailTasks);
         if (calendarTasks.length > 0) onImportTasks('Calendar', calendarTasks);
       }
 
-      toast.success(`Synced ${connectedIntegrations.length} integration(s) - ${allTasks.length} tasks imported for cognitive analysis`);
+      toast.success(`Synced ${connectedIntegrations.length} integration(s) - ${newSyncedItems.length} items imported for cognitive analysis`);
     } catch (error) {
-      console.error('Sync error:', error);
+      logClientError(error, {
+        feature: 'integrations',
+        action: 'sync-all',
+        userId: user?.id,
+        severity: 'error',
+      });
       toast.error('Failed to sync integrations');
-      
+
       // Reset status on error
-      setIntegrations(prev => prev.map(int => 
+      setIntegrations(prev => prev.map(int =>
         int.connected ? { ...int, status: 'error', syncProgress: undefined } : int
       ));
     } finally {

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { logClientError } from '@/lib/logging';
 
 type UserPlan = 'free' | 'pro' | 'premium' | 'elite' | 'enterprise';
 
@@ -33,7 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [subscribed, setSubscribed] = useState(false);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
 
-  // Stripe product IDs mapped to plan names
+  // Stripe product IDs mapped to plan names (kept in sync with supabase/functions/_shared/plans.ts)
   const PRODUCT_PLANS: Record<string, UserPlan> = {
     'prod_TZocSSpPddFCH1': 'pro',      // ShadowTalk Pro
     'prod_TbiuwlUUg3F17C': 'premium',  // ShadowTalk Premium
@@ -57,27 +58,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('stripe-subscription');
-      
-      if (error) {
-        console.error('Error checking subscription:', error);
+      // 1) Primary source of truth: LemonSqueezy/webhook-backed subscribers table
+      const { data: lemonData, error: lemonError } = await supabase.functions.invoke('check-lemonsqueezy-subscription');
+
+      if (lemonError) {
+        logClientError(lemonError, {
+          feature: 'billing',
+          action: 'check-lemonsqueezy-subscription',
+          userId: session.user?.id,
+          severity: 'warning',
+        });
+      }
+
+      if (lemonData?.subscribed) {
+        setSubscribed(true);
+        setUserPlan((lemonData.plan as UserPlan) || 'pro');
+        setSubscriptionEnd(lemonData.subscription_end || null);
         return;
       }
 
-      if (data?.subscribed) {
+      // 2) Fallback to Stripe subscription lookup
+      const { data: stripeData, error: stripeError } = await supabase.functions.invoke('stripe-subscription');
+
+      if (stripeError) {
+        logClientError(stripeError, {
+          feature: 'billing',
+          action: 'stripe-subscription',
+          userId: session.user?.id,
+          severity: 'warning',
+        });
+        return;
+      }
+
+      if (stripeData?.subscribed) {
         setSubscribed(true);
-        // Map product ID to plan name
-        const productId = data.product_id;
+        const productId = stripeData.product_id as string | null | undefined;
         const plan = productId ? (PRODUCT_PLANS[productId] || 'pro') : 'pro';
         setUserPlan(plan);
-        setSubscriptionEnd(data.subscription_end || null);
+        setSubscriptionEnd(stripeData.subscription_end || null);
       } else {
         setSubscribed(false);
         setUserPlan('free');
         setSubscriptionEnd(null);
       }
     } catch (error) {
-      console.error('Error checking subscription:', error);
+      logClientError(error, {
+        feature: 'billing',
+        action: 'checkSubscription',
+        userId: session.user?.id,
+        severity: 'error',
+      });
     }
   };
 

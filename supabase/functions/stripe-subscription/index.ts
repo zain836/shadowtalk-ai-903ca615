@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import { getPlanFromStripeProduct } from "../_shared/plans.ts";
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -13,9 +10,12 @@ const logStep = (step: string, details?: any) => {
 };
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsOptions(origin);
   }
+
+  const corsHeaders = getCorsHeaders(origin);
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
@@ -68,8 +68,8 @@ serve(async (req) => {
       limit: 1,
     });
     const hasActiveSub = subscriptions.data.length > 0;
-    let productId = null;
-    let subscriptionEnd = null;
+    let productId: string | null = null;
+    let subscriptionEnd: string | null = null;
     let plan = 'free';
 
     if (hasActiveSub) {
@@ -78,14 +78,7 @@ serve(async (req) => {
       logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
       
       productId = subscription.items.data[0].price.product as string;
-      
-      // Map product ID to plan name
-      const productPlanMap: Record<string, string> = {
-        'prod_TZocSSpPddFCH1': 'pro',
-        'prod_TbiuwlUUg3F17C': 'premium',
-        'prod_TbhEVUPSLMSF53': 'elite',
-      };
-      plan = productPlanMap[productId] || 'free';
+      plan = getPlanFromStripeProduct(productId);
       
       logStep("Determined subscription tier", { productId, plan });
     } else {

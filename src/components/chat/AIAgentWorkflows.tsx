@@ -73,67 +73,84 @@ export const AIAgentWorkflows: React.FC<AIAgentWorkflowsProps> = ({ isOpen, onCl
 
     setIsRunning(true);
     setProgress(0);
-    
+
     const workflowSteps: WorkflowStep[] = selectedWorkflow.steps.map((name, i) => ({
       id: `step-${i}`,
       name,
-      status: 'pending'
+      status: 'pending',
     }));
     setSteps(workflowSteps);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
-      for (let i = 0; i < workflowSteps.length; i++) {
-        setSteps(prev => prev.map((s, idx) => 
-          idx === i ? { ...s, status: 'running' } : s
-        ));
-        
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            agentWorkflow: {
-              workflowId: selectedWorkflow.id,
-              stepIndex: i,
-              stepName: workflowSteps[i].name,
-              input: input,
-              previousResults: workflowSteps.slice(0, i).map(s => s.result).filter(Boolean)
-            }
-          }),
-        });
 
-        if (!response.ok) throw new Error(`Step failed: ${workflowSteps[i].name}`);
-        
-        const result = await response.json();
-        
-        setSteps(prev => prev.map((s, idx) => 
-          idx === i ? { ...s, status: 'completed', result: result.stepResult } : s
-        ));
-        
-        setProgress(((i + 1) / workflowSteps.length) * 100);
-        
-        // Small delay between steps for UX
-        if (i < workflowSteps.length - 1) {
-          await new Promise(r => setTimeout(r, 500));
-        }
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          agentWorkflow: {
+            workflowId: selectedWorkflow.id,
+            input,
+            steps: selectedWorkflow.steps.map((name) => ({ name })),
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Workflow failed with status ${response.status}`);
       }
 
-      // Generate final result
-      const finalResult = steps.map(s => s.result).filter(Boolean).join('\n\n');
+      const result = await response.json();
+
+      if (!Array.isArray(result.steps)) {
+        throw new Error('Invalid workflow response from server');
+      }
+
+      const serverSteps: { step: string; result: string; status: string }[] = result.steps;
+
+      // Map server results back onto local steps state
+      setSteps((prev) =>
+        prev.map((s) => {
+          const match = serverSteps.find((st) => st.step === s.name);
+          if (!match) return s;
+          return {
+            ...s,
+            status: match.status === 'completed' ? 'completed' : match.status === 'error' ? 'error' : s.status,
+            result: match.result,
+          };
+        })
+      );
+
+      setProgress(100);
+
+      const finalResult = serverSteps
+        .filter((s) => s.result)
+        .map((s) => `### ${s.step}\n\n${s.result}`)
+        .join('\n\n');
+
       onResult(`## ${selectedWorkflow.name} Results\n\n${finalResult || 'Workflow completed successfully.'}`);
-      
-      toast({ title: 'Workflow completed', description: `${selectedWorkflow.name} finished successfully` });
-      
+
+      toast({
+        title: 'Workflow completed',
+        description: `${selectedWorkflow.name} finished ${result.status === 'partial' ? 'with some errors' : 'successfully'}`,
+      });
     } catch (error) {
       console.error('Workflow error:', error);
-      setSteps(prev => prev.map(s => 
-        s.status === 'running' ? { ...s, status: 'error' } : s
-      ));
-      toast({ title: 'Workflow failed', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' });
+      setSteps((prev) =>
+        prev.map((s) =>
+          s.status === 'running' || s.status === 'pending'
+            ? { ...s, status: 'error' }
+            : s
+        )
+      );
+      toast({
+        title: 'Workflow failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
     } finally {
       setIsRunning(false);
     }

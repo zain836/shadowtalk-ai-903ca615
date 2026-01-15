@@ -64,6 +64,30 @@ This project is built with:
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
 
+## Production deployment (self-hosted)
+
+For a production deployment outside Lovable, you should:
+
+1. Set required environment variables for the frontend (build-time):
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+   The Vite config will refuse to build in production if these are missing.
+
+2. Configure your Supabase project with the SQL migrations under `supabase/migrations` and set the service role and URL for edge functions.
+
+3. Configure secrets for payments and integrations in your hosting provider (not committed to the repo), such as:
+   - Stripe keys (publishable and secret)
+   - LemonSqueezy API keys and webhook secrets
+   - Any OAuth client IDs/secrets used by Google/Microsoft
+
+4. Run the standard quality gates before deploying:
+   - `npm run lint`
+   - `npm run test`
+   - `npm run build`
+
+Once these pass with your production environment variables, you can deploy the built assets (`dist/`) behind your preferred CDN or app hosting platform.
+
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!

@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Building2, Key, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react";
+import { Shield, Building2, ExternalLink, CheckCircle2, AlertCircle, Lock } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
 
 interface SSOConfig {
   provider: "saml" | "oauth" | "oidc";
@@ -27,6 +29,7 @@ interface SSOProviderProps {
 
 export const SSOProvider: React.FC<SSOProviderProps> = ({ workspaceId, onConfigured }) => {
   const { toast } = useToast();
+  const { plan } = useAuth();
   const [activeTab, setActiveTab] = useState<"saml" | "oauth" | "oidc">("saml");
   const [isConfiguring, setIsConfiguring] = useState(false);
   
@@ -56,17 +59,36 @@ export const SSOProvider: React.FC<SSOProviderProps> = ({ workspaceId, onConfigu
   const handleSAMLSubmit = async () => {
     setIsConfiguring(true);
     try {
-      // Validate SAML configuration
       if (!samlConfig.entityId || !samlConfig.ssoUrl || !samlConfig.certificate) {
         throw new Error("All SAML fields are required");
       }
 
-      // In production, this would call an edge function to store SSO config
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error("You must be signed in to configure SSO");
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sso-configure`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          workspaceId,
+          provider: "saml",
+          config: samlConfig,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.message || result?.error || "Failed to configure SAML SSO");
+      }
+
       toast({
         title: "SAML SSO Configured",
-        description: "Your SAML configuration has been saved successfully.",
+        description: result?.message || "Your SAML configuration has been saved successfully.",
       });
 
       onConfigured?.({
@@ -91,11 +113,32 @@ export const SSOProvider: React.FC<SSOProviderProps> = ({ workspaceId, onConfigu
         throw new Error("Client ID, Client Secret, and Authorization URL are required");
       }
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error("You must be signed in to configure SSO");
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sso-configure`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          workspaceId,
+          provider: "oauth",
+          config: oauthConfig,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.message || result?.error || "Failed to configure OAuth");
+      }
+
       toast({
         title: "OAuth 2.0 Configured",
-        description: "Your OAuth configuration has been saved successfully.",
+        description: result?.message || "Your OAuth configuration has been saved successfully.",
       });
 
       onConfigured?.({
@@ -120,11 +163,36 @@ export const SSOProvider: React.FC<SSOProviderProps> = ({ workspaceId, onConfigu
         throw new Error("Client ID and Issuer URL are required");
       }
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error("You must be signed in to configure SSO");
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sso-configure`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          workspaceId,
+          provider: "oidc",
+          config: {
+            clientId: oidcConfig.clientId,
+            clientSecret: oidcConfig.clientSecret,
+            issuerUrl: oidcConfig.issuerUrl,
+          },
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.message || result?.error || "Failed to configure OIDC");
+      }
+
       toast({
         title: "OIDC Configured",
-        description: "Your OpenID Connect configuration has been saved successfully.",
+        description: result?.message || "Your OpenID Connect configuration has been saved successfully.",
       });
 
       onConfigured?.({
@@ -155,6 +223,8 @@ export const SSOProvider: React.FC<SSOProviderProps> = ({ workspaceId, onConfigu
     { name: "Ping Identity", logo: "📍", type: "saml" },
   ];
 
+  const isEnterprise = plan === 'enterprise' || plan === 'elite';
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -175,6 +245,17 @@ export const SSOProvider: React.FC<SSOProviderProps> = ({ workspaceId, onConfigu
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {!isEnterprise && (
+          <div className="flex items-start gap-3 p-4 rounded-lg bg-muted border border-dashed border-primary/40">
+            <Lock className="h-5 w-5 text-primary mt-0.5" />
+            <div>
+              <p className="text-sm font-medium">Enterprise feature locked</p>
+              <p className="text-xs text-muted-foreground">
+                SSO is available on Elite and Enterprise plans. Upgrade your subscription to unlock SAML, OAuth, and OIDC configuration.
+              </p>
+            </div>
+          </div>
+        )}
         {/* Supported Providers */}
         <div>
           <Label className="text-sm text-muted-foreground mb-3 block">Supported Providers</Label>
@@ -252,7 +333,7 @@ export const SSOProvider: React.FC<SSOProviderProps> = ({ workspaceId, onConfigu
 
               <Button 
                 onClick={handleSAMLSubmit} 
-                disabled={isConfiguring}
+                disabled={isConfiguring || !isEnterprise}
                 className="w-full"
               >
                 {isConfiguring ? "Configuring..." : "Save SAML Configuration"}
@@ -322,7 +403,7 @@ export const SSOProvider: React.FC<SSOProviderProps> = ({ workspaceId, onConfigu
 
               <Button 
                 onClick={handleOAuthSubmit} 
-                disabled={isConfiguring}
+                disabled={isConfiguring || !isEnterprise}
                 className="w-full"
               >
                 {isConfiguring ? "Configuring..." : "Save OAuth Configuration"}
@@ -378,7 +459,7 @@ export const SSOProvider: React.FC<SSOProviderProps> = ({ workspaceId, onConfigu
 
               <Button 
                 onClick={handleOIDCSubmit} 
-                disabled={isConfiguring}
+                disabled={isConfiguring || !isEnterprise}
                 className="w-full"
               >
                 {isConfiguring ? "Configuring..." : "Save OIDC Configuration"}
