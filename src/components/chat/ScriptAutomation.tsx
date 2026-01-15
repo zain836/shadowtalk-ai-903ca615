@@ -127,29 +127,18 @@ export const ScriptAutomation: React.FC<ScriptAutomationProps> = ({
 
     setIsSaving(true);
     try {
-      const insertData: {
-        user_id: string;
-        name: string;
-        description: string | null;
-        script_code: string;
-        trigger_type: string;
-        trigger_config: Record<string, string | number | boolean> | null;
-        is_active: boolean;
-        run_count: number;
-      } = {
-        user_id: user.id,
-        name: newScript.name,
-        description: newScript.description || null,
-        script_code: newScript.script_code,
-        trigger_type: newScript.trigger_type,
-        trigger_config: null,
-        is_active: true,
-        run_count: 0
-      };
-
       const { data, error } = await supabase
         .from('automation_scripts')
-        .insert([insertData])
+        .insert({
+          user_id: user.id,
+          name: newScript.name,
+          description: newScript.description || null,
+          script_code: newScript.script_code,
+          trigger_type: newScript.trigger_type,
+          trigger_config: {},
+          is_active: true,
+          run_count: 0
+        } as never)
         .select()
         .single();
 
