@@ -29,6 +29,8 @@ import { AgenticTaskRunner } from "@/components/chat/AgenticTaskRunner";
 import { VisualReasoning } from "@/components/chat/VisualReasoning";
 import { CreativeSynthesis } from "@/components/chat/CreativeSynthesis";
 import { PerplexityPages } from "@/components/chat/PerplexityPages";
+import { ClaudeCowork } from "@/components/chat/ClaudeCowork";
+import { GeminiLiveMode } from "@/components/chat/GeminiLiveMode";
 import CognitiveLoadPanel from "@/components/chat/CognitiveLoadPanel";
 import PlanetaryActionPanel from "@/components/chat/PlanetaryActionPanel";
 import SecurityAuditPanel from "@/components/chat/SecurityAuditPanel";
@@ -126,6 +128,8 @@ const ChatbotPage = () => {
   const [showImageEditor, setShowImageEditor] = useState(false);
   const [imageToEdit, setImageToEdit] = useState<string | undefined>(undefined);
   const [showPerplexityPages, setShowPerplexityPages] = useState(false);
+  const [showClaudeCowork, setShowClaudeCowork] = useState(false);
+  const [showGeminiLive, setShowGeminiLive] = useState(false);
   
   // Special mode state
   const [isAnalyzingTask, setIsAnalyzingTask] = useState(false);
