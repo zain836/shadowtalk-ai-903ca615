@@ -9,7 +9,7 @@ export const ChatRequestSchema = z.object({
   personality: z.enum([
     "friendly", "sarcastic", "professional", "creative", 
     "meticulous", "curious", "diplomatic", "witty", 
-    "pragmatic", "inquisitive"
+    "pragmatic", "inquisitive", "spicy"
   ]).optional(),
   mode: z.string().max(50).optional(),
   generateImage: z.boolean().optional(),
