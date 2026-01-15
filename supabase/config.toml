@@ -3,13 +3,13 @@ project_id = "axsudmhjpfzffcicfvuj"
 [functions.chat]
 verify_jwt = false
 
-[functions.create-checkout]
+[functions.stripe-checkout]
 verify_jwt = false
 
-[functions.check-subscription]
+[functions.stripe-subscription]
 verify_jwt = false
 
-[functions.customer-portal]
+[functions.stripe-portal]
 verify_jwt = false
 
 [functions.assign-admin-role]
@@ -31,18 +31,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.gemini-key-alert]
-verify_jwt = false
-
-[functions.lemonsqueezy-checkout]
-verify_jwt = false
-
-[functions.lemonsqueezy-webhook]
-verify_jwt = false
-
-[functions.lemonsqueezy-portal]
-verify_jwt = false
-
-[functions.check-lemonsqueezy-subscription]
 verify_jwt = false
 
 [functions.save-custom-model]

@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
-import { LEMONSQUEEZY_CONFIG, PLAN_DETAILS } from "@/lib/lemonsqueezy";
+import { STRIPE_CONFIG, PLAN_DETAILS } from "@/lib/stripe";
 
 const PricingSection = () => {
   const navigate = useNavigate();
@@ -34,39 +34,27 @@ const PricingSection = () => {
     setLoading(planName);
 
     try {
-      const planKey = planName.toLowerCase() as keyof typeof LEMONSQUEEZY_CONFIG.variants;
-      const variantId = LEMONSQUEEZY_CONFIG.variants[planKey];
+      const planKey = planName.toLowerCase() as keyof typeof STRIPE_CONFIG.prices;
+      const priceId = STRIPE_CONFIG.prices[planKey];
       
-      if (!variantId || variantId.startsWith('PLACEHOLDER')) {
+      if (!priceId) {
         toast({
-          title: "Coming Soon",
-          description: "Payment processing is being configured. Please try again later.",
+          title: "Invalid Plan",
+          description: "This plan is not available for purchase.",
         });
         setLoading(null);
         return;
       }
       
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/lemonsqueezy-checkout`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.access_token}`,
-          },
-          body: JSON.stringify({ variantId }),
-        }
-      );
+      const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+        body: { priceId },
+      });
 
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error);
+      if (error) {
+        throw new Error(error.message);
       }
 
-      if (data.url) {
+      if (data?.url) {
         window.open(data.url, "_blank");
       }
     } catch (error) {
@@ -311,7 +299,7 @@ const PricingSection = () => {
         {/* Additional Info */}
         <div className="text-center mt-12">
           <p className="text-muted-foreground mb-4">
-            All plans include 30-day money-back guarantee • Cancel anytime • Secure payment via Lemon Squeezy
+            All plans include 30-day money-back guarantee • Cancel anytime • Secure payment via Stripe
           </p>
           <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-muted-foreground">
             <span className="flex items-center space-x-2">

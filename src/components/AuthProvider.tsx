@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('check-subscription');
+      const { data, error } = await supabase.functions.invoke('stripe-subscription');
       
       if (error) {
         console.error('Error checking subscription:', error);

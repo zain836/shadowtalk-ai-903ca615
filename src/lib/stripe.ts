@@ -1,28 +1,34 @@
-// Lemon Squeezy Configuration
-// Add your variant IDs after setting up products in Lemon Squeezy dashboard
+// Stripe Configuration for ShadowTalk AI
 
-export const LEMONSQUEEZY_CONFIG = {
-  // Replace these placeholder IDs with your actual Lemon Squeezy variant IDs
-  variants: {
-    pro: "PLACEHOLDER_PRO_VARIANT_ID", // $9.99/month
-    premium: "PLACEHOLDER_PREMIUM_VARIANT_ID", // $29.99/month
-    elite: "PLACEHOLDER_ELITE_VARIANT_ID", // $49.99/month
+export const STRIPE_CONFIG = {
+  prices: {
+    pro: "price_1ScezZInnwEWcho15wMKeOMU", // $9.99/month
+    premium: "price_1SeVSbInnwEWcho1EILyNsK4", // $29.99/month
+    elite: "price_1SeTpoInnwEWcho1ETYh5Udy", // $49.99/month
   },
   products: {
-    pro: "PLACEHOLDER_PRO_PRODUCT_ID",
-    premium: "PLACEHOLDER_PREMIUM_PRODUCT_ID",
-    elite: "PLACEHOLDER_ELITE_PRODUCT_ID",
+    pro: "prod_TZocSSpPddFCH1",
+    premium: "prod_TbiuwlUUg3F17C",
+    elite: "prod_TbhEVUPSLMSF53",
   },
 } as const;
 
-export type PlanName = keyof typeof LEMONSQUEEZY_CONFIG.variants;
+export type PlanName = keyof typeof STRIPE_CONFIG.prices;
 
-export const getPlanVariantId = (plan: PlanName): string => {
-  return LEMONSQUEEZY_CONFIG.variants[plan];
+export const getPlanPriceId = (plan: PlanName): string => {
+  return STRIPE_CONFIG.prices[plan];
 };
 
 export const getPlanProductId = (plan: PlanName): string => {
-  return LEMONSQUEEZY_CONFIG.products[plan];
+  return STRIPE_CONFIG.products[plan];
+};
+
+// Get plan name from product ID
+export const getPlanFromProductId = (productId: string): PlanName | 'free' => {
+  const entry = Object.entries(STRIPE_CONFIG.products).find(
+    ([, id]) => id === productId
+  );
+  return entry ? (entry[0] as PlanName) : 'free';
 };
 
 // Plan display information
