@@ -157,14 +157,13 @@ export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkPr
   const [codeReviews, setCodeReviews] = useState<Record<string, CodeReview>>({});
   const [expandedReview, setExpandedReview] = useState<string | null>(null);
   
-  // AI code completion state
-  const [completionSuggestions, setCompletionSuggestions] = useState<string[]>([]);
+  // AI code completion state - inline ghost text like GitHub Copilot
+  const [ghostText, setGhostText] = useState<string>("");
   const [isLoadingCompletion, setIsLoadingCompletion] = useState(false);
-  const [showCompletions, setShowCompletions] = useState(false);
-  const [selectedCompletionIndex, setSelectedCompletionIndex] = useState(0);
   const [cursorPosition, setCursorPosition] = useState(0);
   const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   
   // Helper to update files in active project
   const setFiles = (newFiles: FileNode[] | ((prev: FileNode[]) => FileNode[])) => {
@@ -731,11 +730,12 @@ ${codeContext}`
     return "text-red-500";
   };
   
-  // AI-powered code completion
+  // AI-powered inline code completion (ghost text like GitHub Copilot)
   const getCodeCompletion = useCallback(async (code: string, position: number) => {
     if (!selectedFile || !isEditing) return;
     
     setIsLoadingCompletion(true);
+    setGhostText("");
     
     // Get context around cursor
     const beforeCursor = code.slice(Math.max(0, position - 500), position);
@@ -756,34 +756,31 @@ ${codeContext}`
           messages: [
             {
               role: "system",
-              content: `You are an expert code completion assistant. Provide 3-5 intelligent code completions based on the current context.
+              content: `You are an expert code completion assistant like GitHub Copilot. Provide a SINGLE inline code completion based on the current context.
 
 Language: ${language}
 File: ${selectedFile.name}
 
-Return ONLY a JSON array of completion strings. Each completion should:
-- Complete the current line or add the next logical code
-- Be concise (1-3 lines max)
-- Follow the existing code style
-- Be syntactically correct
+Return ONLY the completion text that should be inserted at the cursor position. No explanations, no markdown, no code blocks - just the raw code to insert.
 
-Example response: ["completion1", "completion2", "completion3"]`
+Guidelines:
+- Complete the current line or add the next logical code
+- Be concise (1-5 lines max)
+- Follow the existing code style and indentation
+- Be syntactically correct
+- If the line is complete, suggest the next logical line(s)`
             },
             {
               role: "user",
-              content: `Current code before cursor:
-\`\`\`${ext}
-${beforeCursor}
-\`\`\`
-
-Current line: "${currentLine}"
+              content: `Code before cursor:
+${beforeCursor}█
 
 Code after cursor:
-\`\`\`${ext}
 ${afterCursor}
-\`\`\`
 
-Provide intelligent completions for where the cursor is.`
+Current line being typed: "${currentLine}"
+
+Provide the code completion to insert at █:`
             }
           ]
         }
@@ -794,25 +791,15 @@ Provide intelligent completions for where the cursor is.`
       const content = response.data?.choices?.[0]?.message?.content || 
                       response.data?.generatedText || "";
       
-      try {
-        // Parse JSON array from response
-        const jsonMatch = content.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          const completions = JSON.parse(jsonMatch[0]) as string[];
-          if (completions.length > 0) {
-            setCompletionSuggestions(completions.slice(0, 5));
-            setShowCompletions(true);
-            setSelectedCompletionIndex(0);
-          }
-        }
-      } catch {
-        // Try to extract completions from text
-        const lines = content.split("\n").filter((l: string) => l.trim() && !l.startsWith("#") && !l.startsWith("//"));
-        if (lines.length > 0) {
-          setCompletionSuggestions(lines.slice(0, 3));
-          setShowCompletions(true);
-          setSelectedCompletionIndex(0);
-        }
+      // Clean the response - remove markdown code blocks if present
+      let completion = content.trim();
+      if (completion.startsWith("```")) {
+        completion = completion.replace(/^```\w*\n?/, "").replace(/\n?```$/, "");
+      }
+      
+      // Set ghost text if we got a valid completion
+      if (completion && completion.length > 0 && completion.length < 500) {
+        setGhostText(completion);
       }
     } catch (error) {
       console.error("Code completion error:", error);
@@ -840,7 +827,7 @@ Provide intelligent completions for where the cursor is.`
     
     setFileContent(newContent);
     setCursorPosition(newPosition);
-    setShowCompletions(false);
+    setGhostText(""); // Clear ghost text on any change
     
     // Trigger completion after typing
     triggerCompletion(newContent, newPosition);
@@ -848,55 +835,53 @@ Provide intelligent completions for where the cursor is.`
   
   // Handle editor key events
   const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (showCompletions && completionSuggestions.length > 0) {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setSelectedCompletionIndex(prev => 
-          (prev + 1) % completionSuggestions.length
-        );
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSelectedCompletionIndex(prev => 
-          prev === 0 ? completionSuggestions.length - 1 : prev - 1
-        );
-      } else if (e.key === "Tab" || e.key === "Enter") {
-        e.preventDefault();
-        acceptCompletion(completionSuggestions[selectedCompletionIndex]);
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        setShowCompletions(false);
-      }
-    } else if (e.key === "Tab" && e.ctrlKey) {
-      // Ctrl+Tab to manually trigger completion
+    // Accept ghost text with Tab
+    if (e.key === "Tab" && ghostText) {
+      e.preventDefault();
+      acceptGhostText();
+      return;
+    }
+    
+    // Dismiss ghost text with Escape
+    if (e.key === "Escape" && ghostText) {
+      e.preventDefault();
+      setGhostText("");
+      return;
+    }
+    
+    // Ctrl+Space to manually trigger completion
+    if (e.key === " " && e.ctrlKey) {
       e.preventDefault();
       getCodeCompletion(fileContent, cursorPosition);
+      return;
     }
   };
   
-  // Accept a completion
-  const acceptCompletion = (completion: string) => {
+  // Accept the ghost text suggestion
+  const acceptGhostText = () => {
+    if (!ghostText) return;
+    
     const before = fileContent.slice(0, cursorPosition);
     const after = fileContent.slice(cursorPosition);
-    const newContent = before + completion + after;
+    const newContent = before + ghostText + after;
+    const newPosition = cursorPosition + ghostText.length;
     
     setFileContent(newContent);
-    setCursorPosition(cursorPosition + completion.length);
-    setShowCompletions(false);
-    setCompletionSuggestions([]);
+    setCursorPosition(newPosition);
+    setGhostText("");
     
     // Focus textarea and set cursor position
     if (textareaRef.current) {
       textareaRef.current.focus();
       setTimeout(() => {
         if (textareaRef.current) {
-          const newPos = cursorPosition + completion.length;
-          textareaRef.current.selectionStart = newPos;
-          textareaRef.current.selectionEnd = newPos;
+          textareaRef.current.selectionStart = newPosition;
+          textareaRef.current.selectionEnd = newPosition;
         }
       }, 0);
     }
     
-    toast({ title: "Completion applied" });
+    toast({ title: "Completion accepted" });
   };
   
   // Cleanup timeout on unmount
@@ -1071,7 +1056,7 @@ Provide intelligent completions for where the cursor is.`
                                 )}
                                 AI Complete
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={() => { setIsEditing(false); setShowCompletions(false); }}>Cancel</Button>
+                              <Button size="sm" variant="ghost" onClick={() => { setIsEditing(false); setGhostText(""); }}>Cancel</Button>
                               <Button size="sm" onClick={saveFile}><Save className="h-3 w-3 mr-1" />Save</Button>
                             </>
                           ) : (
@@ -1087,54 +1072,50 @@ Provide intelligent completions for where the cursor is.`
                         </div>
                       </div>
                       {isEditing ? (
-                        <div className="flex-1 relative">
+                        <div ref={editorContainerRef} className="flex-1 relative overflow-hidden">
+                          {/* Ghost text overlay - positioned absolutely behind cursor */}
+                          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                            <pre className="font-mono text-sm p-3 whitespace-pre-wrap break-words">
+                              {/* Render content before cursor as invisible to position ghost text */}
+                              <span className="invisible">{fileContent.slice(0, cursorPosition)}</span>
+                              {/* Ghost text suggestion */}
+                              {ghostText && (
+                                <span className="text-muted-foreground/50 italic">{ghostText}</span>
+                              )}
+                            </pre>
+                          </div>
+                          
+                          {/* Actual textarea */}
                           <Textarea
                             ref={textareaRef}
                             value={fileContent}
                             onChange={handleEditorChange}
                             onKeyDown={handleEditorKeyDown}
                             onSelect={(e) => setCursorPosition((e.target as HTMLTextAreaElement).selectionStart)}
-                            className="absolute inset-0 font-mono text-sm resize-none border-0 rounded-none focus-visible:ring-0"
-                            placeholder="Enter file content... (Ctrl+Tab for AI completion)"
+                            className="absolute inset-0 font-mono text-sm resize-none border-0 rounded-none focus-visible:ring-0 bg-transparent"
+                            placeholder="Enter file content... (Ctrl+Space for AI completion)"
+                            style={{ caretColor: 'hsl(var(--foreground))' }}
                           />
                           
-                          {/* AI Completion Popup */}
-                          {showCompletions && completionSuggestions.length > 0 && (
-                            <div className="absolute left-4 top-16 z-10 w-[calc(100%-2rem)] max-w-xl">
-                              <div className="bg-popover border border-border rounded-lg shadow-xl overflow-hidden">
-                                <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border">
-                                  <Sparkles className="h-3 w-3 text-primary" />
-                                  <span className="text-xs font-medium">AI Suggestions</span>
-                                  <span className="text-xs text-muted-foreground ml-auto">
-                                    ↑↓ Navigate • Tab/Enter Accept • Esc Close
-                                  </span>
-                                </div>
-                                <div className="max-h-48 overflow-auto">
-                                  {completionSuggestions.map((suggestion, idx) => (
-                                    <button
-                                      key={idx}
-                                      onClick={() => acceptCompletion(suggestion)}
-                                      className={cn(
-                                        "w-full text-left px-3 py-2 text-sm font-mono hover:bg-accent transition-colors",
-                                        idx === selectedCompletionIndex && "bg-accent"
-                                      )}
-                                    >
-                                      <div className="flex items-start gap-2">
-                                        <Code className="h-3 w-3 mt-1 text-muted-foreground shrink-0" />
-                                        <pre className="whitespace-pre-wrap text-xs">{suggestion}</pre>
-                                      </div>
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
+                          {/* Ghost text hint bar */}
+                          {ghostText && (
+                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full shadow-lg">
+                              <Sparkles className="h-3 w-3 text-primary" />
+                              <span className="text-xs text-muted-foreground">
+                                Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono mx-1">Tab</kbd> to accept
+                              </span>
+                              <span className="text-muted-foreground/50">•</span>
+                              <span className="text-xs text-muted-foreground">
+                                <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono mx-1">Esc</kbd> to dismiss
+                              </span>
                             </div>
                           )}
                           
                           {/* Loading indicator */}
                           {isLoadingCompletion && (
-                            <div className="absolute right-4 top-4 flex items-center gap-2 px-2 py-1 bg-muted rounded-md">
+                            <div className="absolute right-4 top-4 flex items-center gap-2 px-2 py-1 bg-muted/80 backdrop-blur-sm rounded-md border border-border">
                               <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                              <span className="text-xs text-muted-foreground">Getting suggestions...</span>
+                              <span className="text-xs text-muted-foreground">AI thinking...</span>
                             </div>
                           )}
                         </div>
