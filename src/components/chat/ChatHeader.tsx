@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2 } from "lucide-react";
+import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2, FileEdit, PenLine } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +69,7 @@ interface ChatHeaderProps {
   onOpenModelFineTuning: () => void;
   onOpenWhiteLabelBranding: () => void;
   onOpenGeminiAnalytics: () => void;
+  onOpenCanvas: (type: "document" | "code") => void;
   aiProvider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
   maxChats: string;
@@ -134,6 +135,7 @@ export const ChatHeader = ({
   onOpenModelFineTuning,
   onOpenWhiteLabelBranding,
   onOpenGeminiAnalytics,
+  onOpenCanvas,
   aiProvider,
   onProviderChange,
   maxChats,
@@ -162,8 +164,23 @@ export const ChatHeader = ({
         </Badge>
       </div>
 
-      {/* Pro Features */}
+      {/* Canvas */}
       <div className="px-2">
+        <p className="text-xs text-muted-foreground px-2 py-1 font-medium">Canvas</p>
+        <MenuItem
+          icon={<FileEdit className="h-5 w-5" />}
+          label="New Document"
+          onClick={() => handleMenuAction(() => onOpenCanvas("document"))}
+        />
+        <MenuItem
+          icon={<PenLine className="h-5 w-5" />}
+          label="New Code"
+          onClick={() => handleMenuAction(() => onOpenCanvas("code"))}
+        />
+      </div>
+
+      {/* Pro Features */}
+      <div className="px-2 mt-2">
         <p className="text-xs text-muted-foreground px-2 py-1 font-medium">Pro Features</p>
         <MenuItem
           icon={<Users className="h-5 w-5" />}
@@ -356,6 +373,18 @@ export const ChatHeader = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-popover">
+              {/* Canvas */}
+              <DropdownMenuItem onClick={() => onOpenCanvas("document")}>
+                <FileEdit className="h-4 w-4 mr-2" />
+                New Document
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onOpenCanvas("code")}>
+                <PenLine className="h-4 w-4 mr-2" />
+                New Code
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
               {/* Pro Features */}
               <DropdownMenuItem onClick={() => navigate('/rooms')} disabled={!isProOrHigher}>
                 <Users className="h-4 w-4 mr-2" />
