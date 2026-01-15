@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, FolderOpen, FileCode, Terminal, Play, Pause, 
@@ -156,6 +156,15 @@ export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkPr
   // Code review state
   const [codeReviews, setCodeReviews] = useState<Record<string, CodeReview>>({});
   const [expandedReview, setExpandedReview] = useState<string | null>(null);
+  
+  // AI code completion state
+  const [completionSuggestions, setCompletionSuggestions] = useState<string[]>([]);
+  const [isLoadingCompletion, setIsLoadingCompletion] = useState(false);
+  const [showCompletions, setShowCompletions] = useState(false);
+  const [selectedCompletionIndex, setSelectedCompletionIndex] = useState(0);
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Helper to update files in active project
   const setFiles = (newFiles: FileNode[] | ((prev: FileNode[]) => FileNode[])) => {
@@ -722,6 +731,183 @@ ${codeContext}`
     return "text-red-500";
   };
   
+  // AI-powered code completion
+  const getCodeCompletion = useCallback(async (code: string, position: number) => {
+    if (!selectedFile || !isEditing) return;
+    
+    setIsLoadingCompletion(true);
+    
+    // Get context around cursor
+    const beforeCursor = code.slice(Math.max(0, position - 500), position);
+    const afterCursor = code.slice(position, Math.min(code.length, position + 200));
+    const currentLine = beforeCursor.split("\n").pop() || "";
+    
+    // Get file extension for language context
+    const ext = selectedFile.name.split(".").pop() || "txt";
+    const languageMap: Record<string, string> = {
+      ts: "TypeScript", tsx: "TypeScript React", js: "JavaScript", jsx: "JavaScript React",
+      py: "Python", css: "CSS", html: "HTML", json: "JSON", md: "Markdown"
+    };
+    const language = languageMap[ext] || ext.toUpperCase();
+    
+    try {
+      const response = await supabase.functions.invoke("chat", {
+        body: {
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert code completion assistant. Provide 3-5 intelligent code completions based on the current context.
+
+Language: ${language}
+File: ${selectedFile.name}
+
+Return ONLY a JSON array of completion strings. Each completion should:
+- Complete the current line or add the next logical code
+- Be concise (1-3 lines max)
+- Follow the existing code style
+- Be syntactically correct
+
+Example response: ["completion1", "completion2", "completion3"]`
+            },
+            {
+              role: "user",
+              content: `Current code before cursor:
+\`\`\`${ext}
+${beforeCursor}
+\`\`\`
+
+Current line: "${currentLine}"
+
+Code after cursor:
+\`\`\`${ext}
+${afterCursor}
+\`\`\`
+
+Provide intelligent completions for where the cursor is.`
+            }
+          ]
+        }
+      });
+      
+      if (response.error) throw new Error(response.error.message);
+      
+      const content = response.data?.choices?.[0]?.message?.content || 
+                      response.data?.generatedText || "";
+      
+      try {
+        // Parse JSON array from response
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const completions = JSON.parse(jsonMatch[0]) as string[];
+          if (completions.length > 0) {
+            setCompletionSuggestions(completions.slice(0, 5));
+            setShowCompletions(true);
+            setSelectedCompletionIndex(0);
+          }
+        }
+      } catch {
+        // Try to extract completions from text
+        const lines = content.split("\n").filter((l: string) => l.trim() && !l.startsWith("#") && !l.startsWith("//"));
+        if (lines.length > 0) {
+          setCompletionSuggestions(lines.slice(0, 3));
+          setShowCompletions(true);
+          setSelectedCompletionIndex(0);
+        }
+      }
+    } catch (error) {
+      console.error("Code completion error:", error);
+    } finally {
+      setIsLoadingCompletion(false);
+    }
+  }, [selectedFile, isEditing]);
+  
+  // Debounced completion trigger
+  const triggerCompletion = useCallback((code: string, position: number) => {
+    if (completionTimeoutRef.current) {
+      clearTimeout(completionTimeoutRef.current);
+    }
+    
+    // Only trigger after a pause in typing
+    completionTimeoutRef.current = setTimeout(() => {
+      getCodeCompletion(code, position);
+    }, 800);
+  }, [getCodeCompletion]);
+  
+  // Handle editor changes
+  const handleEditorChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newContent = e.target.value;
+    const newPosition = e.target.selectionStart;
+    
+    setFileContent(newContent);
+    setCursorPosition(newPosition);
+    setShowCompletions(false);
+    
+    // Trigger completion after typing
+    triggerCompletion(newContent, newPosition);
+  };
+  
+  // Handle editor key events
+  const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showCompletions && completionSuggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedCompletionIndex(prev => 
+          (prev + 1) % completionSuggestions.length
+        );
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedCompletionIndex(prev => 
+          prev === 0 ? completionSuggestions.length - 1 : prev - 1
+        );
+      } else if (e.key === "Tab" || e.key === "Enter") {
+        e.preventDefault();
+        acceptCompletion(completionSuggestions[selectedCompletionIndex]);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setShowCompletions(false);
+      }
+    } else if (e.key === "Tab" && e.ctrlKey) {
+      // Ctrl+Tab to manually trigger completion
+      e.preventDefault();
+      getCodeCompletion(fileContent, cursorPosition);
+    }
+  };
+  
+  // Accept a completion
+  const acceptCompletion = (completion: string) => {
+    const before = fileContent.slice(0, cursorPosition);
+    const after = fileContent.slice(cursorPosition);
+    const newContent = before + completion + after;
+    
+    setFileContent(newContent);
+    setCursorPosition(cursorPosition + completion.length);
+    setShowCompletions(false);
+    setCompletionSuggestions([]);
+    
+    // Focus textarea and set cursor position
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const newPos = cursorPosition + completion.length;
+          textareaRef.current.selectionStart = newPos;
+          textareaRef.current.selectionEnd = newPos;
+        }
+      }, 0);
+    }
+    
+    toast({ title: "Completion applied" });
+  };
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (completionTimeoutRef.current) {
+        clearTimeout(completionTimeoutRef.current);
+      }
+    };
+  }, []);
+  
   // Export terminal output to chat
   const exportTerminalToChat = () => {
     if (onInsertToChat) {
@@ -871,7 +1057,21 @@ ${codeContext}`
                         <div className="flex gap-1">
                           {isEditing ? (
                             <>
-                              <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                onClick={() => getCodeCompletion(fileContent, cursorPosition)}
+                                disabled={isLoadingCompletion}
+                                className="gap-1"
+                              >
+                                {isLoadingCompletion ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Sparkles className="h-3 w-3" />
+                                )}
+                                AI Complete
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => { setIsEditing(false); setShowCompletions(false); }}>Cancel</Button>
                               <Button size="sm" onClick={saveFile}><Save className="h-3 w-3 mr-1" />Save</Button>
                             </>
                           ) : (
@@ -887,12 +1087,57 @@ ${codeContext}`
                         </div>
                       </div>
                       {isEditing ? (
-                        <Textarea
-                          value={fileContent}
-                          onChange={(e) => setFileContent(e.target.value)}
-                          className="flex-1 font-mono text-sm resize-none border-0 rounded-none focus-visible:ring-0"
-                          placeholder="Enter file content..."
-                        />
+                        <div className="flex-1 relative">
+                          <Textarea
+                            ref={textareaRef}
+                            value={fileContent}
+                            onChange={handleEditorChange}
+                            onKeyDown={handleEditorKeyDown}
+                            onSelect={(e) => setCursorPosition((e.target as HTMLTextAreaElement).selectionStart)}
+                            className="absolute inset-0 font-mono text-sm resize-none border-0 rounded-none focus-visible:ring-0"
+                            placeholder="Enter file content... (Ctrl+Tab for AI completion)"
+                          />
+                          
+                          {/* AI Completion Popup */}
+                          {showCompletions && completionSuggestions.length > 0 && (
+                            <div className="absolute left-4 top-16 z-10 w-[calc(100%-2rem)] max-w-xl">
+                              <div className="bg-popover border border-border rounded-lg shadow-xl overflow-hidden">
+                                <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border">
+                                  <Sparkles className="h-3 w-3 text-primary" />
+                                  <span className="text-xs font-medium">AI Suggestions</span>
+                                  <span className="text-xs text-muted-foreground ml-auto">
+                                    ↑↓ Navigate • Tab/Enter Accept • Esc Close
+                                  </span>
+                                </div>
+                                <div className="max-h-48 overflow-auto">
+                                  {completionSuggestions.map((suggestion, idx) => (
+                                    <button
+                                      key={idx}
+                                      onClick={() => acceptCompletion(suggestion)}
+                                      className={cn(
+                                        "w-full text-left px-3 py-2 text-sm font-mono hover:bg-accent transition-colors",
+                                        idx === selectedCompletionIndex && "bg-accent"
+                                      )}
+                                    >
+                                      <div className="flex items-start gap-2">
+                                        <Code className="h-3 w-3 mt-1 text-muted-foreground shrink-0" />
+                                        <pre className="whitespace-pre-wrap text-xs">{suggestion}</pre>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Loading indicator */}
+                          {isLoadingCompletion && (
+                            <div className="absolute right-4 top-4 flex items-center gap-2 px-2 py-1 bg-muted rounded-md">
+                              <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                              <span className="text-xs text-muted-foreground">Getting suggestions...</span>
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <ScrollArea className="flex-1 p-4">
                           <pre className="font-mono text-sm whitespace-pre-wrap">{fileContent}</pre>
