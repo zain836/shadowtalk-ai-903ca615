@@ -12,9 +12,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, User, Bell, Shield, Save, Loader2, Camera, Gift, BarChart3 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, User, Bell, Shield, Save, Loader2, Camera, Gift, BarChart3, CreditCard, ExternalLink, Crown } from "lucide-react";
 import ReferralProgram from "@/components/ReferralProgram";
 import UsageAnalytics from "@/components/UsageAnalytics";
+import { PLAN_DETAILS } from "@/lib/stripe";
 
 interface Profile {
   id: string;
@@ -28,18 +30,42 @@ interface Profile {
 
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userPlan, subscribed, subscriptionEnd } = useAuth();
   const { toast } = useToast();
   
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isManagingSubscription, setIsManagingSubscription] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [notificationEmail, setNotificationEmail] = useState(true);
   const [notificationPush, setNotificationPush] = useState(true);
   const [notificationMentions, setNotificationMentions] = useState(true);
+
+  const handleManageSubscription = async () => {
+    setIsManagingSubscription(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('stripe-portal');
+      
+      if (error) throw new Error(error.message);
+      
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to open subscription portal",
+        variant: "destructive",
+      });
+    } finally {
+      setIsManagingSubscription(false);
+    }
+  };
+
+  const currentPlanDetails = PLAN_DETAILS[userPlan as keyof typeof PLAN_DETAILS] || PLAN_DETAILS.free;
 
   useEffect(() => {
     if (!user) {
@@ -284,6 +310,85 @@ const ProfilePage = () => {
                   onCheckedChange={setNotificationMentions}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Subscription Management */}
+          <Card className={subscribed ? "ring-2 ring-primary/50" : ""}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  <CardTitle>Subscription</CardTitle>
+                </div>
+                <Badge variant={subscribed ? "default" : "secondary"} className="capitalize">
+                  {subscribed && <Crown className="h-3 w-3 mr-1" />}
+                  {currentPlanDetails.name}
+                </Badge>
+              </div>
+              <CardDescription>
+                Manage your subscription and billing
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="font-semibold text-lg">{currentPlanDetails.name} Plan</p>
+                    <p className="text-2xl font-bold gradient-text">
+                      ${currentPlanDetails.price}
+                      {currentPlanDetails.price > 0 && <span className="text-sm font-normal text-muted-foreground">/month</span>}
+                    </p>
+                  </div>
+                  {subscribed && subscriptionEnd && (
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Renews on</p>
+                      <p className="text-sm font-medium">
+                        {new Date(subscriptionEnd).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  {currentPlanDetails.features.slice(0, 4).map((feature, i) => (
+                    <p key={i} className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span className="text-primary">✓</span> {feature}
+                    </p>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  {subscribed ? (
+                    <Button 
+                      onClick={handleManageSubscription} 
+                      disabled={isManagingSubscription}
+                      className="flex-1"
+                    >
+                      {isManagingSubscription ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                      )}
+                      Manage Subscription
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={() => navigate('/pricing')} 
+                      className="flex-1 btn-glow"
+                    >
+                      <Crown className="h-4 w-4 mr-2" />
+                      Upgrade Plan
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {!subscribed && (
+                <p className="text-xs text-center text-muted-foreground">
+                  Upgrade to unlock unlimited queries, advanced features, and priority support
+                </p>
+              )}
             </CardContent>
           </Card>
 
