@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2, FileEdit, PenLine, Search, Image, Play, Eye, Wand2, Sparkles } from "lucide-react";
+import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2, FileEdit, PenLine, Search, Image, Play, Eye, Wand2, Sparkles, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +38,7 @@ import { MemoryPanel } from "./MemoryPanel";
 import { CustomInstructions } from "./CustomInstructions";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive";
+type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive" | "spicy";
 type UserPlan = 'free' | 'pro' | 'premium' | 'elite' | 'enterprise';
 
 const personalities: { value: Personality; label: string; icon: React.ReactNode; description: string }[] = [
@@ -52,6 +52,7 @@ const personalities: { value: Personality; label: string; icon: React.ReactNode;
   { value: "witty", label: "Witty", icon: <MessageCircle className="h-4 w-4" />, description: "Intellectually amusing with clever wordplay" },
   { value: "pragmatic", label: "Pragmatic", icon: <Target className="h-4 w-4" />, description: "Practical realist focused on what works" },
   { value: "inquisitive", label: "Inquisitive", icon: <HelpCircle className="h-4 w-4" />, description: "Asks targeted questions for precise answers" },
+  { value: "spicy", label: "🌶️ Spicy Mode", icon: <Zap className="h-4 w-4 text-orange-500" />, description: "Grok-style: Bold, edgy, unfiltered takes with real-time awareness" },
 ];
 
 interface ChatHeaderProps {
@@ -75,6 +76,7 @@ interface ChatHeaderProps {
   onOpenVisualReasoning: () => void;
   onOpenCreativeSynthesis: () => void;
   onOpenImageEditor: () => void;
+  onOpenPerplexityPages: () => void;
   aiProvider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
   maxChats: string;
@@ -146,6 +148,7 @@ export const ChatHeader = ({
   onOpenVisualReasoning,
   onOpenCreativeSynthesis,
   onOpenImageEditor,
+  onOpenPerplexityPages,
   aiProvider,
   onProviderChange,
   maxChats,
@@ -201,6 +204,11 @@ export const ChatHeader = ({
           icon={<Image className="h-5 w-5 text-orange-500" />}
           label="Image Editor (E)"
           onClick={() => handleMenuAction(onOpenImageEditor)}
+        />
+        <MenuItem
+          icon={<Globe className="h-5 w-5 text-cyan-500" />}
+          label="Create Shareable Page"
+          onClick={() => handleMenuAction(onOpenPerplexityPages)}
         />
       </div>
 
