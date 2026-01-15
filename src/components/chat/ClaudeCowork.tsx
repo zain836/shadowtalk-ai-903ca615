@@ -4,7 +4,9 @@ import {
   X, FolderOpen, FileCode, Terminal, Play, Pause, 
   CheckCircle2, AlertCircle, Loader2, Download, Upload,
   FolderTree, File, Edit3, Trash2, Plus, Save, Copy,
-  RefreshCw, Settings, Bot, ChevronRight, ChevronDown
+  RefreshCw, Settings, Bot, ChevronRight, ChevronDown,
+  GitBranch, GitCommit, GitMerge, History, RotateCcw, Archive,
+  FolderPlus, MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,33 +46,74 @@ interface TaskAction {
   output?: string;
 }
 
+interface GitCommit {
+  id: string;
+  message: string;
+  timestamp: Date;
+  files: string[];
+  snapshot: FileNode[];
+}
+
+interface Project {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: Date;
+  files: FileNode[];
+  commits: GitCommit[];
+  currentBranch: string;
+  branches: string[];
+}
+
 export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkProps) => {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // File system state
-  const [files, setFiles] = useState<FileNode[]>([
+  // Projects state
+  const [projects, setProjects] = useState<Project[]>([
     {
-      name: "project",
-      type: "folder",
-      path: "/project",
-      expanded: true,
-      children: [
+      id: "default",
+      name: "My Project",
+      description: "Default workspace project",
+      createdAt: new Date(),
+      files: [
         {
-          name: "src",
+          name: "project",
           type: "folder",
-          path: "/project/src",
+          path: "/project",
           expanded: true,
           children: [
-            { name: "index.ts", type: "file", path: "/project/src/index.ts", content: '// Main entry point\nconsole.log("Hello, world!");' },
-            { name: "utils.ts", type: "file", path: "/project/src/utils.ts", content: '// Utility functions\nexport const add = (a: number, b: number) => a + b;' },
+            {
+              name: "src",
+              type: "folder",
+              path: "/project/src",
+              expanded: true,
+              children: [
+                { name: "index.ts", type: "file", path: "/project/src/index.ts", content: '// Main entry point\nconsole.log("Hello, world!");' },
+                { name: "utils.ts", type: "file", path: "/project/src/utils.ts", content: '// Utility functions\nexport const add = (a: number, b: number) => a + b;' },
+              ]
+            },
+            { name: "package.json", type: "file", path: "/project/package.json", content: '{\n  "name": "my-project",\n  "version": "1.0.0"\n}' },
+            { name: "README.md", type: "file", path: "/project/README.md", content: "# My Project\n\nA sample project for Claude Cowork." },
           ]
-        },
-        { name: "package.json", type: "file", path: "/project/package.json", content: '{\n  "name": "my-project",\n  "version": "1.0.0"\n}' },
-        { name: "README.md", type: "file", path: "/project/README.md", content: "# My Project\n\nA sample project for Claude Cowork." },
-      ]
+        }
+      ],
+      commits: [
+        { id: "init", message: "Initial commit", timestamp: new Date(Date.now() - 86400000), files: ["package.json", "README.md"], snapshot: [] }
+      ],
+      currentBranch: "main",
+      branches: ["main", "develop"]
     }
   ]);
+  const [activeProjectId, setActiveProjectId] = useState("default");
+  const [newProjectName, setNewProjectName] = useState("");
+  const [commitMessage, setCommitMessage] = useState("");
+  const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
+  
+  const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
+  
+  // File system state (derived from active project)
+  const files = activeProject?.files || [];
   
   const [selectedFile, setSelectedFile] = useState<FileNode | null>(null);
   const [fileContent, setFileContent] = useState("");
@@ -89,6 +132,19 @@ export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkPr
   const [actions, setActions] = useState<TaskAction[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
   const [actionsCompleted, setActionsCompleted] = useState(0);
+  
+  // Helper to update files in active project
+  const setFiles = (newFiles: FileNode[] | ((prev: FileNode[]) => FileNode[])) => {
+    setProjects(prev => prev.map(p => {
+      if (p.id === activeProjectId) {
+        return { 
+          ...p, 
+          files: typeof newFiles === 'function' ? newFiles(p.files) : newFiles 
+        };
+      }
+      return p;
+    }));
+  };
   
   // Toggle folder expansion
   const toggleFolder = (path: string) => {
@@ -347,6 +403,140 @@ export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkPr
     toast({ title: "Task stopped" });
   };
   
+  // Git-like version control functions
+  const createCommit = () => {
+    if (!commitMessage.trim()) {
+      toast({ title: "Enter a commit message", variant: "destructive" });
+      return;
+    }
+    
+    const changedFiles = getAllFileNames(files);
+    const newCommit: GitCommit = {
+      id: crypto.randomUUID(),
+      message: commitMessage,
+      timestamp: new Date(),
+      files: changedFiles,
+      snapshot: JSON.parse(JSON.stringify(files)) // Deep clone
+    };
+    
+    setProjects(prev => prev.map(p => {
+      if (p.id === activeProjectId) {
+        return { ...p, commits: [...p.commits, newCommit] };
+      }
+      return p;
+    }));
+    
+    setCommitMessage("");
+    toast({ title: "Commit created", description: commitMessage });
+    
+    // Send to chat if callback exists
+    if (onInsertToChat) {
+      onInsertToChat(`📝 **Git Commit**\n\nMessage: "${commitMessage}"\nFiles changed: ${changedFiles.join(", ")}\nBranch: ${activeProject?.currentBranch || "main"}`);
+    }
+  };
+  
+  const getAllFileNames = (nodes: FileNode[]): string[] => {
+    const names: string[] = [];
+    const traverse = (node: FileNode) => {
+      if (node.type === "file") names.push(node.name);
+      node.children?.forEach(traverse);
+    };
+    nodes.forEach(traverse);
+    return names;
+  };
+  
+  const revertToCommit = (commit: GitCommit) => {
+    if (commit.snapshot.length === 0) {
+      toast({ title: "Cannot revert", description: "No snapshot available", variant: "destructive" });
+      return;
+    }
+    
+    setProjects(prev => prev.map(p => {
+      if (p.id === activeProjectId) {
+        return { ...p, files: JSON.parse(JSON.stringify(commit.snapshot)) };
+      }
+      return p;
+    }));
+    
+    toast({ title: "Reverted", description: `Reverted to: ${commit.message}` });
+  };
+  
+  const createProject = () => {
+    if (!newProjectName.trim()) {
+      toast({ title: "Enter a project name", variant: "destructive" });
+      return;
+    }
+    
+    const newProject: Project = {
+      id: crypto.randomUUID(),
+      name: newProjectName,
+      description: "New project",
+      createdAt: new Date(),
+      files: [
+        {
+          name: "src",
+          type: "folder",
+          path: "/src",
+          expanded: true,
+          children: [
+            { name: "index.ts", type: "file", path: "/src/index.ts", content: '// Entry point\nconsole.log("Hello!");' }
+          ]
+        }
+      ],
+      commits: [],
+      currentBranch: "main",
+      branches: ["main"]
+    };
+    
+    setProjects(prev => [...prev, newProject]);
+    setActiveProjectId(newProject.id);
+    setNewProjectName("");
+    setShowNewProjectDialog(false);
+    toast({ title: "Project created", description: newProjectName });
+  };
+  
+  const switchBranch = (branch: string) => {
+    setProjects(prev => prev.map(p => {
+      if (p.id === activeProjectId) {
+        return { ...p, currentBranch: branch };
+      }
+      return p;
+    }));
+    toast({ title: `Switched to ${branch}` });
+  };
+  
+  const createBranch = (name: string) => {
+    setProjects(prev => prev.map(p => {
+      if (p.id === activeProjectId) {
+        return { 
+          ...p, 
+          branches: [...p.branches, name],
+          currentBranch: name
+        };
+      }
+      return p;
+    }));
+    toast({ title: `Created branch: ${name}` });
+  };
+  
+  // Export terminal output to chat
+  const exportTerminalToChat = () => {
+    if (onInsertToChat) {
+      const output = terminalLines.map(l => l.content).join("\n");
+      onInsertToChat(`## Terminal Output\n\n\`\`\`\n${output}\n\`\`\``);
+      toast({ title: "Exported to chat" });
+    }
+  };
+  
+  // Export file to chat
+  const exportFileToChat = () => {
+    if (onInsertToChat && selectedFile) {
+      const lang = selectedFile.name.split('.').pop() || 'text';
+      onInsertToChat(`## File: ${selectedFile.name}\n\n\`\`\`${lang}\n${fileContent}\n\`\`\``);
+      toast({ title: "Exported to chat" });
+    }
+  };
+  
   // Render file tree
   const renderFileTree = (nodes: FileNode[], depth = 0) => {
     return nodes.map(node => (
@@ -406,6 +596,16 @@ export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkPr
               <Badge variant={isAutonomous ? "default" : "secondary"}>
                 {isAutonomous ? "Autonomous Mode" : "Manual Mode"}
               </Badge>
+              <Badge variant="outline" className="gap-1">
+                <GitBranch className="h-3 w-3" />
+                {activeProject?.currentBranch || "main"}
+              </Badge>
+              {onInsertToChat && (
+                <Button variant="ghost" size="sm" onClick={exportTerminalToChat} className="gap-1 text-xs">
+                  <MessageSquare className="h-3 w-3" />
+                  Export
+                </Button>
+              )}
               <Button variant="ghost" size="icon" onClick={onClose}>
                 <X className="h-4 w-4" />
               </Button>
@@ -449,6 +649,10 @@ export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkPr
                     <Bot className="h-4 w-4" />
                     Autonomous
                   </TabsTrigger>
+                  <TabsTrigger value="projects" className="gap-2 data-[state=active]:bg-accent">
+                    <GitBranch className="h-4 w-4" />
+                    Projects
+                  </TabsTrigger>
                 </TabsList>
 
                 {/* Editor Tab */}
@@ -471,6 +675,9 @@ export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkPr
                             <>
                               <Button size="sm" variant="ghost" onClick={() => setIsEditing(true)}><Edit3 className="h-3 w-3 mr-1" />Edit</Button>
                               <Button size="sm" variant="ghost" onClick={() => navigator.clipboard.writeText(fileContent)}><Copy className="h-3 w-3" /></Button>
+                              {onInsertToChat && (
+                                <Button size="sm" variant="ghost" onClick={exportFileToChat}><MessageSquare className="h-3 w-3 mr-1" />Export</Button>
+                              )}
                               <Button size="sm" variant="ghost" onClick={() => deleteNode(selectedFile.path)}><Trash2 className="h-3 w-3" /></Button>
                             </>
                           )}
@@ -601,6 +808,154 @@ export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkPr
                         </div>
                       </div>
                     )}
+                  </div>
+                </TabsContent>
+
+                {/* Projects Tab */}
+                <TabsContent value="projects" className="flex-1 flex flex-col mt-0 p-4 overflow-auto">
+                  <div className="space-y-6">
+                    {/* Project Selector */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FolderTree className="h-5 w-5 text-primary" />
+                        <select
+                          value={activeProjectId}
+                          onChange={(e) => setActiveProjectId(e.target.value)}
+                          className="bg-background border border-border rounded-md px-3 py-1.5 text-sm"
+                        >
+                          {projects.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => setShowNewProjectDialog(true)} className="gap-1">
+                        <FolderPlus className="h-4 w-4" />
+                        New Project
+                      </Button>
+                    </div>
+
+                    {/* New Project Dialog */}
+                    {showNewProjectDialog && (
+                      <div className="p-4 border border-border rounded-lg bg-muted/30 space-y-3">
+                        <Input
+                          value={newProjectName}
+                          onChange={(e) => setNewProjectName(e.target.value)}
+                          placeholder="Project name..."
+                          className="text-sm"
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={createProject}>Create</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setShowNewProjectDialog(false)}>Cancel</Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Branch Management */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium flex items-center gap-2">
+                          <GitBranch className="h-4 w-4" />
+                          Branches
+                        </h4>
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => {
+                            const name = prompt("New branch name:");
+                            if (name) createBranch(name);
+                          }}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          New
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {activeProject?.branches.map(branch => (
+                          <Badge
+                            key={branch}
+                            variant={branch === activeProject.currentBranch ? "default" : "outline"}
+                            className="cursor-pointer"
+                            onClick={() => switchBranch(branch)}
+                          >
+                            {branch}
+                            {branch === activeProject.currentBranch && <CheckCircle2 className="h-3 w-3 ml-1" />}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Commit Section */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium flex items-center gap-2">
+                        <GitCommit className="h-4 w-4" />
+                        Create Commit
+                      </h4>
+                      <div className="flex gap-2">
+                        <Input
+                          value={commitMessage}
+                          onChange={(e) => setCommitMessage(e.target.value)}
+                          placeholder="Commit message..."
+                          className="flex-1"
+                          onKeyDown={(e) => e.key === "Enter" && createCommit()}
+                        />
+                        <Button onClick={createCommit} className="gap-1">
+                          <GitCommit className="h-4 w-4" />
+                          Commit
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Commit History */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium flex items-center gap-2">
+                        <History className="h-4 w-4" />
+                        Commit History
+                      </h4>
+                      <ScrollArea className="h-[300px]">
+                        <div className="space-y-2 pr-4">
+                          {activeProject?.commits.slice().reverse().map((commit, idx) => (
+                            <div
+                              key={commit.id}
+                              className="p-3 border border-border rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{commit.message}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {commit.timestamp.toLocaleString()}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {commit.files.slice(0, 3).map(f => (
+                                      <Badge key={f} variant="secondary" className="text-xs">{f}</Badge>
+                                    ))}
+                                    {commit.files.length > 3 && (
+                                      <Badge variant="secondary" className="text-xs">+{commit.files.length - 3} more</Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                {idx > 0 && commit.snapshot.length > 0 && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => revertToCommit(commit)}
+                                    className="gap-1 shrink-0"
+                                  >
+                                    <RotateCcw className="h-3 w-3" />
+                                    Revert
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                          {(!activeProject?.commits || activeProject.commits.length === 0) && (
+                            <div className="text-center text-muted-foreground py-8">
+                              <Archive className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm">No commits yet</p>
+                            </div>
+                          )}
+                        </div>
+                      </ScrollArea>
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
