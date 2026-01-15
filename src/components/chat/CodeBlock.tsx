@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Copy, Check, Code, Play, ChevronDown, ChevronUp, FlaskConical, Maximize2 } from "lucide-react";
+import { Copy, Check, Code, Play, ChevronDown, ChevronUp, FlaskConical, Maximize2, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { CodePlayground } from "./CodePlayground";
@@ -49,6 +49,9 @@ export const CodeBlock = ({ code, language, onOpenCanvas }: CodeBlockProps) => {
   // Languages that support full workspace/IDE
   const workspaceSupported = ['javascript', 'typescript', 'jsx', 'tsx', 'python', 'html', 'css', 'json'];
   const canUseWorkspace = workspaceSupported.includes(normalizedLang);
+
+  // All code can be edited in canvas
+  const canEditInCanvas = true;
 
   if (showPlayground) {
     return (
@@ -103,6 +106,18 @@ export const CodeBlock = ({ code, language, onOpenCanvas }: CodeBlockProps) => {
             >
               <FlaskConical className="h-3 w-3 mr-1" />
               Quick Run
+            </Button>
+          )}
+          {/* Edit in Canvas - Always available */}
+          {canEditInCanvas && onOpenCanvas && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onOpenCanvas(code, language)}
+              className="h-7 px-2 text-xs bg-secondary/50 hover:bg-secondary text-secondary-foreground hover:text-secondary-foreground"
+            >
+              <PenLine className="h-3 w-3 mr-1" />
+              Edit in Canvas
             </Button>
           )}
           {canUseWorkspace && onOpenCanvas && (

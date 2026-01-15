@@ -28,6 +28,7 @@ import { DeepResearchPanel } from "@/components/chat/DeepResearchPanel";
 import { AgenticTaskRunner } from "@/components/chat/AgenticTaskRunner";
 import { VisualReasoning } from "@/components/chat/VisualReasoning";
 import { CreativeSynthesis } from "@/components/chat/CreativeSynthesis";
+import { PerplexityPages } from "@/components/chat/PerplexityPages";
 import CognitiveLoadPanel from "@/components/chat/CognitiveLoadPanel";
 import PlanetaryActionPanel from "@/components/chat/PlanetaryActionPanel";
 import SecurityAuditPanel from "@/components/chat/SecurityAuditPanel";
@@ -75,7 +76,7 @@ type Message = {
   imageUrl?: string; // For AI-generated images
 };
 type Conversation = { id: string; title: string; created_at: string };
-type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive";
+type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive" | "spicy";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const GEMINI_LB_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-load-balancer`;
@@ -124,6 +125,7 @@ const ChatbotPage = () => {
   const [showCreativeSynthesis, setShowCreativeSynthesis] = useState(false);
   const [showImageEditor, setShowImageEditor] = useState(false);
   const [imageToEdit, setImageToEdit] = useState<string | undefined>(undefined);
+  const [showPerplexityPages, setShowPerplexityPages] = useState(false);
   
   // Special mode state
   const [isAnalyzingTask, setIsAnalyzingTask] = useState(false);
@@ -296,7 +298,8 @@ const ChatbotPage = () => {
       diplomatic: "Good to see you. I'm here to help navigate any situation with care. How may I assist?",
       witty: "Ah, a new conversation! The plot thickens. What intellectual adventure awaits us today?",
       pragmatic: "Let's get down to business. What's the most practical problem I can help you solve today?",
-      inquisitive: "Welcome! To serve you best, I'll need to understand your needs precisely. What can I help with?"
+      inquisitive: "Welcome! To serve you best, I'll need to understand your needs precisely. What can I help with?",
+      spicy: "🌶️ Well, well, well... Look who decided to chat with the spiciest AI around! Let's skip the boring pleasantries—hit me with your hottest takes, wildest questions, or controversial opinions. I'm here for the unfiltered truth. What's on your mind? 🔥"
     };
     return messages[personality];
   };
@@ -653,6 +656,7 @@ const ChatbotPage = () => {
             onOpenVisualReasoning={() => setShowVisualReasoning(true)}
             onOpenCreativeSynthesis={() => setShowCreativeSynthesis(true)}
             onOpenImageEditor={() => setShowImageEditor(true)}
+            onOpenPerplexityPages={() => setShowPerplexityPages(true)}
             aiProvider={aiProvider}
             onProviderChange={setAiProvider}
             maxChats={maxChats}
@@ -805,6 +809,16 @@ const ChatbotPage = () => {
               imageUrl: editedImage
             }]);
           }}
+        />
+      )}
+      
+      {/* Perplexity Pages */}
+      {showPerplexityPages && (
+        <PerplexityPages
+          isOpen={showPerplexityPages}
+          onClose={() => setShowPerplexityPages(false)}
+          messages={messages}
+          conversationTitle={conversations.find(c => c.id === currentConversationId)?.title}
         />
       )}
       
