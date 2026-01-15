@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2, FileEdit, PenLine } from "lucide-react";
+import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2, FileEdit, PenLine, Search, Image, Play, Eye, Wand2, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import { Heart, Laugh, Briefcase, Sparkles, Search, Lightbulb, Scale, MessageCircle, Target, HelpCircle } from "lucide-react";
+import { Heart, Laugh, Briefcase, Lightbulb, Scale, MessageCircle, Target, HelpCircle } from "lucide-react";
 import { OfflineModeIndicator } from "./OfflineModeIndicator";
 import { ProviderSelector, AIProvider } from "./ProviderSelector";
 import { ModelSelector, AIModel } from "./ModelSelector";
@@ -70,6 +70,11 @@ interface ChatHeaderProps {
   onOpenWhiteLabelBranding: () => void;
   onOpenGeminiAnalytics: () => void;
   onOpenCanvas: (type: "document" | "code") => void;
+  onOpenDeepResearch: () => void;
+  onOpenAgenticRunner: () => void;
+  onOpenVisualReasoning: () => void;
+  onOpenCreativeSynthesis: () => void;
+  onOpenImageEditor: () => void;
   aiProvider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
   maxChats: string;
@@ -136,6 +141,11 @@ export const ChatHeader = ({
   onOpenWhiteLabelBranding,
   onOpenGeminiAnalytics,
   onOpenCanvas,
+  onOpenDeepResearch,
+  onOpenAgenticRunner,
+  onOpenVisualReasoning,
+  onOpenCreativeSynthesis,
+  onOpenImageEditor,
   aiProvider,
   onProviderChange,
   maxChats,
@@ -164,17 +174,47 @@ export const ChatHeader = ({
         </Badge>
       </div>
 
-      {/* Canvas */}
+      {/* AI Tools */}
       <div className="px-2">
+        <p className="text-xs text-muted-foreground px-2 py-1 font-medium">AI Tools <span className="opacity-50">(Ctrl+Shift+...)</span></p>
+        <MenuItem
+          icon={<Search className="h-5 w-5 text-blue-500" />}
+          label="Deep Research (R)"
+          onClick={() => handleMenuAction(onOpenDeepResearch)}
+        />
+        <MenuItem
+          icon={<Play className="h-5 w-5 text-green-500" />}
+          label="Agentic Task Runner (A)"
+          onClick={() => handleMenuAction(onOpenAgenticRunner)}
+        />
+        <MenuItem
+          icon={<Eye className="h-5 w-5 text-purple-500" />}
+          label="Visual Reasoning (V)"
+          onClick={() => handleMenuAction(onOpenVisualReasoning)}
+        />
+        <MenuItem
+          icon={<Wand2 className="h-5 w-5 text-pink-500" />}
+          label="Creative Synthesis (C)"
+          onClick={() => handleMenuAction(onOpenCreativeSynthesis)}
+        />
+        <MenuItem
+          icon={<Image className="h-5 w-5 text-orange-500" />}
+          label="Image Editor (E)"
+          onClick={() => handleMenuAction(onOpenImageEditor)}
+        />
+      </div>
+
+      {/* Canvas */}
+      <div className="px-2 mt-2">
         <p className="text-xs text-muted-foreground px-2 py-1 font-medium">Canvas</p>
         <MenuItem
           icon={<FileEdit className="h-5 w-5" />}
-          label="New Document"
+          label="New Document (D)"
           onClick={() => handleMenuAction(() => onOpenCanvas("document"))}
         />
         <MenuItem
           icon={<PenLine className="h-5 w-5" />}
-          label="New Code"
+          label="New Code (K)"
           onClick={() => handleMenuAction(() => onOpenCanvas("code"))}
         />
       </div>
@@ -372,20 +412,60 @@ export const ChatHeader = ({
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-popover">
+            <DropdownMenuContent align="end" className="w-64 bg-popover max-h-[80vh] overflow-y-auto">
+              {/* AI Tools */}
+              <div className="px-2 py-1.5">
+                <span className="text-xs text-muted-foreground font-medium">AI Tools</span>
+              </div>
+              <DropdownMenuItem onClick={onOpenDeepResearch}>
+                <Search className="h-4 w-4 mr-2 text-blue-500" />
+                Deep Research
+                <span className="ml-auto text-xs text-muted-foreground">⇧R</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenAgenticRunner}>
+                <Play className="h-4 w-4 mr-2 text-green-500" />
+                Agentic Task Runner
+                <span className="ml-auto text-xs text-muted-foreground">⇧A</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenVisualReasoning}>
+                <Eye className="h-4 w-4 mr-2 text-purple-500" />
+                Visual Reasoning
+                <span className="ml-auto text-xs text-muted-foreground">⇧V</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenCreativeSynthesis}>
+                <Wand2 className="h-4 w-4 mr-2 text-pink-500" />
+                Creative Synthesis
+                <span className="ml-auto text-xs text-muted-foreground">⇧C</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenImageEditor}>
+                <Image className="h-4 w-4 mr-2 text-orange-500" />
+                Image Editor
+                <span className="ml-auto text-xs text-muted-foreground">⇧E</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
               {/* Canvas */}
+              <div className="px-2 py-1.5">
+                <span className="text-xs text-muted-foreground font-medium">Canvas</span>
+              </div>
               <DropdownMenuItem onClick={() => onOpenCanvas("document")}>
                 <FileEdit className="h-4 w-4 mr-2" />
                 New Document
+                <span className="ml-auto text-xs text-muted-foreground">⇧D</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onOpenCanvas("code")}>
                 <PenLine className="h-4 w-4 mr-2" />
                 New Code
+                <span className="ml-auto text-xs text-muted-foreground">⇧K</span>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 
               {/* Pro Features */}
+              <div className="px-2 py-1.5">
+                <span className="text-xs text-muted-foreground font-medium">Pro Features</span>
+              </div>
               <DropdownMenuItem onClick={() => navigate('/rooms')} disabled={!isProOrHigher}>
                 <Users className="h-4 w-4 mr-2" />
                 Collaborative Rooms

@@ -197,6 +197,50 @@ const ChatbotPage = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Keyboard shortcuts for AI tools
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only trigger with Ctrl+Shift (or Cmd+Shift on Mac)
+      if (!(e.ctrlKey || e.metaKey) || !e.shiftKey) return;
+      
+      const key = e.key.toLowerCase();
+      
+      switch (key) {
+        case 'r': // Deep Research
+          e.preventDefault();
+          setShowDeepResearch(true);
+          break;
+        case 'a': // Agentic Task Runner
+          e.preventDefault();
+          setShowAgenticRunner(true);
+          break;
+        case 'v': // Visual Reasoning
+          e.preventDefault();
+          setShowVisualReasoning(true);
+          break;
+        case 'c': // Creative Synthesis
+          e.preventDefault();
+          setShowCreativeSynthesis(true);
+          break;
+        case 'e': // Image Editor
+          e.preventDefault();
+          setShowImageEditor(true);
+          break;
+        case 'd': // New Document Canvas
+          e.preventDefault();
+          setCanvasState({ content: "", type: "document", language: "javascript" });
+          break;
+        case 'k': // New Code Canvas
+          e.preventDefault();
+          setCanvasState({ content: "", type: "code", language: "javascript" });
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Conversation Management
   const loadConversations = async () => {
     if (!user) return;
@@ -604,6 +648,11 @@ const ChatbotPage = () => {
             onOpenWhiteLabelBranding={() => checkAccess('whiteLabelBranding') && setShowWhiteLabelBranding(true)}
             onOpenGeminiAnalytics={() => setShowGeminiAnalytics(true)}
             onOpenCanvas={(type) => setCanvasState({ content: "", type, language: "javascript" })}
+            onOpenDeepResearch={() => setShowDeepResearch(true)}
+            onOpenAgenticRunner={() => setShowAgenticRunner(true)}
+            onOpenVisualReasoning={() => setShowVisualReasoning(true)}
+            onOpenCreativeSynthesis={() => setShowCreativeSynthesis(true)}
+            onOpenImageEditor={() => setShowImageEditor(true)}
             aiProvider={aiProvider}
             onProviderChange={setAiProvider}
             maxChats={maxChats}
@@ -698,6 +747,66 @@ const ChatbotPage = () => {
       {showModelFineTuning && <ModelFineTuning onClose={() => setShowModelFineTuning(false)} />}
       {showWhiteLabelBranding && <WhiteLabelBranding onClose={() => setShowWhiteLabelBranding(false)} />}
       {showGeminiAnalytics && <GeminiKeyAnalytics onClose={() => setShowGeminiAnalytics(false)} />}
+
+      {/* Advanced AI Panels */}
+      {showDeepResearch && (
+        <DeepResearchPanel
+          isOpen={showDeepResearch}
+          onClose={() => setShowDeepResearch(false)}
+          onInsertToChat={(content) => {
+            setShowDeepResearch(false);
+            setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content, timestamp: new Date() }]);
+          }}
+        />
+      )}
+      {showAgenticRunner && (
+        <AgenticTaskRunner
+          isOpen={showAgenticRunner}
+          onClose={() => setShowAgenticRunner(false)}
+          onTaskComplete={(result) => {
+            setShowAgenticRunner(false);
+            setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: result, timestamp: new Date() }]);
+          }}
+        />
+      )}
+      {showVisualReasoning && (
+        <VisualReasoning
+          isOpen={showVisualReasoning}
+          onClose={() => setShowVisualReasoning(false)}
+          onInsertToChat={(content) => {
+            setShowVisualReasoning(false);
+            setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content, timestamp: new Date() }]);
+          }}
+        />
+      )}
+      {showCreativeSynthesis && (
+        <CreativeSynthesis
+          isOpen={showCreativeSynthesis}
+          onClose={() => setShowCreativeSynthesis(false)}
+          onInsertToChat={(content) => {
+            setShowCreativeSynthesis(false);
+            setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content, timestamp: new Date() }]);
+          }}
+        />
+      )}
+      {showImageEditor && (
+        <ImageEditor
+          isOpen={showImageEditor}
+          onClose={() => { setShowImageEditor(false); setImageToEdit(undefined); }}
+          initialImage={imageToEdit}
+          onSave={(editedImage) => {
+            setShowImageEditor(false);
+            setImageToEdit(undefined);
+            setMessages(prev => [...prev, { 
+              id: crypto.randomUUID(), 
+              type: 'ai', 
+              content: '🎨 **Image Edited Successfully**', 
+              timestamp: new Date(),
+              imageUrl: editedImage
+            }]);
+          }}
+        />
+      )}
       
       {/* Canvas - ChatGPT-like document/code editor */}
       <Canvas
