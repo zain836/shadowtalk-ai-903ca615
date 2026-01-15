@@ -4,8 +4,8 @@ const ALLOWED_ORIGINS = [
   "http://localhost:8080",
   "http://localhost:5173",
   "https://axsudmhjpfzffcicfvuj.supabase.co",
-  // Add your production domains here:
-  // "https://your-domain.com",
+  "https://shadowtalk-ai.lovable.app",
+  "https://id-preview--0497e2a8-1dfb-4b9b-b437-30ee6b3f7741.lovable.app",
 ];
 
 export function getCorsHeaders(origin: string | null): Record<string, string> {

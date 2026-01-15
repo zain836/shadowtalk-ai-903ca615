@@ -15,7 +15,17 @@ export const ChatRequestSchema = z.object({
   generateImage: z.boolean().optional(),
   imagePrompt: z.string().max(1000).optional(),
   modePrompt: z.string().max(5000).optional(),
-  userContext: z.string().max(5000).optional(),
+  userContext: z.union([
+    z.string().max(5000),
+    z.object({
+      country: z.string().optional(),
+      city: z.string().optional(),
+      incomeRange: z.string().optional(),
+      employmentStatus: z.string().optional(),
+      familyStatus: z.string().optional(),
+      recentLifeEvents: z.array(z.string()).optional(),
+    })
+  ]).optional(),
   analyzeTask: z.string().max(2000).optional(),
   getEcoActions: z.boolean().optional(),
   location: z.string().max(200).optional(),

@@ -1,21 +1,101 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import { checkRateLimit, getRateLimitHeaders } from "../_shared/rate-limit.ts";
+import { ChatRequestSchema, validateInput } from "../_shared/validation.ts";
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsOptions(origin);
   }
 
+  const corsHeaders = getCorsHeaders(origin);
+
   try {
-    const { messages, personality, generateImage, imagePrompt, mode, modePrompt, userContext, analyzeTask, getEcoActions, location, securityAudit, webSearch, searchQuery, deepResearch, researchQuery } = await req.json();
+    // Parse and validate request body
+    const body = await req.json();
+    const validation = validateInput(ChatRequestSchema, body);
+    
+    if (!validation.success) {
+      console.error("[CHAT] Validation failed:", validation.details);
+      return new Response(JSON.stringify(validation), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { 
+      messages, personality, generateImage, imagePrompt, mode, modePrompt, 
+      userContext, analyzeTask, getEcoActions, location, securityAudit, 
+      webSearch, searchQuery, deepResearch, researchQuery, agentWorkflow 
+    } = validation.data;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    // AI Agent Workflows - Execute multi-step workflows
+    if (agentWorkflow) {
+      console.log("[CHAT] Executing agent workflow:", agentWorkflow.workflowId);
+      
+      const workflowResults: Array<{ step: string; result: string; status: string }> = [];
+      const steps = agentWorkflow.steps || [];
+      
+      for (let i = 0; i < steps.length; i++) {
+        const step = steps[i];
+        console.log(`[CHAT] Executing step ${i + 1}/${steps.length}:`, step.name);
+        
+        // Execute each step with AI
+        const stepResponse: Response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { 
+                role: "system", 
+                content: `You are an AI agent executing step "${step.name}" of a "${agentWorkflow.workflowId}" workflow.
+Context from previous steps: ${JSON.stringify(workflowResults)}
+Task: ${agentWorkflow.input}
+Execute this step thoroughly and provide actionable, detailed results.`
+              },
+              { role: "user", content: `Execute step: ${step.name}\nInput: ${agentWorkflow.input}` }
+            ],
+          }),
+        });
+        
+        if (!stepResponse.ok) {
+          workflowResults.push({
+            step: step.name,
+            result: `Step failed: ${stepResponse.statusText}`,
+            status: "error",
+          });
+          continue;
+        }
+        
+        const stepResult: { choices?: Array<{ message?: { content?: string } }> } = await stepResponse.json();
+        const stepContent: string = stepResult.choices?.[0]?.message?.content || "";
+        
+        workflowResults.push({
+          step: step.name,
+          result: stepContent,
+          status: "completed",
+        });
+      }
+      
+      return new Response(JSON.stringify({ 
+        workflowId: agentWorkflow.workflowId,
+        steps: workflowResults,
+        status: workflowResults.every(s => s.status === "completed") ? "completed" : "partial"
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Deep Research using SERP API
@@ -579,19 +659,22 @@ Be thorough but realistic - only report real vulnerabilities found in the code.`
 
     // Build user context string for GCAA
     let contextString = "";
-    if (userContext) {
-      const parts = [];
-      if (userContext.country) parts.push(`Country: ${userContext.country}`);
-      if (userContext.city) parts.push(`City/Region: ${userContext.city}`);
-      if (userContext.incomeRange) parts.push(`Income: ${userContext.incomeRange}`);
-      if (userContext.employmentStatus) parts.push(`Employment: ${userContext.employmentStatus}`);
-      if (userContext.familyStatus) parts.push(`Family Status: ${userContext.familyStatus}`);
-      if (userContext.recentLifeEvents?.length > 0) {
-        parts.push(`Recent Life Events: ${userContext.recentLifeEvents.join(", ")}`);
+    if (userContext && typeof userContext === 'object') {
+      const parts: string[] = [];
+      const ctx = userContext as { country?: string; city?: string; incomeRange?: string; employmentStatus?: string; familyStatus?: string; recentLifeEvents?: string[] };
+      if (ctx.country) parts.push(`Country: ${ctx.country}`);
+      if (ctx.city) parts.push(`City/Region: ${ctx.city}`);
+      if (ctx.incomeRange) parts.push(`Income: ${ctx.incomeRange}`);
+      if (ctx.employmentStatus) parts.push(`Employment: ${ctx.employmentStatus}`);
+      if (ctx.familyStatus) parts.push(`Family Status: ${ctx.familyStatus}`);
+      if (ctx.recentLifeEvents?.length && ctx.recentLifeEvents.length > 0) {
+        parts.push(`Recent Life Events: ${ctx.recentLifeEvents.join(", ")}`);
       }
       if (parts.length > 0) {
         contextString = `\n\n## USER CONTEXT (Use for personalized recommendations):\n${parts.join("\n")}`;
       }
+    } else if (userContext && typeof userContext === 'string') {
+      contextString = `\n\n## USER CONTEXT:\n${userContext}`;
     }
 
     const markdownInstructions = `
@@ -761,7 +844,7 @@ Don't just provide code and leave:
       inquisitive: `You are ShadowTalk AI as the Deep Prober. You use highly targeted, structured questioning to refine requests quickly. When an answer is impossible without more specific data, be unrelenting (but polite) until the user provides necessary information. Use closed-ended questions to expedite the process. Example: "To proceed accurately: Is this option A or B? Please specify the exact value for X. What is your deadline for this?"${markdownInstructions}${gcaaPrompt}${capabilitiesPrompt}`
     };
 
-    let systemPrompt = systemPrompts[personality] || systemPrompts.friendly;
+    let systemPrompt = personality && systemPrompts[personality as keyof typeof systemPrompts] ? systemPrompts[personality as keyof typeof systemPrompts] : systemPrompts.friendly;
     
     if (modePrompt && mode !== 'general') {
       systemPrompt += `\n\n## Current Mode: ${mode?.toUpperCase() || 'GENERAL'}\n${modePrompt}`;
