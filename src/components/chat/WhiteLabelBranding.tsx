@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { X, Palette, Type, Image, Save, RotateCcw, Eye, Upload } from "lucide-react";
+import { X, Palette, Type, Image, Save, RotateCcw, Eye, Upload, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
 
 interface BrandingConfig {
   appName: string;
@@ -18,6 +20,7 @@ interface BrandingConfig {
   foregroundColor: string;
   fontFamily: string;
   borderRadius: string;
+  customDomain?: string;
 }
 
 const defaultBranding: BrandingConfig = {
@@ -36,15 +39,78 @@ const defaultBranding: BrandingConfig = {
 
 interface WhiteLabelBrandingProps {
   onClose: () => void;
+  workspaceId?: string;
 }
 
-export const WhiteLabelBranding = ({ onClose }: WhiteLabelBrandingProps) => {
+export const WhiteLabelBranding = ({ onClose, workspaceId }: WhiteLabelBrandingProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [branding, setBranding] = useState<BrandingConfig>(() => {
     const saved = localStorage.getItem('white-label-branding');
     return saved ? JSON.parse(saved) : defaultBranding;
   });
   const [previewMode, setPreviewMode] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(workspaceId || null);
+
+  // Load branding from database if workspaceId is provided
+  useEffect(() => {
+    if (!user) return;
+    
+    const loadBranding = async () => {
+      setIsLoading(true);
+      try {
+        // If no workspaceId, try to get user's default workspace
+        let wsId = currentWorkspaceId;
+        
+        if (!wsId) {
+          const { data: workspaces } = await supabase
+            .from('workspaces')
+            .select('id')
+            .eq('owner_id', user.id)
+            .limit(1)
+            .single();
+          
+          if (workspaces) {
+            wsId = workspaces.id;
+            setCurrentWorkspaceId(wsId);
+          }
+        }
+
+        if (wsId) {
+          const { data: brandingData, error } = await supabase
+            .from('workspace_branding')
+            .select('*')
+            .eq('workspace_id', wsId)
+            .single();
+
+          if (brandingData && !error) {
+            setBranding({
+              appName: brandingData.app_name || defaultBranding.appName,
+              tagline: brandingData.tagline || defaultBranding.tagline,
+              logoUrl: brandingData.logo_url || '',
+              faviconUrl: brandingData.favicon_url || '',
+              primaryColor: brandingData.primary_color || defaultBranding.primaryColor,
+              secondaryColor: brandingData.secondary_color || defaultBranding.secondaryColor,
+              accentColor: brandingData.accent_color || defaultBranding.accentColor,
+              backgroundColor: brandingData.background_color || defaultBranding.backgroundColor,
+              foregroundColor: brandingData.foreground_color || defaultBranding.foregroundColor,
+              fontFamily: brandingData.font_family || defaultBranding.fontFamily,
+              borderRadius: brandingData.border_radius || defaultBranding.borderRadius,
+              customDomain: brandingData.custom_domain || '',
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error loading branding:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadBranding();
+  }, [user, currentWorkspaceId]);
 
   useEffect(() => {
     if (previewMode) {
@@ -90,10 +156,64 @@ export const WhiteLabelBranding = ({ onClose }: WhiteLabelBrandingProps) => {
     document.title = config.appName;
   };
 
-  const saveBranding = () => {
+  const saveBranding = async () => {
+    // Always save to localStorage for immediate effect
     localStorage.setItem('white-label-branding', JSON.stringify(branding));
     applyBranding(branding);
-    toast({ title: "Branding saved", description: "Your custom branding has been applied" });
+
+    // If user is logged in and has a workspace, save to database
+    if (user && currentWorkspaceId) {
+      setIsSaving(true);
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        
+        const response = await supabase.functions.invoke('save-workspace-branding', {
+          body: {
+            workspaceId: currentWorkspaceId,
+            appName: branding.appName,
+            tagline: branding.tagline,
+            logoUrl: branding.logoUrl,
+            faviconUrl: branding.faviconUrl,
+            primaryColor: branding.primaryColor,
+            secondaryColor: branding.secondaryColor,
+            accentColor: branding.accentColor,
+            backgroundColor: branding.backgroundColor,
+            foregroundColor: branding.foregroundColor,
+            fontFamily: branding.fontFamily,
+            borderRadius: branding.borderRadius,
+            customDomain: branding.customDomain || null,
+          },
+        });
+
+        if (response.error) {
+          // Check if it's a feature lock error
+          if (response.error.message?.includes('Feature locked') || response.error.message?.includes('403')) {
+            toast({
+              title: "Feature locked",
+              description: "White-label branding requires Elite or Enterprise tier. Saved locally only.",
+              variant: "destructive"
+            });
+          } else {
+            throw response.error;
+          }
+        } else {
+          toast({ 
+            title: "Branding saved", 
+            description: "Your custom branding has been saved to your workspace" 
+          });
+        }
+      } catch (error) {
+        console.error('Error saving branding:', error);
+        toast({ 
+          title: "Saved locally", 
+          description: "Branding saved to this browser. Sign in with Elite tier for cloud sync." 
+        });
+      } finally {
+        setIsSaving(false);
+      }
+    } else {
+      toast({ title: "Branding saved", description: "Your custom branding has been applied" });
+    }
   };
 
   const resetBranding = () => {
@@ -114,6 +234,17 @@ export const WhiteLabelBranding = ({ onClose }: WhiteLabelBrandingProps) => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading branding settings...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
       <div className="w-full max-w-3xl max-h-[90vh] bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
@@ -125,7 +256,9 @@ export const WhiteLabelBranding = ({ onClose }: WhiteLabelBrandingProps) => {
             </div>
             <div>
               <h2 className="font-semibold">White-Label Branding</h2>
-              <p className="text-xs text-muted-foreground">Customize your chat experience</p>
+              <p className="text-xs text-muted-foreground">
+                {currentWorkspaceId ? 'Synced to workspace' : 'Local storage only'}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -175,6 +308,20 @@ export const WhiteLabelBranding = ({ onClose }: WhiteLabelBrandingProps) => {
                   value={branding.tagline}
                   onChange={e => setBranding({ ...branding, tagline: e.target.value })}
                   placeholder="Your tagline here"
+                  className="rounded-xl"
+                />
+              </div>
+
+              {/* Custom Domain */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  Custom Domain
+                  <span className="text-xs text-muted-foreground">(Enterprise)</span>
+                </Label>
+                <Input
+                  value={branding.customDomain || ''}
+                  onChange={e => setBranding({ ...branding, customDomain: e.target.value })}
+                  placeholder="chat.yourdomain.com"
                   className="rounded-xl"
                 />
               </div>
@@ -378,8 +525,12 @@ export const WhiteLabelBranding = ({ onClose }: WhiteLabelBrandingProps) => {
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset to Default
           </Button>
-          <Button onClick={saveBranding} className="btn-glow rounded-xl">
-            <Save className="h-4 w-4 mr-2" />
+          <Button onClick={saveBranding} className="btn-glow rounded-xl" disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
             Save Branding
           </Button>
         </div>
