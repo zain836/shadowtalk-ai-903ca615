@@ -29,8 +29,8 @@ import { AgenticTaskRunner } from "@/components/chat/AgenticTaskRunner";
 import { VisualReasoning } from "@/components/chat/VisualReasoning";
 import { CreativeSynthesis } from "@/components/chat/CreativeSynthesis";
 import { PerplexityPages } from "@/components/chat/PerplexityPages";
-import { ClaudeCowork } from "@/components/chat/ClaudeCowork";
-import { GeminiLiveMode } from "@/components/chat/GeminiLiveMode";
+import { ShadowCowork } from "@/components/chat/ShadowCowork";
+import { ShadowTalkLive } from "@/components/chat/ShadowTalkLive";
 import CognitiveLoadPanel from "@/components/chat/CognitiveLoadPanel";
 import PlanetaryActionPanel from "@/components/chat/PlanetaryActionPanel";
 import SecurityAuditPanel from "@/components/chat/SecurityAuditPanel";
@@ -128,8 +128,8 @@ const ChatbotPage = () => {
   const [showImageEditor, setShowImageEditor] = useState(false);
   const [imageToEdit, setImageToEdit] = useState<string | undefined>(undefined);
   const [showPerplexityPages, setShowPerplexityPages] = useState(false);
-  const [showClaudeCowork, setShowClaudeCowork] = useState(false);
-  const [showGeminiLive, setShowGeminiLive] = useState(false);
+  const [showShadowCowork, setShowShadowCowork] = useState(false);
+  const [showShadowTalkLive, setShowShadowTalkLive] = useState(false);
   
   // Special mode state
   const [isAnalyzingTask, setIsAnalyzingTask] = useState(false);
@@ -240,13 +240,13 @@ const ChatbotPage = () => {
           e.preventDefault();
           setCanvasState({ content: "", type: "code", language: "javascript" });
           break;
-        case 'w': // Claude Cowork
+        case 'w': // Shadow Cowork
           e.preventDefault();
-          setShowClaudeCowork(true);
+          setShowShadowCowork(true);
           break;
-        case 'l': // Gemini Live
+        case 'l': // ShadowTalk Live
           e.preventDefault();
-          setShowGeminiLive(true);
+          setShowShadowTalkLive(true);
           break;
       }
     };
@@ -688,8 +688,8 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             onOpenCreativeSynthesis={() => setShowCreativeSynthesis(true)}
             onOpenImageEditor={() => setShowImageEditor(true)}
             onOpenPerplexityPages={() => setShowPerplexityPages(true)}
-            onOpenClaudeCowork={() => setShowClaudeCowork(true)}
-            onOpenGeminiLive={() => setShowGeminiLive(true)}
+            onOpenShadowCowork={() => setShowShadowCowork(true)}
+            onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
             aiProvider={aiProvider}
             onProviderChange={setAiProvider}
             maxChats={maxChats}
@@ -855,11 +855,11 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         />
       )}
       
-      {/* Claude Cowork Mode */}
-      {showClaudeCowork && (
-        <ClaudeCowork
-          isOpen={showClaudeCowork}
-          onClose={() => setShowClaudeCowork(false)}
+      {/* Shadow Cowork Mode */}
+      {showShadowCowork && (
+        <ShadowCowork
+          isOpen={showShadowCowork}
+          onClose={() => setShowShadowCowork(false)}
           onInsertToChat={(content) => {
             setMessages(prev => [...prev, { 
               id: crypto.randomUUID(), 
@@ -871,11 +871,11 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         />
       )}
       
-      {/* Gemini Live Mode */}
-      {showGeminiLive && (
-        <GeminiLiveMode
-          isOpen={showGeminiLive}
-          onClose={() => setShowGeminiLive(false)}
+      {/* ShadowTalk Live Mode */}
+      {showShadowTalkLive && (
+        <ShadowTalkLive
+          isOpen={showShadowTalkLive}
+          onClose={() => setShowShadowTalkLive(false)}
           onInsertToChat={(content) => {
             setMessages(prev => [...prev, { 
               id: crypto.randomUUID(), 

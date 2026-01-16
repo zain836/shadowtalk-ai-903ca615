@@ -77,8 +77,8 @@ interface ChatHeaderProps {
   onOpenCreativeSynthesis: () => void;
   onOpenImageEditor: () => void;
   onOpenPerplexityPages: () => void;
-  onOpenClaudeCowork: () => void;
-  onOpenGeminiLive: () => void;
+  onOpenShadowCowork: () => void;
+  onOpenShadowTalkLive: () => void;
   aiProvider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
   maxChats: string;
@@ -151,8 +151,8 @@ export const ChatHeader = ({
   onOpenCreativeSynthesis,
   onOpenImageEditor,
   onOpenPerplexityPages,
-  onOpenClaudeCowork,
-  onOpenGeminiLive,
+  onOpenShadowCowork,
+  onOpenShadowTalkLive,
   aiProvider,
   onProviderChange,
   maxChats,
@@ -216,13 +216,13 @@ export const ChatHeader = ({
         />
         <MenuItem
           icon={<Terminal className="h-5 w-5 text-amber-500" />}
-          label="Claude Cowork (W)"
-          onClick={() => handleMenuAction(onOpenClaudeCowork)}
+          label="Shadow Cowork (W)"
+          onClick={() => handleMenuAction(onOpenShadowCowork)}
         />
         <MenuItem
-          icon={<Mic className="h-5 w-5 text-red-500" />}
-          label="Gemini Live (L)"
-          onClick={() => handleMenuAction(onOpenGeminiLive)}
+          icon={<Mic className="h-5 w-5 text-violet-500" />}
+          label="ShadowTalk Live (L)"
+          onClick={() => handleMenuAction(onOpenShadowTalkLive)}
         />
       </div>
 
@@ -468,14 +468,14 @@ export const ChatHeader = ({
                 <Globe className="h-4 w-4 mr-2 text-cyan-500" />
                 Create Shareable Page
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onOpenClaudeCowork}>
+              <DropdownMenuItem onClick={onOpenShadowCowork}>
                 <Terminal className="h-4 w-4 mr-2 text-amber-500" />
-                Claude Cowork
+                Shadow Cowork
                 <span className="ml-auto text-xs text-muted-foreground">⇧W</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onOpenGeminiLive}>
-                <Mic className="h-4 w-4 mr-2 text-red-500" />
-                Gemini Live
+              <DropdownMenuItem onClick={onOpenShadowTalkLive}>
+                <Mic className="h-4 w-4 mr-2 text-violet-500" />
+                ShadowTalk Live
                 <span className="ml-auto text-xs text-muted-foreground">⇧L</span>
               </DropdownMenuItem>
 
