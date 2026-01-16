@@ -29,7 +29,7 @@ interface SSOProviderProps {
 
 export const SSOProvider: React.FC<SSOProviderProps> = ({ workspaceId, onConfigured }) => {
   const { toast } = useToast();
-  const { plan } = useAuth();
+  const { userPlan } = useAuth();
   const [activeTab, setActiveTab] = useState<"saml" | "oauth" | "oidc">("saml");
   const [isConfiguring, setIsConfiguring] = useState(false);
   
@@ -223,7 +223,7 @@ export const SSOProvider: React.FC<SSOProviderProps> = ({ workspaceId, onConfigu
     { name: "Ping Identity", logo: "📍", type: "saml" },
   ];
 
-  const isEnterprise = plan === 'enterprise' || plan === 'elite';
+  const isEnterprise = userPlan === 'enterprise' || userPlan === 'elite';
 
   return (
     <Card className="w-full">

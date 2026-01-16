@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-interface ClaudeCoworkProps {
+interface ShadowCoworkProps {
   isOpen: boolean;
   onClose: () => void;
   onInsertToChat?: (content: string) => void;
@@ -85,7 +85,7 @@ interface Project {
   branches: string[];
 }
 
-export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkProps) => {
+export const ShadowCowork = ({ isOpen, onClose, onInsertToChat }: ShadowCoworkProps) => {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -114,7 +114,7 @@ export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkPr
               ]
             },
             { name: "package.json", type: "file", path: "/project/package.json", content: '{\n  "name": "my-project",\n  "version": "1.0.0"\n}' },
-            { name: "README.md", type: "file", path: "/project/README.md", content: "# My Project\n\nA sample project for Claude Cowork." },
+            { name: "README.md", type: "file", path: "/project/README.md", content: "# My Project\n\nA sample project for Shadow Cowork." },
           ]
         }
       ],
@@ -141,7 +141,7 @@ export const ClaudeCowork = ({ isOpen, onClose, onInsertToChat }: ClaudeCoworkPr
   
   // Terminal state
   const [terminalLines, setTerminalLines] = useState<TerminalLine[]>([
-    { type: "system", content: "Claude Cowork Terminal v1.0", timestamp: new Date() },
+    { type: "system", content: "Shadow Cowork Terminal v1.0", timestamp: new Date() },
     { type: "system", content: "Type 'help' for available commands", timestamp: new Date() },
   ]);
   const [currentCommand, setCurrentCommand] = useState("");
@@ -962,7 +962,7 @@ Provide the code completion to insert at █:`
                 <Bot className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="font-semibold">Claude Cowork</h2>
+                <h2 className="font-semibold">Shadow Cowork</h2>
                 <p className="text-xs text-muted-foreground">Semi-autonomous file & terminal operations</p>
               </div>
             </div>
