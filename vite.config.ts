@@ -8,13 +8,10 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
 
-  const isProd = mode === 'production';
-  const supabaseUrl = env.VITE_SUPABASE_URL || (!isProd ? 'https://axsudmhjpfzffcicfvuj.supabase.co' : '');
-  const supabaseAnon = env.VITE_SUPABASE_PUBLISHABLE_KEY || (!isProd ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4c3VkbWhqcGZ6ZmZjaWNmdnVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzY2NTgsImV4cCI6MjA4MDg1MjY1OH0.Jdbo00BVo0QqChuZCxwHYwzdyJK4oBzCxelv1hILEZ4' : '');
-
-  if (isProd && (!supabaseUrl || !supabaseAnon)) {
-    throw new Error('VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY must be set in production builds');
-  }
+  // Use environment variables with fallbacks for both dev and prod
+  // Lovable Cloud auto-injects these at build time
+  const supabaseUrl = env.VITE_SUPABASE_URL || 'https://axsudmhjpfzffcicfvuj.supabase.co';
+  const supabaseAnon = env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4c3VkbWhqcGZ6ZmZjaWNmdnVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzY2NTgsImV4cCI6MjA4MDg1MjY1OH0.Jdbo00BVo0QqChuZCxwHYwzdyJK4oBzCxelv1hILEZ4';
   
   return {
     server: {
