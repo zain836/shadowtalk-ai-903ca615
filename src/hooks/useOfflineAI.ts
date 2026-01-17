@@ -61,6 +61,12 @@ export const useOfflineAI = () => {
   const engineRef = useRef<any>(null);
   const initPromiseRef = useRef<Promise<boolean> | null>(null);
   const autoInitAttempted = useRef(false);
+  const stateRef = useRef(state);
+  
+  // Keep stateRef in sync with state
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   // Check WebGPU support and auto-initialize when offline
   useEffect(() => {
@@ -122,11 +128,12 @@ export const useOfflineAI = () => {
 
   // Internal initialize function that doesn't depend on state
   const initializeModelInternal = async (): Promise<boolean> => {
-    // Get current state
-    const currentState = state;
+    // Get current state from ref
+    const currentState = stateRef.current;
     
     // If in fallback mode, no need to load model
     if (currentState.fallbackMode) {
+      console.log('[Offline AI] Already in fallback mode, ready to respond');
       return true;
     }
 
@@ -142,6 +149,7 @@ export const useOfflineAI = () => {
 
     if (!currentState.isSupported) {
       // Switch to fallback mode
+      console.log('[Offline AI] WebGPU not supported, enabling fallback mode');
       setState(prev => ({ ...prev, fallbackMode: true, isModelLoaded: true }));
       return true;
     }
@@ -309,37 +317,42 @@ export const useOfflineAI = () => {
     return FALLBACK_RESPONSES.default[Math.floor(Math.random() * FALLBACK_RESPONSES.default.length)];
   };
 
-  // Generate response
+  // Generate response - use ref to always get latest state
   const generateResponse = useCallback(async (
     messages: WebLLMMessage[],
     onChunk?: (chunk: string) => void
   ): Promise<string> => {
-    // If in fallback mode, use simple responses
-    if (state.fallbackMode) {
+    const currentState = stateRef.current;
+    console.log('[Offline AI] generateResponse called, fallbackMode:', currentState.fallbackMode, 'isModelLoaded:', currentState.isModelLoaded);
+    
+    // If in fallback mode, use simple responses immediately
+    if (currentState.fallbackMode || !currentState.isSupported) {
+      console.log('[Offline AI] Using fallback response');
       const response = generateFallbackResponse(messages);
       if (onChunk) {
-        // Simulate streaming
-        for (let i = 0; i < response.length; i += 3) {
-          onChunk(response.substring(i, i + 3));
-          await new Promise(resolve => setTimeout(resolve, 20));
+        // Simulate streaming for natural feel
+        const words = response.split(' ');
+        for (const word of words) {
+          onChunk(word + ' ');
+          await new Promise(resolve => setTimeout(resolve, 30));
         }
       }
       return response;
     }
 
+    // Try to initialize model if not loaded
     if (!engineRef.current) {
       const loaded = await initializeModel();
-      if (!loaded && !state.fallbackMode) {
-        throw new Error('Failed to load AI model');
-      }
+      const stateAfterInit = stateRef.current;
       
-      // If we switched to fallback during init
-      if (state.fallbackMode) {
+      if (!loaded || stateAfterInit.fallbackMode) {
+        console.log('[Offline AI] Model failed to load, using fallback');
         const response = generateFallbackResponse(messages);
         if (onChunk) {
-          for (let i = 0; i < response.length; i += 3) {
-            onChunk(response.substring(i, i + 3));
-            await new Promise(resolve => setTimeout(resolve, 20));
+          const words = response.split(' ');
+          for (const word of words) {
+            onChunk(word + ' ');
+            await new Promise(resolve => setTimeout(resolve, 30));
           }
         }
         return response;
@@ -386,17 +399,18 @@ export const useOfflineAI = () => {
       console.error('[Offline AI] Error generating response:', e);
       
       // Fall back to simple responses on error
-      setState(prev => ({ ...prev, fallbackMode: true }));
+      setState(prev => ({ ...prev, fallbackMode: true, isModelLoaded: true }));
       const response = generateFallbackResponse(messages);
       if (onChunk) {
-        for (let i = 0; i < response.length; i += 3) {
-          onChunk(response.substring(i, i + 3));
-          await new Promise(resolve => setTimeout(resolve, 20));
+        const words = response.split(' ');
+        for (const word of words) {
+          onChunk(word + ' ');
+          await new Promise(resolve => setTimeout(resolve, 30));
         }
       }
       return response;
     }
-  }, [initializeModel, state.fallbackMode]);
+  }, [initializeModel]);
 
   // Unload model to free memory
   const unloadModel = useCallback(async () => {

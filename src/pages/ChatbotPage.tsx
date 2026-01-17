@@ -152,35 +152,71 @@ const ChatbotPage = () => {
 
   // Auto-initialize offline AI when going offline
   useEffect(() => {
-    if (isOffline && offlineAI.isSupported && !offlineAI.isModelLoaded && !offlineAI.isLoading) {
+    if (isOffline && !offlineAI.isModelLoaded && !offlineAI.isLoading) {
       console.log('[ChatbotPage] Auto-initializing offline AI...');
       offlineAI.initializeModel();
     }
-  }, [isOffline, offlineAI.isSupported, offlineAI.isModelLoaded, offlineAI.isLoading]);
+  }, [isOffline, offlineAI.isModelLoaded, offlineAI.isLoading]);
 
-  // Load cached conversations when offline
+  // Load cached conversations from IndexedDB when offline
   useEffect(() => {
-    if (isOffline && cachedConversations.length > 0 && messages.length <= 1) {
-      console.log('[ChatbotPage] Loading cached conversations for offline mode');
-      // Load the most recent cached conversation
-      const mostRecent = cachedConversations[0];
-      if (mostRecent && mostRecent.messages.length > 0) {
-        const loadedMessages: Message[] = mostRecent.messages.map(m => ({
-          id: m.id,
-          type: m.type,
-          content: m.content,
-          timestamp: new Date(m.timestamp)
-        }));
-        setMessages(loadedMessages);
-        setCurrentConversationId(mostRecent.id);
-        setConversations(cachedConversations.map(c => ({
-          id: c.id,
-          title: c.title,
-          created_at: c.cachedAt
-        })));
+    const loadOfflineData = async () => {
+      if (!isOffline || !offlineChatHistory.isReady) return;
+      
+      console.log('[ChatbotPage] Loading cached conversations from IndexedDB for offline mode');
+      
+      try {
+        const cachedConvs = await offlineChatHistory.getCachedConversations();
+        
+        if (cachedConvs.length > 0) {
+          // Set conversations list
+          setConversations(cachedConvs.map(c => ({
+            id: c.id,
+            title: c.title,
+            created_at: c.created_at
+          })));
+          
+          // Load the most recent conversation's messages
+          const mostRecent = cachedConvs[0];
+          const cachedMessages = await offlineChatHistory.getCachedMessages(mostRecent.id);
+          
+          if (cachedMessages.length > 0) {
+            const loadedMessages: Message[] = cachedMessages.map(m => ({
+              id: m.id,
+              type: m.type,
+              content: m.content,
+              timestamp: m.timestamp
+            }));
+            setMessages(loadedMessages);
+            setCurrentConversationId(mostRecent.id);
+            console.log('[ChatbotPage] Loaded', loadedMessages.length, 'cached messages');
+          } else {
+            // No messages, show welcome
+            setCurrentConversationId(mostRecent.id);
+            setMessages([{ id: 'welcome', type: 'ai', content: getWelcomeMessage(), timestamp: new Date() }]);
+          }
+        } else {
+          // No cached conversations, create a local one
+          const newConvId = crypto.randomUUID();
+          const newConv = {
+            id: newConvId,
+            title: 'Offline Conversation',
+            created_at: new Date().toISOString()
+          };
+          await offlineChatHistory.cacheConversation(newConv);
+          setConversations([newConv]);
+          setCurrentConversationId(newConvId);
+          setMessages([{ id: 'welcome', type: 'ai', content: getWelcomeMessage(), timestamp: new Date() }]);
+        }
+      } catch (e) {
+        console.error('[ChatbotPage] Failed to load offline data:', e);
+        // Fallback: just show welcome message
+        setMessages([{ id: 'welcome', type: 'ai', content: getWelcomeMessage(), timestamp: new Date() }]);
       }
-    }
-  }, [isOffline, cachedConversations]);
+    };
+    
+    loadOfflineData();
+  }, [isOffline, offlineChatHistory.isReady]);
 
   // Initialize
   useEffect(() => {
@@ -266,6 +302,18 @@ const ChatbotPage = () => {
     
     if (data && !error) {
       setConversations(data);
+      
+      // Cache conversations to IndexedDB for offline access
+      if (offlineChatHistory.isReady) {
+        const toCache = data.map(c => ({
+          id: c.id,
+          title: c.title || 'Untitled',
+          created_at: c.created_at,
+          updated_at: c.updated_at
+        }));
+        offlineChatHistory.bulkCacheConversations(toCache);
+      }
+      
       if (data.length > 0 && !currentConversationId) {
         loadConversation(data[0].id);
       } else if (data.length === 0) {
@@ -276,6 +324,21 @@ const ChatbotPage = () => {
 
   const loadConversation = async (conversationId: string) => {
     setCurrentConversationId(conversationId);
+    
+    // If offline, load from IndexedDB
+    if (isOffline && offlineChatHistory.isReady) {
+      const cachedMessages = await offlineChatHistory.getCachedMessages(conversationId);
+      if (cachedMessages.length > 0) {
+        setMessages(cachedMessages.map(m => ({
+          id: m.id,
+          type: m.type,
+          content: m.content,
+          timestamp: m.timestamp
+        })));
+        return;
+      }
+    }
+    
     const { data, error } = await supabase
       .from('messages')
       .select('*')
@@ -289,6 +352,17 @@ const ChatbotPage = () => {
         content: m.content,
         timestamp: new Date(m.created_at)
       }));
+      
+      // Cache messages to IndexedDB for offline access
+      if (offlineChatHistory.isReady && loadedMessages.length > 0) {
+        const toCache = loadedMessages.map(m => ({
+          id: m.id,
+          type: m.type,
+          content: m.content,
+          timestamp: m.timestamp
+        }));
+        offlineChatHistory.bulkCacheMessages(conversationId, toCache);
+      }
       
       setMessages(loadedMessages.length === 0 ? [{
         id: 'welcome',
@@ -411,50 +485,46 @@ const ChatbotPage = () => {
     abortControllerRef.current = new AbortController();
     await saveMessage(messageToSend, 'user');
 
-    // Offline mode - use local AI if available
+    // Offline mode - use local AI
     if (isOffline) {
-      if (offlineAI.isModelLoaded || offlineAI.isSupported) {
-        try {
-          // Initialize model if needed
-          if (!offlineAI.isModelLoaded) {
-            const loaded = await offlineAI.initializeModel();
-            if (!loaded) {
-              // Fall back to basic offline responses
-              const offlineResponse = getOfflineResponse(messageToSend);
-              setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: offlineResponse, timestamp: new Date() }]);
-              setIsLoading(false);
-              return;
-            }
-          }
-          
-          // Use local AI for response
-          const aiMessageId = crypto.randomUUID();
-          setMessages(prev => [...prev, { id: aiMessageId, type: "ai", content: "", timestamp: new Date() }]);
-          
-          const offlineMessages = messages
-            .filter(m => m.id !== 'welcome')
-            .map(m => ({ role: m.type === 'user' ? 'user' as const : 'assistant' as const, content: m.content }));
-          offlineMessages.push({ role: 'user' as const, content: messageToSend });
-          
-          await offlineAI.generateResponse(offlineMessages, (chunk) => {
-            setMessages(prev => prev.map(m => 
-              m.id === aiMessageId ? { ...m, content: m.content + chunk } : m
-            ));
+      console.log('[ChatbotPage] Offline mode detected, using local AI');
+      
+      try {
+        // Create AI message placeholder for streaming
+        const aiMessageId = crypto.randomUUID();
+        setMessages(prev => [...prev, { id: aiMessageId, type: "ai", content: "", timestamp: new Date() }]);
+        
+        // Build message history for AI
+        const offlineMessages = messages
+          .filter(m => m.id !== 'welcome')
+          .map(m => ({ role: m.type === 'user' ? 'user' as const : 'assistant' as const, content: m.content }));
+        offlineMessages.push({ role: 'user' as const, content: messageToSend });
+        
+        // Generate response with streaming
+        const fullResponse = await offlineAI.generateResponse(offlineMessages, (chunk) => {
+          setMessages(prev => prev.map(m => 
+            m.id === aiMessageId ? { ...m, content: m.content + chunk } : m
+          ));
+        });
+        
+        // Cache the messages to IndexedDB
+        if (offlineChatHistory.isReady && currentConversationId) {
+          await offlineChatHistory.cacheMessage(currentConversationId, userMessage);
+          await offlineChatHistory.cacheMessage(currentConversationId, {
+            id: aiMessageId,
+            type: 'ai',
+            content: fullResponse,
+            timestamp: new Date()
           });
-          
-          setIsLoading(false);
-          return;
-        } catch (e) {
-          console.error('Offline AI error:', e);
-          // Fall back to basic responses
-          const offlineResponse = getOfflineResponse(messageToSend);
-          setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: offlineResponse, timestamp: new Date() }]);
-          setIsLoading(false);
-          return;
         }
-      } else if (isOfflineModeAvailable) {
-        const offlineResponse = getOfflineResponse(messageToSend);
-        setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: offlineResponse, timestamp: new Date() }]);
+        
+        setIsLoading(false);
+        return;
+      } catch (e) {
+        console.error('[ChatbotPage] Offline AI error:', e);
+        // Even on error, provide a fallback response
+        const fallbackResponse = "I'm having trouble processing that request offline. Please try a simpler question or connect to the internet for full functionality.";
+        setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: fallbackResponse, timestamp: new Date() }]);
         setIsLoading(false);
         return;
       }
