@@ -390,6 +390,60 @@ const ChatbotPage = () => {
     return messages[personality];
   };
 
+  // Generate smart, short conversation title from message content
+  const generateSmartTitle = (content: string): string => {
+    const text = content.trim();
+    
+    // Common action words to identify intent
+    const actionPatterns: [RegExp, string][] = [
+      [/^(help|assist|can you|could you|please|i need)/i, ''],
+      [/\b(create|make|build|generate|write)\s+(?:a\s+|an\s+)?(\w+)/i, 'Create $2'],
+      [/\b(explain|what is|what are|what's|define)\s+(.{1,20})/i, 'About $2'],
+      [/\b(fix|debug|solve|resolve)\s+(.{1,20})/i, 'Fix $2'],
+      [/\b(summarize|summary of)\s+(.{1,20})/i, 'Summary: $2'],
+      [/\b(translate)\s+(.{1,20})/i, 'Translate $2'],
+      [/\b(code|script|program|function)\s+(?:for\s+)?(.{1,15})/i, 'Code: $2'],
+      [/\b(analyze|analysis)\s+(.{1,20})/i, 'Analysis: $2'],
+      [/\b(compare|vs|versus)\s+(.{1,20})/i, 'Compare $2'],
+      [/\b(list|show|give me)\s+(.{1,20})/i, '$2'],
+      [/\b(how to|how do|how can)\s+(.{1,20})/i, 'How to $2'],
+      [/\b(why|reason)\s+(.{1,20})/i, 'Why $2'],
+    ];
+    
+    // Try pattern matching first
+    for (const [pattern, template] of actionPatterns) {
+      const match = text.match(pattern);
+      if (match && template) {
+        let title = template.replace('$2', match[2] || '').trim();
+        // Capitalize first letter and clean up
+        title = title.charAt(0).toUpperCase() + title.slice(1);
+        if (title.length > 25) title = title.slice(0, 22) + '...';
+        return title;
+      }
+    }
+    
+    // Extract key words (nouns, topics) from the message
+    const stopWords = new Set(['i', 'me', 'my', 'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'can', 'may', 'might', 'must', 'shall', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'and', 'but', 'if', 'or', 'because', 'until', 'while', 'about', 'this', 'that', 'these', 'those', 'what', 'which', 'who', 'whom', 'please', 'help', 'want', 'need', 'like', 'know', 'think', 'make', 'get', 'go', 'see', 'come', 'take', 'use', 'find', 'give', 'tell', 'try', 'ask', 'work', 'seem', 'feel', 'let', 'put', 'keep', 'begin', 'show', 'hear', 'play', 'run', 'move', 'live', 'believe', 'hold', 'bring', 'happen', 'write', 'provide', 'sit', 'stand', 'lose', 'pay', 'meet', 'include', 'continue', 'set', 'learn', 'change', 'lead', 'understand', 'watch', 'follow', 'stop', 'create', 'speak', 'read', 'allow', 'add', 'spend', 'grow', 'open', 'walk', 'win', 'offer', 'remember', 'love', 'consider', 'appear', 'buy', 'wait', 'serve', 'die', 'send', 'expect', 'build', 'stay', 'fall', 'cut', 'reach', 'kill', 'remain', 'suggest', 'raise', 'pass', 'sell', 'require', 'report', 'decide', 'pull', 'you', 'your']);
+    
+    const words = text
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 2 && !stopWords.has(w.toLowerCase()));
+    
+    if (words.length === 0) {
+      // Fallback: use first few words
+      const firstWords = text.split(/\s+/).slice(0, 3).join(' ');
+      return firstWords.length > 25 ? firstWords.slice(0, 22) + '...' : firstWords;
+    }
+    
+    // Take first 2-3 meaningful words
+    const keyWords = words.slice(0, 3);
+    let title = keyWords.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    
+    if (title.length > 25) title = title.slice(0, 22) + '...';
+    return title;
+  };
+
   const createNewConversation = async () => {
     if (!user) return;
     const { data, error } = await supabase
@@ -431,8 +485,9 @@ const ChatbotPage = () => {
       .select()
       .single();
     
+    // Auto-generate smart title on first user message
     if (role === 'user' && messages.length <= 1) {
-      const title = content.slice(0, 50) + (content.length > 50 ? '...' : '');
+      const title = generateSmartTitle(content);
       await supabase.from('conversations').update({ title, updated_at: new Date().toISOString() }).eq('id', currentConversationId);
       setConversations(prev => prev.map(c => c.id === currentConversationId ? { ...c, title } : c));
     }
