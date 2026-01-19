@@ -1,4 +1,4 @@
-import { Code, Languages, FileText, Bug, Lightbulb, Image, MessageSquare, Pen, Music, Brain, Leaf, Shield, Search, Video, Camera, Table, Calculator, GraduationCap, Mail, FileCheck } from "lucide-react";
+import { Code, Languages, FileText, Bug, Lightbulb, Image, MessageSquare, Pen, Music, Brain, Leaf, Shield, Search, Video, Camera, Table, Calculator, GraduationCap, Mail, FileCheck, Lock, Sparkles, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,6 +7,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { useFeatureGating, FEATURES } from "@/hooks/useFeatureGating";
+import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export type ChatMode = 
   | "general"
@@ -37,7 +41,20 @@ interface ModeSelectorProps {
   disabled?: boolean;
 }
 
-const modes: { value: ChatMode; label: string; icon: React.ReactNode; prompt: string; color: string }[] = [
+// Map modes to their required feature keys
+const modeFeatureMap: Partial<Record<ChatMode, string>> = {
+  research: "pceEngine",
+  cpf: "pceEngine", 
+  ppag: "lifeEventSuggestions",
+  hsca: "stealthMode",
+  video: "imageGeneration",
+  camera: "imageGeneration",
+  math: "advancedCodeGeneration",
+  organize: "documentGeneration",
+  academic: "pceEngine",
+};
+
+const modes: { value: ChatMode; label: string; icon: React.ReactNode; prompt: string; color: string; tier?: string }[] = [
   { 
     value: "general", 
     label: "General Chat", 
@@ -113,35 +130,40 @@ const modes: { value: ChatMode; label: string; icon: React.ReactNode; prompt: st
     label: "🧮 Math & Science", 
     icon: <Calculator className="h-4 w-4" />,
     prompt: "You are in math and science mode. Help with logic puzzles, mathematical equations, and scientific concepts. Use LaTeX notation for mathematical expressions (wrap in $...$ for inline or $$...$$ for display). For example: $$\\sigma = \\sqrt{\\frac{\\sum (x_i - \\mu)^2}{N}}$$. Explain step-by-step solutions clearly.",
-    color: "text-indigo-500"
+    color: "text-indigo-500",
+    tier: "premium"
   },
   { 
     value: "video", 
     label: "🎬 Create Video", 
     icon: <Video className="h-4 w-4" />,
     prompt: "You are in video creation mode. Help users create prompts for AI video generation. Describe scenes, movements, camera angles, and atmosphere in detail.",
-    color: "text-fuchsia-500"
+    color: "text-fuchsia-500",
+    tier: "premium"
   },
   { 
     value: "camera", 
     label: "📷 Camera Analysis", 
     icon: <Camera className="h-4 w-4" />,
     prompt: "You are in camera analysis mode. Analyze images from the camera and provide helpful information about what you see. Identify objects, plants, animals, text, products, or problems that need fixing.",
-    color: "text-teal-500"
+    color: "text-teal-500",
+    tier: "premium"
   },
   { 
     value: "organize", 
     label: "📊 Organize Data", 
     icon: <Table className="h-4 w-4" />,
     prompt: "You are in data organization mode. Turn messy notes, lists, and unstructured text into clean, structured tables, CSV format, or JSON. Ask clarifying questions about the desired output format.",
-    color: "text-amber-500"
+    color: "text-amber-500",
+    tier: "premium"
   },
   { 
     value: "academic", 
     label: "🎓 Academic", 
     icon: <GraduationCap className="h-4 w-4" />,
     prompt: "You are in academic mode. Synthesize complex topics, explain scientific concepts, and provide historical context. Cite sources when possible and maintain academic rigor in explanations.",
-    color: "text-sky-500"
+    color: "text-sky-500",
+    tier: "premium"
   },
   { 
     value: "email", 
@@ -162,28 +184,32 @@ const modes: { value: ChatMode; label: string; icon: React.ReactNode; prompt: st
     label: "📚 Deep Research", 
     icon: <Search className="h-4 w-4" />,
     prompt: "You are in deep research mode. Conduct comprehensive research using multiple search queries, synthesize information from various sources, and provide in-depth analysis with citations.",
-    color: "text-violet-500"
+    color: "text-violet-500",
+    tier: "premium"
   },
   { 
     value: "cpf", 
     label: "🌊 Cognitive Filter", 
     icon: <Brain className="h-4 w-4" />,
     prompt: "You are in Cognitive Pollution Filter (CPF) mode. Help users manage digital overload by analyzing tasks, prioritizing them by cognitive load, and summarizing complex information into actionable items.",
-    color: "text-cyan-400"
+    color: "text-cyan-400",
+    tier: "elite"
   },
   { 
     value: "ppag", 
     label: "🌍 Eco Actions", 
     icon: <Leaf className="h-4 w-4" />,
     prompt: "You are in Planetary Action Guide (PPAG) mode. Provide hyper-personalized, location-specific environmental actions with high impact. Calculate environmental return on investment for each action.",
-    color: "text-emerald-500"
+    color: "text-emerald-500",
+    tier: "elite"
   },
   { 
     value: "hsca", 
     label: "🔒 Security Audit", 
     icon: <Shield className="h-4 w-4" />,
     prompt: "You are the Hyper-Security Contextual Auditor (HSCA). Analyze code for security vulnerabilities, trace data flows across stacks, generate proof-of-concept exploits, and provide secure code remediation.",
-    color: "text-red-500"
+    color: "text-red-500",
+    tier: "elite"
   },
 ];
 
@@ -192,80 +218,112 @@ export const getModePrompt = (mode: ChatMode): string => {
 };
 
 export const ModeSelector = ({ mode, onModeChange, disabled }: ModeSelectorProps) => {
+  const { canAccess, getUpgradeMessage, isPremiumOrHigher, isElite } = useFeatureGating();
+  const { toast } = useToast();
   const currentMode = modes.find(m => m.value === mode) || modes[0];
-const standardModes = modes.filter(m => !['cpf', 'ppag', 'hsca', 'research', 'math', 'video', 'camera', 'organize', 'academic'].includes(m.value));
+  const standardModes = modes.filter(m => !['cpf', 'ppag', 'hsca', 'research', 'math', 'video', 'camera', 'organize', 'academic'].includes(m.value));
   const specialModes = modes.filter(m => ['research', 'math', 'video', 'camera', 'organize', 'academic'].includes(m.value));
   const advancedModes = modes.filter(m => ['cpf', 'ppag', 'hsca'].includes(m.value));
 
+  const handleModeSelect = (selectedMode: ChatMode) => {
+    const featureKey = modeFeatureMap[selectedMode];
+    
+    if (featureKey && !canAccess(featureKey)) {
+      toast({
+        title: "Premium Feature",
+        description: getUpgradeMessage(featureKey),
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    onModeChange(selectedMode);
+  };
+
+  const renderModeItem = (m: typeof modes[0], showLock: boolean = false) => {
+    const featureKey = modeFeatureMap[m.value];
+    const isLocked = featureKey && !canAccess(featureKey);
+    
+    return (
+      <DropdownMenuItem
+        key={m.value}
+        onClick={() => handleModeSelect(m.value)}
+        className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-md cursor-pointer ${
+          mode === m.value 
+            ? "bg-primary/10 border border-primary/30" 
+            : "hover:bg-muted"
+        } ${isLocked ? "opacity-70" : ""}`}
+      >
+        <div className="flex items-center gap-2">
+          <span className={m.color}>{m.icon}</span>
+          <span className="font-medium">{m.label}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {m.tier === "premium" && !isPremiumOrHigher && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 gap-0.5">
+              <Sparkles className="h-2.5 w-2.5" />
+              PRO
+            </Badge>
+          )}
+          {m.tier === "elite" && !isElite && (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 gap-0.5 bg-gradient-to-r from-amber-500/20 to-orange-500/20">
+              <Crown className="h-2.5 w-2.5 text-amber-500" />
+              ELITE
+            </Badge>
+          )}
+          {isLocked && <Lock className="h-3 w-3 text-muted-foreground" />}
+        </div>
+      </DropdownMenuItem>
+    );
+  };
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="gap-2 h-9 px-3 border-border/50 hover:border-primary/50 transition-colors"
-          disabled={disabled}
-        >
-          <span className={currentMode.color}>{currentMode.icon}</span>
-          <span className="hidden sm:inline text-sm font-medium">{currentMode.label}</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-56 p-1">
-        <div className="grid grid-cols-2 gap-1 p-1">
-          {standardModes.map((m) => (
-            <DropdownMenuItem
-              key={m.value}
-              onClick={() => onModeChange(m.value)}
-              className={`flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer text-xs ${
-                mode === m.value ? "bg-primary/10 border border-primary/30" : "hover:bg-muted"
-              }`}
-            >
-              <span className={m.color}>{m.icon}</span>
-              <span className="truncate">{m.label}</span>
-            </DropdownMenuItem>
-          ))}
-        </div>
-        <DropdownMenuSeparator className="my-1" />
-        <div className="px-2 py-1.5 text-xs text-muted-foreground font-semibold uppercase tracking-wide">
-          Advanced Features
-        </div>
-        <div className="p-1 space-y-1">
-          {specialModes.map((m) => (
-            <DropdownMenuItem
-              key={m.value}
-              onClick={() => onModeChange(m.value)}
-              className={`flex items-center gap-2 px-3 py-2.5 rounded-md cursor-pointer ${
-                mode === m.value 
-                  ? "bg-primary/10 border border-primary/30" 
-                  : "hover:bg-muted"
-              }`}
-            >
-              <span className={m.color}>{m.icon}</span>
-              <span className="font-medium">{m.label}</span>
-            </DropdownMenuItem>
-          ))}
-        </div>
-        <DropdownMenuSeparator className="my-1" />
-        <div className="px-2 py-1.5 text-xs text-muted-foreground font-semibold uppercase tracking-wide">
-          Pro Features
-        </div>
-        <div className="p-1 space-y-1">
-          {advancedModes.map((m) => (
-            <DropdownMenuItem
-              key={m.value}
-              onClick={() => onModeChange(m.value)}
-              className={`flex items-center gap-2 px-3 py-2.5 rounded-md cursor-pointer ${
-                mode === m.value 
-                  ? "bg-primary/10 border border-primary/30" 
-                  : "hover:bg-muted"
-              }`}
-            >
-              <span className={m.color}>{m.icon}</span>
-              <span className="font-medium">{m.label}</span>
-            </DropdownMenuItem>
-          ))}
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <TooltipProvider>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-2 h-9 px-3 border-border/50 hover:border-primary/50 transition-colors"
+            disabled={disabled}
+          >
+            <span className={currentMode.color}>{currentMode.icon}</span>
+            <span className="hidden sm:inline text-sm font-medium">{currentMode.label}</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-64 p-1">
+          <div className="grid grid-cols-2 gap-1 p-1">
+            {standardModes.map((m) => (
+              <DropdownMenuItem
+                key={m.value}
+                onClick={() => handleModeSelect(m.value)}
+                className={`flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer text-xs ${
+                  mode === m.value ? "bg-primary/10 border border-primary/30" : "hover:bg-muted"
+                }`}
+              >
+                <span className={m.color}>{m.icon}</span>
+                <span className="truncate">{m.label}</span>
+              </DropdownMenuItem>
+            ))}
+          </div>
+          <DropdownMenuSeparator className="my-1" />
+          <div className="px-2 py-1.5 text-xs text-muted-foreground font-semibold uppercase tracking-wide flex items-center gap-2">
+            <Sparkles className="h-3 w-3 text-primary" />
+            Advanced Features
+          </div>
+          <div className="p-1 space-y-1">
+            {specialModes.map((m) => renderModeItem(m, true))}
+          </div>
+          <DropdownMenuSeparator className="my-1" />
+          <div className="px-2 py-1.5 text-xs text-muted-foreground font-semibold uppercase tracking-wide flex items-center gap-2">
+            <Crown className="h-3 w-3 text-amber-500" />
+            Pro Features
+          </div>
+          <div className="p-1 space-y-1">
+            {advancedModes.map((m) => renderModeItem(m, true))}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </TooltipProvider>
   );
 };

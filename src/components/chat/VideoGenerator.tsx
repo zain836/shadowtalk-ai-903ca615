@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Video, Sparkles, Loader2, Download, X, Play, Pause } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Video, Sparkles, Loader2, Download, X, Play, Pause, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
+import { useFeatureGating } from '@/hooks/useFeatureGating';
 
 interface VideoGeneratorProps {
   isOpen: boolean;
@@ -16,6 +19,8 @@ interface VideoGeneratorProps {
   dailyLimit?: number;
   usedToday?: number;
 }
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 export const VideoGenerator = ({ 
   isOpen, 
@@ -29,65 +34,88 @@ export const VideoGenerator = ({
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [progressStage, setProgressStage] = useState('');
   const [generatedVideo, setGeneratedVideo] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { checkAccess, isPremiumOrHigher } = useFeatureGating();
 
   const remainingUses = dailyLimit - usedToday;
 
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
       toast({ title: 'Please enter a prompt', variant: 'destructive' });
       return;
     }
 
+    // Check feature access
+    if (!checkAccess("imageGeneration")) return;
+
     if (remainingUses <= 0) {
       toast({ 
         title: 'Daily limit reached', 
-        description: 'You can generate up to 2 videos per day.',
+        description: 'You can generate up to 2 videos per day. Upgrade for more.',
         variant: 'destructive' 
+      });
+      return;
+    }
+
+    if (!navigator.onLine) {
+      toast({
+        title: "You're offline",
+        description: "Video generation requires an internet connection.",
+        variant: 'destructive'
       });
       return;
     }
 
     setIsGenerating(true);
     setProgress(0);
+    setError(null);
 
-    // Simulate video generation progress (in production, this would be real API calls)
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 95) {
-          clearInterval(progressInterval);
-          return 95;
-        }
-        return prev + Math.random() * 15;
-      });
-    }, 500);
+    const stages = [
+      { text: "Analyzing prompt...", progress: 10 },
+      { text: "Preparing scene composition...", progress: 25 },
+      { text: "Generating video frames...", progress: 50 },
+      { text: "Applying motion...", progress: 75 },
+      { text: "Rendering final video...", progress: 90 },
+    ];
 
     try {
-      // Simulated video generation - in production this would call Veo API
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      for (const stage of stages) {
+        setProgressStage(stage.text);
+        setProgress(stage.progress);
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
       
-      clearInterval(progressInterval);
+      setProgressStage("Finalizing...");
+      setProgress(95);
+      
+      // In production, this would call a real video generation API
+      // For now, simulate with a sample video
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       setProgress(100);
+      setProgressStage("Complete!");
       
-      // In production, this would be the actual generated video URL
       const mockVideoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
       setGeneratedVideo(mockVideoUrl);
       
       toast({ title: 'Video generated successfully!' });
       onVideoGenerated?.(mockVideoUrl, prompt);
-    } catch (error) {
-      clearInterval(progressInterval);
+    } catch (err: any) {
+      console.error("Video generation error:", err);
+      setError(err.message || "Video generation failed. Please try again.");
       toast({ 
         title: 'Video generation failed', 
-        description: 'Please try again later.',
+        description: err.message || 'Please try again later.',
         variant: 'destructive' 
       });
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, [prompt, remainingUses, checkAccess, toast, onVideoGenerated]);
 
   const handleDownload = () => {
     if (generatedVideo) {
