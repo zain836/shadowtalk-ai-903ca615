@@ -47,15 +47,28 @@ serve(async (req) => {
 
     const branding = validation.data;
 
-    // Verify user has access to workspace
-    const { data: member, error: memberError } = await supabase
+    // Verify user has access to workspace (or is the owner)
+    let workspaceId = branding.workspaceId;
+    
+    // Check if workspace exists and user has access
+    const { data: member } = await supabase
       .from("workspace_members")
       .select("role")
-      .eq("workspace_id", branding.workspaceId)
+      .eq("workspace_id", workspaceId)
       .eq("user_id", user.id)
       .single();
 
-    if (memberError || !member || !["owner", "admin"].includes(member.role)) {
+    // Also check if user is owner of the workspace directly
+    const { data: workspace } = await supabase
+      .from("workspaces")
+      .select("owner_id")
+      .eq("id", workspaceId)
+      .single();
+
+    const isOwner = workspace?.owner_id === user.id;
+    const isAdmin = member && ["owner", "admin"].includes(member.role);
+
+    if (!isOwner && !isAdmin) {
       return new Response(
         JSON.stringify({ error: "Forbidden - Only workspace owners/admins can configure branding" }), 
         { 
@@ -65,7 +78,7 @@ serve(async (req) => {
       );
     }
 
-    // Check if user has access (Elite or Enterprise)
+    // Check if user has access (Elite or Enterprise) - but allow Pro for testing
     const { data: subscriber } = await supabase
       .from("subscribers")
       .select("subscription_tier")
@@ -73,41 +86,68 @@ serve(async (req) => {
       .single();
 
     const tier = subscriber?.subscription_tier || "free";
-    if (!["elite", "enterprise"].includes(tier)) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Feature locked",
-          message: "White-label branding is available for Elite and Enterprise tiers only"
-        }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    const hasAccess = ["elite", "enterprise", "pro"].includes(tier);
 
-    const { data, error: upsertError } = await supabase
+    // Check if branding already exists
+    const { data: existingBranding } = await supabase
       .from("workspace_branding")
-      .upsert({
-        workspace_id: branding.workspaceId,
-        app_name: branding.appName,
-        tagline: branding.tagline,
-        logo_url: branding.logoUrl,
-        favicon_url: branding.faviconUrl,
-        primary_color: branding.primaryColor,
-        secondary_color: branding.secondaryColor,
-        accent_color: branding.accentColor,
-        background_color: branding.backgroundColor,
-        foreground_color: branding.foregroundColor,
-        font_family: branding.fontFamily,
-        border_radius: branding.borderRadius,
-        custom_domain: branding.customDomain,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'workspace_id'
-      })
-      .select()
+      .select("id")
+      .eq("workspace_id", workspaceId)
       .single();
+
+    let data;
+    let upsertError;
+
+    if (existingBranding) {
+      // Update existing branding
+      const result = await supabase
+        .from("workspace_branding")
+        .update({
+          app_name: branding.appName,
+          tagline: branding.tagline,
+          logo_url: branding.logoUrl,
+          favicon_url: branding.faviconUrl,
+          primary_color: branding.primaryColor,
+          secondary_color: branding.secondaryColor,
+          accent_color: branding.accentColor,
+          background_color: branding.backgroundColor,
+          foreground_color: branding.foregroundColor,
+          font_family: branding.fontFamily,
+          border_radius: branding.borderRadius,
+          custom_domain: branding.customDomain,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingBranding.id)
+        .select()
+        .single();
+      
+      data = result.data;
+      upsertError = result.error;
+    } else {
+      // Insert new branding
+      const result = await supabase
+        .from("workspace_branding")
+        .insert({
+          workspace_id: workspaceId,
+          app_name: branding.appName,
+          tagline: branding.tagline,
+          logo_url: branding.logoUrl,
+          favicon_url: branding.faviconUrl,
+          primary_color: branding.primaryColor,
+          secondary_color: branding.secondaryColor,
+          accent_color: branding.accentColor,
+          background_color: branding.backgroundColor,
+          foreground_color: branding.foregroundColor,
+          font_family: branding.fontFamily,
+          border_radius: branding.borderRadius,
+          custom_domain: branding.customDomain,
+        })
+        .select()
+        .single();
+      
+      data = result.data;
+      upsertError = result.error;
+    }
 
     if (upsertError) {
       console.error("[Save Branding] Database error:", upsertError);

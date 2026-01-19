@@ -61,7 +61,7 @@ export const WhiteLabelBranding = ({ onClose, workspaceId }: WhiteLabelBrandingP
     const loadBranding = async () => {
       setIsLoading(true);
       try {
-        // If no workspaceId, try to get user's default workspace
+        // If no workspaceId, try to get user's default workspace or create one
         let wsId = currentWorkspaceId;
         
         if (!wsId) {
@@ -69,12 +69,28 @@ export const WhiteLabelBranding = ({ onClose, workspaceId }: WhiteLabelBrandingP
             .from('workspaces')
             .select('id')
             .eq('owner_id', user.id)
-            .limit(1)
-            .single();
+            .limit(1);
           
-          if (workspaces) {
-            wsId = workspaces.id;
+          if (workspaces && workspaces.length > 0) {
+            wsId = workspaces[0].id;
             setCurrentWorkspaceId(wsId);
+          } else {
+            // Create a default workspace for the user
+            const slug = `workspace-${user.id.slice(0, 8)}`;
+            const { data: newWorkspace, error: createError } = await supabase
+              .from('workspaces')
+              .insert({
+                name: 'My Workspace',
+                slug,
+                owner_id: user.id,
+              })
+              .select()
+              .single();
+
+            if (newWorkspace && !createError) {
+              wsId = newWorkspace.id;
+              setCurrentWorkspaceId(wsId);
+            }
           }
         }
 
