@@ -18,6 +18,38 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: "3.0.0",
+    date: "January 19, 2025",
+    title: "ShadowBrowser & Browse Together Mode",
+    description: "Revolutionary AI-powered browser integration with real-time browsing assistance.",
+    changes: [
+      { type: "feature", text: "ShadowBrowser - Built-in AI-powered web browser with multi-tab support" },
+      { type: "feature", text: "Browse Together Mode - AI actively assists while you browse with page summaries and suggestions" },
+      { type: "feature", text: "Real-time page analysis with key insights extraction" },
+      { type: "feature", text: "Related content suggestions based on current page" },
+      { type: "feature", text: "AI-powered Q&A about any webpage you're viewing" },
+      { type: "feature", text: "Smart bookmarks and browsing history" },
+      { type: "feature", text: "Quick actions: Summarize, Key Points, Find Similar" },
+      { type: "improvement", text: "AI Web Search with instant summaries" },
+      { type: "improvement", text: "One-click send content to main chat" },
+      { type: "security", text: "Secure iframe sandboxing for browsed content" },
+    ],
+  },
+  {
+    version: "2.6.0",
+    date: "January 10, 2025",
+    title: "Deep Research & Advanced Analytics",
+    description: "Professional research tools and comprehensive usage analytics.",
+    changes: [
+      { type: "feature", text: "Deep Research Panel for comprehensive topic exploration" },
+      { type: "feature", text: "Perplexity Pages - Transform research into shareable web pages" },
+      { type: "feature", text: "Advanced analytics dashboard with usage insights" },
+      { type: "feature", text: "Cognitive Load Panel for AI response complexity control" },
+      { type: "improvement", text: "Enhanced conversation branching" },
+      { type: "improvement", text: "Better markdown rendering for AI responses" },
+    ],
+  },
+  {
     version: "2.5.0",
     date: "December 15, 2024",
     title: "Collaborative Rooms & PWA Support",
