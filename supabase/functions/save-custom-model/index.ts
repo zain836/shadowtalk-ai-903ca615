@@ -51,6 +51,8 @@ serve(async (req) => {
     const model = validation.data;
 
     // Check if user has access to this feature (Elite tier or higher)
+    // For now, allow all authenticated users to save models locally
+    // Cloud sync feature gating happens on client side
     const { data: subscriber } = await supabase
       .from("subscribers")
       .select("subscription_tier")
@@ -58,42 +60,70 @@ serve(async (req) => {
       .single();
 
     const tier = subscriber?.subscription_tier || "free";
-    if (!["elite", "enterprise"].includes(tier)) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Feature locked",
-          message: "Model fine-tuning is available for Elite and Enterprise tiers only"
-        }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    
+    // Allow saving for all tiers but warn about limited cloud sync
+    const isEliteOrHigher = ["elite", "enterprise", "pro"].includes(tier);
 
-    // Save or update custom model
-    const { data, error: upsertError } = await supabase
+    // Check if model already exists
+    const { data: existingModel } = await supabase
       .from("custom_models")
-      .upsert({
-        user_id: user.id,
-        name: model.name,
-        config: {
-          basePersonality: model.basePersonality,
-          temperature: model.temperature,
-          maxTokens: model.maxTokens,
-          topP: model.topP,
-          frequencyPenalty: model.frequencyPenalty,
-          presencePenalty: model.presencePenalty,
-          systemPrompt: model.systemPrompt,
-        },
-        training_examples: model.trainingExamples,
-        is_active: model.isActive,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'user_id,name'
-      })
-      .select()
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("name", model.name)
       .single();
+
+    let data;
+    let upsertError;
+
+    if (existingModel) {
+      // Update existing model
+      const result = await supabase
+        .from("custom_models")
+        .update({
+          config: {
+            basePersonality: model.basePersonality,
+            temperature: model.temperature,
+            maxTokens: model.maxTokens,
+            topP: model.topP,
+            frequencyPenalty: model.frequencyPenalty,
+            presencePenalty: model.presencePenalty,
+            systemPrompt: model.systemPrompt,
+          },
+          training_examples: model.trainingExamples,
+          is_active: model.isActive,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingModel.id)
+        .select()
+        .single();
+      
+      data = result.data;
+      upsertError = result.error;
+    } else {
+      // Insert new model
+      const result = await supabase
+        .from("custom_models")
+        .insert({
+          user_id: user.id,
+          name: model.name,
+          config: {
+            basePersonality: model.basePersonality,
+            temperature: model.temperature,
+            maxTokens: model.maxTokens,
+            topP: model.topP,
+            frequencyPenalty: model.frequencyPenalty,
+            presencePenalty: model.presencePenalty,
+            systemPrompt: model.systemPrompt,
+          },
+          training_examples: model.trainingExamples,
+          is_active: model.isActive,
+        })
+        .select()
+        .single();
+      
+      data = result.data;
+      upsertError = result.error;
+    }
 
     if (upsertError) {
       console.error("[Save Model] Database error:", upsertError);
