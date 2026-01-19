@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { 
   Select,
   SelectContent,
@@ -34,7 +35,10 @@ import {
   XCircle,
   Key,
   Megaphone,
-  User
+  User,
+  Activity,
+  Server,
+  Radio
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -43,6 +47,9 @@ import { GeminiKeysManager } from '@/components/admin/GeminiKeysManager';
 import { UserRoleManager } from '@/components/admin/UserRoleManager';
 import { ProfileManager } from '@/components/admin/ProfileManager';
 import { AnnouncementManager } from '@/components/admin/AnnouncementManager';
+import { RealTimeUserFlow } from '@/components/admin/RealTimeUserFlow';
+import { WebHealthMonitor } from '@/components/admin/WebHealthMonitor';
+import { RealTimeFeedback } from '@/components/admin/RealTimeFeedback';
 
 interface UserData {
   id: string;
@@ -384,42 +391,69 @@ const AdminPage = () => {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="feedback" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="feedback" className="gap-2">
-              <MessageSquareHeart className="h-4 w-4" />
-              Feedback
-              {stats.pendingFeedback > 0 && (
-                <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                  {stats.pendingFeedback}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="subscribers" className="gap-2">
-              <Crown className="h-4 w-4" />
-              Subscribers
-            </TabsTrigger>
-            <TabsTrigger value="conversations" className="gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Conversations
-            </TabsTrigger>
-            <TabsTrigger value="gemini-keys" className="gap-2">
-              <Key className="h-4 w-4" />
-              Gemini Keys
-            </TabsTrigger>
-            <TabsTrigger value="roles" className="gap-2">
-              <Shield className="h-4 w-4" />
-              Roles
-            </TabsTrigger>
-            <TabsTrigger value="profiles" className="gap-2">
-              <User className="h-4 w-4" />
-              Profiles
-            </TabsTrigger>
-            <TabsTrigger value="announcements" className="gap-2">
-              <Megaphone className="h-4 w-4" />
-              Announcements
-            </TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="realtime" className="space-y-4">
+          <ScrollArea className="w-full">
+            <TabsList className="inline-flex w-max">
+              <TabsTrigger value="realtime" className="gap-2">
+                <Radio className="h-4 w-4" />
+                Live Users
+              </TabsTrigger>
+              <TabsTrigger value="health" className="gap-2">
+                <Server className="h-4 w-4" />
+                Web Health
+              </TabsTrigger>
+              <TabsTrigger value="live-feedback" className="gap-2">
+                <Activity className="h-4 w-4" />
+                Live Feedback
+              </TabsTrigger>
+              <TabsTrigger value="feedback" className="gap-2">
+                <MessageSquareHeart className="h-4 w-4" />
+                Feedback
+                {stats.pendingFeedback > 0 && (
+                  <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                    {stats.pendingFeedback}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="subscribers" className="gap-2">
+                <Crown className="h-4 w-4" />
+                Subscribers
+              </TabsTrigger>
+              <TabsTrigger value="conversations" className="gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Conversations
+              </TabsTrigger>
+              <TabsTrigger value="gemini-keys" className="gap-2">
+                <Key className="h-4 w-4" />
+                Gemini Keys
+              </TabsTrigger>
+              <TabsTrigger value="roles" className="gap-2">
+                <Shield className="h-4 w-4" />
+                Roles
+              </TabsTrigger>
+              <TabsTrigger value="profiles" className="gap-2">
+                <User className="h-4 w-4" />
+                Profiles
+              </TabsTrigger>
+              <TabsTrigger value="announcements" className="gap-2">
+                <Megaphone className="h-4 w-4" />
+                Announcements
+              </TabsTrigger>
+            </TabsList>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+
+          <TabsContent value="realtime">
+            <RealTimeUserFlow />
+          </TabsContent>
+
+          <TabsContent value="health">
+            <WebHealthMonitor />
+          </TabsContent>
+
+          <TabsContent value="live-feedback">
+            <RealTimeFeedback />
+          </TabsContent>
 
           <TabsContent value="feedback">
             {/* Analytics Charts */}
