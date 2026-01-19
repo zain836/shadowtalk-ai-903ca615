@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Bot, User, Copy, RefreshCw, Volume2, VolumeX, Lock, Edit2, ExternalLink } from 'lucide-react';
+import { Bot, User, Copy, RefreshCw, Volume2, VolumeX, Lock, Edit2, ExternalLink, Compass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -42,6 +42,7 @@ interface MessageBubbleProps {
   onRegenerate: (index: number) => void;
   onTextToSpeech: (text: string, messageId: string) => void;
   onOpenCodeCanvas: (code: string, language: string) => void;
+  onOpenInBrowser?: (url: string) => void;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -55,6 +56,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onRegenerate,
   onTextToSpeech,
   onOpenCodeCanvas,
+  onOpenInBrowser,
 }) => {
   const { toast } = useToast();
   const isUser = message.type === 'user';
@@ -212,16 +214,28 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 }
                 
                 return (
-                  <Button
-                    key={idx}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openInBrowser(url)}
-                    className="h-6 px-2 text-xs gap-1 text-muted-foreground hover:text-primary"
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                    {domain.length > 20 ? domain.slice(0, 20) + '...' : domain}
-                  </Button>
+                  <div key={idx} className="flex items-center gap-0.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openInBrowser(url)}
+                      className="h-6 px-2 text-xs gap-1 text-muted-foreground hover:text-primary rounded-r-none"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      {domain.length > 20 ? domain.slice(0, 20) + '...' : domain}
+                    </Button>
+                    {onOpenInBrowser && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onOpenInBrowser(url)}
+                        className="h-6 px-1.5 text-xs text-muted-foreground hover:text-sky-500 rounded-l-none border-l-0"
+                        title="Open in ShadowBrowser"
+                      >
+                        <Compass className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 );
               })}
               {urls.length > 3 && (
