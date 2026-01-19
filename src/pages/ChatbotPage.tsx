@@ -36,6 +36,7 @@ import PlanetaryActionPanel from "@/components/chat/PlanetaryActionPanel";
 import SecurityAuditPanel from "@/components/chat/SecurityAuditPanel";
 import { OfflineAIIndicator } from "@/components/chat/OfflineAIIndicator";
 import { OfflineToolsPanel } from "@/components/chat/OfflineToolsPanel";
+import { ShadowBrowser } from "@/components/chat/ShadowBrowser";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -132,6 +133,8 @@ const ChatbotPage = () => {
   const [showShadowCowork, setShowShadowCowork] = useState(false);
   const [showShadowTalkLive, setShowShadowTalkLive] = useState(false);
   const [showOfflineTools, setShowOfflineTools] = useState(false);
+  const [showShadowBrowser, setShowShadowBrowser] = useState(false);
+  const [browserInitialUrl, setBrowserInitialUrl] = useState<string | undefined>(undefined);
   
   // Special mode state
   const [isAnalyzingTask, setIsAnalyzingTask] = useState(false);
@@ -289,6 +292,10 @@ const ChatbotPage = () => {
         case 'o': // Offline Tools
           e.preventDefault();
           setShowOfflineTools(true);
+          break;
+        case 'b': // Browser
+          e.preventDefault();
+          setShowShadowBrowser(true);
           break;
       }
     };
@@ -857,6 +864,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             onOpenShadowCowork={() => setShowShadowCowork(true)}
             onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
             onOpenOfflineTools={() => setShowOfflineTools(true)}
+            onOpenBrowser={() => setShowShadowBrowser(true)}
             aiProvider={aiProvider}
             onProviderChange={setAiProvider}
             maxChats={maxChats}
@@ -897,6 +905,10 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
               onRegenerate={handleRegenerate}
               onTextToSpeech={handleTextToSpeech}
               onOpenCodeCanvas={(code, lang) => setCodeWorkspace({ code, language: lang })}
+              onOpenInBrowser={(url) => {
+                setBrowserInitialUrl(url);
+                setShowShadowBrowser(true);
+              }}
               messagesEndRef={messagesEndRef}
             />
           )}
@@ -1129,6 +1141,24 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         onInsertToChat={(text) => {
           setMessage(prev => prev + text);
           setShowOfflineTools(false);
+        }}
+      />
+
+      {/* ShadowBrowser - Integrated AI-Powered Browser */}
+      <ShadowBrowser
+        isOpen={showShadowBrowser}
+        onClose={() => {
+          setShowShadowBrowser(false);
+          setBrowserInitialUrl(undefined);
+        }}
+        initialUrl={browserInitialUrl}
+        onInsertToChat={(content) => {
+          setMessages(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'user',
+            content,
+            timestamp: new Date()
+          }]);
         }}
       />
     </div>

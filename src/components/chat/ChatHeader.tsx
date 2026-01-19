@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2, FileEdit, PenLine, Search, Image, Play, Eye, Wand2, Sparkles, Globe, Terminal, Mic, WifiOff } from "lucide-react";
+import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2, FileEdit, PenLine, Search, Image, Play, Eye, Wand2, Sparkles, Globe, Terminal, Mic, WifiOff, Compass } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -80,6 +80,7 @@ interface ChatHeaderProps {
   onOpenShadowCowork: () => void;
   onOpenShadowTalkLive: () => void;
   onOpenOfflineTools: () => void;
+  onOpenBrowser: () => void;
   aiProvider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
   maxChats: string;
@@ -155,6 +156,7 @@ export const ChatHeader = ({
   onOpenShadowCowork,
   onOpenShadowTalkLive,
   onOpenOfflineTools,
+  onOpenBrowser,
   aiProvider,
   onProviderChange,
   maxChats,
@@ -230,6 +232,11 @@ export const ChatHeader = ({
           icon={<WifiOff className="h-5 w-5 text-emerald-500" />}
           label="Offline Tools (O)"
           onClick={() => handleMenuAction(onOpenOfflineTools)}
+        />
+        <MenuItem
+          icon={<Compass className="h-5 w-5 text-sky-500" />}
+          label="ShadowBrowser (B)"
+          onClick={() => handleMenuAction(onOpenBrowser)}
         />
       </div>
 
@@ -482,6 +489,11 @@ export const ChatHeader = ({
                 <WifiOff className="h-4 w-4 mr-2 text-emerald-500" />
                 Offline Tools
                 <span className="ml-auto text-xs text-muted-foreground">⇧O</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenBrowser}>
+                <Compass className="h-4 w-4 mr-2 text-sky-500" />
+                ShadowBrowser
+                <span className="ml-auto text-xs text-muted-foreground">⇧B</span>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />

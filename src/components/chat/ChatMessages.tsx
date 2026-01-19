@@ -24,6 +24,7 @@ interface ChatMessagesProps {
   onRegenerate: (index: number) => void;
   onTextToSpeech: (text: string, messageId: string) => void;
   onOpenCodeCanvas: (code: string, language: string) => void;
+  onOpenInBrowser?: (url: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
 }
 
@@ -40,6 +41,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   onRegenerate,
   onTextToSpeech,
   onOpenCodeCanvas,
+  onOpenInBrowser,
   messagesEndRef,
 }) => {
   return (
@@ -67,6 +69,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             onRegenerate={onRegenerate}
             onTextToSpeech={onTextToSpeech}
             onOpenCodeCanvas={onOpenCodeCanvas}
+            onOpenInBrowser={onOpenInBrowser}
           />
         ))}
 
