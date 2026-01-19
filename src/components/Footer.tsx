@@ -1,41 +1,42 @@
 import { Bot, Github, Twitter, Linkedin, Mail, Globe, Shield, FileText } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   const footerSections = [
     {
       title: "Product",
       links: [
-        { name: "Features", href: "#features" },
-        { name: "Pricing", href: "#pricing" },
-        { name: "API Docs", href: "#api" },
-        { name: "Changelog", href: "#changelog" }
+        { name: "Features", href: "/#features" },
+        { name: "Pricing", href: "/pricing" },
+        { name: "API Docs", href: "/api" },
+        { name: "Changelog", href: "/changelog" }
       ]
     },
     {
       title: "Support",
       links: [
-        { name: "Help Center", href: "#help" },
-        { name: "FAQ", href: "#faq" },
-        { name: "Contact", href: "#contact" },
-        { name: "Status", href: "#status" }
+        { name: "Help Center", href: "/help" },
+        { name: "FAQ", href: "/faq" },
+        { name: "Contact", href: "/contact" },
+        { name: "Status", href: "/status" }
       ]
     },
     {
       title: "Company",
       links: [
-        { name: "About", href: "#about" },
-        { name: "Blog", href: "#blog" },
-        { name: "Careers", href: "#careers" },
-        { name: "Press", href: "#press" }
+        { name: "About", href: "/about" },
+        { name: "Blog", href: "/blog" },
+        { name: "Careers", href: "/careers" },
+        { name: "Press", href: "/press" }
       ]
     },
     {
       title: "Legal",
       links: [
-        { name: "Privacy Policy", href: "#privacy" },
-        { name: "Terms of Service", href: "#terms" },
-        { name: "Cookie Policy", href: "#cookies" },
-        { name: "GDPR", href: "#gdpr" }
+        { name: "Privacy Policy", href: "/privacy" },
+        { name: "Terms of Service", href: "/terms" },
+        { name: "Cookie Policy", href: "/cookies" },
+        { name: "GDPR", href: "/gdpr" }
       ]
     }
   ];
@@ -83,12 +84,12 @@ const Footer = () => {
               <ul className="space-y-3">
                 {section.links.map((link, linkIndex) => (
                   <li key={linkIndex}>
-                    <a
-                      href={link.href}
+                    <Link
+                      to={link.href}
                       className="text-muted-foreground hover:text-primary transition-colors"
                     >
                       {link.name}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>

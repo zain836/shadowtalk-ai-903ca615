@@ -22,6 +22,17 @@ import APIPage from "./pages/APIPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import EnterpriseSettingsPage from "./pages/EnterpriseSettingsPage";
 import AboutPage from "./pages/AboutPage";
+import HelpCenterPage from "./pages/HelpCenterPage";
+import FAQPage from "./pages/FAQPage";
+import ContactPage from "./pages/ContactPage";
+import StatusPage from "./pages/StatusPage";
+import BlogPage from "./pages/BlogPage";
+import CareersPage from "./pages/CareersPage";
+import PressPage from "./pages/PressPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsOfServicePage from "./pages/TermsOfServicePage";
+import CookiePolicyPage from "./pages/CookiePolicyPage";
+import GDPRPage from "./pages/GDPRPage";
 import NotFound from "./pages/NotFound";
 import PWABanner from "./components/PWABanner";
 import CookieConsent from "./components/CookieConsent";
@@ -78,6 +89,17 @@ const App = () => {
                   <Route path="/analytics" element={<AnalyticsPage />} />
                   <Route path="/enterprise" element={<EnterpriseSettingsPage />} />
                   <Route path="/about" element={<AboutPage />} />
+                  <Route path="/help" element={<HelpCenterPage />} />
+                  <Route path="/faq" element={<FAQPage />} />
+                  <Route path="/contact" element={<ContactPage />} />
+                  <Route path="/status" element={<StatusPage />} />
+                  <Route path="/blog" element={<BlogPage />} />
+                  <Route path="/careers" element={<CareersPage />} />
+                  <Route path="/press" element={<PressPage />} />
+                  <Route path="/privacy" element={<PrivacyPolicyPage />} />
+                  <Route path="/terms" element={<TermsOfServicePage />} />
+                  <Route path="/cookies" element={<CookiePolicyPage />} />
+                  <Route path="/gdpr" element={<GDPRPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <JourneyTracker />
