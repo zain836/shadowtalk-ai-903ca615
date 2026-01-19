@@ -1,69 +1,45 @@
-import { useState, useCallback, useEffect } from "react";
-import { MessageCircle, X, Mic, Phone, PhoneOff, Loader2, Volume2 } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { MessageCircle, X, Send, Loader2, Bot, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { useConversation } from "@elevenlabs/react";
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
 
 const CustomerSupportWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [transcript, setTranscript] = useState<string[]>([]);
-  const [agentConfigured, setAgentConfigured] = useState(true);
+  const [messages, setMessages] = useState<Message[]>([
+    { role: "assistant", content: "Hi! I'm your 24/7 AI support assistant. How can I help you today?" }
+  ]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // ElevenLabs conversation hook
-  const conversation = useConversation({
-    onConnect: () => {
-      console.log("Connected to ElevenLabs agent");
-      setTranscript(prev => [...prev, "🎙️ Connected to AI Support Agent"]);
-      toast({
-        title: "Connected!",
-        description: "You're now connected to our AI support agent."
-      });
-    },
-    onDisconnect: () => {
-      console.log("Disconnected from ElevenLabs agent");
-      setTranscript(prev => [...prev, "📞 Call ended"]);
-    },
-    onMessage: (message) => {
-      console.log("Message from agent:", message);
-      // Handle different message types - cast to unknown first for type safety
-      const msg = message as unknown as Record<string, unknown>;
-      if (msg.user_transcription_event) {
-        const event = msg.user_transcription_event as { user_transcript?: string };
-        if (event.user_transcript) {
-          setTranscript(prev => [...prev, `You: ${event.user_transcript}`]);
-        }
-      } else if (msg.agent_response_event) {
-        const event = msg.agent_response_event as { agent_response?: string };
-        if (event.agent_response) {
-          setTranscript(prev => [...prev, `Agent: ${event.agent_response}`]);
-        }
-      }
-    },
-    onError: (error) => {
-      console.error("ElevenLabs error:", error);
-      toast({
-        variant: "destructive",
-        title: "Connection Error",
-        description: "Failed to connect to voice agent. Please try again."
-      });
-    },
-  });
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
-  const startConversation = useCallback(async () => {
-    setIsConnecting(true);
-    setTranscript([]);
+  const sendMessage = useCallback(async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = input.trim();
+    setInput("");
+    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    setIsLoading(true);
 
     try {
-      // Request microphone permission
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      // Get signed URL from edge function (agent ID is configured server-side)
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-conversation-token`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
         {
           method: "POST",
           headers: {
@@ -71,63 +47,82 @@ const CustomerSupportWidget = () => {
             "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({}),
+          body: JSON.stringify({
+            messages: [
+              { 
+                role: "system", 
+                content: "You are a helpful 24/7 customer support assistant for ShadowTalk AI. Be friendly, concise, and helpful. Answer questions about features, pricing, and usage. Keep responses brief and to the point." 
+              },
+              ...messages.map(m => ({ role: m.role, content: m.content })),
+              { role: "user", content: userMessage }
+            ]
+          }),
         }
       );
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        if (errorData.error?.includes("not configured") || errorData.error?.includes("Agent ID")) {
-          setAgentConfigured(false);
+        throw new Error("Failed to get response");
+      }
+
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response body");
+
+      const decoder = new TextDecoder();
+      let assistantContent = "";
+
+      // Add empty assistant message that we'll update
+      setMessages(prev => [...prev, { role: "assistant", content: "" }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ") && line !== "data: [DONE]") {
+            try {
+              const json = JSON.parse(line.slice(6));
+              const content = json.choices?.[0]?.delta?.content;
+              if (content) {
+                assistantContent += content;
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  newMessages[newMessages.length - 1] = { role: "assistant", content: assistantContent };
+                  return newMessages;
+                });
+              }
+            } catch {
+              // Ignore parse errors for incomplete chunks
+            }
+          }
         }
-        throw new Error(errorData.error || "Failed to get signed URL");
       }
-
-      const data = await response.json();
-
-      if (!data.signed_url) {
-        throw new Error("No signed URL received from server");
-      }
-
-      // Start the conversation with WebSocket (more reliable than WebRTC)
-      await conversation.startSession({
-        signedUrl: data.signed_url,
-      });
 
     } catch (err) {
-      console.error("Failed to start conversation:", err);
-      const errMsg = err instanceof Error ? err.message : "Failed to connect to support agent.";
-      if (errMsg.includes("not configured") || errMsg.includes("Agent ID")) {
-        setAgentConfigured(false);
-      }
+      console.error("Chat error:", err);
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: "Sorry, I'm having trouble connecting. Please try again in a moment." 
+      }]);
       toast({
         variant: "destructive",
-        title: "Connection Failed",
-        description: errMsg
+        title: "Connection Error",
+        description: "Failed to send message. Please try again."
       });
     } finally {
-      setIsConnecting(false);
+      setIsLoading(false);
     }
-  }, [conversation, toast]);
+  }, [input, isLoading, messages, toast]);
 
-  const endConversation = useCallback(async () => {
-    await conversation.endSession();
-    toast({
-      title: "Disconnected",
-      description: "Your support session has ended."
-    });
-  }, [conversation, toast]);
-
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      if (conversation.status === 'connected') {
-        conversation.endSession();
-      }
-    };
-  }, [conversation]);
-
-  const isConnected = conversation.status === 'connected';
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
 
   if (!isOpen) {
     return (
@@ -149,21 +144,19 @@ const CustomerSupportWidget = () => {
 
   return (
     <div className="fixed bottom-6 right-6 z-50 w-80 md:w-96">
-      <Card className="bg-card/95 backdrop-blur-lg border-border shadow-2xl overflow-hidden">
+      <Card className="bg-card/95 backdrop-blur-lg border-border shadow-2xl overflow-hidden flex flex-col h-[500px]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border bg-gradient-to-r from-primary/10 to-primary/5">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className={`w-10 h-10 rounded-full bg-primary flex items-center justify-center ${conversation.isSpeaking ? 'animate-pulse' : ''}`}>
-                <Volume2 className={`h-5 w-5 text-primary-foreground ${conversation.isSpeaking ? 'animate-bounce' : ''}`} />
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+                <Bot className="h-5 w-5 text-primary-foreground" />
               </div>
-              <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-muted-foreground'}`} />
+              <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-green-500" />
             </div>
             <div>
               <h3 className="font-semibold text-sm">24/7 AI Support</h3>
-              <p className="text-xs text-muted-foreground">
-                {isConnected ? (conversation.isSpeaking ? 'Agent speaking...' : 'Listening...') : 'Ready to help'}
-              </p>
+              <p className="text-xs text-muted-foreground">Always here to help</p>
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
@@ -171,100 +164,69 @@ const CustomerSupportWidget = () => {
           </Button>
         </div>
 
-        {/* Content */}
-        <div className="p-4 space-y-4">
-          {/* Status */}
-          <div className="flex items-center justify-center gap-2">
-            <Badge variant={isConnected ? "default" : "secondary"} className="gap-1">
-              {isConnected ? (
-                <>
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  Live Call
-                </>
-              ) : (
-                <>
-                  <div className="w-2 h-2 rounded-full bg-muted-foreground" />
-                  Ready
-                </>
-              )}
-            </Badge>
-          </div>
-
-          {/* Visual indicator */}
-          <div className="flex justify-center">
-            <div className={`relative w-24 h-24 rounded-full flex items-center justify-center transition-all ${
-              isConnected 
-                ? 'bg-primary/20 border-2 border-primary' 
-                : 'bg-muted border-2 border-muted-foreground/20'
-            }`}>
-              {isConnecting ? (
-                <Loader2 className="h-10 w-10 text-primary animate-spin" />
-              ) : isConnected ? (
-                <>
-                  <Mic className={`h-10 w-10 text-primary ${conversation.isSpeaking ? 'animate-pulse' : ''}`} />
-                  {/* Sound waves animation */}
-                  {conversation.isSpeaking && (
-                    <>
-                      <div className="absolute inset-0 rounded-full border-2 border-primary/50 animate-ping" />
-                      <div className="absolute inset-2 rounded-full border border-primary/30 animate-pulse" />
-                    </>
-                  )}
-                </>
-              ) : (
-                <Phone className="h-10 w-10 text-muted-foreground" />
-              )}
-            </div>
-          </div>
-
-          {/* Transcript */}
-          {transcript.length > 0 && (
-            <div className="max-h-32 overflow-y-auto space-y-1 p-2 bg-muted/50 rounded-lg">
-              {transcript.slice(-5).map((text, i) => (
-                <p key={i} className="text-xs text-muted-foreground">{text}</p>
-              ))}
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex gap-2">
-            {!isConnected ? (
-              <Button 
-                onClick={startConversation} 
-                disabled={isConnecting}
-                className="flex-1 gap-2"
+        {/* Messages */}
+        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+          <div className="space-y-4">
+            {messages.map((message, i) => (
+              <div
+                key={i}
+                className={`flex gap-2 ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                {isConnecting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Connecting...
-                  </>
-                ) : (
-                  <>
-                    <Phone className="h-4 w-4" />
-                    Start Voice Call
-                  </>
+                {message.role === "assistant" && (
+                  <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <Bot className="h-4 w-4 text-primary" />
+                  </div>
                 )}
-              </Button>
-            ) : (
-              <Button 
-                onClick={endConversation} 
-                variant="destructive"
-                className="flex-1 gap-2"
-              >
-                <PhoneOff className="h-4 w-4" />
-                End Call
-              </Button>
-            )}
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
+                    message.role === "user"
+                      ? "bg-primary text-primary-foreground rounded-br-md"
+                      : "bg-muted rounded-bl-md"
+                  }`}
+                >
+                  {message.content || (isLoading && i === messages.length - 1 ? (
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </span>
+                  ) : "")}
+                </div>
+                {message.role === "user" && (
+                  <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+                    <User className="h-4 w-4" />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
+        </ScrollArea>
 
-          {/* Info */}
-          {!agentConfigured && (
-            <p className="text-xs text-center text-amber-500">
-              Voice support is being configured. Try again later.
-            </p>
-          )}
-          <p className="text-xs text-center text-muted-foreground">
-            Powered by ElevenLabs AI • Available 24/7
+        {/* Input */}
+        <div className="p-4 border-t border-border">
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type your message..."
+              disabled={isLoading}
+              className="flex-1"
+            />
+            <Button 
+              onClick={sendMessage} 
+              disabled={!input.trim() || isLoading}
+              size="icon"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          <p className="text-xs text-center text-muted-foreground mt-2">
+            Powered by AI • Available 24/7
           </p>
         </div>
       </Card>
