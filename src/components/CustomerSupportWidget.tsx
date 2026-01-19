@@ -61,7 +61,7 @@ const CustomerSupportWidget = () => {
       // Request microphone permission
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Get token from edge function (agent ID is configured server-side)
+      // Get signed URL from edge function (agent ID is configured server-side)
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-conversation-token`,
         {
@@ -80,18 +80,18 @@ const CustomerSupportWidget = () => {
         if (errorData.error?.includes("not configured") || errorData.error?.includes("Agent ID")) {
           setAgentConfigured(false);
         }
-        throw new Error(errorData.error || "Failed to get conversation token");
+        throw new Error(errorData.error || "Failed to get signed URL");
       }
 
       const data = await response.json();
 
-      if (!data.token) {
-        throw new Error("No token received from server");
+      if (!data.signed_url) {
+        throw new Error("No signed URL received from server");
       }
 
-      // Start the conversation with WebRTC
+      // Start the conversation with WebSocket (more reliable than WebRTC)
       await conversation.startSession({
-        conversationToken: data.token,
+        signedUrl: data.signed_url,
       });
 
     } catch (err) {

@@ -33,35 +33,18 @@ serve(async (req) => {
     const targetAgentId = agentId || Deno.env.get("ELEVENLABS_AGENT_ID");
     
     if (!targetAgentId) {
-      // Return a signed URL for realtime scribe instead
-      const response = await fetch(
-        "https://api.elevenlabs.io/v1/single-use-token/realtime_scribe",
-        {
-          method: "POST",
-          headers: {
-            "xi-api-key": ELEVENLABS_API_KEY,
-          },
-        }
+      console.error("No agent ID configured");
+      return new Response(
+        JSON.stringify({ error: "ElevenLabs Agent ID not configured. Please set ELEVENLABS_AGENT_ID." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("ElevenLabs API error:", errorText);
-        return new Response(
-          JSON.stringify({ error: "Failed to get token from ElevenLabs" }),
-          { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const data = await response.json();
-      return new Response(JSON.stringify(data), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
 
-    // Get conversation token for agent
+    console.log("Requesting signed URL for agent:", targetAgentId);
+
+    // Get SIGNED URL for WebSocket connection (more reliable than WebRTC token)
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${targetAgentId}`,
+      `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${targetAgentId}`,
       {
         headers: {
           "xi-api-key": ELEVENLABS_API_KEY,
@@ -71,16 +54,17 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("ElevenLabs API error:", errorText);
+      console.error("ElevenLabs API error:", response.status, errorText);
       return new Response(
-        JSON.stringify({ error: "Failed to get conversation token" }),
+        JSON.stringify({ error: `Failed to get signed URL: ${response.status}` }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { token } = await response.json();
+    const data = await response.json();
+    console.log("Successfully obtained signed URL");
 
-    return new Response(JSON.stringify({ token }), {
+    return new Response(JSON.stringify({ signed_url: data.signed_url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
