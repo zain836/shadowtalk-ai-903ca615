@@ -37,6 +37,7 @@ import SecurityAuditPanel from "@/components/chat/SecurityAuditPanel";
 import { OfflineAIIndicator } from "@/components/chat/OfflineAIIndicator";
 import { OfflineToolsPanel } from "@/components/chat/OfflineToolsPanel";
 import { ShadowBrowser } from "@/components/chat/ShadowBrowser";
+import { WelcomeDialog } from "@/components/chat/WelcomeDialog";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -135,6 +136,20 @@ const ChatbotPage = () => {
   const [showOfflineTools, setShowOfflineTools] = useState(false);
   const [showShadowBrowser, setShowShadowBrowser] = useState(false);
   const [browserInitialUrl, setBrowserInitialUrl] = useState<string | undefined>(undefined);
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
+  
+  // Check if welcome dialog should be shown (after boot screen)
+  useEffect(() => {
+    const hasSeenWelcome = sessionStorage.getItem('shadowtalk_welcome_seen');
+    if (!hasSeenWelcome) {
+      // Small delay to ensure boot screen has finished
+      const timer = setTimeout(() => {
+        setShowWelcomeDialog(true);
+        sessionStorage.setItem('shadowtalk_welcome_seen', 'true');
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
   
   // Special mode state
   const [isAnalyzingTask, setIsAnalyzingTask] = useState(false);
@@ -1160,6 +1175,12 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             timestamp: new Date()
           }]);
         }}
+      />
+
+      {/* Welcome Dialog - Shown once per session after boot screen */}
+      <WelcomeDialog 
+        open={showWelcomeDialog} 
+        onOpenChange={setShowWelcomeDialog} 
       />
     </div>
   );
