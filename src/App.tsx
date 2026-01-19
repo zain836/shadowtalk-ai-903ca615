@@ -25,6 +25,7 @@ import NotFound from "./pages/NotFound";
 import PWABanner from "./components/PWABanner";
 import CookieConsent from "./components/CookieConsent";
 import CustomerSupportWidget from "./components/CustomerSupportWidget";
+import { JourneyTracker } from "./components/JourneyTracker";
 
 // ElevenLabs Agent ID is now configured via the backend secret ELEVENLABS_AGENT_ID
 
@@ -77,6 +78,7 @@ const App = () => {
                   <Route path="/enterprise" element={<EnterpriseSettingsPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                <JourneyTracker />
                 <PWABanner />
                 <CookieConsent />
                 <CustomerSupportWidget />
