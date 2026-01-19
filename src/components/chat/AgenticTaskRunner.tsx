@@ -82,7 +82,7 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete }: AgenticTa
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      // Step 1: Plan the task
+      // Step 1: Plan the task - use standard chat to generate a plan
       addLog("Generating task steps...");
       
       const planResp = await fetch(CHAT_URL, {
@@ -92,13 +92,20 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete }: AgenticTa
           Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
         },
         body: JSON.stringify({
-          agentTask: true,
-          taskGoal: goal,
-          phase: "plan"
+          messages: [{ 
+            role: "user", 
+            content: `Break down this task into 4-6 numbered steps. Only list the steps, nothing else:\n\n${goal}` 
+          }],
+          personality: "professional",
+          mode: "general"
         })
       });
 
-      if (!planResp.ok) throw new Error("Planning failed");
+      if (!planResp.ok) {
+        const errText = await planResp.text();
+        console.error("Planning failed:", errText);
+        throw new Error("Planning failed");
+      }
 
       // Parse streaming response for plan
       const reader = planResp.body?.getReader();
@@ -125,8 +132,8 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete }: AgenticTa
       // Parse steps from plan
       const stepMatches = planContent.match(/\d+\.\s+[^\n]+/g) || [];
       const plannedSteps: TaskStep[] = stepMatches.map((s, i) => ({
-        id: `step-${i}`,
-        action: s.replace(/^\d+\.\s+/, ''),
+        id: `step-${i + 1}`,
+        action: s.replace(/^\d+\.\s+/, '').trim(),
         status: "pending" as const
       }));
 
