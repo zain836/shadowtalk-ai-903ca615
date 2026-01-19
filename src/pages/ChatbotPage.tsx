@@ -35,6 +35,7 @@ import CognitiveLoadPanel from "@/components/chat/CognitiveLoadPanel";
 import PlanetaryActionPanel from "@/components/chat/PlanetaryActionPanel";
 import SecurityAuditPanel from "@/components/chat/SecurityAuditPanel";
 import { OfflineAIIndicator } from "@/components/chat/OfflineAIIndicator";
+import { OfflineToolsPanel } from "@/components/chat/OfflineToolsPanel";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -130,6 +131,7 @@ const ChatbotPage = () => {
   const [showPerplexityPages, setShowPerplexityPages] = useState(false);
   const [showShadowCowork, setShowShadowCowork] = useState(false);
   const [showShadowTalkLive, setShowShadowTalkLive] = useState(false);
+  const [showOfflineTools, setShowOfflineTools] = useState(false);
   
   // Special mode state
   const [isAnalyzingTask, setIsAnalyzingTask] = useState(false);
@@ -283,6 +285,10 @@ const ChatbotPage = () => {
         case 'l': // ShadowTalk Live
           e.preventDefault();
           setShowShadowTalkLive(true);
+          break;
+        case 'o': // Offline Tools
+          e.preventDefault();
+          setShowOfflineTools(true);
           break;
       }
     };
@@ -473,6 +479,40 @@ const ChatbotPage = () => {
         remaining.length > 0 ? loadConversation(remaining[0].id) : createNewConversation();
       }
       toast({ title: "Conversation deleted" });
+    }
+  };
+
+  const clearAllConversations = async () => {
+    if (!user || conversations.length === 0) return;
+    
+    try {
+      // Delete all conversations for this user
+      const { error } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      // Clear local state
+      setConversations([]);
+      setMessages([]);
+      setCurrentConversationId(null);
+      
+      // Create a fresh conversation
+      await createNewConversation();
+      
+      toast({ 
+        title: "All chats cleared", 
+        description: `Deleted ${conversations.length} conversation${conversations.length !== 1 ? 's' : ''}.` 
+      });
+    } catch (error) {
+      console.error("Failed to clear conversations:", error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to clear conversations. Please try again.", 
+        variant: "destructive" 
+      });
     }
   };
 
@@ -784,6 +824,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             onCreateNew={createNewConversation}
             onSelect={loadConversation}
             onDelete={deleteConversation}
+            onClearAll={clearAllConversations}
           />
         )}
 
@@ -815,6 +856,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             onOpenPerplexityPages={() => setShowPerplexityPages(true)}
             onOpenShadowCowork={() => setShowShadowCowork(true)}
             onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
+            onOpenOfflineTools={() => setShowOfflineTools(true)}
             aiProvider={aiProvider}
             onProviderChange={setAiProvider}
             maxChats={maxChats}
@@ -1077,6 +1119,16 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             console.error('Canvas AI assist error:', error);
             throw error;
           }
+        }}
+      />
+
+      {/* Offline Tools Panel */}
+      <OfflineToolsPanel
+        isOpen={showOfflineTools}
+        onClose={() => setShowOfflineTools(false)}
+        onInsertToChat={(text) => {
+          setMessage(prev => prev + text);
+          setShowOfflineTools(false);
         }}
       />
     </div>

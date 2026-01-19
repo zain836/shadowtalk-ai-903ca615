@@ -6,14 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useConversation } from "@elevenlabs/react";
 
-interface CustomerSupportWidgetProps {
-  agentId?: string;
-}
-
-const CustomerSupportWidget = ({ agentId }: CustomerSupportWidgetProps) => {
+const CustomerSupportWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [transcript, setTranscript] = useState<string[]>([]);
+  const [agentConfigured, setAgentConfigured] = useState(true);
   const { toast } = useToast();
 
   // ElevenLabs conversation hook
@@ -57,15 +54,6 @@ const CustomerSupportWidget = ({ agentId }: CustomerSupportWidgetProps) => {
   });
 
   const startConversation = useCallback(async () => {
-    if (!agentId) {
-      toast({
-        variant: "destructive",
-        title: "Agent ID Required",
-        description: "Please configure the ElevenLabs Agent ID to enable voice support."
-      });
-      return;
-    }
-
     setIsConnecting(true);
     setTranscript([]);
 
@@ -73,7 +61,7 @@ const CustomerSupportWidget = ({ agentId }: CustomerSupportWidgetProps) => {
       // Request microphone permission
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Get token from edge function
+      // Get token from edge function (agent ID is configured server-side)
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-conversation-token`,
         {
@@ -83,12 +71,16 @@ const CustomerSupportWidget = ({ agentId }: CustomerSupportWidgetProps) => {
             "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ agentId }),
+          body: JSON.stringify({}),
         }
       );
 
       if (!response.ok) {
-        throw new Error("Failed to get conversation token");
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.error?.includes("not configured") || errorData.error?.includes("Agent ID")) {
+          setAgentConfigured(false);
+        }
+        throw new Error(errorData.error || "Failed to get conversation token");
       }
 
       const data = await response.json();
@@ -104,15 +96,19 @@ const CustomerSupportWidget = ({ agentId }: CustomerSupportWidgetProps) => {
 
     } catch (err) {
       console.error("Failed to start conversation:", err);
+      const errMsg = err instanceof Error ? err.message : "Failed to connect to support agent.";
+      if (errMsg.includes("not configured") || errMsg.includes("Agent ID")) {
+        setAgentConfigured(false);
+      }
       toast({
         variant: "destructive",
         title: "Connection Failed",
-        description: err instanceof Error ? err.message : "Failed to connect to support agent."
+        description: errMsg
       });
     } finally {
       setIsConnecting(false);
     }
-  }, [agentId, conversation, toast]);
+  }, [conversation, toast]);
 
   const endConversation = useCallback(async () => {
     await conversation.endSession();
@@ -234,7 +230,7 @@ const CustomerSupportWidget = ({ agentId }: CustomerSupportWidgetProps) => {
             {!isConnected ? (
               <Button 
                 onClick={startConversation} 
-                disabled={isConnecting || !agentId}
+                disabled={isConnecting}
                 className="flex-1 gap-2"
               >
                 {isConnecting ? (
@@ -262,9 +258,9 @@ const CustomerSupportWidget = ({ agentId }: CustomerSupportWidgetProps) => {
           </div>
 
           {/* Info */}
-          {!agentId && (
+          {!agentConfigured && (
             <p className="text-xs text-center text-amber-500">
-              Agent ID not configured. Contact admin.
+              Voice support is being configured. Try again later.
             </p>
           )}
           <p className="text-xs text-center text-muted-foreground">

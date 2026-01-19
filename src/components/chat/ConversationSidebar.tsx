@@ -1,6 +1,17 @@
-import { Plus, MessageSquare, Trash2 } from "lucide-react";
+import { Plus, MessageSquare, Trash2, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Conversation {
   id: string;
@@ -14,6 +25,7 @@ interface ConversationSidebarProps {
   onCreateNew: () => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onClearAll?: () => void;
 }
 
 export const ConversationSidebar = ({
@@ -22,13 +34,38 @@ export const ConversationSidebar = ({
   onCreateNew,
   onSelect,
   onDelete,
+  onClearAll,
 }: ConversationSidebarProps) => {
   return (
     <div className="w-60 bg-card/50 backdrop-blur-sm border-r border-border flex flex-col">
-      <div className="p-3">
+      <div className="p-3 space-y-2">
         <Button onClick={onCreateNew} className="w-full btn-glow" size="sm">
           <Plus className="h-4 w-4 mr-2" /> New Chat
         </Button>
+        
+        {conversations.length > 0 && onClearAll && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10">
+                <Trash className="h-4 w-4 mr-2" /> Clear All Chats
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete all conversations?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete all {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={onClearAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Delete All
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
       
       <ScrollArea className="flex-1 px-3">

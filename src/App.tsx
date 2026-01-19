@@ -26,8 +26,7 @@ import PWABanner from "./components/PWABanner";
 import CookieConsent from "./components/CookieConsent";
 import CustomerSupportWidget from "./components/CustomerSupportWidget";
 
-// ElevenLabs Agent ID for 24/7 customer support - configure via environment or update here
-const ELEVENLABS_SUPPORT_AGENT_ID = import.meta.env.VITE_ELEVENLABS_AGENT_ID || "";
+// ElevenLabs Agent ID is now configured via the backend secret ELEVENLABS_AGENT_ID
 
 const queryClient = new QueryClient();
 
@@ -80,7 +79,7 @@ const App = () => {
                 </Routes>
                 <PWABanner />
                 <CookieConsent />
-                <CustomerSupportWidget agentId={ELEVENLABS_SUPPORT_AGENT_ID} />
+                <CustomerSupportWidget />
               </BrowserRouter>
             </AuthProvider>
           </TooltipProvider>
