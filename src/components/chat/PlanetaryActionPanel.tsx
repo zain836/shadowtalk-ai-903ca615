@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Leaf, 
   Droplets, 
@@ -36,12 +37,17 @@ import {
   Lightbulb,
   RefreshCw,
   TreePine,
-  Globe
+  Globe,
+  Lock,
+  WifiOff,
+  AlertCircle,
+  Crown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import EcoLeaderboard from './EcoLeaderboard';
+import { useFeatureGating } from '@/hooks/useFeatureGating';
 
 interface EcoAction {
   id: string;
@@ -96,6 +102,7 @@ const PlanetaryActionPanel: React.FC<PlanetaryActionPanelProps> = ({
   isLoading
 }) => {
   const { user } = useAuth();
+  const { checkAccess, isPremiumOrHigher, isProOrHigher } = useFeatureGating();
   const [location, setLocation] = useState('');
   const [detectedLocation, setDetectedLocation] = useState<string | null>(null);
   const [actions, setActions] = useState<EcoAction[]>([]);
@@ -130,8 +137,26 @@ const PlanetaryActionPanel: React.FC<PlanetaryActionPanelProps> = ({
   const [carbonOffset, setCarbonOffset] = useState({ monthly: 0, yearly: 0 });
   const [weatherData, setWeatherData] = useState<{ temp: number; condition: string } | null>(null);
   const [localGrid, setLocalGrid] = useState<{ renewable: number; peak: boolean } | null>(null);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
 
   const xpToNextLevel = level * 100;
+
+  // Offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Auto-detect location
   useEffect(() => {
@@ -205,12 +230,25 @@ const PlanetaryActionPanel: React.FC<PlanetaryActionPanelProps> = ({
     }
   };
 
-  const fetchActions = async () => {
+  const fetchActions = useCallback(async () => {
+    // Feature gating check
+    if (!checkAccess('eco_actions')) {
+      return;
+    }
+
+    // Offline check
+    if (isOffline) {
+      toast.error('You are offline. Please reconnect to fetch actions.');
+      return;
+    }
+
     const locationToUse = location.trim() || detectedLocation;
     if (!locationToUse) {
       toast.error('Please enter your location or enable location detection');
       return;
     }
+
+    setError(null);
 
     try {
       const newActions = await onGetActions(locationToUse);
@@ -225,10 +263,20 @@ const PlanetaryActionPanel: React.FC<PlanetaryActionPanelProps> = ({
       }));
       
       setActions(enhancedActions);
-    } catch (error) {
-      toast.error('Failed to get eco-actions');
+      setRetryCount(0);
+    } catch (err: any) {
+      console.error('Failed to get eco-actions:', err);
+      
+      if (retryCount < MAX_RETRIES) {
+        setRetryCount(prev => prev + 1);
+        toast.error(`Failed to fetch actions. Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+        setTimeout(() => fetchActions(), 2000);
+      } else {
+        setError('Failed to load eco-actions. Please try again.');
+        toast.error('Unable to load actions after multiple attempts.');
+      }
     }
-  };
+  }, [location, detectedLocation, isOffline, onGetActions, localGrid, weatherData, retryCount, checkAccess]);
 
   const generateTips = (action: EcoAction, weather: typeof weatherData): string[] => {
     const tips: string[] = [];
@@ -455,6 +503,48 @@ const PlanetaryActionPanel: React.FC<PlanetaryActionPanelProps> = ({
 
   return (
     <div className="space-y-4 p-4">
+      {/* Feature Badge */}
+      <div className="flex items-center justify-between">
+        <Badge variant="secondary" className="gap-1">
+          <Crown className="h-3 w-3" />
+          PRO Feature
+        </Badge>
+        {isOffline && (
+          <Badge variant="destructive" className="gap-1">
+            <WifiOff className="h-3 w-3" />
+            Offline
+          </Badge>
+        )}
+      </div>
+
+      {/* Offline Alert */}
+      {isOffline && (
+        <Alert variant="destructive">
+          <WifiOff className="h-4 w-4" />
+          <AlertDescription>
+            You're offline. Some features may be limited. Your progress will sync when you're back online.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Error Alert */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>{error}</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => { setError(null); setRetryCount(0); fetchActions(); }}
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Level & XP with Weather Context */}
       <Card className="bg-gradient-to-r from-primary/20 to-accent/20 border-primary/30">
         <CardContent className="pt-4">

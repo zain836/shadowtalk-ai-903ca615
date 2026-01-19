@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Mail, 
   Calendar,
@@ -18,12 +19,16 @@ import {
   CheckCircle2,
   Zap,
   Database,
-  Shield
+  Shield,
+  WifiOff,
+  Crown,
+  ExternalLink
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { logClientError } from '@/lib/logging';
+import { useFeatureGating } from '@/hooks/useFeatureGating';
 
 interface IntegrationSource {
   id: string;
@@ -54,6 +59,7 @@ interface EmailCalendarIntegrationProps {
 
 const EmailCalendarIntegration: React.FC<EmailCalendarIntegrationProps> = ({ onImportTasks }) => {
   const { user } = useAuth();
+  const { checkAccess, isElite } = useFeatureGating();
   const [integrations, setIntegrations] = useState<IntegrationSource[]>([
     { id: 'gmail', name: 'Gmail', type: 'email', icon: <Mail className="h-4 w-4" />, connected: false, provider: 'google', status: 'idle' },
     { id: 'outlook', name: 'Outlook', type: 'email', icon: <Mail className="h-4 w-4" />, connected: false, provider: 'microsoft', status: 'idle' },
@@ -69,6 +75,22 @@ const EmailCalendarIntegration: React.FC<EmailCalendarIntegrationProps> = ({ onI
   const [syncedItems, setSyncedItems] = useState<SyncedItem[]>([]);
   const [totalSynced, setTotalSynced] = useState({ emails: 0, events: 0 });
   const [lastFullSync, setLastFullSync] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [error, setError] = useState<string | null>(null);
+
+  // Offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Check for existing OAuth tokens on mount
   useEffect(() => {
@@ -140,35 +162,64 @@ const EmailCalendarIntegration: React.FC<EmailCalendarIntegrationProps> = ({ onI
   const handleConnect = async (integrationId: string) => {
     const integration = integrations.find(i => i.id === integrationId);
     if (!integration || !user) return;
+
+    // Feature gating check
+    if (!checkAccess('cognitive_filter')) {
+      return;
+    }
+
+    // Offline check
+    if (isOffline) {
+      toast.error('You need an internet connection to connect integrations.');
+      return;
+    }
     
     setIsConnecting(integrationId);
+    setError(null);
     
     try {
-      // For Google integrations, use Supabase OAuth
+      // For Google integrations, use our custom OAuth edge function
       if (integration.provider === 'google') {
-        const scopes = integration.type === 'email' 
-          ? 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.labels'
-          : 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events.readonly';
+        const scope = integration.type === 'email' ? 'gmail' : 
+                      integration.type === 'calendar' ? 'calendar' : 'both';
         
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            scopes,
-            redirectTo: window.location.href,
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent',
-            }
-          }
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          toast.error('Please sign in to connect integrations.');
+          return;
+        }
+
+        // Call our OAuth initiate edge function
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/oauth-initiate`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ provider: 'google', scope }),
         });
+
+        const result = await response.json();
         
-        if (error) throw error;
-        
-        toast.info('Redirecting to Google for authorization...');
-        return;
+        if (!response.ok) {
+          // If OAuth not configured, fall back to demo mode
+          if (result.error === 'OAuth not configured') {
+            toast.info('Google OAuth not configured. Using demo mode with realistic data.');
+            await simulateConnection(integrationId);
+            return;
+          }
+          throw new Error(result.error || 'Failed to initiate OAuth');
+        }
+
+        // Redirect to Google OAuth
+        if (result.authUrl) {
+          toast.info('Redirecting to Google for authorization...');
+          window.location.href = result.authUrl;
+          return;
+        }
       }
       
-      // For Microsoft integrations
+      // For Microsoft integrations, use Supabase OAuth directly
       if (integration.provider === 'microsoft') {
         const scopes = integration.type === 'email' 
           ? 'Mail.Read Mail.ReadBasic'
@@ -191,8 +242,8 @@ const EmailCalendarIntegration: React.FC<EmailCalendarIntegrationProps> = ({ onI
       // Fallback simulation for demo purposes if OAuth not configured
       await simulateConnection(integrationId);
       
-    } catch (error: any) {
-      logClientError(error, {
+    } catch (err: any) {
+      logClientError(err, {
         feature: 'integrations',
         action: 'oauth-connect',
         userId: user?.id,
@@ -200,11 +251,12 @@ const EmailCalendarIntegration: React.FC<EmailCalendarIntegrationProps> = ({ onI
       });
       
       // If OAuth fails (provider not configured), fall back to demo mode
-      if (error.message?.includes('not enabled') || error.message?.includes('not configured')) {
+      if (err.message?.includes('not enabled') || err.message?.includes('not configured')) {
         toast.info('OAuth not configured. Using demo mode with realistic data.');
         await simulateConnection(integrationId);
       } else {
-        toast.error('Connection failed: ' + error.message);
+        setError(`Connection failed: ${err.message}`);
+        toast.error('Connection failed: ' + err.message);
         setIntegrations(prev => prev.map(int => 
           int.id === integrationId ? { ...int, status: 'error' } : int
         ));
@@ -286,6 +338,17 @@ const EmailCalendarIntegration: React.FC<EmailCalendarIntegrationProps> = ({ onI
   };
 
   const handleSync = async () => {
+    // Feature gating check
+    if (!checkAccess('cognitive_filter')) {
+      return;
+    }
+
+    // Offline check
+    if (isOffline) {
+      toast.error('You need an internet connection to sync data.');
+      return;
+    }
+
     const connectedIntegrations = integrations.filter(i => i.connected);
     if (connectedIntegrations.length === 0) {
       toast.error('No integrations connected');
@@ -293,6 +356,7 @@ const EmailCalendarIntegration: React.FC<EmailCalendarIntegrationProps> = ({ onI
     }
 
     setIsSyncing(true);
+    setError(null);
 
     // Update all connected integrations to syncing state
     setIntegrations(prev => prev.map(int =>
@@ -436,11 +500,23 @@ const EmailCalendarIntegration: React.FC<EmailCalendarIntegrationProps> = ({ onI
     <Card className="border-primary/20">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Inbox className="h-4 w-4 text-primary" />
-            Real-Time Data Sync
-          </CardTitle>
           <div className="flex items-center gap-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Inbox className="h-4 w-4 text-primary" />
+              Real-Time Data Sync
+            </CardTitle>
+            <Badge variant="secondary" className="gap-1 text-[10px]">
+              <Crown className="h-3 w-3" />
+              ELITE
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            {isOffline && (
+              <Badge variant="destructive" className="gap-1 text-[10px]">
+                <WifiOff className="h-3 w-3" />
+                Offline
+              </Badge>
+            )}
             {connectionStatus === 'checking' && (
               <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
             )}
@@ -452,6 +528,29 @@ const EmailCalendarIntegration: React.FC<EmailCalendarIntegrationProps> = ({ onI
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Offline Alert */}
+        {isOffline && (
+          <Alert variant="destructive" className="py-2">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              You're offline. Syncing is paused until you reconnect.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive" className="py-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-xs flex items-center justify-between">
+              <span>{error}</span>
+              <Button variant="ghost" size="sm" onClick={() => setError(null)}>
+                Dismiss
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Sync Stats Banner */}
         {connectedCount > 0 && (
           <div className="grid grid-cols-3 gap-2 p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg">
