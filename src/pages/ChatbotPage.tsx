@@ -45,6 +45,7 @@ import { useUsageTracking } from "@/hooks/useUsageTracking";
 import { useOfflineAuth } from "@/hooks/useOfflineAuth";
 import { useOfflineAI } from "@/hooks/useOfflineAI";
 import { useOfflineChatHistory } from "@/hooks/useOfflineChatHistory";
+import { useGeoLocation } from "@/hooks/useGeoLocation";
 
 // Types
 interface SpeechRecognitionEvent extends Event {
@@ -164,6 +165,9 @@ const ChatbotPage = () => {
   const { getOfflineSession } = useOfflineAuth();
   const offlineAI = useOfflineAI();
   const offlineChatHistory = useOfflineChatHistory();
+  
+  // Track user geolocation for analytics
+  useGeoLocation();
   
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);

@@ -1127,6 +1127,57 @@ export type Database = {
         }
         Relationships: []
       }
+      user_locations: {
+        Row: {
+          city: string | null
+          country: string | null
+          country_code: string | null
+          created_at: string
+          id: string
+          ip_address: string | null
+          isp: string | null
+          last_seen_at: string
+          latitude: number | null
+          longitude: number | null
+          region: string | null
+          session_id: string
+          timezone: string | null
+          user_id: string | null
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          country_code?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          isp?: string | null
+          last_seen_at?: string
+          latitude?: number | null
+          longitude?: number | null
+          region?: string | null
+          session_id: string
+          timezone?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          country_code?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          isp?: string | null
+          last_seen_at?: string
+          latitude?: number | null
+          longitude?: number | null
+          region?: string | null
+          session_id?: string
+          timezone?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_referral_codes: {
         Row: {
           created_at: string
