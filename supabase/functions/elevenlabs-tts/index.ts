@@ -57,8 +57,34 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("ElevenLabs TTS error:", errorText);
+      
+      // Parse error for better user feedback
+      let errorMessage = "Failed to generate speech";
+      let errorCode = "TTS_ERROR";
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        if (errorData.detail?.status === "detected_unusual_activity") {
+          errorMessage = "ElevenLabs free tier limit reached. Please upgrade your ElevenLabs API key to a paid plan.";
+          errorCode = "QUOTA_EXCEEDED";
+        } else if (errorData.detail?.status === "quota_exceeded") {
+          errorMessage = "ElevenLabs quota exceeded. Please check your API usage limits.";
+          errorCode = "QUOTA_EXCEEDED";
+        } else if (response.status === 401) {
+          errorMessage = "Invalid ElevenLabs API key. Please check your configuration.";
+          errorCode = "INVALID_API_KEY";
+        } else if (response.status === 429) {
+          errorMessage = "Rate limit exceeded. Please try again later.";
+          errorCode = "RATE_LIMITED";
+        } else if (errorData.detail?.message) {
+          errorMessage = errorData.detail.message;
+        }
+      } catch {
+        // Use default error message
+      }
+      
       return new Response(
-        JSON.stringify({ error: "Failed to generate speech" }),
+        JSON.stringify({ error: errorMessage, code: errorCode }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
