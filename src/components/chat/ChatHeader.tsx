@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2, FileEdit, PenLine, Search, Image, Play, Eye, Wand2, Sparkles, Globe, Terminal, Mic } from "lucide-react";
+import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2, FileEdit, PenLine, Search, Image, Play, Eye, Wand2, Sparkles, Globe, Terminal, Mic, WifiOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +79,7 @@ interface ChatHeaderProps {
   onOpenPerplexityPages: () => void;
   onOpenShadowCowork: () => void;
   onOpenShadowTalkLive: () => void;
+  onOpenOfflineTools: () => void;
   aiProvider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
   maxChats: string;
@@ -153,6 +154,7 @@ export const ChatHeader = ({
   onOpenPerplexityPages,
   onOpenShadowCowork,
   onOpenShadowTalkLive,
+  onOpenOfflineTools,
   aiProvider,
   onProviderChange,
   maxChats,
@@ -223,6 +225,11 @@ export const ChatHeader = ({
           icon={<Mic className="h-5 w-5 text-violet-500" />}
           label="ShadowTalk Live (L)"
           onClick={() => handleMenuAction(onOpenShadowTalkLive)}
+        />
+        <MenuItem
+          icon={<WifiOff className="h-5 w-5 text-emerald-500" />}
+          label="Offline Tools (O)"
+          onClick={() => handleMenuAction(onOpenOfflineTools)}
         />
       </div>
 
@@ -477,6 +484,11 @@ export const ChatHeader = ({
                 <Mic className="h-4 w-4 mr-2 text-violet-500" />
                 ShadowTalk Live
                 <span className="ml-auto text-xs text-muted-foreground">⇧L</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenOfflineTools}>
+                <WifiOff className="h-4 w-4 mr-2 text-emerald-500" />
+                Offline Tools
+                <span className="ml-auto text-xs text-muted-foreground">⇧O</span>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />

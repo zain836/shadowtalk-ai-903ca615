@@ -21,9 +21,15 @@ serve(async (req) => {
       );
     }
 
-    const { agentId } = await req.json();
+    let agentId: string | undefined;
+    try {
+      const body = await req.json();
+      agentId = body.agentId;
+    } catch {
+      // No body or invalid JSON - use default agent ID
+    }
     
-    // If agentId is provided, use it; otherwise use a default or handle accordingly
+    // If agentId is provided, use it; otherwise use the configured ELEVENLABS_AGENT_ID
     const targetAgentId = agentId || Deno.env.get("ELEVENLABS_AGENT_ID");
     
     if (!targetAgentId) {
