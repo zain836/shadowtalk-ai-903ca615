@@ -12,7 +12,8 @@ import {
   Palette, Users, Download, Search, ChevronRight, ExternalLink, Sparkles,
   Settings, Lock, Bell, Globe, Keyboard, FileText, HelpCircle, Lightbulb,
   Terminal, Database, Cloud, Smartphone, Monitor, Wifi, WifiOff, Volume2,
-  Upload, Share2, History, Star, Crown, Check, X
+  Upload, Share2, History, Star, Crown, Check, X, Compass, Eye, TrendingUp,
+  Link2, Bookmark
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -66,10 +67,13 @@ const FeatureComparison = () => (
         {[
           { feature: "Daily Messages", free: "50", pro: "Unlimited", elite: "Unlimited" },
           { feature: "AI Chat", free: true, pro: true, elite: true },
+          { feature: "ShadowBrowser", free: true, pro: true, elite: true },
+          { feature: "Browse Together", free: true, pro: true, elite: true },
           { feature: "Voice Input", free: true, pro: true, elite: true },
           { feature: "Voice Output (TTS)", free: false, pro: true, elite: true },
           { feature: "Image Generation", free: false, pro: true, elite: true },
           { feature: "Code Canvas", free: false, pro: true, elite: true },
+          { feature: "Deep Research", free: false, pro: true, elite: true },
           { feature: "Chat Export", free: false, pro: true, elite: true },
           { feature: "Collaborative Rooms", free: false, pro: true, elite: true },
           { feature: "File Uploads", free: "5MB", pro: "50MB", elite: "500MB" },
@@ -109,6 +113,8 @@ const DocsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const features = [
+    { icon: Compass, title: "ShadowBrowser", description: "Built-in AI-powered browser with Browse Together mode", badge: "New" },
+    { icon: Eye, title: "Browse Together", description: "AI assists while you browse - summaries, insights, Q&A", badge: "New" },
     { icon: MessageSquare, title: "AI Chat", description: "Engage in natural conversations with advanced AI models", badge: "Free" },
     { icon: Image, title: "Image Generation", description: "Create stunning images from text descriptions", badge: "Pro" },
     { icon: Mic, title: "Voice Input", description: "Speak to the AI using voice recognition", badge: "Free" },
@@ -570,6 +576,10 @@ const DocsPage = () => {
                         { action: "Copy last response", shortcut: "Ctrl + Shift + C" },
                         { action: "Regenerate response", shortcut: "Ctrl + R" },
                         { action: "Stop generation", shortcut: "Escape" },
+                        { action: "Open ShadowBrowser", shortcut: "Ctrl + Shift + B" },
+                        { action: "Shadow Cowork", shortcut: "Shift + W" },
+                        { action: "ShadowTalk Live", shortcut: "Shift + L" },
+                        { action: "Offline Tools", shortcut: "Shift + O" },
                       ].map((item, i) => (
                         <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted">
                           <span className="text-sm">{item.action}</span>
@@ -577,6 +587,108 @@ const DocsPage = () => {
                         </div>
                       ))}
                     </div>
+                  </CardContent>
+                </Card>
+              </DocSection>
+
+              <DocSection title="ShadowBrowser">
+                <p className="text-muted-foreground mb-6">
+                  ShadowBrowser is a built-in AI-powered web browser that lets you browse the web with AI assistance.
+                </p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <Compass className="h-5 w-5 text-primary" />
+                        <CardTitle>Browser Features</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          Multi-tab browsing with smart tab management
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          Bookmarks and browsing history
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          AI-powered web search
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          One-click page analysis
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          Send content to main chat
+                        </li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <Eye className="h-5 w-5 text-primary" />
+                        <CardTitle>Browse Together Mode</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          AI automatically analyzes pages you visit
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          Get key insights and summaries
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          Ask questions about any webpage
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          Related content suggestions
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          Quick actions: Summarize, Key Points, Find Similar
+                        </li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle className="text-lg">How to Use ShadowBrowser</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ol className="space-y-3 text-sm">
+                      <li className="flex gap-3">
+                        <span className="font-bold text-primary shrink-0">1.</span>
+                        <span>Open ShadowBrowser using <Badge variant="outline" className="font-mono text-xs">Ctrl + Shift + B</Badge> or from the menu</span>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="font-bold text-primary shrink-0">2.</span>
+                        <span>Enter a URL or search query in the address bar</span>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="font-bold text-primary shrink-0">3.</span>
+                        <span>Enable "Browse Together" mode to have AI assist while you browse</span>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="font-bold text-primary shrink-0">4.</span>
+                        <span>Ask questions about the page in the sidebar chat</span>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="font-bold text-primary shrink-0">5.</span>
+                        <span>Use quick actions to summarize, extract key points, or find similar content</span>
+                      </li>
+                    </ol>
                   </CardContent>
                 </Card>
               </DocSection>
