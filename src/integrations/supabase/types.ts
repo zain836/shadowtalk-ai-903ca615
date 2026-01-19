@@ -978,6 +978,137 @@ export type Database = {
         }
         Relationships: []
       }
+      security_audits: {
+        Row: {
+          compliance_scores: Json | null
+          created_at: string
+          critical_count: number
+          dependencies_vulnerable: number
+          files_scanned: number
+          high_count: number
+          id: string
+          info_count: number
+          low_count: number
+          medium_count: number
+          project_name: string
+          risk_score: number
+          scan_mode: string
+          secrets_found: number
+          summary: string | null
+          total_vulnerabilities: number
+          user_id: string
+        }
+        Insert: {
+          compliance_scores?: Json | null
+          created_at?: string
+          critical_count?: number
+          dependencies_vulnerable?: number
+          files_scanned?: number
+          high_count?: number
+          id?: string
+          info_count?: number
+          low_count?: number
+          medium_count?: number
+          project_name: string
+          risk_score?: number
+          scan_mode?: string
+          secrets_found?: number
+          summary?: string | null
+          total_vulnerabilities?: number
+          user_id: string
+        }
+        Update: {
+          compliance_scores?: Json | null
+          created_at?: string
+          critical_count?: number
+          dependencies_vulnerable?: number
+          files_scanned?: number
+          high_count?: number
+          id?: string
+          info_count?: number
+          low_count?: number
+          medium_count?: number
+          project_name?: string
+          risk_score?: number
+          scan_mode?: string
+          secrets_found?: number
+          summary?: string | null
+          total_vulnerabilities?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      security_vulnerabilities: {
+        Row: {
+          affected_files: string[] | null
+          attack_chain: string[] | null
+          audit_id: string
+          category: string
+          code_fix: string | null
+          compliance_mappings: Json | null
+          created_at: string
+          cvss_score: number | null
+          cwe_id: string | null
+          description: string | null
+          exploit: string | null
+          id: string
+          is_dependency: boolean | null
+          is_secret: boolean | null
+          location: string | null
+          remediation: string | null
+          severity: string
+          title: string
+        }
+        Insert: {
+          affected_files?: string[] | null
+          attack_chain?: string[] | null
+          audit_id: string
+          category: string
+          code_fix?: string | null
+          compliance_mappings?: Json | null
+          created_at?: string
+          cvss_score?: number | null
+          cwe_id?: string | null
+          description?: string | null
+          exploit?: string | null
+          id?: string
+          is_dependency?: boolean | null
+          is_secret?: boolean | null
+          location?: string | null
+          remediation?: string | null
+          severity: string
+          title: string
+        }
+        Update: {
+          affected_files?: string[] | null
+          attack_chain?: string[] | null
+          audit_id?: string
+          category?: string
+          code_fix?: string | null
+          compliance_mappings?: Json | null
+          created_at?: string
+          cvss_score?: number | null
+          cwe_id?: string | null
+          description?: string | null
+          exploit?: string | null
+          id?: string
+          is_dependency?: boolean | null
+          is_secret?: boolean | null
+          location?: string | null
+          remediation?: string | null
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_vulnerabilities_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "security_audits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sso_configurations: {
         Row: {
           authorization_url: string | null
