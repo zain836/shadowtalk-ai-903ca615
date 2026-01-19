@@ -655,6 +655,17 @@ Be thorough but realistic - only report real vulnerabilities found in the code.`
       });
     }
 
+    // General chat requires messages
+    if (!messages || messages.length === 0) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "Messages are required for general chat" 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     console.log("[CHAT] Processing request with", messages.length, "messages, personality:", personality, "mode:", mode);
 
     // Build user context string for GCAA

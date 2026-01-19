@@ -1,11 +1,12 @@
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 // Chat request validation
+// Chat request validation - messages optional for special modes
 export const ChatRequestSchema = z.object({
   messages: z.array(z.object({
     role: z.enum(["user", "assistant", "system"]),
     content: z.string().min(1).max(10000),
-  })).min(1).max(100),
+  })).min(1).max(100).optional(),
   personality: z.enum([
     "friendly", "sarcastic", "professional", "creative", 
     "meticulous", "curious", "diplomatic", "witty", 
@@ -43,7 +44,10 @@ export const ChatRequestSchema = z.object({
       status: z.enum(["pending", "running", "completed", "error"]).optional(),
     })).optional(),
   }).optional(),
-});
+}).refine(
+  (data) => data.messages || data.analyzeTask || data.getEcoActions || data.securityAudit || data.agentWorkflow || data.deepResearch || data.webSearch,
+  { message: "Either messages or a special mode (analyzeTask, getEcoActions, securityAudit, agentWorkflow, deepResearch, webSearch) must be provided" }
+);
 
 // SSO Configuration validation
 export const SSOConfigSchema = z.object({
