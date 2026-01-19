@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Brain, 
   Shield, 
@@ -13,11 +14,18 @@ import {
   CheckCircle2,
   Loader2,
   Plus,
-  Trash2
+  Trash2,
+  WifiOff,
+  AlertCircle,
+  RefreshCw,
+  Crown,
+  Lock
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import EmailCalendarIntegration from './EmailCalendarIntegration';
+import { useFeatureGating } from '@/hooks/useFeatureGating';
+import { useAuth } from '@/components/AuthProvider';
 
 interface Task {
   id: string;
@@ -44,10 +52,30 @@ const CognitiveLoadPanel: React.FC<CognitiveLoadPanelProps> = ({
   onAnalyzeTask,
   isAnalyzing 
 }) => {
+  const { user } = useAuth();
+  const { checkAccess, isElite, isPremiumOrHigher } = useFeatureGating();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState('');
   const [deepWorkMode, setDeepWorkMode] = useState(false);
   const [clsThreshold, setClsThreshold] = useState(8);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
+
+  // Offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const getCLSColor = (cls: number) => {
     if (cls <= 3) return 'text-success';
@@ -152,6 +180,47 @@ const CognitiveLoadPanel: React.FC<CognitiveLoadPanelProps> = ({
 
   return (
     <div className="space-y-4 p-4">
+      {/* Feature Badge */}
+      <div className="flex items-center justify-between">
+        <Badge variant="secondary" className="gap-1">
+          <Crown className="h-3 w-3" />
+          ELITE Feature
+        </Badge>
+        {isOffline && (
+          <Badge variant="destructive" className="gap-1">
+            <WifiOff className="h-3 w-3" />
+            Offline
+          </Badge>
+        )}
+      </div>
+
+      {/* Offline Alert */}
+      {isOffline && (
+        <Alert variant="destructive">
+          <WifiOff className="h-4 w-4" />
+          <AlertDescription>
+            You're offline. Task analysis requires an internet connection. Previously analyzed tasks are still available.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Error Alert */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>{error}</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setError(null)}
+            >
+              Dismiss
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header Stats */}
       <div className="grid grid-cols-2 gap-4">
         <Card className="bg-card/50 border-primary/20">
