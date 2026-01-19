@@ -21,6 +21,7 @@ import ProfilePage from "./pages/ProfilePage";
 import APIPage from "./pages/APIPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import EnterpriseSettingsPage from "./pages/EnterpriseSettingsPage";
+import AboutPage from "./pages/AboutPage";
 import NotFound from "./pages/NotFound";
 import PWABanner from "./components/PWABanner";
 import CookieConsent from "./components/CookieConsent";
@@ -76,6 +77,7 @@ const App = () => {
                   <Route path="/api" element={<APIPage />} />
                   <Route path="/analytics" element={<AnalyticsPage />} />
                   <Route path="/enterprise" element={<EnterpriseSettingsPage />} />
+                  <Route path="/about" element={<AboutPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <JourneyTracker />
