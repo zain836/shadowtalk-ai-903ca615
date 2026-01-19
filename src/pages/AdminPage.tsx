@@ -38,7 +38,8 @@ import {
   User,
   Activity,
   Server,
-  Radio
+  Radio,
+  Globe
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -50,6 +51,7 @@ import { AnnouncementManager } from '@/components/admin/AnnouncementManager';
 import { RealTimeUserFlow } from '@/components/admin/RealTimeUserFlow';
 import { WebHealthMonitor } from '@/components/admin/WebHealthMonitor';
 import { RealTimeFeedback } from '@/components/admin/RealTimeFeedback';
+import { GeographicTracker } from '@/components/admin/GeographicTracker';
 
 interface UserData {
   id: string;
@@ -406,6 +408,10 @@ const AdminPage = () => {
                 <Activity className="h-4 w-4" />
                 Live Feedback
               </TabsTrigger>
+              <TabsTrigger value="geo-tracking" className="gap-2">
+                <Globe className="h-4 w-4" />
+                User Map
+              </TabsTrigger>
               <TabsTrigger value="feedback" className="gap-2">
                 <MessageSquareHeart className="h-4 w-4" />
                 Feedback
@@ -453,6 +459,10 @@ const AdminPage = () => {
 
           <TabsContent value="live-feedback">
             <RealTimeFeedback />
+          </TabsContent>
+
+          <TabsContent value="geo-tracking">
+            <GeographicTracker />
           </TabsContent>
 
           <TabsContent value="feedback">
