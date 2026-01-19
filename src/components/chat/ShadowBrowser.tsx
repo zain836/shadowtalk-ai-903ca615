@@ -25,6 +25,14 @@ import {
   Bookmark,
   Clock,
   ChevronDown,
+  Users,
+  Lightbulb,
+  Send,
+  Zap,
+  Eye,
+  Link2,
+  HelpCircle,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +51,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -79,6 +89,20 @@ interface SearchResult {
   domain: string;
 }
 
+interface BrowseTogetherMessage {
+  id: string;
+  role: "user" | "ai" | "system";
+  content: string;
+  timestamp: Date;
+  type?: "suggestion" | "summary" | "question" | "answer" | "insight";
+}
+
+interface RelatedContent {
+  title: string;
+  url: string;
+  relevance: string;
+}
+
 interface ShadowBrowserProps {
   isOpen: boolean;
   onClose: () => void;
@@ -112,13 +136,23 @@ export const ShadowBrowser = ({
   const [urlInput, setUrlInput] = useState(initialUrl || DEFAULT_HOME);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
-  const [sidebarMode, setSidebarMode] = useState<"ai" | "bookmarks" | "history">("ai");
+  const [sidebarMode, setSidebarMode] = useState<"ai" | "bookmarks" | "history" | "together">("together");
   
   // AI Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [aiSummary, setAiSummary] = useState("");
+  
+  // Browse Together state
+  const [browseTogetherEnabled, setBrowseTogetherEnabled] = useState(true);
+  const [browseTogetherMessages, setBrowseTogetherMessages] = useState<BrowseTogetherMessage[]>([]);
+  const [browseTogetherInput, setBrowseTogetherInput] = useState("");
+  const [isAIThinking, setIsAIThinking] = useState(false);
+  const [relatedContent, setRelatedContent] = useState<RelatedContent[]>([]);
+  const [pageInsights, setPageInsights] = useState<string[]>([]);
+  const [autoAnalyze, setAutoAnalyze] = useState(true);
+  const lastAnalyzedUrl = useRef<string>("");
   
   // Bookmarks & History
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(() => {
@@ -457,12 +491,268 @@ export const ShadowBrowser = ({
     }
   };
   
+  // Browse Together: Auto-analyze page when URL changes
+  useEffect(() => {
+    if (browseTogetherEnabled && autoAnalyze && activeTab?.url && activeTab.url !== lastAnalyzedUrl.current) {
+      const timer = setTimeout(() => {
+        if (activeTab.url !== DEFAULT_HOME && !activeTab.url.includes("google.com/search")) {
+          analyzePageForBrowseTogether();
+          lastAnalyzedUrl.current = activeTab.url;
+        }
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab?.url, browseTogetherEnabled, autoAnalyze]);
+  
+  // Browse Together: Analyze current page
+  const analyzePageForBrowseTogether = async () => {
+    if (!activeTab?.url || activeTab.url === DEFAULT_HOME) return;
+    
+    setIsAIThinking(true);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const systemMessage: BrowseTogetherMessage = {
+        id: crypto.randomUUID(),
+        role: "system",
+        content: `📍 Now viewing: ${activeTab.title || new URL(activeTab.url).hostname}`,
+        timestamp: new Date(),
+      };
+      setBrowseTogetherMessages(prev => [...prev, systemMessage]);
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            messages: [
+              {
+                role: "user",
+                content: `You are a helpful AI browsing assistant in "Browse Together" mode. The user is viewing: ${activeTab.url}
+
+Provide a helpful response in this exact JSON format:
+{
+  "summary": "A brief 2-3 sentence summary of what this page is about",
+  "insights": ["3-4 key insights or interesting facts about this page/topic"],
+  "relatedTopics": [{"title": "Related Topic 1", "searchQuery": "search query for it"}, {"title": "Related Topic 2", "searchQuery": "search query"}],
+  "suggestedQuestions": ["What would you like to know about X?", "Should I explain Y?", "Want me to find more about Z?"]
+}
+
+Be concise and helpful.`,
+              },
+            ],
+            personality: "professional",
+          }),
+        }
+      );
+      
+      if (!response.ok) throw new Error("Analysis failed");
+      
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = "";
+      
+      while (reader) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n");
+        
+        for (const line of lines) {
+          if (line.startsWith("data: ") && line !== "data: [DONE]") {
+            try {
+              const data = JSON.parse(line.slice(6));
+              const content = data.choices?.[0]?.delta?.content;
+              if (content) fullContent += content;
+            } catch {}
+          }
+        }
+      }
+      
+      // Parse the AI response
+      try {
+        // Extract JSON from the response
+        const jsonMatch = fullContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          
+          // Add summary message
+          if (parsed.summary) {
+            const summaryMessage: BrowseTogetherMessage = {
+              id: crypto.randomUUID(),
+              role: "ai",
+              content: parsed.summary,
+              timestamp: new Date(),
+              type: "summary",
+            };
+            setBrowseTogetherMessages(prev => [...prev, summaryMessage]);
+          }
+          
+          // Set insights
+          if (parsed.insights) {
+            setPageInsights(parsed.insights);
+          }
+          
+          // Set related content
+          if (parsed.relatedTopics) {
+            setRelatedContent(parsed.relatedTopics.map((t: any) => ({
+              title: t.title,
+              url: `https://www.google.com/search?q=${encodeURIComponent(t.searchQuery)}`,
+              relevance: "Related topic",
+            })));
+          }
+          
+          // Add suggested question
+          if (parsed.suggestedQuestions?.[0]) {
+            const suggestionMessage: BrowseTogetherMessage = {
+              id: crypto.randomUUID(),
+              role: "ai",
+              content: parsed.suggestedQuestions[0],
+              timestamp: new Date(),
+              type: "suggestion",
+            };
+            setBrowseTogetherMessages(prev => [...prev, suggestionMessage]);
+          }
+        }
+      } catch {
+        // If parsing fails, just add the raw summary
+        const aiMessage: BrowseTogetherMessage = {
+          id: crypto.randomUUID(),
+          role: "ai",
+          content: fullContent.slice(0, 500),
+          timestamp: new Date(),
+          type: "summary",
+        };
+        setBrowseTogetherMessages(prev => [...prev, aiMessage]);
+      }
+      
+    } catch (error) {
+      console.error("Browse Together analysis error:", error);
+    } finally {
+      setIsAIThinking(false);
+    }
+  };
+  
+  // Browse Together: Ask question about current page
+  const askBrowseTogetherQuestion = async () => {
+    if (!browseTogetherInput.trim()) return;
+    
+    const userMessage: BrowseTogetherMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: browseTogetherInput,
+      timestamp: new Date(),
+      type: "question",
+    };
+    setBrowseTogetherMessages(prev => [...prev, userMessage]);
+    setBrowseTogetherInput("");
+    setIsAIThinking(true);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            messages: [
+              {
+                role: "system",
+                content: `You are a helpful AI browsing assistant. The user is currently viewing: ${activeTab?.url}. Answer their question about this page or help them browse. Be concise and helpful.`,
+              },
+              {
+                role: "user",
+                content: browseTogetherInput,
+              },
+            ],
+            personality: "professional",
+          }),
+        }
+      );
+      
+      if (!response.ok) throw new Error("Question failed");
+      
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = "";
+      
+      const aiMessage: BrowseTogetherMessage = {
+        id: crypto.randomUUID(),
+        role: "ai",
+        content: "",
+        timestamp: new Date(),
+        type: "answer",
+      };
+      setBrowseTogetherMessages(prev => [...prev, aiMessage]);
+      
+      while (reader) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n");
+        
+        for (const line of lines) {
+          if (line.startsWith("data: ") && line !== "data: [DONE]") {
+            try {
+              const data = JSON.parse(line.slice(6));
+              const content = data.choices?.[0]?.delta?.content;
+              if (content) {
+                fullContent += content;
+                setBrowseTogetherMessages(prev => 
+                  prev.map(m => m.id === aiMessage.id ? { ...m, content: fullContent } : m)
+                );
+              }
+            } catch {}
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.error("Browse Together question error:", error);
+      toast({
+        title: "Couldn't get an answer",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAIThinking(false);
+    }
+  };
+  
+  // Browse Together: Quick actions
+  const browseTogetherQuickAction = async (action: string) => {
+    setBrowseTogetherInput(action);
+    setTimeout(() => {
+      askBrowseTogetherQuestion();
+    }, 100);
+  };
+  
   // Send to chat
   const sendToChat = (content: string) => {
     if (onInsertToChat) {
       onInsertToChat(content);
       toast({ title: "Sent to chat" });
     }
+  };
+  
+  // Clear Browse Together conversation
+  const clearBrowseTogetherChat = () => {
+    setBrowseTogetherMessages([]);
+    setPageInsights([]);
+    setRelatedContent([]);
+    lastAnalyzedUrl.current = "";
   };
   
   if (!isOpen) return null;
@@ -702,12 +992,48 @@ export const ShadowBrowser = ({
               exit={{ width: 0, opacity: 0 }}
               className="border-r border-border flex flex-col bg-muted/20 overflow-hidden"
             >
+              {/* Browse Together Header */}
+              <div className="p-2 border-b border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Browse Together</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={browseTogetherEnabled}
+                      onCheckedChange={setBrowseTogetherEnabled}
+                      className="scale-75"
+                    />
+                  </div>
+                </div>
+                {browseTogetherEnabled && (
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                    <Eye className="h-3 w-3" />
+                    <span>AI is watching and helping</span>
+                    <label className="flex items-center gap-1 ml-auto cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={autoAnalyze}
+                        onChange={(e) => setAutoAnalyze(e.target.checked)}
+                        className="h-3 w-3 rounded"
+                      />
+                      Auto-analyze
+                    </label>
+                  </div>
+                )}
+              </div>
+              
               {/* Sidebar Tabs */}
               <Tabs value={sidebarMode} onValueChange={(v) => setSidebarMode(v as typeof sidebarMode)}>
-                <TabsList className="w-full grid grid-cols-3 m-2 mr-2">
+                <TabsList className="w-full grid grid-cols-4 m-2 mr-2">
+                  <TabsTrigger value="together" className="text-xs gap-1">
+                    <Users className="h-3 w-3" />
+                    Chat
+                  </TabsTrigger>
                   <TabsTrigger value="ai" className="text-xs gap-1">
                     <Sparkles className="h-3 w-3" />
-                    AI
+                    Search
                   </TabsTrigger>
                   <TabsTrigger value="bookmarks" className="text-xs gap-1">
                     <Bookmark className="h-3 w-3" />
@@ -720,10 +1046,221 @@ export const ShadowBrowser = ({
                 </TabsList>
               </Tabs>
               
-              <ScrollArea className="flex-1 p-3">
+              <ScrollArea className="flex-1">
+                {/* Browse Together Mode */}
+                {sidebarMode === "together" && browseTogetherEnabled && (
+                  <div className="flex flex-col h-full">
+                    {/* Messages */}
+                    <div className="flex-1 p-3 space-y-3 min-h-0 overflow-y-auto">
+                      {browseTogetherMessages.length === 0 && (
+                        <div className="text-center py-8 space-y-3">
+                          <Users className="h-10 w-10 mx-auto text-muted-foreground/50" />
+                          <div>
+                            <p className="text-sm font-medium">Browse Together Mode</p>
+                            <p className="text-xs text-muted-foreground">
+                              AI will analyze pages and answer your questions
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 pt-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs h-8"
+                              onClick={() => analyzePageForBrowseTogether()}
+                            >
+                              <Zap className="h-3 w-3 mr-1" />
+                              Analyze Page
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs h-8"
+                              onClick={() => browseTogetherQuickAction("What is this page about?")}
+                            >
+                              <HelpCircle className="h-3 w-3 mr-1" />
+                              What's this?
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {browseTogetherMessages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                        >
+                          <div
+                            className={`max-w-[90%] rounded-lg px-3 py-2 text-xs ${
+                              msg.role === "user"
+                                ? "bg-primary text-primary-foreground"
+                                : msg.role === "system"
+                                ? "bg-muted text-muted-foreground italic w-full text-center"
+                                : "bg-muted"
+                            }`}
+                          >
+                            {msg.type === "suggestion" && (
+                              <div className="flex items-center gap-1 mb-1 text-primary">
+                                <Lightbulb className="h-3 w-3" />
+                                <span className="text-[10px] font-medium">Suggestion</span>
+                              </div>
+                            )}
+                            {msg.type === "summary" && (
+                              <div className="flex items-center gap-1 mb-1 text-primary">
+                                <FileText className="h-3 w-3" />
+                                <span className="text-[10px] font-medium">Summary</span>
+                              </div>
+                            )}
+                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                            {msg.role === "ai" && msg.content && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 text-[10px] px-1 mt-1 -ml-1"
+                                onClick={() => sendToChat(msg.content)}
+                              >
+                                <MessageSquare className="h-2.5 w-2.5 mr-1" />
+                                Send to main chat
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {isAIThinking && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          AI is thinking...
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Page Insights */}
+                    {pageInsights.length > 0 && (
+                      <div className="p-3 border-t border-border space-y-2">
+                        <h4 className="text-xs font-medium flex items-center gap-1">
+                          <Lightbulb className="h-3 w-3 text-yellow-500" />
+                          Key Insights
+                        </h4>
+                        <div className="space-y-1">
+                          {pageInsights.slice(0, 3).map((insight, i) => (
+                            <div key={i} className="text-[10px] text-muted-foreground flex gap-1">
+                              <span className="text-primary">•</span>
+                              <span>{insight}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Related Content */}
+                    {relatedContent.length > 0 && (
+                      <div className="p-3 border-t border-border space-y-2">
+                        <h4 className="text-xs font-medium flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3 text-primary" />
+                          Related Topics
+                        </h4>
+                        <div className="flex flex-wrap gap-1">
+                          {relatedContent.slice(0, 4).map((content, i) => (
+                            <Button
+                              key={i}
+                              variant="outline"
+                              size="sm"
+                              className="h-6 text-[10px] px-2"
+                              onClick={() => navigateTo(content.url)}
+                            >
+                              <Link2 className="h-2.5 w-2.5 mr-1" />
+                              {content.title}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Quick Actions */}
+                    <div className="p-3 border-t border-border">
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-[10px] px-2"
+                          onClick={() => browseTogetherQuickAction("Summarize this page in bullet points")}
+                        >
+                          Summarize
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-[10px] px-2"
+                          onClick={() => browseTogetherQuickAction("What are the key takeaways from this page?")}
+                        >
+                          Key Points
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-[10px] px-2"
+                          onClick={() => browseTogetherQuickAction("Find similar websites or content")}
+                        >
+                          Find Similar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-[10px] px-2"
+                          onClick={clearBrowseTogetherChat}
+                        >
+                          <Trash2 className="h-2.5 w-2.5" />
+                        </Button>
+                      </div>
+                      
+                      {/* Input */}
+                      <div className="flex gap-2">
+                        <Textarea
+                          value={browseTogetherInput}
+                          onChange={(e) => setBrowseTogetherInput(e.target.value)}
+                          placeholder="Ask about this page..."
+                          className="min-h-[60px] text-xs resize-none"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              askBrowseTogetherQuestion();
+                            }
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          className="h-auto"
+                          onClick={askBrowseTogetherQuestion}
+                          disabled={isAIThinking || !browseTogetherInput.trim()}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {sidebarMode === "together" && !browseTogetherEnabled && (
+                  <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+                    <Users className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                    <h3 className="text-sm font-medium mb-2">Browse Together is Off</h3>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Enable it to get AI assistance while browsing
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setBrowseTogetherEnabled(true)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Enable Browse Together
+                    </Button>
+                  </div>
+                )}
+                
                 {/* AI Search Mode */}
                 {sidebarMode === "ai" && (
-                  <div className="space-y-4">
+                  <div className="space-y-4 p-3">
                     {/* AI Search */}
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium flex items-center gap-2">
