@@ -39,7 +39,10 @@ import {
   Activity,
   Server,
   Radio,
-  Globe
+  Globe,
+  Route,
+  Bell,
+  Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -52,6 +55,9 @@ import { RealTimeUserFlow } from '@/components/admin/RealTimeUserFlow';
 import { WebHealthMonitor } from '@/components/admin/WebHealthMonitor';
 import { RealTimeFeedback } from '@/components/admin/RealTimeFeedback';
 import { GeographicTracker } from '@/components/admin/GeographicTracker';
+import { UserJourneyTracker } from '@/components/admin/UserJourneyTracker';
+import { AdminAlerts } from '@/components/admin/AdminAlerts';
+import { AnalyticsExport } from '@/components/admin/AnalyticsExport';
 
 interface UserData {
   id: string;
@@ -412,6 +418,18 @@ const AdminPage = () => {
                 <Globe className="h-4 w-4" />
                 User Map
               </TabsTrigger>
+              <TabsTrigger value="journeys" className="gap-2">
+                <Route className="h-4 w-4" />
+                Journeys
+              </TabsTrigger>
+              <TabsTrigger value="alerts" className="gap-2">
+                <Bell className="h-4 w-4" />
+                Alerts
+              </TabsTrigger>
+              <TabsTrigger value="export" className="gap-2">
+                <Download className="h-4 w-4" />
+                Export
+              </TabsTrigger>
               <TabsTrigger value="feedback" className="gap-2">
                 <MessageSquareHeart className="h-4 w-4" />
                 Feedback
@@ -463,6 +481,18 @@ const AdminPage = () => {
 
           <TabsContent value="geo-tracking">
             <GeographicTracker />
+          </TabsContent>
+
+          <TabsContent value="journeys">
+            <UserJourneyTracker />
+          </TabsContent>
+
+          <TabsContent value="alerts">
+            <AdminAlerts />
+          </TabsContent>
+
+          <TabsContent value="export">
+            <AnalyticsExport />
           </TabsContent>
 
           <TabsContent value="feedback">

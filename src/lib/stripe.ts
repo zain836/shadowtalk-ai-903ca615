@@ -56,6 +56,8 @@ export const PLAN_DETAILS = {
       "Priority support (< 4h)",
       "No advertisements",
       "100+ language translation",
+      "📍 Geographic insights dashboard",
+      "🕐 Timezone-based analytics",
     ],
   },
   premium: {
@@ -71,6 +73,8 @@ export const PLAN_DETAILS = {
       "Document generation (contracts, NDAs)",
       "Real-time collaboration",
       "Priority support (< 2h)",
+      "🗺️ User journey tracking & visualization",
+      "📊 Export analytics (CSV/JSON)",
     ],
   },
   elite: {
@@ -86,6 +90,9 @@ export const PLAN_DETAILS = {
       "24/7 phone support",
       "Early beta access",
       "Advanced analytics dashboard",
+      "🚨 Real-time admin alerts",
+      "🌍 Global heatmap visualization",
+      "📈 Traffic anomaly detection",
     ],
   },
 } as const;

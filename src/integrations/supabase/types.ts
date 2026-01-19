@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_alerts: {
+        Row: {
+          alert_type: string
+          created_by: string | null
+          dismissed_at: string | null
+          id: string
+          is_dismissed: boolean | null
+          is_read: boolean | null
+          message: string
+          metadata: Json | null
+          read_at: string | null
+          severity: string
+          title: string
+          triggered_at: string
+        }
+        Insert: {
+          alert_type: string
+          created_by?: string | null
+          dismissed_at?: string | null
+          id?: string
+          is_dismissed?: boolean | null
+          is_read?: boolean | null
+          message: string
+          metadata?: Json | null
+          read_at?: string | null
+          severity?: string
+          title: string
+          triggered_at?: string
+        }
+        Update: {
+          alert_type?: string
+          created_by?: string | null
+          dismissed_at?: string | null
+          id?: string
+          is_dismissed?: boolean | null
+          is_read?: boolean | null
+          message?: string
+          metadata?: Json | null
+          read_at?: string | null
+          severity?: string
+          title?: string
+          triggered_at?: string
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           created_at: string
@@ -1124,6 +1169,42 @@ export type Database = {
           earned_at?: string
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_journeys: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          page_path: string
+          page_title: string | null
+          referrer_path: string | null
+          session_id: string
+          timestamp: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          page_path: string
+          page_title?: string | null
+          referrer_path?: string | null
+          session_id: string
+          timestamp?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          page_path?: string
+          page_title?: string | null
+          referrer_path?: string | null
+          session_id?: string
+          timestamp?: string
+          user_id?: string | null
         }
         Relationships: []
       }
