@@ -1,5 +1,6 @@
 import { Bot, Github, Twitter, Linkedin, Mail, Globe, Shield, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
+import NewsletterSubscription from "./NewsletterSubscription";
 
 const Footer = () => {
   const footerSections = [
@@ -98,26 +99,7 @@ const Footer = () => {
         </div>
 
         {/* Newsletter Signup */}
-        <div className="bg-gradient-card p-8 rounded-2xl mb-12">
-          <div className="text-center md:text-left md:flex md:items-center md:justify-between">
-            <div className="mb-6 md:mb-0">
-              <h3 className="text-xl font-bold mb-2">Stay Updated</h3>
-              <p className="text-muted-foreground">
-                Get the latest updates, features, and AI insights delivered to your inbox.
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 min-w-[300px]">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-4 py-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              <button className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors btn-glow">
-                Subscribe
-              </button>
-            </div>
-          </div>
-        </div>
+        <NewsletterSubscription />
 
         {/* Bottom Bar */}
         <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-border">
