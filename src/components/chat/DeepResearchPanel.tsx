@@ -1,13 +1,16 @@
-import { useState } from "react";
-import { Search, Loader2, BookOpen, Globe, FileText, X, ExternalLink, Download, ChevronDown, ChevronUp, Sparkles, Clock, RefreshCw } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Search, Loader2, BookOpen, Globe, FileText, X, ExternalLink, Download, ChevronDown, ChevronUp, Sparkles, Clock, RefreshCw, AlertCircle, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
+import { useFeatureGating } from "@/hooks/useFeatureGating";
+import { useToast } from "@/hooks/use-toast";
 
 interface Source {
   title: string;
@@ -40,6 +43,12 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat }: DeepResea
   const [result, setResult] = useState<ResearchResult | null>(null);
   const [expandedSections, setExpandedSections] = useState<string[]>(["summary", "findings"]);
   const [searchMode, setSearchMode] = useState<"web" | "academic" | "news" | "social">("web");
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const { checkAccess, isPremiumOrHigher } = useFeatureGating();
+  const { toast } = useToast();
+  const MAX_RETRIES = 3;
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev =>
@@ -47,14 +56,28 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat }: DeepResea
     );
   };
 
-  const handleResearch = async () => {
+  const handleResearch = useCallback(async (isRetry = false) => {
     if (!query.trim()) return;
+    
+    // Check feature access
+    if (!checkAccess("pceEngine")) return;
+
+    // Check online status
+    if (!navigator.onLine) {
+      setIsOffline(true);
+      toast({
+        title: "You're offline",
+        description: "Deep Research requires an internet connection.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsResearching(true);
     setProgress(0);
-    setResult(null);
+    setError(null);
+    if (!isRetry) setResult(null);
 
-    // Simulate research stages
     const stages = [
       { text: "Analyzing query...", progress: 10 },
       { text: "Searching primary sources...", progress: 25 },
@@ -65,14 +88,16 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat }: DeepResea
     ];
 
     try {
-      // Progress simulation
       for (const s of stages) {
         setStage(s.text);
         setProgress(s.progress);
-        await new Promise(r => setTimeout(r, 600));
+        await new Promise(r => setTimeout(r, 400));
       }
 
       const { data: { session } } = await supabase.auth.getSession();
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
       
       const resp = await fetch(CHAT_URL, {
         method: "POST",
@@ -84,12 +109,25 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat }: DeepResea
           deepResearch: true,
           researchQuery: query,
           searchMode: searchMode
-        })
+        }),
+        signal: controller.signal
       });
 
-      if (!resp.ok) throw new Error("Research failed");
+      clearTimeout(timeoutId);
 
-      // Parse streaming response
+      if (!resp.ok) {
+        if (resp.status === 429) {
+          throw new Error("Rate limit exceeded. Please wait a moment and try again.");
+        }
+        if (resp.status >= 500 && retryCount < MAX_RETRIES) {
+          setRetryCount(prev => prev + 1);
+          setStage(`Server error. Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+          await new Promise(r => setTimeout(r, 2000));
+          return handleResearch(true);
+        }
+        throw new Error(`Research failed with status ${resp.status}`);
+      }
+
       const reader = resp.body?.getReader();
       const decoder = new TextDecoder();
       let fullContent = "";
@@ -111,7 +149,10 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat }: DeepResea
         }
       }
 
-      // Parse the research result
+      if (!fullContent.trim()) {
+        throw new Error("No results found. Try rephrasing your query.");
+      }
+
       const parsedResult: ResearchResult = {
         summary: fullContent,
         sources: [
@@ -126,14 +167,26 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat }: DeepResea
       setResult(parsedResult);
       setProgress(100);
       setStage("Research complete!");
+      setRetryCount(0);
+      
+      toast({
+        title: "Research complete",
+        description: `Found ${parsedResult.keyFindings.length} key findings.`,
+      });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Research error:", error);
-      setStage("Research failed. Please try again.");
+      
+      if (error.name === 'AbortError') {
+        setError("Request timed out. The research is taking longer than expected. Please try a simpler query.");
+      } else {
+        setError(error.message || "Research failed. Please try again.");
+      }
+      setStage("Research failed");
     } finally {
       setIsResearching(false);
     }
-  };
+  }, [query, searchMode, retryCount, checkAccess, toast]);
 
   const extractKeyFindings = (content: string): string[] => {
     const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 20);
@@ -193,7 +246,7 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat }: DeepResea
             disabled={isResearching}
             className="flex-1"
           />
-          <Button onClick={handleResearch} disabled={isResearching || !query.trim()}>
+          <Button onClick={() => handleResearch()} disabled={isResearching || !query.trim()}>
             {isResearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           </Button>
         </div>
@@ -217,15 +270,51 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat }: DeepResea
         </Tabs>
       </div>
 
+      {/* Error State */}
+      {error && (
+        <div className="p-4 border-b border-border">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>{error}</span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleResearch()}
+                className="ml-2"
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {/* Offline Indicator */}
+      {isOffline && (
+        <div className="p-4 border-b border-border">
+          <Alert>
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              You're offline. Deep Research requires an internet connection.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       {/* Progress */}
       {isResearching && (
         <div className="p-4 border-b border-border">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">{stage}</span>
-              <span className="font-medium">{progress}%</span>
+              <span className="font-medium">{Math.round(progress)}%</span>
             </div>
             <Progress value={progress} className="h-2" />
+            {retryCount > 0 && (
+              <p className="text-xs text-amber-500">Retry attempt {retryCount}/{MAX_RETRIES}</p>
+            )}
           </div>
         </div>
       )}
@@ -349,7 +438,7 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat }: DeepResea
                     className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
                     onClick={() => {
                       setQuery(topic);
-                      handleResearch();
+                      setTimeout(() => handleResearch(), 100);
                     }}
                   >
                     {topic}
@@ -379,7 +468,7 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat }: DeepResea
                 size="icon"
                 onClick={() => {
                   setResult(null);
-                  handleResearch();
+                  setTimeout(() => handleResearch(), 100);
                 }}
               >
                 <RefreshCw className="h-4 w-4" />
