@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Bot, User, Copy, RefreshCw, Volume2, VolumeX, Lock, Edit2 } from 'lucide-react';
+import { Bot, User, Copy, RefreshCw, Volume2, VolumeX, Lock, Edit2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -8,6 +8,19 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { CodeBlock } from './CodeBlock';
 import { useToast } from '@/hooks/use-toast';
+
+// Extract URLs from text content
+const extractUrls = (text: string): string[] => {
+  const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
+  const matches = text.match(urlRegex) || [];
+  // Remove duplicates and clean trailing punctuation
+  return [...new Set(matches.map(url => url.replace(/[.,;:!?)]+$/, '')))];
+};
+
+// Open URL in new browser tab
+const openInBrowser = (url: string) => {
+  window.open(url, '_blank', 'noopener,noreferrer');
+};
 
 interface Message {
   id: string;
@@ -132,9 +145,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   p({ children }) { return <p className="text-sm leading-relaxed">{children}</p>; },
                   a({ children, href }) { 
                     return (
-                      <a href={href} target="_blank" rel="noopener noreferrer" 
-                         className="text-primary underline underline-offset-2 hover:no-underline">
+                      <a 
+                        href={href} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (href) openInBrowser(href);
+                        }}
+                        className="text-primary underline underline-offset-2 hover:no-underline cursor-pointer inline-flex items-center gap-0.5"
+                      >
                         {children}
+                        <ExternalLink className="h-3 w-3 inline-block ml-0.5" />
                       </a>
                     ); 
                   },
@@ -169,6 +191,45 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             </div>
           )}
         </div>
+
+        {/* Extracted URLs - Quick open buttons for AI responses */}
+        {!isUser && !isWelcome && (() => {
+          const urls = extractUrls(message.content);
+          if (urls.length === 0) return null;
+          
+          // Show at most 3 quick-open buttons
+          const displayUrls = urls.slice(0, 3);
+          
+          return (
+            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+              {displayUrls.map((url, idx) => {
+                // Extract domain for display
+                let domain = '';
+                try {
+                  domain = new URL(url).hostname.replace('www.', '');
+                } catch {
+                  domain = url.slice(0, 30);
+                }
+                
+                return (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openInBrowser(url)}
+                    className="h-6 px-2 text-xs gap-1 text-muted-foreground hover:text-primary"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    {domain.length > 20 ? domain.slice(0, 20) + '...' : domain}
+                  </Button>
+                );
+              })}
+              {urls.length > 3 && (
+                <span className="text-xs text-muted-foreground">+{urls.length - 3} more</span>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Actions */}
         {!isWelcome && (
