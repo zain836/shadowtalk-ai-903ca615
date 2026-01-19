@@ -292,13 +292,6 @@ export const ChatHeader = ({
           locked={!isElite}
         />
         <MenuItem
-          icon={<Zap className="h-5 w-5" />}
-          label="AI Agent Workflows"
-          onClick={() => handleMenuAction(onOpenAgentWorkflows)}
-          disabled={!isElite}
-          locked={!isElite}
-        />
-        <MenuItem
           icon={<Shield className="h-5 w-5" />}
           label="Stealth Vault"
           onClick={() => handleMenuAction(onOpenStealthVault)}
@@ -541,11 +534,6 @@ export const ChatHeader = ({
               <DropdownMenuItem onClick={onOpenWhiteLabelBranding} disabled={!isElite}>
                 <Palette className="h-4 w-4 mr-2" />
                 White-Label Branding
-                {!isElite && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onOpenAgentWorkflows} disabled={!isElite}>
-                <Zap className="h-4 w-4 mr-2" />
-                AI Agent Workflows
                 {!isElite && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onOpenStealthVault} disabled={!isElite}>
