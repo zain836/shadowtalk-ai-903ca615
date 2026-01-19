@@ -1,11 +1,29 @@
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 // Chat request validation
+// Multimodal content part (for images)
+const ContentPartSchema = z.union([
+  z.object({
+    type: z.literal("text"),
+    text: z.string().min(1).max(10000),
+  }),
+  z.object({
+    type: z.literal("image_url"),
+    image_url: z.object({
+      url: z.string(),
+    }),
+  }),
+]);
+
 // Chat request validation - messages optional for special modes
+// Content can be string (text-only) or array (multimodal with images)
 export const ChatRequestSchema = z.object({
   messages: z.array(z.object({
     role: z.enum(["user", "assistant", "system"]),
-    content: z.string().min(1).max(10000),
+    content: z.union([
+      z.string().min(1).max(10000),
+      z.array(ContentPartSchema).min(1).max(20),
+    ]),
   })).min(1).max(100).optional(),
   personality: z.enum([
     "friendly", "sarcastic", "professional", "creative", 
