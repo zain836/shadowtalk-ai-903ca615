@@ -320,6 +320,14 @@ const ChatbotPage = () => {
           e.preventDefault();
           setShowShadowBrowser(true);
           break;
+        case 'm': // Multi-Model Orchestrator
+          e.preventDefault();
+          setShowMultiModel(true);
+          break;
+        case 'p': // API Marketplace
+          e.preventDefault();
+          setShowAPIMarketplace(true);
+          break;
       }
     };
 
