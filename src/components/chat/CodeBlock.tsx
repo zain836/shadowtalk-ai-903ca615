@@ -64,7 +64,7 @@ export const CodeBlock = ({ code, language, onOpenCanvas }: CodeBlockProps) => {
   }
 
   return (
-    <div className="relative group/code rounded-lg overflow-hidden border border-border my-3">
+    <div className="relative group/code rounded-lg overflow-hidden border border-border my-3 max-w-full">
       {/* Header */}
       <div className="flex items-center justify-between bg-muted/70 px-3 py-2 border-b border-border">
         <div className="flex items-center gap-2">
@@ -154,7 +154,7 @@ export const CodeBlock = ({ code, language, onOpenCanvas }: CodeBlockProps) => {
 
       {/* Code */}
       <div 
-        className={`overflow-x-auto ${collapsed ? "max-h-[200px] overflow-y-hidden" : ""}`}
+        className={`overflow-x-auto overflow-y-auto ${collapsed ? "max-h-[200px]" : "max-h-[400px]"}`}
         style={{ position: "relative" }}
       >
         <SyntaxHighlighter
