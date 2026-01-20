@@ -425,19 +425,33 @@ const SecurityAuditPanel: React.FC<SecurityAuditPanelProps> = ({
         .map(f => `// === File: ${f.path} ===\n// Language: ${f.language || 'unknown'}\n${f.content}`)
         .join('\n\n');
 
+      console.log('[SecurityAudit] Sending code for analysis, length:', combinedCode.length);
+      
       const result = await onAnalyze(combinedCode);
       
+      console.log('[SecurityAudit] Received result:', result);
+      
+      // Handle potential error responses - cast to any for error checking
+      const resultAny = result as any;
+      if (!result || resultAny.error) {
+        throw new Error(resultAny?.error || 'No response from security analysis');
+      }
+      
+      // Ensure vulnerabilities is an array
+      const vulnList = Array.isArray(result.vulnerabilities) ? result.vulnerabilities : [];
+      
       // Enhance vulnerabilities with file references
-      const enhancedVulns = result.vulnerabilities.map(v => ({
+      const enhancedVulns = vulnList.map((v: Vulnerability) => ({
         ...v,
+        id: v.id || `vuln-${Math.random().toString(36).substr(2, 9)}`,
         affectedFiles: filesToAnalyze
-          .filter(f => v.location.includes(f.name) || v.description.toLowerCase().includes(f.name.toLowerCase()))
+          .filter(f => (v.location && v.location.includes(f.name)) || (v.description && v.description.toLowerCase().includes(f.name.toLowerCase())))
           .map(f => f.path)
       }));
 
       setVulnerabilities(enhancedVulns);
-      setSummary(result.summary);
-      setRiskScore(result.riskScore);
+      setSummary(result.summary || 'Analysis complete');
+      setRiskScore(typeof result.riskScore === 'number' ? result.riskScore : 0);
       
       if (enhancedVulns.length > 0) {
         setSelectedVuln(enhancedVulns[0]);
@@ -455,7 +469,11 @@ const SecurityAuditPanel: React.FC<SecurityAuditPanelProps> = ({
       });
 
     } catch (error) {
-      toast.error('Failed to analyze code');
+      console.error('[SecurityAudit] Analysis error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error('Failed to analyze code', {
+        description: errorMessage
+      });
       setScanProgress(null);
     }
   };
