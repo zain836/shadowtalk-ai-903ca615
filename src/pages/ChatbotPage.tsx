@@ -38,6 +38,8 @@ import { OfflineAIIndicator } from "@/components/chat/OfflineAIIndicator";
 import { OfflineToolsPanel } from "@/components/chat/OfflineToolsPanel";
 import { ShadowBrowser } from "@/components/chat/ShadowBrowser";
 import { WelcomeDialog } from "@/components/chat/WelcomeDialog";
+import { MultiModelOrchestrator } from "@/components/chat/MultiModelOrchestrator";
+import { APIMarketplace } from "@/components/chat/APIMarketplace";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -138,6 +140,8 @@ const ChatbotPage = () => {
   const [showShadowBrowser, setShowShadowBrowser] = useState(false);
   const [browserInitialUrl, setBrowserInitialUrl] = useState<string | undefined>(undefined);
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
+  const [showMultiModel, setShowMultiModel] = useState(false);
+  const [showAPIMarketplace, setShowAPIMarketplace] = useState(false);
   
   // Check if welcome dialog should be shown (after boot screen)
   useEffect(() => {
@@ -1185,6 +1189,27 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
       <WelcomeDialog 
         open={showWelcomeDialog} 
         onOpenChange={setShowWelcomeDialog} 
+      />
+
+      {/* Multi-Model Orchestrator - Enterprise AI */}
+      <MultiModelOrchestrator
+        isOpen={showMultiModel}
+        onClose={() => setShowMultiModel(false)}
+        onResult={(result) => {
+          setMessages(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'ai',
+            content: result,
+            timestamp: new Date()
+          }]);
+        }}
+        initialPrompt={message}
+      />
+
+      {/* API Marketplace - Developer Portal */}
+      <APIMarketplace
+        isOpen={showAPIMarketplace}
+        onClose={() => setShowAPIMarketplace(false)}
       />
     </div>
   );
