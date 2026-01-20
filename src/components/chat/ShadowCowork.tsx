@@ -7,7 +7,7 @@ import {
   RefreshCw, Settings, Bot, ChevronRight, ChevronDown,
   GitBranch, GitCommit, GitMerge, History, RotateCcw, Archive,
   FolderPlus, MessageSquare, Sparkles, ThumbsUp, ThumbsDown,
-  AlertTriangle, Lightbulb, Code, Shield
+  AlertTriangle, Lightbulb, Code, Shield, Smartphone, Monitor, Tablet, Wand2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -164,6 +164,18 @@ export const ShadowCowork = ({ isOpen, onClose, onInsertToChat }: ShadowCoworkPr
   const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Auto-responsive feature state
+  const [isResponsiveLoading, setIsResponsiveLoading] = useState(false);
+  const [responsivePreview, setResponsivePreview] = useState<"mobile" | "tablet" | "desktop">("desktop");
+  const [originalCode, setOriginalCode] = useState("");
+  const [responsiveCode, setResponsiveCode] = useState("");
+  const [responsiveChanges, setResponsiveChanges] = useState<Array<{
+    type: "added" | "modified" | "suggestion";
+    description: string;
+    before?: string;
+    after: string;
+  }>>([]);
   
   // Helper to update files in active project
   const setFiles = (newFiles: FileNode[] | ((prev: FileNode[]) => FileNode[])) => {
@@ -911,6 +923,159 @@ Provide the code completion to insert at █:`
     }
   };
   
+  // Auto-responsive feature - AI makes code responsive automatically
+  const makeCodeResponsive = async () => {
+    if (!selectedFile || !fileContent) {
+      toast({ title: "Select a file first", variant: "destructive" });
+      return;
+    }
+    
+    const ext = selectedFile.name.split(".").pop()?.toLowerCase();
+    const supportedExts = ["tsx", "jsx", "html", "css", "vue", "svelte"];
+    
+    if (!ext || !supportedExts.includes(ext)) {
+      toast({ 
+        title: "Unsupported file type", 
+        description: "Select HTML, CSS, JSX, TSX, Vue, or Svelte files",
+        variant: "destructive" 
+      });
+      return;
+    }
+    
+    setIsResponsiveLoading(true);
+    setOriginalCode(fileContent);
+    setResponsiveCode("");
+    setResponsiveChanges([]);
+    
+    try {
+      const response = await supabase.functions.invoke("chat", {
+        body: {
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert frontend developer specializing in responsive design. Your task is to make the provided code fully responsive across all device sizes (mobile, tablet, desktop).
+
+Transform the code following these best practices:
+1. **Mobile-first approach**: Start with mobile styles, add breakpoints for larger screens
+2. **Flexbox/Grid**: Replace fixed widths with flexible layouts
+3. **Responsive units**: Use rem, em, %, vw, vh instead of fixed px values
+4. **Media queries**: Add appropriate breakpoints (sm: 640px, md: 768px, lg: 1024px, xl: 1280px)
+5. **Tailwind classes**: If using Tailwind, add responsive prefixes (sm:, md:, lg:, xl:)
+6. **Touch-friendly**: Ensure buttons/links have min 44px tap targets on mobile
+7. **Typography**: Use fluid typography that scales with viewport
+8. **Images**: Make images responsive with max-width: 100%
+9. **Navigation**: Convert to hamburger menu on mobile if applicable
+10. **Hide/Show**: Use responsive visibility utilities appropriately
+
+Return your response as JSON:
+{
+  "responsiveCode": "// The complete transformed responsive code",
+  "changes": [
+    {
+      "type": "added|modified|suggestion",
+      "description": "What was changed and why",
+      "before": "Original code snippet (if modified)",
+      "after": "New responsive code snippet"
+    }
+  ]
+}`
+            },
+            {
+              role: "user",
+              content: `Make this ${ext.toUpperCase()} code fully responsive:
+
+File: ${selectedFile.name}
+
+\`\`\`${ext}
+${fileContent}
+\`\`\`
+
+Transform it to be fully responsive across mobile, tablet, and desktop.`
+            }
+          ]
+        }
+      });
+      
+      if (response.error) throw new Error(response.error.message);
+      
+      const content = response.data?.choices?.[0]?.message?.content || "";
+      
+      // Parse JSON response
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          setResponsiveCode(parsed.responsiveCode || fileContent);
+          setResponsiveChanges(parsed.changes || []);
+          toast({ 
+            title: "Code made responsive!", 
+            description: `${parsed.changes?.length || 0} changes applied` 
+          });
+        } else {
+          // Fallback: treat entire response as code
+          setResponsiveCode(content.replace(/```[\w]*\n?/g, "").replace(/```$/g, "").trim());
+          setResponsiveChanges([{
+            type: "modified",
+            description: "Code transformed to be responsive",
+            after: "See full code in preview"
+          }]);
+        }
+      } catch {
+        setResponsiveCode(content);
+        setResponsiveChanges([{
+          type: "modified",
+          description: "Code transformed to be responsive",
+          after: "See full code in preview"
+        }]);
+      }
+      
+    } catch (error) {
+      console.error("Responsive conversion error:", error);
+      toast({ 
+        title: "Failed to make responsive", 
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsResponsiveLoading(false);
+    }
+  };
+  
+  // Apply responsive changes to file
+  const applyResponsiveChanges = () => {
+    if (!responsiveCode || !selectedFile) return;
+    
+    setFileContent(responsiveCode);
+    
+    // Update the file in the project
+    const updateContent = (nodes: FileNode[]): FileNode[] => {
+      return nodes.map(node => {
+        if (node.path === selectedFile.path) {
+          return { ...node, content: responsiveCode };
+        }
+        if (node.children) {
+          return { ...node, children: updateContent(node.children) };
+        }
+        return node;
+      });
+    };
+    
+    setFiles(updateContent(files));
+    setSelectedFile({ ...selectedFile, content: responsiveCode });
+    
+    toast({ title: "Responsive changes applied!" });
+    
+    // Export to chat if callback exists
+    if (onInsertToChat) {
+      const changesText = responsiveChanges.map(c => `- **${c.type}**: ${c.description}`).join("\n");
+      onInsertToChat(`## 📱 Auto-Responsive Applied\n\n**File:** ${selectedFile.name}\n\n**Changes:**\n${changesText}\n\n\`\`\`${selectedFile.name.split('.').pop()}\n${responsiveCode}\n\`\`\``);
+    }
+    
+    // Reset state
+    setResponsiveCode("");
+    setResponsiveChanges([]);
+  };
+  
   // Render file tree
   const renderFileTree = (nodes: FileNode[], depth = 0) => {
     return nodes.map(node => (
@@ -1026,6 +1191,10 @@ Provide the code completion to insert at █:`
                   <TabsTrigger value="projects" className="gap-2 data-[state=active]:bg-accent">
                     <GitBranch className="h-4 w-4" />
                     Projects
+                  </TabsTrigger>
+                  <TabsTrigger value="responsive" className="gap-2 data-[state=active]:bg-accent">
+                    <Smartphone className="h-4 w-4" />
+                    Responsive
                   </TabsTrigger>
                 </TabsList>
 
@@ -1474,6 +1643,230 @@ Provide the code completion to insert at █:`
                           )}
                         </div>
                       </ScrollArea>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Responsive Tab */}
+                <TabsContent value="responsive" className="flex-1 flex flex-col mt-0 p-4 overflow-auto">
+                  <div className="space-y-6">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                          <Wand2 className="h-5 w-5 text-primary-foreground" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">Auto-Responsive</h3>
+                          <p className="text-xs text-muted-foreground">Transform any code to be fully responsive</p>
+                        </div>
+                      </div>
+                      
+                      {/* Preview size selector */}
+                      <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
+                        <Button
+                          variant={responsivePreview === "mobile" ? "secondary" : "ghost"}
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => setResponsivePreview("mobile")}
+                        >
+                          <Smartphone className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant={responsivePreview === "tablet" ? "secondary" : "ghost"}
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => setResponsivePreview("tablet")}
+                        >
+                          <Tablet className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant={responsivePreview === "desktop" ? "secondary" : "ghost"}
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => setResponsivePreview("desktop")}
+                        >
+                          <Monitor className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Current file info */}
+                    {selectedFile ? (
+                      <div className="p-4 border border-border rounded-lg bg-muted/30 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <FileCode className="h-5 w-5 text-primary" />
+                            <span className="font-medium">{selectedFile.name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {selectedFile.name.split('.').pop()?.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <Button
+                            onClick={makeCodeResponsive}
+                            disabled={isResponsiveLoading}
+                            className="gap-2"
+                          >
+                            {isResponsiveLoading ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Transforming...
+                              </>
+                            ) : (
+                              <>
+                                <Wand2 className="h-4 w-4" />
+                                Make Responsive
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        
+                        <p className="text-sm text-muted-foreground">
+                          Click "Make Responsive" to automatically add responsive breakpoints, 
+                          flexible layouts, and mobile-first styles to your code.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="p-8 border border-dashed border-border rounded-lg text-center">
+                        <FolderOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                        <p className="text-muted-foreground">Select a file from the explorer to make it responsive</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Supported: HTML, CSS, JSX, TSX, Vue, Svelte
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Changes preview */}
+                    {responsiveChanges.length > 0 && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-medium flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
+                            Changes Made ({responsiveChanges.length})
+                          </h4>
+                          <Button size="sm" onClick={applyResponsiveChanges} className="gap-2">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Apply Changes
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-2 max-h-[200px] overflow-auto">
+                          {responsiveChanges.map((change, idx) => (
+                            <div 
+                              key={idx}
+                              className={cn(
+                                "p-3 rounded-lg border text-sm",
+                                change.type === "added" && "bg-primary/5 border-primary/20",
+                                change.type === "modified" && "bg-accent border-accent",
+                                change.type === "suggestion" && "bg-muted border-border"
+                              )}
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge 
+                                  variant="outline" 
+                                  className={cn(
+                                    "text-xs",
+                                    change.type === "added" && "border-primary text-primary",
+                                    change.type === "modified" && "border-accent-foreground",
+                                    change.type === "suggestion" && "border-muted-foreground"
+                                  )}
+                                >
+                                  {change.type}
+                                </Badge>
+                              </div>
+                              <p className="text-muted-foreground">{change.description}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Responsive code preview */}
+                    {responsiveCode && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-medium">Responsive Code Preview</h4>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => navigator.clipboard.writeText(responsiveCode)}
+                              className="gap-1"
+                            >
+                              <Copy className="h-3 w-3" />
+                              Copy
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => {
+                                setResponsiveCode("");
+                                setResponsiveChanges([]);
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                              Discard
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div 
+                          className={cn(
+                            "border border-border rounded-lg overflow-hidden transition-all duration-300 mx-auto",
+                            responsivePreview === "mobile" && "max-w-[375px]",
+                            responsivePreview === "tablet" && "max-w-[768px]",
+                            responsivePreview === "desktop" && "max-w-full"
+                          )}
+                        >
+                          <div className="flex items-center justify-center gap-2 p-2 bg-muted/50 border-b border-border">
+                            <div className="flex gap-1">
+                              <div className="w-2 h-2 rounded-full bg-destructive/50" />
+                              <div className="w-2 h-2 rounded-full bg-yellow-500/50" />
+                              <div className="w-2 h-2 rounded-full bg-primary/50" />
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {responsivePreview === "mobile" && "375px (Mobile)"}
+                              {responsivePreview === "tablet" && "768px (Tablet)"}
+                              {responsivePreview === "desktop" && "Full Width (Desktop)"}
+                            </span>
+                          </div>
+                          <ScrollArea className="h-[300px]">
+                            <pre className="p-4 text-xs font-mono whitespace-pre-wrap break-words">
+                              {responsiveCode}
+                            </pre>
+                          </ScrollArea>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tips section */}
+                    <div className="p-4 border border-border rounded-lg bg-muted/20">
+                      <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
+                        <Lightbulb className="h-4 w-4 text-primary" />
+                        Responsive Best Practices
+                      </h4>
+                      <ul className="text-xs text-muted-foreground space-y-1.5">
+                        <li className="flex items-start gap-2">
+                          <span className="text-primary">•</span>
+                          Mobile-first: Start with mobile styles, add breakpoints for larger screens
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-primary">•</span>
+                          Use flexible units: rem, em, %, vw, vh instead of fixed px
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-primary">•</span>
+                          Flexbox & Grid: Replace fixed layouts with flexible ones
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-primary">•</span>
+                          Touch targets: Minimum 44px tap areas for mobile buttons
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-primary">•</span>
+                          Test on real devices: Simulators don't catch all issues
+                        </li>
+                      </ul>
                     </div>
                   </div>
                 </TabsContent>
