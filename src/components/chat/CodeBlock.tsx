@@ -14,7 +14,7 @@ interface CodeBlockProps {
 
 export const CodeBlock = ({ code, language, onOpenCanvas }: CodeBlockProps) => {
   const [copied, setCopied] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [showPlayground, setShowPlayground] = useState(false);
   const { toast } = useToast();
 
@@ -25,8 +25,13 @@ export const CodeBlock = ({ code, language, onOpenCanvas }: CodeBlockProps) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const lines = code.split("\n").length;
-  const isLong = lines > 20;
+  const allLines = code.split("\n");
+  const lines = allLines.length;
+  const isLong = lines > 10;
+  
+  // Show only first 10 lines when collapsed
+  const displayCode = isLong && !expanded ? allLines.slice(0, 10).join("\n") : code;
+  const hiddenLines = lines - 10;
 
   // Map common language aliases
   const languageMap: Record<string, string> = {
@@ -77,26 +82,6 @@ export const CodeBlock = ({ code, language, onOpenCanvas }: CodeBlockProps) => {
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {isLong && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCollapsed(!collapsed)}
-              className="h-7 px-2 text-xs"
-            >
-              {collapsed ? (
-                <>
-                  <ChevronDown className="h-3 w-3 mr-1" />
-                  Expand
-                </>
-              ) : (
-                <>
-                  <ChevronUp className="h-3 w-3 mr-1" />
-                  Collapse
-                </>
-              )}
-            </Button>
-          )}
           {canUsePlayground && (
             <Button
               variant="ghost"
@@ -153,10 +138,7 @@ export const CodeBlock = ({ code, language, onOpenCanvas }: CodeBlockProps) => {
       </div>
 
       {/* Code */}
-      <div 
-        className={`overflow-x-auto overflow-y-auto ${collapsed ? "max-h-[200px]" : "max-h-[400px]"}`}
-        style={{ position: "relative" }}
-      >
+      <div className="overflow-x-auto">
         <SyntaxHighlighter
           language={normalizedLang}
           style={oneDark}
@@ -176,16 +158,29 @@ export const CodeBlock = ({ code, language, onOpenCanvas }: CodeBlockProps) => {
             opacity: 0.5,
           }}
         >
-          {code}
+          {displayCode}
         </SyntaxHighlighter>
-        
-        {/* Collapsed gradient overlay */}
-        {collapsed && isLong && (
-          <div 
-            className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent pointer-events-none"
-          />
-        )}
       </div>
+      
+      {/* Show more/less button for long code */}
+      {isLong && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full flex items-center justify-center gap-2 py-2 bg-muted/50 hover:bg-muted border-t border-border text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {expanded ? (
+            <>
+              <ChevronUp className="h-3 w-3" />
+              Show less
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-3 w-3" />
+              Show {hiddenLines} more lines
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 };
