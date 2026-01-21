@@ -68,27 +68,27 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   return (
-    <div className={`group flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
+    <div className={`group flex items-start gap-2 sm:gap-3 ${isUser ? 'flex-row-reverse' : ''} animate-in fade-in-0 slide-in-from-bottom-2 duration-300`}>
       {/* Avatar */}
-      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm ${
+      <div className={`w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm ${
         isUser 
           ? 'bg-primary' 
           : 'bg-gradient-to-br from-primary to-secondary'
       }`}>
         {isUser 
-          ? <User className="h-4 w-4 text-primary-foreground" /> 
-          : <Bot className="h-4 w-4 text-primary-foreground" />
+          ? <User className="h-3 w-3 sm:h-4 sm:w-4 text-primary-foreground" /> 
+          : <Bot className="h-3 w-3 sm:h-4 sm:w-4 text-primary-foreground" />
         }
       </div>
 
       {/* Content */}
-      <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'} max-w-[75%]`}>
+      <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[75%]`}>
         {/* Image attachment (user uploaded) */}
         {message.attachment?.type === 'image' && (
           <img 
             src={message.attachment.data} 
             alt={message.attachment.name} 
-            className="max-w-xs rounded-xl border border-border/50 shadow-sm" 
+            className="max-w-[200px] sm:max-w-xs rounded-xl border border-border/50 shadow-sm" 
           />
         )}
 
@@ -111,13 +111,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
 
         {/* Message bubble */}
-        <div className={`rounded-2xl px-4 py-3 w-full overflow-hidden ${
+        <div className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-3 w-full overflow-hidden ${
           isUser 
             ? 'bg-primary text-primary-foreground rounded-br-md' 
             : 'bg-card border border-border/50 shadow-sm rounded-bl-md'
         }`}>
           {isUser ? (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+            <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
           ) : (
             <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-headings:mt-3 prose-headings:mb-1.5 [&_.katex]:text-foreground [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto overflow-hidden">
               <ReactMarkdown
