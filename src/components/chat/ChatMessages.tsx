@@ -45,8 +45,8 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   messagesEndRef,
 }) => {
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar">
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+    <div className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth">
+      <div className="max-w-4xl mx-auto px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Suggested prompts */}
         {showSuggestions && (
           <SuggestedPrompts 
@@ -75,11 +75,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
         {/* Loading indicator */}
         {isLoading && (
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-sm">
-              <Bot className="h-4 w-4 text-primary-foreground" />
+          <div className="flex items-start gap-2 sm:gap-3 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-sm">
+              <Bot className="h-3 w-3 sm:h-4 sm:w-4 text-primary-foreground" />
             </div>
-            <div className="bg-card border border-border/50 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+            <div className="bg-card border border-border/50 rounded-2xl rounded-bl-md px-3 py-2 sm:px-4 sm:py-3 shadow-sm">
               <div className="flex gap-1.5">
                 <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
                 <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
@@ -89,7 +89,8 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
           </div>
         )}
 
-        <div ref={messagesEndRef} />
+        {/* Scroll anchor - always visible for auto-scroll */}
+        <div ref={messagesEndRef} className="h-1" />
       </div>
     </div>
   );

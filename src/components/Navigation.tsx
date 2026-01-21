@@ -56,7 +56,7 @@ const Navigation = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-6">
+          <div className="hidden md:flex items-center space-x-4 lg:space-x-6">
             {navItems.map((item) => (
               <button
                 key={item.name}
@@ -64,7 +64,7 @@ const Navigation = () => {
                 className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors text-sm"
               >
                 <item.icon className="h-4 w-4" />
-                <span>{item.name}</span>
+                <span className="hidden lg:inline">{item.name}</span>
               </button>
             ))}
           </div>
@@ -92,7 +92,8 @@ const Navigation = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden text-foreground"
+            className="md:hidden p-2 text-foreground hover:bg-muted rounded-lg transition-colors"
+            aria-label="Toggle menu"
           >
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -100,7 +101,7 @@ const Navigation = () => {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="lg:hidden absolute top-16 left-0 right-0 bg-background border-b border-border">
+          <div className="md:hidden absolute top-16 left-0 right-0 bg-background/95 backdrop-blur-lg border-b border-border shadow-lg animate-in slide-in-from-top-2 duration-200">
             <div className="px-4 py-6 space-y-6">
               {user && (
                 <div className="pb-4 border-b border-border">
