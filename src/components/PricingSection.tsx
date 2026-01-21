@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Check, Star, Zap, Crown, Rocket, Gift } from "lucide-react";
+import { Check, Star, Zap, Crown, Rocket, Gift, Coins, PlayCircle, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -290,6 +290,59 @@ const PricingSection = () => {
                 <div className="text-2xl font-bold gradient-text mb-4">$50-$200</div>
                 <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/chatbot')}>
                   Get Report
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Additional Revenue Streams */}
+        <div className="mt-16 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Credit System */}
+            <Card className="card-hover bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20">
+              <CardContent className="pt-6 text-center">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <Coins className="h-6 w-6 text-primary" />
+                </div>
+                <h4 className="font-semibold mb-2">Pay-Per-Use Credits</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Buy credits for AI generations, no subscription needed
+                </p>
+                <Button variant="outline" className="w-full" onClick={() => navigate('/billing')}>
+                  Buy Credits
+                </Button>
+              </CardContent>
+            </Card>
+            
+            {/* Affiliate Program */}
+            <Card className="card-hover bg-gradient-to-br from-success/5 to-primary/5 border-success/20">
+              <CardContent className="pt-6 text-center">
+                <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center mx-auto mb-4">
+                  <TrendingUp className="h-6 w-6 text-success" />
+                </div>
+                <h4 className="font-semibold mb-2">Affiliate Program</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Earn 20-40% recurring commission on referrals
+                </p>
+                <Button variant="outline" className="w-full" onClick={() => navigate('/billing?tab=affiliate')}>
+                  Start Earning
+                </Button>
+              </CardContent>
+            </Card>
+            
+            {/* Video Tutorials */}
+            <Card className="card-hover bg-gradient-to-br from-secondary/5 to-primary/5 border-secondary/20">
+              <CardContent className="pt-6 text-center">
+                <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mx-auto mb-4">
+                  <PlayCircle className="h-6 w-6 text-secondary-foreground" />
+                </div>
+                <h4 className="font-semibold mb-2">Video Tutorials</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Learn to master all AI features step-by-step
+                </p>
+                <Button variant="outline" className="w-full" onClick={() => navigate('/billing')}>
+                  Watch Now
                 </Button>
               </CardContent>
             </Card>

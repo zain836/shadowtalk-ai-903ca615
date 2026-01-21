@@ -30,6 +30,7 @@ const features = [
   { icon: Globe, label: "ShadowBrowser", description: "Browse the web with AI assistance" },
   { icon: Shield, label: "Stealth Vault", description: "End-to-end encrypted notes" },
   { icon: Zap, label: "Deep Research", description: "Comprehensive AI-powered research" },
+  { icon: Rocket, label: "Video Tutorials", description: "Step-by-step onboarding guides" },
 ];
 
 export function WelcomeDialog({ open, onOpenChange }: WelcomeDialogProps) {
