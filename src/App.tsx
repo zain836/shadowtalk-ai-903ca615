@@ -34,6 +34,7 @@ import TermsOfServicePage from "./pages/TermsOfServicePage";
 import CookiePolicyPage from "./pages/CookiePolicyPage";
 import GDPRPage from "./pages/GDPRPage";
 import NotFound from "./pages/NotFound";
+import MonetizationPage from "./pages/MonetizationPage";
 import PWABanner from "./components/PWABanner";
 import CookieConsent from "./components/CookieConsent";
 import CustomerSupportWidget from "./components/CustomerSupportWidget";
@@ -100,6 +101,7 @@ const App = () => {
                   <Route path="/terms" element={<TermsOfServicePage />} />
                   <Route path="/cookies" element={<CookiePolicyPage />} />
                   <Route path="/gdpr" element={<GDPRPage />} />
+                  <Route path="/billing" element={<MonetizationPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <JourneyTracker />
