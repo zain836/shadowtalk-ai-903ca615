@@ -35,6 +35,7 @@ import CookiePolicyPage from "./pages/CookiePolicyPage";
 import GDPRPage from "./pages/GDPRPage";
 import NotFound from "./pages/NotFound";
 import MonetizationPage from "./pages/MonetizationPage";
+import FounderAccessPage from "./pages/FounderAccessPage";
 import PWABanner from "./components/PWABanner";
 import CookieConsent from "./components/CookieConsent";
 import CustomerSupportWidget from "./components/CustomerSupportWidget";
@@ -102,6 +103,7 @@ const App = () => {
                   <Route path="/cookies" element={<CookiePolicyPage />} />
                   <Route path="/gdpr" element={<GDPRPage />} />
                   <Route path="/billing" element={<MonetizationPage />} />
+                  <Route path="/founder-access" element={<FounderAccessPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <JourneyTracker />
