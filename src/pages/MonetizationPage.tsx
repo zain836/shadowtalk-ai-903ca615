@@ -47,7 +47,7 @@ const MonetizationPage = () => {
                 Video Tutorials
               </Button>
               {userPlan === 'free' && (
-                <Button className="gap-2">
+                <Button className="gap-2" onClick={() => window.location.href = '/founder-access'}>
                   <Crown className="h-4 w-4" />
                   Upgrade to Pro
                 </Button>
