@@ -1,72 +1,23 @@
-import React, { useState } from "react";
+import React from "react";
 import { Check, Star, Zap, Crown, Rocket, Gift, Coins, PlayCircle, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
-import { STRIPE_CONFIG, PLAN_DETAILS } from "@/lib/stripe";
+import { PLAN_DETAILS } from "@/lib/stripe";
 
 const PricingSection = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user, userPlan } = useAuth();
-  const [loading, setLoading] = useState<string | null>(null);
+  const { userPlan } = useAuth();
 
-  const handleSubscription = async (planName: string) => {
+  const handleSubscription = (planName: string) => {
     if (planName === "Free") {
       navigate('/chatbot');
       return;
     }
-
-    if (!user) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to subscribe to a plan.",
-        variant: "destructive",
-      });
-      navigate('/auth');
-      return;
-    }
-
-    setLoading(planName);
-
-    try {
-      const planKey = planName.toLowerCase() as keyof typeof STRIPE_CONFIG.prices;
-      const priceId = STRIPE_CONFIG.prices[planKey];
-      
-      if (!priceId) {
-        toast({
-          title: "Invalid Plan",
-          description: "This plan is not available for purchase.",
-        });
-        setLoading(null);
-        return;
-      }
-      
-      const { data, error } = await supabase.functions.invoke('stripe-checkout', {
-        body: { priceId },
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if (data?.url) {
-        window.open(data.url, "_blank");
-      }
-    } catch (error) {
-      console.error("Subscription error:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to start checkout",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(null);
-    }
+    // Redirect all paid plans to Founder's Access page
+    navigate('/founder-access');
   };
 
   const plans = [
@@ -230,10 +181,9 @@ const PricingSection = () => {
                   variant={plan.variant as any}
                   size="sm"
                   onClick={() => handleSubscription(plan.name)}
-                  disabled={loading === plan.name || userPlan === plan.name.toLowerCase()}
+                  disabled={userPlan === plan.name.toLowerCase()}
                 >
-                  {loading === plan.name ? 'Processing...' : 
-                   userPlan === plan.name.toLowerCase() ? 'Current Plan' : plan.cta}
+                  {userPlan === plan.name.toLowerCase() ? 'Current Plan' : plan.cta}
                 </Button>
               </CardContent>
             </Card>

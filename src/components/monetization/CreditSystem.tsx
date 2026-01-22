@@ -5,8 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { 
   Coins, 
-  Zap, 
-  TrendingUp, 
   Gift, 
   ShoppingCart,
   Sparkles,
@@ -17,9 +15,7 @@ import {
   Mic,
   FileText
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
-import { useToast } from "@/hooks/use-toast";
 
 interface CreditPackage {
   id: string;
@@ -55,9 +51,7 @@ const CREDIT_COSTS: CreditUsage[] = [
 
 export function CreditSystem() {
   const { user, userPlan } = useAuth();
-  const { toast } = useToast();
   const [credits, setCredits] = useState(0);
-  const [loading, setLoading] = useState<string | null>(null);
   const [dailyFreeCredits, setDailyFreeCredits] = useState(50);
   const [usedToday, setUsedToday] = useState(0);
 
@@ -80,38 +74,9 @@ export function CreditSystem() {
     setCredits(freeCreditsPerPlan[userPlan] || 50);
   };
 
-  const handlePurchase = async (pkg: CreditPackage) => {
-    if (!user) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to purchase credits",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(pkg.id);
-    try {
-      // Create Stripe checkout for credit purchase
-      const { data, error } = await supabase.functions.invoke('stripe-checkout', {
-        body: { 
-          priceId: `credit_${pkg.id}`,
-          mode: 'payment',
-          credits: pkg.credits + pkg.bonus,
-        },
-      });
-
-      if (error) throw error;
-      if (data?.url) window.open(data.url, "_blank");
-    } catch (error) {
-      toast({
-        title: "Purchase failed",
-        description: "Please try again later",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(null);
-    }
+  const handlePurchase = () => {
+    // Redirect to Founder's Access page
+    window.location.href = '/founder-access';
   };
 
   const usagePercentage = (usedToday / dailyFreeCredits) * 100;
@@ -201,10 +166,9 @@ export function CreditSystem() {
                 <Button 
                   className={`w-full ${pkg.popular ? 'btn-glow' : ''}`}
                   variant={pkg.popular ? 'default' : 'outline'}
-                  onClick={() => handlePurchase(pkg)}
-                  disabled={loading === pkg.id}
+                  onClick={() => handlePurchase()}
                 >
-                  {loading === pkg.id ? 'Processing...' : 'Buy Now'}
+                  Buy Now
                 </Button>
               </CardContent>
             </Card>
