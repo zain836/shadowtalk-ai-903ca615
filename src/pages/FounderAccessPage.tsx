@@ -32,27 +32,27 @@ const FounderAccessPage = () => {
 
   const bankDetails = {
     bankName: "Meezan Bank",
-    accountName: "Zain Ahmed",
-    iban: "PK36MEZN0001100106546578",
+    accountName: "ShadowTalk AI",
+    iban: "PK08 MEZN 0099 1701 1274 9131",
     reference: "ShadowTalk-Elite"
   };
 
   const mobileWallet = {
-    easypaisa: "03001234567",
-    jazzcash: "03001234567",
-    name: "Zain Ahmed"
+    easypaisa: "03211798561",
+    jazzcash: "03211798561",
+    name: "ShadowTalk AI"
   };
 
   const cryptoDetails = {
-    usdt: "TRC20: TXxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    network: "Tron (TRC20)"
+    usdt: "Contact via WhatsApp for wallet address",
+    network: "Tron (TRC20) / ERC20"
   };
 
   const internationalDetails = {
-    swift: "MEABORKA",
-    iban: "PK36MEZN0001100106546578",
+    swift: "MEZN PK KA",
+    iban: "PK08 MEZN 0099 1701 1274 9131",
     bankName: "Meezan Bank Limited",
-    accountName: "Zain Ahmed"
+    accountName: "ShadowTalk AI"
   };
 
   const eliteFeatures = [
@@ -65,15 +65,15 @@ const FounderAccessPage = () => {
   ];
 
   const whatsappMessage = encodeURIComponent(
-    "Salam Zain! I just transferred the $39.99 for the Elite Founding Membership. Here is my receipt screenshot. My account email is: [Your Email]"
+    "Salam! I just transferred the $39.99 for the Elite Founding Membership. Here is my receipt screenshot. My account email is: [Your Email]"
   );
 
   const internationalWhatsappMessage = encodeURIComponent(
     "I am an International Founder. I have sent [Amount] via [Crypto/Wise]. Here is my TXID/Screenshot. Please activate my Elite Node."
   );
 
-  const whatsappLink = `https://wa.me/923001234567?text=${whatsappMessage}`;
-  const internationalWhatsappLink = `https://wa.me/923001234567?text=${internationalWhatsappMessage}`;
+  const whatsappLink = `https://wa.me/923211798561?text=${whatsappMessage}`;
+  const internationalWhatsappLink = `https://wa.me/923211798561?text=${internationalWhatsappMessage}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
