@@ -555,6 +555,66 @@ export type Database = {
         }
         Relationships: []
       }
+      manual_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          email: string
+          id: string
+          name: string | null
+          notes: string | null
+          payment_method: string
+          phone: string | null
+          plan_type: string
+          receipt_url: string | null
+          status: string
+          transaction_reference: string | null
+          updated_at: string
+          user_id: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          email: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          payment_method: string
+          phone?: string | null
+          plan_type?: string
+          receipt_url?: string | null
+          status?: string
+          transaction_reference?: string | null
+          updated_at?: string
+          user_id?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          email?: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          payment_method?: string
+          phone?: string | null
+          plan_type?: string
+          receipt_url?: string | null
+          status?: string
+          transaction_reference?: string | null
+          updated_at?: string
+          user_id?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string

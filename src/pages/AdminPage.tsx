@@ -42,7 +42,8 @@ import {
   Globe,
   Route,
   Bell,
-  Download
+  Download,
+  CreditCard
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -58,6 +59,7 @@ import { GeographicTracker } from '@/components/admin/GeographicTracker';
 import { UserJourneyTracker } from '@/components/admin/UserJourneyTracker';
 import { AdminAlerts } from '@/components/admin/AdminAlerts';
 import { AnalyticsExport } from '@/components/admin/AnalyticsExport';
+import { ManualPaymentsManager } from '@/components/admin/ManualPaymentsManager';
 
 interface UserData {
   id: string;
@@ -399,9 +401,13 @@ const AdminPage = () => {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="realtime" className="space-y-4">
+        <Tabs defaultValue="payments" className="space-y-4">
           <ScrollArea className="w-full">
             <TabsList className="inline-flex w-max">
+              <TabsTrigger value="payments" className="gap-2">
+                <CreditCard className="h-4 w-4" />
+                Payments
+              </TabsTrigger>
               <TabsTrigger value="realtime" className="gap-2">
                 <Radio className="h-4 w-4" />
                 Live Users
@@ -466,6 +472,10 @@ const AdminPage = () => {
             </TabsList>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
+
+          <TabsContent value="payments">
+            <ManualPaymentsManager />
+          </TabsContent>
 
           <TabsContent value="realtime">
             <RealTimeUserFlow />
