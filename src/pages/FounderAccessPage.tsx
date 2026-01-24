@@ -44,8 +44,8 @@ const FounderAccessPage = () => {
   };
 
   const cryptoDetails = {
-    usdt: "Contact via WhatsApp for wallet address",
-    network: "Tron (TRC20) / ERC20"
+    usdt: "TKfKJ7ESFcnMTd2F1DkrvZ4buCWneAmHqz",
+    network: "Tron (TRC20)"
   };
 
   const internationalDetails = {
