@@ -74,8 +74,8 @@ export function CreditSystem() {
     setCredits(freeCreditsPerPlan[userPlan] || 50);
   };
 
-  const handlePurchase = () => {
-    // Redirect to Founder's Access page
+  const handlePurchase = (packageId?: string) => {
+    // Redirect to Founder's Access page for all purchases
     window.location.href = '/founder-access';
   };
 

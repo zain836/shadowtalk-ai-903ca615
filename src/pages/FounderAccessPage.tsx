@@ -3,18 +3,30 @@ import { motion } from "framer-motion";
 import { 
   Shield, Copy, Check, ExternalLink, MessageCircle, 
   Zap, Lock, Plane, Bot, Palette, Crown, Globe, 
-  Wallet, Building2, Smartphone, ArrowRight
+  Wallet, Building2, Smartphone, ArrowRight, Star,
+  Coins, Code, FileText, Users, Rocket
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/AuthProvider";
+import { 
+  SUBSCRIPTION_TIERS, 
+  CREDIT_PACKAGES, 
+  PAY_PER_SOLUTIONS,
+  API_PLANS,
+  WHITELABEL_PLANS 
+} from "@/lib/monetization";
 
 const FounderAccessPage = () => {
   const { toast } = useToast();
+  const { userPlan } = useAuth();
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [selectedTier, setSelectedTier] = useState<string>("elite");
 
   const slotsRemaining = 7;
   const totalSlots = 10;
@@ -55,25 +67,33 @@ const FounderAccessPage = () => {
     accountName: "ShadowTalk AI"
   };
 
-  const eliteFeatures = [
-    { icon: Plane, text: "100% Offline Mode (Airplane Mode)" },
-    { icon: Lock, text: "Stealth Mode & Encrypted Vault" },
-    { icon: Bot, text: "Agentic Task Runners" },
-    { icon: Palette, text: "White-Label Branding" },
-    { icon: Zap, text: "Priority Support & Updates" },
-    { icon: Crown, text: "Lifetime Access - No Renewals" }
-  ];
-
   const whatsappMessage = encodeURIComponent(
-    "Salam! I just transferred the $39.99 for the Elite Founding Membership. Here is my receipt screenshot. My account email is: [Your Email]"
+    `Salam! I want to purchase ${selectedTier.toUpperCase()} plan. Here is my receipt screenshot. My account email is: [Your Email]`
   );
 
   const internationalWhatsappMessage = encodeURIComponent(
-    "I am an International Founder. I have sent [Amount] via [Crypto/Wise]. Here is my TXID/Screenshot. Please activate my Elite Node."
+    "I am an International Founder. I have sent [Amount] via [Crypto/Wise]. Here is my TXID/Screenshot. Please activate my account."
   );
 
   const whatsappLink = `https://wa.me/923211798561?text=${whatsappMessage}`;
   const internationalWhatsappLink = `https://wa.me/923211798561?text=${internationalWhatsappMessage}`;
+
+  const getTierIcon = (tierId: string) => {
+    switch (tierId) {
+      case 'free': return Zap;
+      case 'pro': return Star;
+      case 'premium': return Rocket;
+      case 'elite': return Crown;
+      default: return Zap;
+    }
+  };
+
+  const getTierPrice = (tier: typeof SUBSCRIPTION_TIERS[0]) => {
+    if (tier.id === 'elite') return { pkr: '11,150', usd: '39.99' };
+    if (tier.id === 'premium') return { pkr: '8,400', usd: '29.99' };
+    if (tier.id === 'pro') return { pkr: '2,800', usd: '9.99' };
+    return { pkr: '0', usd: '0' };
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -84,8 +104,8 @@ const FounderAccessPage = () => {
             key={i}
             className="absolute w-1 h-1 bg-primary/20 rounded-full"
             initial={{ 
-              x: Math.random() * window.innerWidth, 
-              y: Math.random() * window.innerHeight 
+              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000), 
+              y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800) 
             }}
             animate={{ 
               y: [null, Math.random() * -500],
@@ -103,109 +123,267 @@ const FounderAccessPage = () => {
       <div className="relative z-10 container max-w-6xl mx-auto px-4 py-12">
         {/* Header Section */}
         <motion.div 
-          className="text-center mb-12"
+          className="text-center mb-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
             <Shield className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Secure Founder Onboarding</span>
+            <span className="text-sm font-medium text-primary">Secure Payment Portal</span>
           </div>
           
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
-            Claim Your Sovereign Node 🛡️
+            Complete Your Purchase 🛡️
           </h1>
           
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
-            Our automated gateway is currently upgrading to handle 160+ simultaneous users. 
-            To ensure zero delay in your access, we are processing Founding Member payments via 
-            <span className="text-primary font-semibold"> Direct Secure Settlement</span>.
-          </p>
-
-          {/* Scarcity Badge */}
-          <motion.div 
-            className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-red-500/10 border border-amber-500/30"
-            animate={{ scale: [1, 1.02, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="font-bold text-amber-500">
-              LIVE: {slotsRemaining}/{totalSlots} FOUNDING SLOTS REMAINING
-            </span>
-          </motion.div>
-        </motion.div>
-
-        {/* Progress Bar */}
-        <motion.div 
-          className="max-w-md mx-auto mb-12"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span>Founding Member Slots</span>
-            <span className="text-primary font-semibold">{100 - (slotsRemaining * 10)}% Claimed</span>
-          </div>
-          <Progress value={progressPercent * 10} className="h-3" />
-          <p className="text-xs text-muted-foreground mt-2 text-center">
-            ⚡ Slots are filling fast — Secure yours now
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            All subscriptions, credits, and solutions are processed through our 
+            <span className="text-primary font-semibold"> Direct Secure Settlement</span> system.
           </p>
         </motion.div>
 
-        {/* Elite Plan Card */}
-        <motion.div 
-          className="max-w-2xl mx-auto mb-12"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="relative overflow-hidden border-2 border-primary/50 bg-gradient-to-br from-primary/5 via-background to-primary/10">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
-            
-            <CardHeader className="text-center pb-4">
-              <Badge className="w-fit mx-auto mb-2 bg-gradient-to-r from-amber-500 to-orange-500">
-                <Crown className="w-3 h-3 mr-1" />
-                ELITE TIER
-              </Badge>
-              <CardTitle className="text-2xl">Lifetime Elite Access</CardTitle>
-              <div className="flex items-center justify-center gap-3 mt-4">
-                <span className="text-2xl text-muted-foreground line-through">$49.99</span>
-                <span className="text-5xl font-bold text-primary">$39.99</span>
-                <Badge variant="secondary" className="bg-green-500/20 text-green-500 border-green-500/30">
-                  20% OFF
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">Founder's Discount • One-time payment</p>
-            </CardHeader>
-            
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {eliteFeatures.map((feature, i) => (
-                  <div 
-                    key={i}
-                    className="flex items-center gap-2 p-3 rounded-lg bg-background/50 border border-border/50"
+        {/* Products Tab Navigation */}
+        <Tabs defaultValue="subscriptions" className="mb-8">
+          <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full max-w-3xl mx-auto mb-8">
+            <TabsTrigger value="subscriptions" className="gap-1">
+              <Crown className="w-4 h-4" />
+              <span className="hidden sm:inline">Plans</span>
+            </TabsTrigger>
+            <TabsTrigger value="credits" className="gap-1">
+              <Coins className="w-4 h-4" />
+              <span className="hidden sm:inline">Credits</span>
+            </TabsTrigger>
+            <TabsTrigger value="solutions" className="gap-1">
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline">Solutions</span>
+            </TabsTrigger>
+            <TabsTrigger value="api" className="gap-1">
+              <Code className="w-4 h-4" />
+              <span className="hidden sm:inline">API</span>
+            </TabsTrigger>
+            <TabsTrigger value="whitelabel" className="gap-1">
+              <Palette className="w-4 h-4" />
+              <span className="hidden sm:inline">License</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Subscriptions Tab */}
+          <TabsContent value="subscriptions">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {SUBSCRIPTION_TIERS.filter(t => t.id !== 'free').map((tier) => {
+                const Icon = getTierIcon(tier.id);
+                const prices = getTierPrice(tier);
+                const isSelected = selectedTier === tier.id;
+                const isElite = tier.id === 'elite';
+                
+                return (
+                  <Card 
+                    key={tier.id}
+                    className={`relative cursor-pointer transition-all ${
+                      isSelected ? 'ring-2 ring-primary shadow-lg' : 'hover:border-primary/50'
+                    } ${isElite ? 'bg-gradient-to-br from-primary/10 to-transparent' : ''}`}
+                    onClick={() => setSelectedTier(tier.id)}
                   >
-                    <feature.icon className="w-4 h-4 text-primary shrink-0" />
-                    <span className="text-xs">{feature.text}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+                    {tier.badge && (
+                      <Badge className={`absolute -top-2 left-1/2 -translate-x-1/2 ${
+                        isElite ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-primary'
+                      }`}>
+                        {tier.badge}
+                      </Badge>
+                    )}
+                    
+                    <CardHeader className="text-center pb-2 pt-6">
+                      <div className={`w-12 h-12 rounded-xl mx-auto mb-2 flex items-center justify-center ${
+                        isElite ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-primary/20'
+                      }`}>
+                        <Icon className={`w-6 h-6 ${isElite ? 'text-white' : 'text-primary'}`} />
+                      </div>
+                      <CardTitle className="text-lg">{tier.name}</CardTitle>
+                      <div className="mt-2">
+                        <span className="text-3xl font-bold text-primary">${tier.price}</span>
+                        <span className="text-muted-foreground text-sm">{tier.period}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        PKR {prices.pkr}
+                      </p>
+                    </CardHeader>
+                    
+                    <CardContent className="pt-0">
+                      <div className="space-y-1.5">
+                        {tier.features.slice(0, 4).map((feature, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs">
+                            <Check className="w-3 h-3 text-success shrink-0" />
+                            <span>{feature}</span>
+                          </div>
+                        ))}
+                        {tier.features.length > 4 && (
+                          <p className="text-xs text-muted-foreground text-center">
+                            +{tier.features.length - 4} more
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </TabsContent>
+
+          {/* Credits Tab */}
+          <TabsContent value="credits">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {CREDIT_PACKAGES.map((pkg) => (
+                <Card 
+                  key={pkg.id}
+                  className={`relative transition-all hover:shadow-lg cursor-pointer ${
+                    pkg.popular ? 'ring-2 ring-primary' : ''
+                  }`}
+                  onClick={() => setSelectedTier(`credits-${pkg.id}`)}
+                >
+                  {pkg.popular && (
+                    <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-primary">
+                      Best Value
+                    </Badge>
+                  )}
+                  <CardContent className="pt-6 text-center">
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/20 mx-auto mb-3 flex items-center justify-center">
+                      <Coins className="w-6 h-6 text-amber-500" />
+                    </div>
+                    <h4 className="font-semibold mb-1">{pkg.name}</h4>
+                    <div className="text-3xl font-bold text-primary mb-1">
+                      {pkg.credits.toLocaleString()}
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">credits</p>
+                    {pkg.bonus > 0 && (
+                      <Badge variant="outline" className="text-success border-success mb-3">
+                        +{pkg.bonus} bonus
+                      </Badge>
+                    )}
+                    <div className="text-2xl font-bold">${pkg.price}</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Solutions Tab */}
+          <TabsContent value="solutions">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+              {PAY_PER_SOLUTIONS.map((solution) => (
+                <Card 
+                  key={solution.id}
+                  className="cursor-pointer hover:shadow-lg transition-all"
+                  onClick={() => setSelectedTier(`solution-${solution.id}`)}
+                >
+                  <CardContent className="pt-6">
+                    <div className="text-3xl mb-3">{solution.icon}</div>
+                    <h4 className="font-semibold mb-2">{solution.name}</h4>
+                    <p className="text-sm text-muted-foreground mb-4">{solution.description}</p>
+                    <Badge variant="secondary" className="text-lg font-bold">
+                      {solution.priceRange}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* API Tab */}
+          <TabsContent value="api">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              {API_PLANS.map((plan) => (
+                <Card 
+                  key={plan.id}
+                  className="cursor-pointer hover:shadow-lg transition-all"
+                  onClick={() => setSelectedTier(`api-${plan.id}`)}
+                >
+                  <CardHeader className="text-center">
+                    <div className="w-12 h-12 rounded-xl bg-green-500/20 mx-auto mb-2 flex items-center justify-center">
+                      <Code className="w-6 h-6 text-green-500" />
+                    </div>
+                    <CardTitle>{plan.name}</CardTitle>
+                    <div className="mt-2">
+                      <span className="text-3xl font-bold text-primary">${plan.price}</span>
+                      <span className="text-muted-foreground">/month</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {plan.features.map((feature, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm">
+                          <Check className="w-4 h-4 text-success shrink-0" />
+                          <span>{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* White-Label Tab */}
+          <TabsContent value="whitelabel">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              {WHITELABEL_PLANS.map((plan) => (
+                <Card 
+                  key={plan.id}
+                  className="cursor-pointer hover:shadow-lg transition-all"
+                  onClick={() => setSelectedTier(`wl-${plan.id}`)}
+                >
+                  <CardHeader className="text-center">
+                    <div className="w-12 h-12 rounded-xl bg-purple-500/20 mx-auto mb-2 flex items-center justify-center">
+                      <Palette className="w-6 h-6 text-purple-500" />
+                    </div>
+                    <CardTitle>{plan.name}</CardTitle>
+                    <div className="mt-2">
+                      <span className="text-3xl font-bold text-primary">${plan.price}</span>
+                      <span className="text-muted-foreground">{plan.period}</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {plan.features.map((feature, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm">
+                          <Check className="w-4 h-4 text-success shrink-0" />
+                          <span>{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        {/* Scarcity Badge for Elite */}
+        {selectedTier === 'elite' && (
+          <motion.div 
+            className="flex justify-center mb-8"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-destructive/10 border border-amber-500/30">
+              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+              <span className="font-bold text-amber-500">
+                LIVE: {slotsRemaining}/{totalSlots} FOUNDING SLOTS REMAINING
+              </span>
+            </div>
+          </motion.div>
+        )}
 
         {/* Payment Methods Bento Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.2 }}
         >
-          <h2 className="text-2xl font-bold text-center mb-2">Direct Settlement Methods</h2>
-          <p className="text-muted-foreground text-center mb-8">Choose your preferred payment method</p>
+          <h2 className="text-2xl font-bold text-center mb-2">Payment Methods</h2>
+          <p className="text-muted-foreground text-center mb-6">Choose your preferred payment method</p>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {/* Bank Transfer Card */}
             <Card className="relative overflow-hidden hover:border-primary/50 transition-colors">
               <div className="absolute top-0 right-0 p-3">
@@ -240,13 +418,6 @@ const FounderAccessPage = () => {
                     copied={copiedField === "IBAN"}
                     mono
                   />
-                  <DetailRow 
-                    label="Reference" 
-                    value={bankDetails.reference}
-                    onCopy={() => copyToClipboard(bankDetails.reference, "Reference")}
-                    copied={copiedField === "Reference"}
-                    highlight
-                  />
                 </div>
               </CardContent>
             </Card>
@@ -257,7 +428,7 @@ const FounderAccessPage = () => {
                 <Smartphone className="w-8 h-8 text-primary/20" />
               </div>
               <CardHeader>
-                <Badge variant="outline" className="w-fit mb-2 bg-green-500/10 text-green-500 border-green-500/30">
+                <Badge variant="outline" className="w-fit mb-2 bg-success/10 text-success border-success/30">
                   <Smartphone className="w-3 h-3 mr-1" />
                   Mobile Wallet
                 </Badge>
@@ -287,11 +458,6 @@ const FounderAccessPage = () => {
                     copied={copiedField === "Wallet Name"}
                   />
                 </div>
-                <div className="pt-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                  <p className="text-xs text-green-500">
-                    💡 Tip: Send exactly PKR 11,150 (~$39.99 USD)
-                  </p>
-                </div>
               </CardContent>
             </Card>
 
@@ -301,18 +467,18 @@ const FounderAccessPage = () => {
                 <Globe className="w-8 h-8 text-primary/20" />
               </div>
               <CardHeader>
-                <Badge variant="outline" className="w-fit mb-2 bg-purple-500/10 text-purple-500 border-purple-500/30">
+                <Badge variant="outline" className="w-fit mb-2 bg-secondary/50 text-secondary-foreground border-secondary/30">
                   <Globe className="w-3 h-3 mr-1" />
                   International
                 </Badge>
-                <CardTitle className="text-lg">Global Founders</CardTitle>
+                <CardTitle className="text-lg">Global Payments</CardTitle>
                 <CardDescription>Crypto & Wire Transfer</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Crypto Section */}
-                <div className="p-3 rounded-lg bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border border-orange-500/20">
+                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
                   <div className="flex items-center gap-2 mb-2">
-                    <Wallet className="w-4 h-4 text-orange-500" />
+                    <Wallet className="w-4 h-4 text-amber-500" />
                     <span className="font-semibold text-sm">USDT (TRC20)</span>
                   </div>
                   <DetailRow 
@@ -340,20 +506,6 @@ const FounderAccessPage = () => {
                     mono
                     small
                   />
-                  <DetailRow 
-                    label="IBAN" 
-                    value={internationalDetails.iban}
-                    onCopy={() => copyToClipboard(internationalDetails.iban, "Intl IBAN")}
-                    copied={copiedField === "Intl IBAN"}
-                    mono
-                    small
-                  />
-                </div>
-
-                <div className="pt-2 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                  <p className="text-xs text-purple-400">
-                    🌍 Support decentralized intelligence. Your membership funds offline-first AI for emerging markets.
-                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -365,7 +517,7 @@ const FounderAccessPage = () => {
           className="max-w-2xl mx-auto"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.3 }}
         >
           <Card className="border-2 border-dashed border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
             <CardHeader className="text-center">
@@ -373,7 +525,7 @@ const FounderAccessPage = () => {
                 <Zap className="w-5 h-5 text-primary" />
                 Confirmation Workflow
               </CardTitle>
-              <CardDescription>Complete these steps to activate your Elite Node</CardDescription>
+              <CardDescription>Complete these steps to activate your purchase</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid md:grid-cols-3 gap-4">
@@ -399,11 +551,11 @@ const FounderAccessPage = () => {
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 
                   size="lg" 
-                  className="group bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400"
+                  className="group bg-gradient-to-r from-success to-success/80 hover:from-success/90 hover:to-success/70"
                   onClick={() => window.open(whatsappLink, '_blank')}
                 >
                   <MessageCircle className="w-5 h-5 mr-2" />
-                  Upload Receipt & Activate Node
+                  Upload Receipt & Activate
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </div>
@@ -413,7 +565,7 @@ const FounderAccessPage = () => {
                 <Button 
                   variant="link" 
                   size="sm" 
-                  className="text-purple-400 h-auto p-0 ml-1"
+                  className="text-primary h-auto p-0 ml-1"
                   onClick={() => window.open(internationalWhatsappLink, '_blank')}
                 >
                   Use this link instead <ExternalLink className="w-3 h-3 ml-1" />
@@ -428,11 +580,11 @@ const FounderAccessPage = () => {
           className="text-center mt-12 space-y-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: 0.4 }}
         >
-          <div className="flex items-center justify-center gap-6 text-muted-foreground">
+          <div className="flex items-center justify-center gap-6 text-muted-foreground flex-wrap">
             <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-green-500" />
+              <Shield className="w-4 h-4 text-success" />
               <span className="text-sm">256-bit Encrypted</span>
             </div>
             <div className="flex items-center gap-2">
@@ -484,7 +636,7 @@ const DetailRow = ({
         onClick={onCopy}
       >
         {copied ? (
-          <Check className="w-3 h-3 text-green-500" />
+          <Check className="w-3 h-3 text-success" />
         ) : (
           <Copy className="w-3 h-3" />
         )}
