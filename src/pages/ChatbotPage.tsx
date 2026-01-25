@@ -582,7 +582,12 @@ const ChatbotPage = () => {
     
     const limit = getDailyMessageLimit();
     if (limit !== Infinity && dailyChats >= limit) {
-      toast({ title: "Daily Limit Reached", description: `Upgrade to Pro for unlimited messages!`, variant: "destructive" });
+      toast({ 
+        title: "Daily Limit Reached", 
+        description: "Upgrade for unlimited messages!",
+        variant: "destructive",
+        action: <a href="/founder-access" className="underline font-semibold">Upgrade Now</a>
+      });
       return;
     }
     

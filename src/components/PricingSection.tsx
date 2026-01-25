@@ -210,7 +210,7 @@ const PricingSection = () => {
                   Contracts, NDAs, business forms
                 </p>
                 <div className="text-2xl font-bold gradient-text mb-4">$5-$50</div>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/chatbot')}>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/founder-access')}>
                   Generate Document
                 </Button>
               </CardContent>
@@ -224,7 +224,7 @@ const PricingSection = () => {
                   Contract analysis & risk assessment
                 </p>
                 <div className="text-2xl font-bold gradient-text mb-4">$10-$75</div>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/chatbot')}>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/founder-access')}>
                   Review Document
                 </Button>
               </CardContent>
@@ -238,7 +238,7 @@ const PricingSection = () => {
                   Multi-jurisdictional guidance
                 </p>
                 <div className="text-2xl font-bold gradient-text mb-4">$50-$200</div>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/chatbot')}>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/founder-access')}>
                   Get Report
                 </Button>
               </CardContent>
@@ -259,7 +259,7 @@ const PricingSection = () => {
                 <p className="text-sm text-muted-foreground mb-4">
                   Buy credits for AI generations, no subscription needed
                 </p>
-                <Button variant="outline" className="w-full" onClick={() => navigate('/billing')}>
+                <Button variant="outline" className="w-full" onClick={() => navigate('/founder-access')}>
                   Buy Credits
                 </Button>
               </CardContent>
@@ -275,7 +275,7 @@ const PricingSection = () => {
                 <p className="text-sm text-muted-foreground mb-4">
                   Earn 20-40% recurring commission on referrals
                 </p>
-                <Button variant="outline" className="w-full" onClick={() => navigate('/billing?tab=affiliate')}>
+                <Button variant="outline" className="w-full" onClick={() => navigate('/founder-access')}>
                   Start Earning
                 </Button>
               </CardContent>
@@ -291,7 +291,7 @@ const PricingSection = () => {
                 <p className="text-sm text-muted-foreground mb-4">
                   Learn to master all AI features step-by-step
                 </p>
-                <Button variant="outline" className="w-full" onClick={() => navigate('/billing')}>
+                <Button variant="outline" className="w-full" onClick={() => navigate('/docs')}>
                   Watch Now
                 </Button>
               </CardContent>

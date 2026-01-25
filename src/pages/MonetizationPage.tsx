@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditSystem } from "@/components/monetization/CreditSystem";
 import { AffiliateProgram } from "@/components/monetization/AffiliateProgram";
 import { UsageBasedBilling } from "@/components/monetization/UsageBasedBilling";
+import { RevenueStreams } from "@/components/monetization/RevenueStreams";
 import { VideoTutorials } from "@/components/onboarding/VideoTutorials";
 import { Button } from "@/components/ui/button";
 import { 
@@ -13,12 +14,15 @@ import {
   Activity, 
   PlayCircle,
   Crown,
-  Sparkles
+  Sparkles,
+  LayoutGrid
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import { useNavigate } from "react-router-dom";
 
 const MonetizationPage = () => {
   const { user, userPlan } = useAuth();
+  const navigate = useNavigate();
   const [showTutorials, setShowTutorials] = useState(false);
 
   return (
@@ -47,7 +51,7 @@ const MonetizationPage = () => {
                 Video Tutorials
               </Button>
               {userPlan === 'free' && (
-                <Button className="gap-2" onClick={() => window.location.href = '/founder-access'}>
+                <Button className="gap-2" onClick={() => navigate('/founder-access')}>
                   <Crown className="h-4 w-4" />
                   Upgrade to Pro
                 </Button>
@@ -56,8 +60,12 @@ const MonetizationPage = () => {
           </div>
 
           {/* Main Content */}
-          <Tabs defaultValue="credits" className="max-w-5xl mx-auto">
-            <TabsList className="grid w-full grid-cols-3 mb-8">
+          <Tabs defaultValue="overview" className="max-w-5xl mx-auto">
+            <TabsList className="grid w-full grid-cols-4 mb-8">
+              <TabsTrigger value="overview" className="gap-2">
+                <LayoutGrid className="h-4 w-4" />
+                <span className="hidden sm:inline">Overview</span>
+              </TabsTrigger>
               <TabsTrigger value="credits" className="gap-2">
                 <Coins className="h-4 w-4" />
                 <span className="hidden sm:inline">Credits</span>
@@ -71,6 +79,10 @@ const MonetizationPage = () => {
                 <span className="hidden sm:inline">Affiliate</span>
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="overview">
+              <RevenueStreams />
+            </TabsContent>
 
             <TabsContent value="credits">
               <CreditSystem />
