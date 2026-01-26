@@ -37,6 +37,7 @@ export const ChatRequestSchema = z.object({
   originalImage: z.string().optional(),
   editPrompt: z.string().max(1000).optional(),
   modePrompt: z.string().max(5000).optional(),
+  businessMemory: z.string().max(10000).optional(), // AI workspace memory context
   userContext: z.union([
     z.string().max(5000),
     z.object({
