@@ -1,4 +1,4 @@
-import { Send, Mic, MicOff, Square, Image as ImageIcon, Sparkles, Search, Video, Camera, Table } from "lucide-react";
+import { Send, Mic, MicOff, Square, Image as ImageIcon, Sparkles, Search, Camera, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FileUpload } from "@/components/chat/FileUpload";
@@ -71,10 +71,9 @@ export const ChatInput = ({
           )}
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             {chatMode === 'research' && <Search className="h-3 w-3 text-violet-500" />}
-            {chatMode === 'video' && <Video className="h-3 w-3 text-fuchsia-500" />}
             {chatMode === 'camera' && <Camera className="h-3 w-3 text-teal-500" />}
             {chatMode === 'organize' && <Table className="h-3 w-3 text-amber-500" />}
-            {!['research', 'video', 'camera', 'organize'].includes(chatMode) && <Sparkles className="h-3 w-3" />}
+            {!['research', 'camera', 'organize'].includes(chatMode) && <Sparkles className="h-3 w-3" />}
             <span className="capitalize">{chatMode}</span>
             <span className="text-border">•</span>
             <span className="capitalize">{personality}</span>

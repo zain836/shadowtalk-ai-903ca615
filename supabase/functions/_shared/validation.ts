@@ -33,6 +33,9 @@ export const ChatRequestSchema = z.object({
   mode: z.string().max(50).optional(),
   generateImage: z.boolean().optional(),
   imagePrompt: z.string().max(1000).optional(),
+  imageEdit: z.boolean().optional(),
+  originalImage: z.string().optional(),
+  editPrompt: z.string().max(1000).optional(),
   modePrompt: z.string().max(5000).optional(),
   userContext: z.union([
     z.string().max(5000),
@@ -63,8 +66,8 @@ export const ChatRequestSchema = z.object({
     })).optional(),
   }).optional(),
 }).refine(
-  (data) => data.messages || data.analyzeTask || data.getEcoActions || data.securityAudit || data.agentWorkflow || data.deepResearch || data.webSearch,
-  { message: "Either messages or a special mode (analyzeTask, getEcoActions, securityAudit, agentWorkflow, deepResearch, webSearch) must be provided" }
+  (data) => data.messages || data.analyzeTask || data.getEcoActions || data.securityAudit || data.agentWorkflow || data.deepResearch || data.webSearch || data.generateImage || data.imageEdit,
+  { message: "Either messages or a special mode (analyzeTask, getEcoActions, securityAudit, agentWorkflow, deepResearch, webSearch, generateImage, imageEdit) must be provided" }
 );
 
 // SSO Configuration validation
