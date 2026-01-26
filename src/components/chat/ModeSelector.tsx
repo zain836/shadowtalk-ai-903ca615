@@ -1,4 +1,4 @@
-import { Code, Languages, FileText, Bug, Lightbulb, Image, MessageSquare, Pen, Music, Brain, Leaf, Shield, Search, Video, Camera, Table, Calculator, GraduationCap, Mail, FileCheck, Lock, Sparkles, Crown } from "lucide-react";
+import { Code, Languages, FileText, Bug, Lightbulb, Image, MessageSquare, Pen, Music, Brain, Leaf, Shield, Search, Camera, Table, Calculator, GraduationCap, Mail, FileCheck, Lock, Sparkles, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -28,7 +28,6 @@ export type ChatMode =
   | "ppag"
   | "hsca"
   | "math"
-  | "video"
   | "camera"
   | "organize"
   | "academic"
@@ -47,7 +46,6 @@ const modeFeatureMap: Partial<Record<ChatMode, string>> = {
   cpf: "pceEngine", 
   ppag: "lifeEventSuggestions",
   hsca: "stealthMode",
-  video: "imageGeneration",
   camera: "imageGeneration",
   math: "advancedCodeGeneration",
   organize: "documentGeneration",
@@ -134,14 +132,6 @@ const modes: { value: ChatMode; label: string; icon: React.ReactNode; prompt: st
     tier: "premium"
   },
   { 
-    value: "video", 
-    label: "🎬 Create Video", 
-    icon: <Video className="h-4 w-4" />,
-    prompt: "You are in video creation mode. Help users create prompts for AI video generation. Describe scenes, movements, camera angles, and atmosphere in detail.",
-    color: "text-fuchsia-500",
-    tier: "premium"
-  },
-  { 
     value: "camera", 
     label: "📷 Camera Analysis", 
     icon: <Camera className="h-4 w-4" />,
@@ -221,8 +211,8 @@ export const ModeSelector = ({ mode, onModeChange, disabled }: ModeSelectorProps
   const { canAccess, getUpgradeMessage, isPremiumOrHigher, isElite } = useFeatureGating();
   const { toast } = useToast();
   const currentMode = modes.find(m => m.value === mode) || modes[0];
-  const standardModes = modes.filter(m => !['cpf', 'ppag', 'hsca', 'research', 'math', 'video', 'camera', 'organize', 'academic'].includes(m.value));
-  const specialModes = modes.filter(m => ['research', 'math', 'video', 'camera', 'organize', 'academic'].includes(m.value));
+  const standardModes = modes.filter(m => !['cpf', 'ppag', 'hsca', 'research', 'math', 'camera', 'organize', 'academic'].includes(m.value));
+  const specialModes = modes.filter(m => ['research', 'math', 'camera', 'organize', 'academic'].includes(m.value));
   const advancedModes = modes.filter(m => ['cpf', 'ppag', 'hsca'].includes(m.value));
 
   const handleModeSelect = (selectedMode: ChatMode) => {

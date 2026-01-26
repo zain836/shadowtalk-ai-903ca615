@@ -27,8 +27,8 @@ serve(async (req) => {
     }
 
     const { 
-      messages, personality, generateImage, imagePrompt, mode, modePrompt, 
-      userContext, analyzeTask, getEcoActions, location, securityAudit, 
+      messages, personality, generateImage, imagePrompt, imageEdit, originalImage, editPrompt,
+      mode, modePrompt, userContext, analyzeTask, getEcoActions, location, securityAudit, 
       webSearch, searchQuery, deepResearch, researchQuery, agentWorkflow 
     } = validation.data;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -600,7 +600,7 @@ Be thorough but realistic - only report real vulnerabilities found in the code.`
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image-preview",
+          model: "google/gemini-2.5-flash-image",
           messages: [
             { 
               role: "user", 
@@ -650,6 +650,83 @@ Be thorough but realistic - only report real vulnerabilities found in the code.`
       return new Response(JSON.stringify({ 
         type: "text",
         content: textContent || "Could not generate image. Please try a different prompt."
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Image Editing with AI
+    if (imageEdit && originalImage && editPrompt) {
+      console.log("[CHAT] Editing image with prompt:", editPrompt);
+      
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image",
+          messages: [
+            { 
+              role: "user", 
+              content: [
+                {
+                  type: "text",
+                  text: `Edit this image: ${editPrompt}. Apply the changes while maintaining the overall composition and quality.`
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: originalImage
+                  }
+                }
+              ]
+            }
+          ],
+          modalities: ["image", "text"],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[CHAT] Image edit error:", response.status, errorText);
+        
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ 
+            error: "Daily limit reached. Try again tomorrow." 
+          }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        throw new Error("Image editing failed");
+      }
+
+      const result = await response.json();
+      console.log("[CHAT] Image edit result keys:", Object.keys(result));
+      
+      const message = result.choices?.[0]?.message;
+      const images = message?.images;
+      const textContent = message?.content || "";
+      
+      if (images && images.length > 0) {
+        const imageUrl = images[0]?.image_url?.url;
+        console.log("[CHAT] Image edited successfully");
+        
+        return new Response(JSON.stringify({ 
+          type: "image",
+          imageUrl: imageUrl,
+          content: textContent
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      return new Response(JSON.stringify({ 
+        type: "text",
+        content: textContent || "Could not edit image. Please try a different instruction."
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
