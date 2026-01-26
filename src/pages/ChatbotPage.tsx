@@ -48,6 +48,7 @@ import { useOfflineAuth } from "@/hooks/useOfflineAuth";
 import { useOfflineAI } from "@/hooks/useOfflineAI";
 import { useOfflineChatHistory } from "@/hooks/useOfflineChatHistory";
 import { useGeoLocation } from "@/hooks/useGeoLocation";
+import { useBusinessMemory } from "@/hooks/useBusinessMemory";
 
 // Types
 interface SpeechRecognitionEvent extends Event {
@@ -169,6 +170,7 @@ const ChatbotPage = () => {
   const { getOfflineSession } = useOfflineAuth();
   const offlineAI = useOfflineAI();
   const offlineChatHistory = useOfflineChatHistory();
+  const { getMemoryContext, getActiveMemories } = useBusinessMemory();
   
   // Track user geolocation for analytics
   useGeoLocation();
@@ -717,10 +719,11 @@ const ChatbotPage = () => {
       } else {
         // Use Lovable AI (default)
         let requestBody;
+        const businessMemoryContext = getMemoryContext();
         if (isResearchMode) {
-          requestBody = { deepResearch: true, researchQuery: messageToSend };
+          requestBody = { deepResearch: true, researchQuery: messageToSend, businessMemory: businessMemoryContext || undefined };
         } else {
-          requestBody = { messages: chatMessages, personality, mode: chatMode, modePrompt: getModePrompt(chatMode) };
+          requestBody = { messages: chatMessages, personality, mode: chatMode, modePrompt: getModePrompt(chatMode), businessMemory: businessMemoryContext || undefined };
         }
 
         // Save search to history if in research mode
