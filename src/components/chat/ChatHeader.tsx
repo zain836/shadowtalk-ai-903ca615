@@ -75,7 +75,7 @@ interface ChatHeaderProps {
   onOpenAgenticRunner: () => void;
   onOpenVisualReasoning: () => void;
   onOpenCreativeSynthesis: () => void;
-  onOpenImageEditor: () => void;
+  onOpenImageGenerator: () => void;
   onOpenPerplexityPages: () => void;
   onOpenShadowCowork: () => void;
   onOpenShadowTalkLive: () => void;
@@ -151,7 +151,7 @@ export const ChatHeader = ({
   onOpenAgenticRunner,
   onOpenVisualReasoning,
   onOpenCreativeSynthesis,
-  onOpenImageEditor,
+  onOpenImageGenerator,
   onOpenPerplexityPages,
   onOpenShadowCowork,
   onOpenShadowTalkLive,
@@ -210,8 +210,8 @@ export const ChatHeader = ({
         />
         <MenuItem
           icon={<Image className="h-5 w-5 text-orange-500" />}
-          label="Image Editor (E)"
-          onClick={() => handleMenuAction(onOpenImageEditor)}
+          label="Image Generator (E)"
+          onClick={() => handleMenuAction(onOpenImageGenerator)}
         />
         <MenuItem
           icon={<Globe className="h-5 w-5 text-cyan-500" />}
@@ -466,9 +466,9 @@ export const ChatHeader = ({
                 Creative Synthesis
                 <span className="ml-auto text-xs text-muted-foreground">⇧C</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onOpenImageEditor}>
+              <DropdownMenuItem onClick={onOpenImageGenerator}>
                 <Image className="h-4 w-4 mr-2 text-orange-500" />
-                Image Editor
+                Image Generator
                 <span className="ml-auto text-xs text-muted-foreground">⇧E</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onOpenPerplexityPages}>

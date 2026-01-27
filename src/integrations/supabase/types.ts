@@ -59,6 +59,47 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_clicks: {
+        Row: {
+          clicked_at: string
+          commission_earned: number | null
+          converted: boolean | null
+          converted_at: string | null
+          id: string
+          partner_id: string | null
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          clicked_at?: string
+          commission_earned?: number | null
+          converted?: boolean | null
+          converted_at?: string | null
+          id?: string
+          partner_id?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          clicked_at?: string
+          commission_earned?: number | null
+          converted?: boolean | null
+          converted_at?: string | null
+          id?: string
+          partner_id?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_clicks_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "sponsor_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           created_at: string
@@ -196,6 +237,39 @@ export type Database = {
         }
         Relationships: []
       }
+      business_intents: {
+        Row: {
+          country: string | null
+          created_at: string
+          id: string
+          industry: string | null
+          intent_category: string
+          intent_keywords: string[] | null
+          query_summary: string | null
+          region: string | null
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          industry?: string | null
+          intent_category: string
+          intent_keywords?: string[] | null
+          query_summary?: string | null
+          region?: string | null
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          industry?: string | null
+          intent_category?: string
+          intent_keywords?: string[] | null
+          query_summary?: string | null
+          region?: string | null
+        }
+        Relationships: []
+      }
       business_memories: {
         Row: {
           category: string
@@ -288,6 +362,39 @@ export type Database = {
           id?: string
           title?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          session_type: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          session_type?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          session_type?: string | null
+          transaction_type?: string
           user_id?: string
         }
         Relationships: []
@@ -1204,6 +1311,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shadow_credits: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          total_consumed: number
+          total_purchased: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          total_consumed?: number
+          total_purchased?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          total_consumed?: number
+          total_purchased?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sponsor_partners: {
+        Row: {
+          affiliate_url: string | null
+          category: string
+          commission_rate: number | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          keywords: string[]
+          logo_url: string | null
+          name: string
+          priority: number | null
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          affiliate_url?: string | null
+          category: string
+          commission_rate?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[]
+          logo_url?: string | null
+          name: string
+          priority?: number | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          affiliate_url?: string | null
+          category?: string
+          commission_rate?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[]
+          logo_url?: string | null
+          name?: string
+          priority?: number | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
       }
       sso_configurations: {
         Row: {
