@@ -14,7 +14,7 @@ import { CodeCanvas } from "@/components/chat/CodeCanvas";
 import { CodeWorkspace } from "@/components/chat/CodeWorkspace";
 import { Canvas } from "@/components/chat/Canvas";
 import { ImageGenerator } from "@/components/chat/ImageGenerator";
-import { ImageEditor } from "@/components/chat/ImageEditor";
+
 import { EditMessageDialog } from "@/components/chat/EditMessageDialog";
 import { AdBanner } from "@/components/chat/AdBanner";
 import { AnalyticsDashboard } from "@/components/chat/AnalyticsDashboard";
@@ -132,8 +132,6 @@ const ChatbotPage = () => {
   const [showAgenticRunner, setShowAgenticRunner] = useState(false);
   const [showVisualReasoning, setShowVisualReasoning] = useState(false);
   const [showCreativeSynthesis, setShowCreativeSynthesis] = useState(false);
-  const [showImageEditor, setShowImageEditor] = useState(false);
-  const [imageToEdit, setImageToEdit] = useState<string | undefined>(undefined);
   const [showPerplexityPages, setShowPerplexityPages] = useState(false);
   const [showShadowCowork, setShowShadowCowork] = useState(false);
   const [showShadowTalkLive, setShowShadowTalkLive] = useState(false);
@@ -293,10 +291,6 @@ const ChatbotPage = () => {
         case 'c': // Creative Synthesis
           e.preventDefault();
           setShowCreativeSynthesis(true);
-          break;
-        case 'e': // Image Editor
-          e.preventDefault();
-          setShowImageEditor(true);
           break;
         case 'd': // New Document Canvas
           e.preventDefault();
@@ -898,7 +892,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             onOpenAgenticRunner={() => setShowAgenticRunner(true)}
             onOpenVisualReasoning={() => setShowVisualReasoning(true)}
             onOpenCreativeSynthesis={() => setShowCreativeSynthesis(true)}
-            onOpenImageEditor={() => setShowImageEditor(true)}
+            onOpenImageGenerator={() => setShowImageGenerator(true)}
             onOpenPerplexityPages={() => setShowPerplexityPages(true)}
             onOpenShadowCowork={() => setShowShadowCowork(true)}
             onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
@@ -1041,24 +1035,6 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
           onInsertToChat={(content) => {
             setShowCreativeSynthesis(false);
             setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content, timestamp: new Date() }]);
-          }}
-        />
-      )}
-      {showImageEditor && (
-        <ImageEditor
-          isOpen={showImageEditor}
-          onClose={() => { setShowImageEditor(false); setImageToEdit(undefined); }}
-          initialImage={imageToEdit}
-          onSave={(editedImage) => {
-            setShowImageEditor(false);
-            setImageToEdit(undefined);
-            setMessages(prev => [...prev, { 
-              id: crypto.randomUUID(), 
-              type: 'ai', 
-              content: '🎨 **Image Edited Successfully**', 
-              timestamp: new Date(),
-              imageUrl: editedImage
-            }]);
           }}
         />
       )}
