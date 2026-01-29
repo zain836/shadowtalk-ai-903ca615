@@ -1,12 +1,38 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Shield, Copy, Check, ExternalLink, MessageCircle, 
-  Zap, Lock, Plane, Bot, Palette, Crown, Globe, 
-  Wallet, Building2, Smartphone, ArrowRight, Star,
-  Coins, Code, FileText, Users, Rocket, Timer,
-  Sparkles, Gift, TrendingUp, AlertTriangle, X,
-  CheckCircle2, Clock, CreditCard, Bitcoin
+import {
+  Shield,
+  Copy,
+  Check,
+  ExternalLink,
+  MessageCircle,
+  Zap,
+  Lock,
+  Plane,
+  Bot,
+  Palette,
+  Crown,
+  Globe,
+  Wallet,
+  Building2,
+  Smartphone,
+  ArrowRight,
+  Star,
+  Coins,
+  Code,
+  FileText,
+  Users,
+  Rocket,
+  Timer,
+  Sparkles,
+  Gift,
+  TrendingUp,
+  AlertTriangle,
+  X,
+  CheckCircle2,
+  Clock,
+  CreditCard,
+  Bitcoin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -64,16 +90,20 @@ const LifetimeDealPage = () => {
 
   const mobileWallet = {
     number: "03211798561",
-    name: "ShadowTalk AI"
+    name: "ShadowTalk AI",
   };
 
   const cryptoDetails = {
     usdt: "TKfKJ7ESFcnMTd2F1DkrvZ4buCWneAmHqz",
-    network: "Tron (TRC20)"
+    network: "Tron (TRC20)",
+  };
+
+  const query = {
+    query: "The easypaisa&jazzcash is not working so transfer payments to bank accoutn",
   };
 
   const whatsappMessage = encodeURIComponent(
-    `🔥 LIFETIME DEAL PURCHASE 🔥\n\nI want to claim my $99 Lifetime Deal!\n\nEmail: ${user?.email || '[Your Email]'}\n\nPayment Method: [Bank/EasyPaisa/JazzCash/Crypto]\n\n[Attach receipt screenshot]`
+    `🔥 LIFETIME DEAL PURCHASE 🔥\n\nI want to claim my $99 Lifetime Deal!\n\nEmail: ${user?.email || "[Your Email]"}\n\nPayment Method: [Bank/EasyPaisa/JazzCash/Crypto]\n\n[Attach receipt screenshot]`,
   );
   const whatsappLink = `https://wa.me/923211798561?text=${whatsappMessage}`;
 
@@ -82,13 +112,13 @@ const LifetimeDealPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <Navigation />
-      
+
       {/* Urgency Banner */}
       <AnimatePresence>
         {showUrgency && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
+            animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="sticky top-16 z-40 bg-gradient-to-r from-destructive via-orange-500 to-amber-500 text-white"
           >
@@ -98,7 +128,8 @@ const LifetimeDealPage = () => {
                 <span className="font-bold">⚡ TONIGHT ONLY: $99 Lifetime Deal</span>
                 <span className="hidden sm:inline">•</span>
                 <span className="hidden sm:inline font-mono">
-                  {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+                  {String(timeLeft.hours).padStart(2, "0")}:{String(timeLeft.minutes).padStart(2, "0")}:
+                  {String(timeLeft.seconds).padStart(2, "0")}
                 </span>
                 <Badge variant="secondary" className="bg-white/20 text-white border-0">
                   {LIFETIME_DEAL.slotsRemaining} spots left
@@ -118,18 +149,18 @@ const LifetimeDealPage = () => {
           <motion.div
             key={i}
             className="absolute w-1 h-1 bg-primary/30 rounded-full"
-            initial={{ 
-              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000), 
-              y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800) 
+            initial={{
+              x: Math.random() * (typeof window !== "undefined" ? window.innerWidth : 1000),
+              y: Math.random() * (typeof window !== "undefined" ? window.innerHeight : 800),
             }}
-            animate={{ 
+            animate={{
               y: [null, Math.random() * -500],
-              opacity: [0.3, 0.8, 0.3]
+              opacity: [0.3, 0.8, 0.3],
             }}
-            transition={{ 
-              duration: 8 + Math.random() * 8, 
+            transition={{
+              duration: 8 + Math.random() * 8,
               repeat: Infinity,
-              ease: "linear"
+              ease: "linear",
             }}
           />
         ))}
@@ -137,7 +168,7 @@ const LifetimeDealPage = () => {
 
       <div className="relative z-10 container max-w-5xl mx-auto px-4 py-8 pt-24">
         {/* Hero Section */}
-        <motion.div 
+        <motion.div
           className="text-center mb-12"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -153,7 +184,7 @@ const LifetimeDealPage = () => {
             <span className="font-bold text-amber-500">🔥 LIMITED TIME OFFER • FIRST 100 USERS ONLY</span>
             <Sparkles className="w-5 h-5 text-amber-500" />
           </motion.div>
-          
+
           <h1 className="text-5xl md:text-7xl font-black mb-6">
             <span className="bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
               $99 LIFETIME
@@ -161,7 +192,7 @@ const LifetimeDealPage = () => {
             <br />
             <span className="text-foreground">ACCESS</span>
           </h1>
-          
+
           <div className="flex items-center justify-center gap-4 mb-6">
             <span className="text-3xl text-muted-foreground line-through">$999</span>
             <span className="text-6xl font-black text-primary">$99</span>
@@ -169,8 +200,8 @@ const LifetimeDealPage = () => {
           </div>
 
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-            Get <span className="text-primary font-bold">EVERYTHING</span> ShadowTalk AI offers. 
-            Forever. One payment. No subscriptions. No renewals.
+            Get <span className="text-primary font-bold">EVERYTHING</span> ShadowTalk AI offers. Forever. One payment.
+            No subscriptions. No renewals.
           </p>
 
           {/* Scarcity Counter */}
@@ -251,9 +282,7 @@ const LifetimeDealPage = () => {
                   <span className="text-4xl font-black text-primary">$99</span>
                   <span className="text-muted-foreground"> USD</span>
                 </div>
-                <p className="text-sm text-muted-foreground mb-4">
-                  ≈ PKR {LIFETIME_DEAL.pkrPrice.toLocaleString()}
-                </p>
+                <p className="text-sm text-muted-foreground mb-4">≈ PKR {LIFETIME_DEAL.pkrPrice.toLocaleString()}</p>
                 <Badge className="bg-success/20 text-success border-success mb-4">
                   <CheckCircle2 className="w-3 h-3 mr-1" />
                   One-time payment • Forever access
@@ -283,7 +312,7 @@ const LifetimeDealPage = () => {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-muted-foreground">IBAN:</span>
-                      <button 
+                      <button
                         onClick={() => copyToClipboard(bankDetails.iban, "IBAN")}
                         className="flex items-center gap-1 text-primary hover:underline"
                       >
@@ -302,7 +331,7 @@ const LifetimeDealPage = () => {
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-muted-foreground">Number:</span>
-                    <button 
+                    <button
                       onClick={() => copyToClipboard(mobileWallet.number, "Mobile")}
                       className="flex items-center gap-1 text-primary hover:underline font-mono"
                     >
@@ -318,20 +347,24 @@ const LifetimeDealPage = () => {
                     <Bitcoin className="w-4 h-4 text-orange-500" />
                     <span className="font-semibold text-sm">USDT (TRC20)</span>
                   </div>
-                  <button 
+                  <button
                     onClick={() => copyToClipboard(cryptoDetails.usdt, "USDT")}
                     className="w-full text-left text-xs font-mono p-2 rounded bg-background break-all flex items-start justify-between gap-2"
                   >
                     <span className="text-muted-foreground">{cryptoDetails.usdt}</span>
-                    {copiedField === "USDT" ? <Check className="w-3 h-3 shrink-0 text-success" /> : <Copy className="w-3 h-3 shrink-0" />}
+                    {copiedField === "USDT" ? (
+                      <Check className="w-3 h-3 shrink-0 text-success" />
+                    ) : (
+                      <Copy className="w-3 h-3 shrink-0" />
+                    )}
                   </button>
                 </div>
 
                 <Separator />
 
                 {/* WhatsApp Button */}
-                <Button 
-                  asChild 
+                <Button
+                  asChild
                   className="w-full h-14 text-lg bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600"
                 >
                   <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
@@ -343,7 +376,8 @@ const LifetimeDealPage = () => {
 
                 <p className="text-xs text-center text-muted-foreground">
                   After payment, send your receipt screenshot via WhatsApp.
-                  <br />We'll activate your account within 30 minutes!
+                  <br />
+                  We'll activate your account within 30 minutes!
                 </p>
               </CardContent>
             </Card>
@@ -376,25 +410,25 @@ const LifetimeDealPage = () => {
           <h2 className="text-2xl font-bold text-center mb-6">Frequently Asked Questions</h2>
           <div className="grid gap-4">
             {[
-              { 
-                q: "Is this really a one-time payment?", 
-                a: "Yes! Pay $99 once and get lifetime access. No monthly fees, no renewals, no hidden charges. Ever." 
+              {
+                q: "Is this really a one-time payment?",
+                a: "Yes! Pay $99 once and get lifetime access. No monthly fees, no renewals, no hidden charges. Ever.",
               },
-              { 
-                q: "What happens after the 100 spots are filled?", 
-                a: "The price goes up to $999/lifetime or $39.99/month. This deal will never be offered again at this price." 
+              {
+                q: "What happens after the 100 spots are filled?",
+                a: "The price goes up to $999/lifetime or $39.99/month. This deal will never be offered again at this price.",
               },
-              { 
-                q: "Do I get future updates?", 
-                a: "Absolutely! All future features, improvements, and updates are included for life." 
+              {
+                q: "Do I get future updates?",
+                a: "Absolutely! All future features, improvements, and updates are included for life.",
               },
-              { 
-                q: "How fast will my account be activated?", 
-                a: "Within 30 minutes during business hours. Usually within 5-10 minutes for WhatsApp confirmations." 
+              {
+                q: "How fast will my account be activated?",
+                a: "Within 30 minutes during business hours. Usually within 5-10 minutes for WhatsApp confirmations.",
               },
-              { 
-                q: "Can I use this for my business?", 
-                a: "Yes! You can use ShadowTalk AI for personal and commercial projects. White-label branding is included." 
+              {
+                q: "Can I use this for my business?",
+                a: "Yes! You can use ShadowTalk AI for personal and commercial projects. White-label branding is included.",
               },
             ].map((faq, i) => (
               <Card key={i} className="bg-muted/30">
@@ -419,9 +453,9 @@ const LifetimeDealPage = () => {
             <p className="text-muted-foreground mb-6">
               {LIFETIME_DEAL.slotsRemaining} spots left at $99. After that, it's $999 or $39.99/month.
             </p>
-            <Button 
-              asChild 
-              size="lg" 
+            <Button
+              asChild
+              size="lg"
               className="h-14 text-lg px-8 bg-gradient-to-r from-primary via-purple-500 to-pink-500 hover:opacity-90"
             >
               <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
