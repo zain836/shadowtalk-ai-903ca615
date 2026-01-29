@@ -39,7 +39,7 @@ import { CustomInstructions } from "./CustomInstructions";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive" | "spicy";
-type UserPlan = 'free' | 'pro' | 'premium' | 'elite' | 'enterprise';
+type UserPlan = 'free' | 'pro' | 'premium' | 'lifetime' | 'elite' | 'enterprise';
 
 const personalities: { value: Personality; label: string; icon: React.ReactNode; description: string }[] = [
   { value: "friendly", label: "Friendly", icon: <Heart className="h-4 w-4" />, description: "Warm and enthusiastic with a conversational tone" },

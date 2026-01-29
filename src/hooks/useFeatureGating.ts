@@ -1,7 +1,7 @@
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 
-export type PlanTier = 'free' | 'pro' | 'premium' | 'elite' | 'enterprise';
+export type PlanTier = 'free' | 'pro' | 'premium' | 'lifetime' | 'elite' | 'enterprise';
 
 export interface FeatureConfig {
   name: string;
@@ -61,6 +61,7 @@ const planHierarchy: Record<PlanTier, number> = {
   free: 0,
   pro: 1,
   premium: 2,
+  lifetime: 3, // Lifetime gets elite-level access but NOT admin
   elite: 3,
   enterprise: 4,
 };
