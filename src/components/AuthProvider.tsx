@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logClientError } from '@/lib/logging';
 
-type UserPlan = 'free' | 'pro' | 'premium' | 'elite' | 'enterprise';
+type UserPlan = 'free' | 'pro' | 'premium' | 'lifetime' | 'elite' | 'enterprise';
 
 interface AuthContextType {
   user: User | null;

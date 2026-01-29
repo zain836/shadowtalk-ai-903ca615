@@ -38,6 +38,7 @@ import MonetizationPage from "./pages/MonetizationPage";
 import FounderAccessPage from "./pages/FounderAccessPage";
 import StrategyAgentPage from "./pages/StrategyAgentPage";
 import WorkspacePage from "./pages/WorkspacePage";
+import LifetimeDealPage from "./pages/LifetimeDealPage";
 import PWABanner from "./components/PWABanner";
 import CookieConsent from "./components/CookieConsent";
 import CustomerSupportWidget from "./components/CustomerSupportWidget";
@@ -106,6 +107,7 @@ const App = () => {
                   <Route path="/gdpr" element={<GDPRPage />} />
                   <Route path="/billing" element={<MonetizationPage />} />
                   <Route path="/founder-access" element={<FounderAccessPage />} />
+                  <Route path="/lifetime-deal" element={<LifetimeDealPage />} />
                   <Route path="/strategy" element={<StrategyAgentPage />} />
                   <Route path="/workspace" element={<WorkspacePage />} />
                   <Route path="*" element={<NotFound />} />

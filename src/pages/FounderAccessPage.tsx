@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { 
   Shield, Copy, Check, ExternalLink, MessageCircle, 
   Zap, Lock, Plane, Bot, Palette, Crown, Globe, 
   Wallet, Building2, Smartphone, ArrowRight, Star,
-  Coins, Code, FileText, Users, Rocket
+  Coins, Code, FileText, Users, Rocket, Timer, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -19,7 +20,8 @@ import {
   CREDIT_PACKAGES, 
   PAY_PER_SOLUTIONS,
   API_PLANS,
-  WHITELABEL_PLANS 
+  WHITELABEL_PLANS,
+  LIFETIME_DEAL
 } from "@/lib/monetization";
 
 const FounderAccessPage = () => {
@@ -121,6 +123,46 @@ const FounderAccessPage = () => {
       </div>
 
       <div className="relative z-10 container max-w-6xl mx-auto px-4 py-12">
+        {/* LIFETIME DEAL BANNER - Prominent CTA */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="mb-8"
+        >
+          <Link to="/lifetime-deal">
+            <Card className="border-2 border-primary bg-gradient-to-r from-primary/20 via-purple-500/10 to-pink-500/20 hover:border-primary/80 transition-all cursor-pointer group overflow-hidden">
+              <CardContent className="flex flex-col md:flex-row items-center justify-between gap-4 py-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-primary to-purple-500 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-8 h-8 text-white" />
+                  </div>
+                  <div className="text-center md:text-left">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className="bg-destructive text-white animate-pulse">🔥 TONIGHT ONLY</Badge>
+                      <Badge variant="outline" className="border-success text-success">90% OFF</Badge>
+                    </div>
+                    <h3 className="text-2xl font-bold">$99 Lifetime Deal - First 100 Users</h3>
+                    <p className="text-muted-foreground">Everything included. Forever. No subscriptions.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-sm text-muted-foreground line-through">$999</p>
+                    <p className="text-3xl font-black text-primary">$99</p>
+                  </div>
+                  <Button size="lg" className="bg-gradient-to-r from-primary to-purple-500 hover:opacity-90 group-hover:scale-105 transition-transform">
+                    Claim Now <ArrowRight className="ml-2 w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+              <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-pink-500" />
+            </Card>
+          </Link>
+          <p className="text-center text-sm text-muted-foreground mt-2">
+            ⚡ {LIFETIME_DEAL.slotsRemaining} of {LIFETIME_DEAL.slotsTotal} spots remaining • Offer ends tonight!
+          </p>
+        </motion.div>
+
         {/* Header Section */}
         <motion.div 
           className="text-center mb-8"
