@@ -1,5 +1,5 @@
 import React from "react";
-import { Check, Star, Zap, Crown, Rocket, Gift, Coins, PlayCircle, TrendingUp } from "lucide-react";
+import { Check, Star, Zap, Crown, Rocket, Gift, Coins, PlayCircle, TrendingUp, Sparkles, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,17 +25,13 @@ const PricingSection = () => {
       name: "Free",
       price: "$0",
       period: "",
-      description: "Try our revolutionary AI capabilities",
+      description: "More generous than ChatGPT Free!",
       icon: Zap,
       popular: false,
       highlight: false,
       features: PLAN_DETAILS.free.features,
-      limitations: [
-        "🔒 No Proactive Context Engine (PCE)",
-        "🔒 No Multi-Step Workflow Executor",
-        "🔒 No cross-jurisdictional comparisons",
-        "Contains ads",
-      ],
+      limitations: [],
+      comparison: "ChatGPT gives ~3 images, we give 4!",
       cta: "Start Free",
       variant: "outline",
     },
@@ -43,12 +39,13 @@ const PricingSection = () => {
       name: "Pro",
       price: `$${PLAN_DETAILS.pro.price}`,
       period: "/month",
-      description: "Perfect for freelancers & small businesses",
+      description: "Half the price of ChatGPT Plus!",
       icon: Star,
       popular: false,
       highlight: false,
       features: PLAN_DETAILS.pro.features,
       limitations: [],
+      comparison: "ChatGPT Plus = $20/mo",
       cta: "Upgrade to Pro",
       variant: "default",
     },
@@ -56,12 +53,13 @@ const PricingSection = () => {
       name: "Premium",
       price: `$${PLAN_DETAILS.premium.price}`,
       period: "/month",
-      description: "For serious professionals & agencies",
+      description: "Premium features at Plus prices",
       icon: Rocket,
       popular: true,
       highlight: true,
       features: PLAN_DETAILS.premium.features,
       limitations: [],
+      comparison: "More features than ChatGPT Plus",
       cta: "Go Premium",
       variant: "default",
     },
@@ -69,12 +67,13 @@ const PricingSection = () => {
       name: "Elite",
       price: `$${PLAN_DETAILS.elite.price}`,
       period: "/month",
-      description: "Power users who demand everything",
+      description: "75% cheaper than ChatGPT Pro!",
       icon: Crown,
       popular: false,
       highlight: false,
       features: PLAN_DETAILS.elite.features,
       limitations: [],
+      comparison: "ChatGPT Pro = $200/mo",
       cta: "Go Elite",
       variant: "secondary",
     },
@@ -95,15 +94,30 @@ const PricingSection = () => {
         <div className="text-center mb-16">
           <div className="inline-flex items-center space-x-2 bg-card/50 border border-border rounded-full px-4 py-2 mb-6">
             <Star className="h-4 w-4 text-primary" />
-            <span className="text-sm text-muted-foreground">Value-Driven Pricing</span>
+            <span className="text-sm text-muted-foreground">Better Than ChatGPT • Lower Prices</span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Invest in Your{" "}
-            <span className="gradient-text">Success</span>
+            Why Pay{" "}
+            <span className="line-through text-muted-foreground">$200</span>{" "}
+            <span className="gradient-text">When You Can Pay $50?</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-            Navigate legal, financial & regulatory complexity with AI that pays for itself. Start free, scale as you grow.
+            ShadowTalk AI gives you more features at every price point. Compare to ChatGPT and see the difference.
           </p>
+          
+          {/* Lifetime Deal Banner */}
+          <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-xl px-6 py-4 mb-6">
+            <Timer className="h-6 w-6 text-amber-500 animate-pulse" />
+            <div className="text-left">
+              <span className="text-sm font-bold text-amber-400">🔥 TONIGHT ONLY: $99 Lifetime Deal</span>
+              <p className="text-xs text-muted-foreground">
+                First 100 users get EVERYTHING forever. No monthly fees.{" "}
+                <Button variant="link" className="text-amber-400 p-0 h-auto text-xs" onClick={() => navigate('/lifetime-deal')}>
+                  Claim Now →
+                </Button>
+              </p>
+            </div>
+          </div>
           
           {/* Referral Banner */}
           <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 rounded-xl px-6 py-3">
@@ -153,27 +167,28 @@ const PricingSection = () => {
                 </div>
 
                 {/* Features */}
-                <div className="space-y-2 mb-6">
-                  {plan.features.slice(0, 6).map((feature, featureIndex) => (
+                <div className="space-y-2 mb-4">
+                  {plan.features.slice(0, 5).map((feature, featureIndex) => (
                     <div key={featureIndex} className="flex items-start space-x-2">
                       <Check className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
                       <span className="text-xs">{feature}</span>
                     </div>
                   ))}
-                  {plan.features.length > 6 && (
+                  {plan.features.length > 5 && (
                     <div className="text-xs text-muted-foreground text-center">
-                      +{plan.features.length - 6} more features
+                      +{plan.features.length - 5} more features
                     </div>
                   )}
-                  {plan.limitations.map((limitation, limitIndex) => (
-                    <div key={limitIndex} className="flex items-start space-x-2">
-                      <div className="w-4 h-4 mt-0.5 flex-shrink-0">
-                        <div className="w-2 h-2 bg-muted-foreground rounded-full mx-auto mt-1"></div>
-                      </div>
-                      <span className="text-xs text-muted-foreground">{limitation}</span>
-                    </div>
-                  ))}
                 </div>
+
+                {/* ChatGPT Comparison Badge */}
+                {plan.comparison && (
+                  <div className="bg-success/10 border border-success/20 rounded-md px-2 py-1 mb-4">
+                    <p className="text-xs text-success font-medium text-center">
+                      ✨ {plan.comparison}
+                    </p>
+                  </div>
+                )}
 
                 {/* CTA */}
                 <Button

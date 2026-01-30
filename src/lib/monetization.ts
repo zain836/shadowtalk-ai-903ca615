@@ -282,21 +282,25 @@ export const AFFILIATE_TIERS = [
   { level: 5, name: 'Diamond', minReferrals: 50, commission: 40 },
 ];
 
-// Daily free limits by plan
+// Daily free limits by plan - BETTER THAN CHATGPT!
+// ChatGPT Free: ~3 deep research, ~3 images, limited messages
+// ShadowTalk Free: 5 deep research, 4 images, 50 messages!
 export const DAILY_LIMITS = {
   free: {
     messages: 50,
     fileUploads: 3,
     codeGenerations: 5,
-    imageGenerations: 0,
+    imageGenerations: 4,   // ChatGPT = ~3, WE GIVE 4!
     webSearches: 5,
+    deepResearch: 5,       // ChatGPT = ~3, WE GIVE 5!
   },
   pro: {
     messages: Infinity,
     fileUploads: 50,
     codeGenerations: Infinity,
-    imageGenerations: 10,
+    imageGenerations: 20,
     webSearches: 50,
+    deepResearch: 20,
   },
   premium: {
     messages: Infinity,
@@ -304,6 +308,7 @@ export const DAILY_LIMITS = {
     codeGenerations: Infinity,
     imageGenerations: 50,
     webSearches: Infinity,
+    deepResearch: 50,
   },
   elite: {
     messages: Infinity,
@@ -311,6 +316,15 @@ export const DAILY_LIMITS = {
     codeGenerations: Infinity,
     imageGenerations: Infinity,
     webSearches: Infinity,
+    deepResearch: Infinity,
+  },
+  lifetime: {
+    messages: Infinity,
+    fileUploads: Infinity,
+    codeGenerations: Infinity,
+    imageGenerations: Infinity,
+    webSearches: Infinity,
+    deepResearch: Infinity,
   },
 } as const;
 
