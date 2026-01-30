@@ -40,6 +40,7 @@ import { ShadowBrowser } from "@/components/chat/ShadowBrowser";
 import { WelcomeDialog } from "@/components/chat/WelcomeDialog";
 import { MultiModelOrchestrator } from "@/components/chat/MultiModelOrchestrator";
 import { APIMarketplace } from "@/components/chat/APIMarketplace";
+import { SignInPrompt } from "@/components/chat/SignInPrompt";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -49,6 +50,7 @@ import { useOfflineAI } from "@/hooks/useOfflineAI";
 import { useOfflineChatHistory } from "@/hooks/useOfflineChatHistory";
 import { useGeoLocation } from "@/hooks/useGeoLocation";
 import { useBusinessMemory } from "@/hooks/useBusinessMemory";
+import { useGuestUsage, GUEST_LIMITS } from "@/hooks/useGuestUsage";
 
 // Types
 interface SpeechRecognitionEvent extends Event {
@@ -141,6 +143,8 @@ const ChatbotPage = () => {
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   const [showMultiModel, setShowMultiModel] = useState(false);
   const [showAPIMarketplace, setShowAPIMarketplace] = useState(false);
+  const [showSignInPrompt, setShowSignInPrompt] = useState(false);
+  const [signInPromptReason, setSignInPromptReason] = useState<'chats' | 'images' | 'deepResearch' | 'general'>('general');
   
   // Check if welcome dialog should be shown (after boot screen)
   useEffect(() => {
@@ -169,6 +173,10 @@ const ChatbotPage = () => {
   const offlineAI = useOfflineAI();
   const offlineChatHistory = useOfflineChatHistory();
   const { getMemoryContext, getActiveMemories } = useBusinessMemory();
+  const guestUsage = useGuestUsage(); // Guest usage tracking
+  
+  // Determine if user is a guest (not logged in)
+  const isGuest = !user;
   
   // Track user geolocation for analytics
   useGeoLocation();
@@ -246,22 +254,32 @@ const ChatbotPage = () => {
     loadOfflineData();
   }, [isOffline, offlineChatHistory.isReady]);
 
-  // Initialize
+  // Initialize - ALLOW GUESTS with limited usage!
   useEffect(() => {
     // Check for offline session first
     const offlineSession = getOfflineSession();
     
-    if (!user && !offlineSession) {
-      navigate('/auth');
-    } else if (user || offlineSession) {
+    // CHANGED: Don't redirect guests - let them use limited features
+    if (user || offlineSession) {
       if (!isOffline) {
         loadConversations();
         checkSubscription();
       }
       // Request push notification permission for Elite users
       if (isElite && !isOffline) requestPermission();
+    } else {
+      // Guest mode - create a local conversation for them
+      const guestConvId = 'guest-' + Date.now();
+      setCurrentConversationId(guestConvId);
+      setMessages([{ 
+        id: 'welcome', 
+        type: 'ai', 
+        content: `👋 Welcome to ShadowTalk AI! You have **${GUEST_LIMITS.chats} free chats** and **${GUEST_LIMITS.images} free image generations** without signing in.\n\nSign up for FREE to get:\n• 50 messages per day\n• 4 images per day (more than ChatGPT!)\n• 5 deep research queries (more than ChatGPT!)\n• Save your conversation history\n\nHow can I help you today?`, 
+        timestamp: new Date() 
+      }]);
+      setConversations([{ id: guestConvId, title: 'Guest Conversation', created_at: new Date().toISOString() }]);
     }
-  }, [user, navigate, isElite, isOffline, getOfflineSession]);
+  }, [user, isElite, isOffline, getOfflineSession]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -576,15 +594,27 @@ const ChatbotPage = () => {
     
     if ((!messageToSend.trim() && !attachmentToSend) || isLoading || !currentConversationId) return;
     
-    const limit = getDailyMessageLimit();
-    if (limit !== Infinity && dailyChats >= limit) {
-      toast({ 
-        title: "Daily Limit Reached", 
-        description: "Upgrade for unlimited messages!",
-        variant: "destructive",
-        action: <a href="/founder-access" className="underline font-semibold">Upgrade Now</a>
-      });
-      return;
+    // GUEST USAGE CHECK - prompt sign in if limit reached
+    if (isGuest) {
+      if (!guestUsage.canPerform('chats')) {
+        setSignInPromptReason('chats');
+        setShowSignInPrompt(true);
+        return;
+      }
+      // Track guest usage
+      guestUsage.trackGuestAction('chats');
+    } else {
+      // Logged-in user - check daily limits
+      const limit = getDailyMessageLimit();
+      if (limit !== Infinity && dailyChats >= limit) {
+        toast({ 
+          title: "Daily Limit Reached", 
+          description: "Upgrade for unlimited messages!",
+          variant: "destructive",
+          action: <a href="/founder-access" className="underline font-semibold">Upgrade Now</a>
+        });
+        return;
+      }
     }
     
     if (messageToSend.trim().toLowerCase().startsWith('/imagine ')) {
@@ -1202,6 +1232,15 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
       <APIMarketplace
         isOpen={showAPIMarketplace}
         onClose={() => setShowAPIMarketplace(false)}
+      />
+
+      {/* Sign In Prompt - For guests who hit usage limits */}
+      <SignInPrompt
+        open={showSignInPrompt}
+        onOpenChange={setShowSignInPrompt}
+        reason={signInPromptReason}
+        usedCount={guestUsage.usage[signInPromptReason === 'general' ? 'chats' : signInPromptReason]}
+        limitCount={GUEST_LIMITS[signInPromptReason === 'general' ? 'chats' : signInPromptReason]}
       />
     </div>
   );
