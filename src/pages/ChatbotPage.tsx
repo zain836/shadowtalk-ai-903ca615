@@ -31,7 +31,7 @@ import { CreativeSynthesis } from "@/components/chat/CreativeSynthesis";
 import { PerplexityPages } from "@/components/chat/PerplexityPages";
 import { ShadowCowork } from "@/components/chat/ShadowCowork";
 import { ShadowTalkLive } from "@/components/chat/ShadowTalkLive";
-import CognitiveLoadPanel from "@/components/chat/CognitiveLoadPanel";
+import ShadowAgentPanel from "@/components/chat/ShadowAgentPanel";
 import PlanetaryActionPanel from "@/components/chat/PlanetaryActionPanel";
 import SecurityAuditPanel from "@/components/chat/SecurityAuditPanel";
 import { OfflineAIIndicator } from "@/components/chat/OfflineAIIndicator";
@@ -160,7 +160,7 @@ const ChatbotPage = () => {
   }, []);
   
   // Special mode state
-  const [isAnalyzingTask, setIsAnalyzingTask] = useState(false);
+  const [isExecutingAgent, setIsExecutingAgent] = useState(false);
   const [isLoadingEcoActions, setIsLoadingEcoActions] = useState(false);
   const [isAnalyzingSecurity, setIsAnalyzingSecurity] = useState(false);
   
@@ -875,13 +875,37 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
   const handleManageSubscription = async () => { try { const { data: { session } } = await supabase.auth.getSession(); const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/customer-portal`, { method: 'POST', headers: { Authorization: `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ returnUrl: window.location.href }) }); const { url } = await resp.json(); window.location.href = url; } catch { toast({ title: "Error", description: "Failed to open portal", variant: "destructive" }); } };
   
   // Special mode handlers
-  const handleAnalyzeTask = async (task: string) => { setIsAnalyzingTask(true); try { const { data: { session } } = await supabase.auth.getSession(); const resp = await fetch(CHAT_URL, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` }, body: JSON.stringify({ analyzeTask: task }) }); return await resp.json(); } finally { setIsAnalyzingTask(false); } };
+  const handleExecuteAgentTask = async (task: string) => { 
+    setIsExecutingAgent(true); 
+    try { 
+      const { data: { session } } = await supabase.auth.getSession(); 
+      const resp = await fetch(CHAT_URL, { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` }, 
+        body: JSON.stringify({ 
+          agentTask: task,
+          messages: [
+            { role: "system", content: "You are ShadowAgent - an autonomous AI execution engine. Analyze the task, decompose it into steps, and provide a comprehensive execution plan with results for each step." },
+            { role: "user", content: `Execute this task autonomously: ${task}` }
+          ]
+        }) 
+      }); 
+      const data = await resp.json();
+      // Parse the response into plan and results
+      const plan = data.plan || ["Analyzing task", "Planning execution", "Executing steps", "Synthesizing results"];
+      const results = data.results || [data.text || "Task analysis complete"];
+      const summary = data.summary || data.text || "Task completed successfully";
+      return { plan, results, summary };
+    } finally { 
+      setIsExecutingAgent(false); 
+    } 
+  };
   const handleGetEcoActions = async (location: string) => { setIsLoadingEcoActions(true); try { const { data: { session } } = await supabase.auth.getSession(); const resp = await fetch(CHAT_URL, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` }, body: JSON.stringify({ getEcoActions: true, location }) }); return await resp.json(); } finally { setIsLoadingEcoActions(false); } };
   const handleSecurityAudit = async (code: string) => { setIsAnalyzingSecurity(true); try { const { data: { session } } = await supabase.auth.getSession(); const resp = await fetch(CHAT_URL, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` }, body: JSON.stringify({ securityAudit: code }) }); return await resp.json(); } finally { setIsAnalyzingSecurity(false); } };
 
   const maxChats = isProOrHigher ? "∞" : "50";
   const showSuggestions = messages.length <= 1;
-  const isSpecialMode = ['cpf', 'ppag', 'hsca'].includes(chatMode);
+  const isSpecialMode = ['agent', 'ppag', 'hsca'].includes(chatMode);
 
   return (
     <div className="min-h-screen bg-background">
@@ -949,7 +973,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
           </div>
 
           {/* Special Mode Panels */}
-          {chatMode === 'cpf' && <CognitiveLoadPanel onAnalyzeTask={handleAnalyzeTask} isAnalyzing={isAnalyzingTask} />}
+          {chatMode === 'agent' && <ShadowAgentPanel onExecuteTask={handleExecuteAgentTask} isExecuting={isExecutingAgent} />}
           {chatMode === 'ppag' && <PlanetaryActionPanel onGetActions={handleGetEcoActions} isLoading={isLoadingEcoActions} />}
           {chatMode === 'hsca' && <SecurityAuditPanel onAnalyze={handleSecurityAudit} isAnalyzing={isAnalyzingSecurity} />}
 

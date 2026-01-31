@@ -24,7 +24,7 @@ export type ChatMode =
   | "creative"
   | "music"
   | "research"
-  | "cpf"
+  | "agent"
   | "ppag"
   | "hsca"
   | "math"
@@ -43,7 +43,7 @@ interface ModeSelectorProps {
 // Map modes to their required feature keys
 const modeFeatureMap: Partial<Record<ChatMode, string>> = {
   research: "pceEngine",
-  cpf: "pceEngine", 
+  agent: "pceEngine", 
   ppag: "lifeEventSuggestions",
   hsca: "stealthMode",
   camera: "imageGeneration",
@@ -178,11 +178,11 @@ const modes: { value: ChatMode; label: string; icon: React.ReactNode; prompt: st
     tier: "premium"
   },
   { 
-    value: "cpf", 
-    label: "🌊 Cognitive Filter", 
+    value: "agent", 
+    label: "🤖 ShadowAgent", 
     icon: <Brain className="h-4 w-4" />,
-    prompt: "You are in Cognitive Pollution Filter (CPF) mode. Help users manage digital overload by analyzing tasks, prioritizing them by cognitive load, and summarizing complex information into actionable items.",
-    color: "text-cyan-400",
+    prompt: "You are ShadowAgent - an autonomous AI execution engine. You analyze tasks, decompose them into steps, and execute them autonomously. You have capabilities for research, coding, data analysis, and multi-step task execution. Think step-by-step, plan thoroughly, then execute.",
+    color: "text-violet-500",
     tier: "elite"
   },
   { 
@@ -211,9 +211,9 @@ export const ModeSelector = ({ mode, onModeChange, disabled }: ModeSelectorProps
   const { canAccess, getUpgradeMessage, isPremiumOrHigher, isElite } = useFeatureGating();
   const { toast } = useToast();
   const currentMode = modes.find(m => m.value === mode) || modes[0];
-  const standardModes = modes.filter(m => !['cpf', 'ppag', 'hsca', 'research', 'math', 'camera', 'organize', 'academic'].includes(m.value));
+  const standardModes = modes.filter(m => !['agent', 'ppag', 'hsca', 'research', 'math', 'camera', 'organize', 'academic'].includes(m.value));
   const specialModes = modes.filter(m => ['research', 'math', 'camera', 'organize', 'academic'].includes(m.value));
-  const advancedModes = modes.filter(m => ['cpf', 'ppag', 'hsca'].includes(m.value));
+  const advancedModes = modes.filter(m => ['agent', 'ppag', 'hsca'].includes(m.value));
 
   const handleModeSelect = (selectedMode: ChatMode) => {
     const featureKey = modeFeatureMap[selectedMode];
