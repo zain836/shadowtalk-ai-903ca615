@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,12 +6,12 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
 import { 
   Bot, 
   Zap, 
   Brain, 
   Play,
-  Pause,
   CheckCircle2,
   Loader2,
   AlertCircle,
@@ -21,29 +21,41 @@ import {
   Globe,
   Code,
   FileSearch,
-  Send,
   History,
   Sparkles,
   Crown,
   ChevronRight,
-  ArrowRight,
-  RefreshCw,
   Terminal,
-  Shield
+  Shield,
+  Cog,
+  Eye,
+  MousePointer,
+  Workflow
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 
+// =============================================================================
+// CLAWDBOT-INSPIRED AGENTIC ARCHITECTURE
+// =============================================================================
+// ShadowAgent uses a hybrid architecture:
+// - BRAIN (LLM): Lovable AI Gateway for reasoning & task decomposition
+// - HANDS (Agent): Local agentic executor inspired by Clawdbot patterns
+// - MEMORY (Storage): Supabase Vector/Postgres for persistent context
+// =============================================================================
+
 interface AgentTask {
   id: string;
-  type: 'analyze' | 'research' | 'execute' | 'code' | 'data';
+  type: 'analyze' | 'research' | 'execute' | 'code' | 'data' | 'browse' | 'automate';
   description: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: 'pending' | 'planning' | 'running' | 'awaiting_approval' | 'completed' | 'failed';
   result?: string;
   startedAt?: Date;
   completedAt?: Date;
   subtasks?: AgentSubtask[];
+  requiresApproval?: boolean;
+  riskLevel?: 'low' | 'medium' | 'high';
 }
 
 interface AgentSubtask {
@@ -51,13 +63,22 @@ interface AgentSubtask {
   description: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
   result?: string;
+  tool?: string; // The agentic tool being used
 }
 
 interface AgentMemory {
   id: string;
-  type: 'context' | 'decision' | 'learning';
+  type: 'context' | 'decision' | 'learning' | 'skill';
   content: string;
   timestamp: Date;
+}
+
+interface AgentSkill {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  enabled: boolean;
 }
 
 interface ShadowAgentPanelProps {
@@ -69,21 +90,25 @@ interface ShadowAgentPanelProps {
   isExecuting: boolean;
 }
 
-const AGENT_CAPABILITIES = [
-  { icon: <Brain className="h-4 w-4" />, label: 'Reasoning', desc: 'Complex problem decomposition' },
-  { icon: <Target className="h-4 w-4" />, label: 'Planning', desc: 'Multi-step task planning' },
-  { icon: <Globe className="h-4 w-4" />, label: 'Research', desc: 'Web search & synthesis' },
-  { icon: <Code className="h-4 w-4" />, label: 'Code', desc: 'Generate & execute code' },
-  { icon: <Database className="h-4 w-4" />, label: 'Memory', desc: 'Persistent context' },
-  { icon: <Shield className="h-4 w-4" />, label: 'Autonomy', desc: 'Self-directed execution' },
+// Clawdbot-inspired agent capabilities
+const AGENT_SKILLS: AgentSkill[] = [
+  { id: 'reasoning', name: 'Reasoning', description: 'Complex problem decomposition using LLM', icon: <Brain className="h-4 w-4" />, enabled: true },
+  { id: 'planning', name: 'Planning', description: 'Multi-step task orchestration', icon: <Target className="h-4 w-4" />, enabled: true },
+  { id: 'research', name: 'Web Research', description: 'Search & synthesize information', icon: <Globe className="h-4 w-4" />, enabled: true },
+  { id: 'code', name: 'Code Generation', description: 'Write & analyze code', icon: <Code className="h-4 w-4" />, enabled: true },
+  { id: 'memory', name: 'Deep Memory', description: 'Supabase-backed persistent context', icon: <Database className="h-4 w-4" />, enabled: true },
+  { id: 'browse', name: 'Browser Control', description: 'Autonomous web browsing', icon: <MousePointer className="h-4 w-4" />, enabled: true },
+  { id: 'automate', name: 'Task Automation', description: 'Script execution & scheduling', icon: <Workflow className="h-4 w-4" />, enabled: true },
+  { id: 'observe', name: 'Observation', description: 'Monitor & react to changes', icon: <Eye className="h-4 w-4" />, enabled: true },
 ];
 
 const EXAMPLE_TASKS = [
   "Research top 5 AI startups in healthcare and create a competitive analysis",
-  "Analyze my codebase for security vulnerabilities and fix them",
+  "Analyze this codebase for security vulnerabilities and suggest fixes",
   "Build a marketing strategy for launching a SaaS product",
   "Create a comprehensive business plan with financial projections",
-  "Automate my daily workflow: check emails, summarize, and prioritize tasks",
+  "Monitor competitor pricing pages and alert me to changes",
+  "Scrape job postings matching my skills and create a summary report",
 ];
 
 const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({ 
@@ -95,8 +120,9 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
   const [currentTask, setCurrentTask] = useState<AgentTask | null>(null);
   const [taskHistory, setTaskHistory] = useState<AgentTask[]>([]);
   const [agentMemory, setAgentMemory] = useState<AgentMemory[]>([]);
-  const [isAutoMode, setIsAutoMode] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [humanInLoop, setHumanInLoop] = useState(true); // Safety: require approval for high-risk tasks
+  const [skills, setSkills] = useState<AgentSkill[]>(AGENT_SKILLS);
 
   // Load agent memory from Supabase
   useEffect(() => {
@@ -128,83 +154,192 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
     loadMemory();
   }, [user]);
 
+  // Determine risk level for human-in-the-loop
+  const assessRiskLevel = (task: string): 'low' | 'medium' | 'high' => {
+    const lower = task.toLowerCase();
+    const highRiskKeywords = ['delete', 'remove', 'drop', 'destroy', 'payment', 'transaction', 'send email', 'post to'];
+    const mediumRiskKeywords = ['update', 'modify', 'change', 'edit', 'create', 'write'];
+    
+    if (highRiskKeywords.some(k => lower.includes(k))) return 'high';
+    if (mediumRiskKeywords.some(k => lower.includes(k))) return 'medium';
+    return 'low';
+  };
+
+  // Clawdbot-style task decomposition
+  const decomposeTask = useCallback((task: string, type: AgentTask['type']): AgentSubtask[] => {
+    // AI-driven decomposition would happen server-side
+    // This is a client-side preview of the plan
+    const subtasks: AgentSubtask[] = [];
+    
+    switch (type) {
+      case 'research':
+        subtasks.push(
+          { id: crypto.randomUUID(), description: '🔍 Search web for relevant sources', status: 'pending', tool: 'web_search' },
+          { id: crypto.randomUUID(), description: '📖 Extract and analyze content', status: 'pending', tool: 'content_extraction' },
+          { id: crypto.randomUUID(), description: '🧠 Synthesize findings with LLM', status: 'pending', tool: 'llm_reasoning' },
+          { id: crypto.randomUUID(), description: '📊 Generate structured report', status: 'pending', tool: 'report_generation' }
+        );
+        break;
+      case 'code':
+        subtasks.push(
+          { id: crypto.randomUUID(), description: '📋 Analyze requirements', status: 'pending', tool: 'llm_reasoning' },
+          { id: crypto.randomUUID(), description: '🔧 Generate code solution', status: 'pending', tool: 'code_generation' },
+          { id: crypto.randomUUID(), description: '✅ Validate & test code', status: 'pending', tool: 'code_execution' },
+          { id: crypto.randomUUID(), description: '📝 Document solution', status: 'pending', tool: 'documentation' }
+        );
+        break;
+      case 'browse':
+        subtasks.push(
+          { id: crypto.randomUUID(), description: '🌐 Navigate to target page', status: 'pending', tool: 'browser_navigate' },
+          { id: crypto.randomUUID(), description: '👁️ Observe page content', status: 'pending', tool: 'browser_observe' },
+          { id: crypto.randomUUID(), description: '🖱️ Interact with elements', status: 'pending', tool: 'browser_interact' },
+          { id: crypto.randomUUID(), description: '📥 Extract data', status: 'pending', tool: 'data_extraction' }
+        );
+        break;
+      case 'automate':
+        subtasks.push(
+          { id: crypto.randomUUID(), description: '📋 Define automation workflow', status: 'pending', tool: 'workflow_design' },
+          { id: crypto.randomUUID(), description: '⚙️ Configure triggers', status: 'pending', tool: 'trigger_setup' },
+          { id: crypto.randomUUID(), description: '🔄 Execute automation', status: 'pending', tool: 'script_execution' },
+          { id: crypto.randomUUID(), description: '📊 Monitor & report', status: 'pending', tool: 'monitoring' }
+        );
+        break;
+      default:
+        subtasks.push(
+          { id: crypto.randomUUID(), description: '🧠 Analyze task requirements', status: 'pending', tool: 'llm_reasoning' },
+          { id: crypto.randomUUID(), description: '📋 Create execution plan', status: 'pending', tool: 'planning' },
+          { id: crypto.randomUUID(), description: '⚡ Execute steps', status: 'pending', tool: 'execution' },
+          { id: crypto.randomUUID(), description: '✅ Verify results', status: 'pending', tool: 'verification' }
+        );
+    }
+    
+    return subtasks;
+  }, []);
+
   const executeTask = async () => {
     if (!taskInput.trim()) {
       toast.error('Please enter a task for the agent');
       return;
     }
 
+    const taskType = detectTaskType(taskInput);
+    const riskLevel = assessRiskLevel(taskInput);
+    const subtasks = decomposeTask(taskInput, taskType);
+
     const newTask: AgentTask = {
       id: crypto.randomUUID(),
-      type: detectTaskType(taskInput),
+      type: taskType,
       description: taskInput,
-      status: 'running',
+      status: humanInLoop && riskLevel !== 'low' ? 'awaiting_approval' : 'planning',
       startedAt: new Date(),
-      subtasks: []
+      subtasks,
+      requiresApproval: humanInLoop && riskLevel !== 'low',
+      riskLevel
     };
 
     setCurrentTask(newTask);
     setTaskInput('');
 
-    // Add to memory
+    // Add to memory (Supabase-backed)
     const memoryEntry: AgentMemory = {
       id: crypto.randomUUID(),
       type: 'decision',
-      content: `Started task: ${taskInput}`,
+      content: `🤖 Agent received task: ${taskInput} [Risk: ${riskLevel}]`,
       timestamp: new Date()
     };
     setAgentMemory(prev => [memoryEntry, ...prev].slice(0, 50));
 
+    // If requires approval, wait for user
+    if (newTask.requiresApproval) {
+      toast.info('This task requires your approval before execution', {
+        description: `Risk level: ${riskLevel.toUpperCase()}`
+      });
+      return;
+    }
+
+    // Execute immediately if low risk or human-in-loop disabled
+    await runTask(newTask);
+  };
+
+  const approveTask = async () => {
+    if (!currentTask || currentTask.status !== 'awaiting_approval') return;
+    
+    const approvedTask = { ...currentTask, status: 'planning' as const };
+    setCurrentTask(approvedTask);
+    
+    toast.success('Task approved! Agent is now executing...');
+    await runTask(approvedTask);
+  };
+
+  const runTask = async (task: AgentTask) => {
+    // Update to running status
+    const runningTask = { ...task, status: 'running' as const };
+    setCurrentTask(runningTask);
+
     try {
-      // Execute the task
-      const result = await onExecuteTask(taskInput);
+      // Execute via the LLM backend
+      const result = await onExecuteTask(task.description);
       
-      // Update task with results
+      // Update subtasks with results
+      const completedSubtasks = task.subtasks?.map((st, i) => ({
+        ...st,
+        status: 'completed' as const,
+        result: result.results[i] || 'Completed'
+      })) || [];
+
       const completedTask: AgentTask = {
-        ...newTask,
+        ...task,
         status: 'completed',
         completedAt: new Date(),
         result: result.summary,
-        subtasks: result.plan.map((step, i) => ({
-          id: crypto.randomUUID(),
-          description: step,
-          status: 'completed' as const,
-          result: result.results[i] || 'Completed'
-        }))
+        subtasks: completedSubtasks
       };
 
       setCurrentTask(completedTask);
       setTaskHistory(prev => [completedTask, ...prev].slice(0, 20));
 
-      // Save learning to memory
+      // Save learning to persistent memory
       const learningEntry: AgentMemory = {
         id: crypto.randomUUID(),
         type: 'learning',
-        content: `Completed: ${newTask.description} → ${result.summary.slice(0, 100)}...`,
+        content: `✅ Completed: ${task.description.slice(0, 50)}... → ${result.summary.slice(0, 80)}...`,
         timestamp: new Date()
       };
       setAgentMemory(prev => [learningEntry, ...prev].slice(0, 50));
 
-      toast.success('Task completed successfully!');
+      // Save to Supabase for persistent learning
+      if (user) {
+        await supabase.from('business_memories').insert({
+          user_id: user.id,
+          title: `Agent Task: ${task.type}`,
+          content: result.summary,
+          category: 'agent_learning',
+          priority: task.riskLevel === 'high' ? 10 : 5
+        });
+      }
+
+      toast.success('🤖 Agent completed task successfully!');
     } catch (error) {
       const failedTask: AgentTask = {
-        ...newTask,
+        ...task,
         status: 'failed',
         completedAt: new Date(),
         result: error instanceof Error ? error.message : 'Task failed'
       };
       setCurrentTask(failedTask);
       setTaskHistory(prev => [failedTask, ...prev].slice(0, 20));
-      toast.error('Task execution failed');
+      toast.error('Agent execution failed');
     }
   };
 
   const detectTaskType = (task: string): AgentTask['type'] => {
     const lower = task.toLowerCase();
-    if (lower.includes('research') || lower.includes('find') || lower.includes('search')) return 'research';
-    if (lower.includes('code') || lower.includes('build') || lower.includes('create app')) return 'code';
+    if (lower.includes('research') || lower.includes('find info') || lower.includes('search for')) return 'research';
+    if (lower.includes('code') || lower.includes('build') || lower.includes('create app') || lower.includes('program')) return 'code';
     if (lower.includes('analyze') || lower.includes('audit') || lower.includes('review')) return 'analyze';
     if (lower.includes('data') || lower.includes('database') || lower.includes('query')) return 'data';
+    if (lower.includes('browse') || lower.includes('scrape') || lower.includes('navigate') || lower.includes('website')) return 'browse';
+    if (lower.includes('automate') || lower.includes('schedule') || lower.includes('monitor') || lower.includes('cron')) return 'automate';
     return 'execute';
   };
 
@@ -214,17 +349,31 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
       case 'code': return <Code className="h-4 w-4" />;
       case 'analyze': return <FileSearch className="h-4 w-4" />;
       case 'data': return <Database className="h-4 w-4" />;
+      case 'browse': return <MousePointer className="h-4 w-4" />;
+      case 'automate': return <Workflow className="h-4 w-4" />;
       default: return <Zap className="h-4 w-4" />;
     }
   };
 
   const getStatusColor = (status: AgentTask['status']) => {
     switch (status) {
+      case 'planning': return 'text-blue-500';
       case 'running': return 'text-primary animate-pulse';
+      case 'awaiting_approval': return 'text-amber-500';
       case 'completed': return 'text-success';
       case 'failed': return 'text-destructive';
       default: return 'text-muted-foreground';
     }
+  };
+
+  const getRiskBadge = (risk?: 'low' | 'medium' | 'high') => {
+    if (!risk) return null;
+    const colors = {
+      low: 'bg-green-500/20 text-green-500',
+      medium: 'bg-amber-500/20 text-amber-500',
+      high: 'bg-red-500/20 text-red-500'
+    };
+    return <Badge variant="outline" className={`text-[10px] ${colors[risk]}`}>{risk} risk</Badge>;
   };
 
   return (
@@ -240,7 +389,7 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
             <h2 className="text-lg font-bold bg-gradient-to-r from-primary to-violet-500 bg-clip-text text-transparent">
               ShadowAgent
             </h2>
-            <p className="text-xs text-muted-foreground">Autonomous AI Execution Engine</p>
+            <p className="text-xs text-muted-foreground">Clawdbot-Powered Agentic AI</p>
           </div>
         </div>
         <Badge variant="secondary" className="gap-1 bg-gradient-to-r from-amber-500/20 to-orange-500/20">
@@ -249,14 +398,46 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
         </Badge>
       </div>
 
-      {/* Capabilities Overview */}
+      {/* Human-in-the-Loop Toggle */}
+      <Card className="border-amber-500/30 bg-amber-500/5">
+        <CardContent className="pt-4 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-amber-500" />
+              <div>
+                <p className="text-sm font-medium">Human-in-the-Loop</p>
+                <p className="text-xs text-muted-foreground">Require approval for risky actions</p>
+              </div>
+            </div>
+            <Switch 
+              checked={humanInLoop} 
+              onCheckedChange={setHumanInLoop}
+              className="data-[state=checked]:bg-amber-500"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Agent Skills */}
       <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20">
-        <CardContent className="pt-4">
-          <div className="grid grid-cols-3 gap-2">
-            {AGENT_CAPABILITIES.map((cap, i) => (
-              <div key={i} className="flex flex-col items-center text-center p-2 rounded-lg bg-background/50">
-                <div className="text-primary mb-1">{cap.icon}</div>
-                <span className="text-xs font-medium">{cap.label}</span>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Cog className="h-4 w-4" />
+            Agent Skills (Clawdbot Architecture)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-4 gap-2">
+            {skills.map((skill) => (
+              <div 
+                key={skill.id} 
+                className={`flex flex-col items-center text-center p-2 rounded-lg transition-all ${
+                  skill.enabled ? 'bg-primary/10 border border-primary/30' : 'bg-muted/30 opacity-50'
+                }`}
+                title={skill.description}
+              >
+                <div className={skill.enabled ? 'text-primary' : 'text-muted-foreground'}>{skill.icon}</div>
+                <span className="text-[10px] font-medium mt-1">{skill.name}</span>
               </div>
             ))}
           </div>
@@ -330,7 +511,8 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
       {/* Current Task Execution */}
       {currentTask && (
         <Card className={`border-2 ${
-          currentTask.status === 'running' ? 'border-primary/50 shadow-glow' :
+          currentTask.status === 'running' || currentTask.status === 'planning' ? 'border-primary/50 shadow-glow' :
+          currentTask.status === 'awaiting_approval' ? 'border-amber-500/50' :
           currentTask.status === 'completed' ? 'border-success/50' :
           currentTask.status === 'failed' ? 'border-destructive/50' : 'border-border'
         }`}>
@@ -339,26 +521,47 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
               <div className="flex items-center gap-2">
                 {getTaskIcon(currentTask.type)}
                 <CardTitle className="text-sm">Current Task</CardTitle>
+                {getRiskBadge(currentTask.riskLevel)}
               </div>
               <Badge 
                 variant={currentTask.status === 'completed' ? 'default' : 'secondary'}
                 className={getStatusColor(currentTask.status)}
               >
-                {currentTask.status === 'running' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                {(currentTask.status === 'running' || currentTask.status === 'planning') && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                {currentTask.status === 'awaiting_approval' && <Shield className="h-3 w-3 mr-1" />}
                 {currentTask.status === 'completed' && <CheckCircle2 className="h-3 w-3 mr-1" />}
                 {currentTask.status === 'failed' && <AlertCircle className="h-3 w-3 mr-1" />}
-                {currentTask.status.charAt(0).toUpperCase() + currentTask.status.slice(1)}
+                {currentTask.status.replace('_', ' ').charAt(0).toUpperCase() + currentTask.status.slice(1).replace('_', ' ')}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">{currentTask.description}</p>
             
+            {/* Approval Required */}
+            {currentTask.status === 'awaiting_approval' && (
+              <Alert className="border-amber-500/50 bg-amber-500/10">
+                <Shield className="h-4 w-4 text-amber-500" />
+                <AlertDescription className="text-sm">
+                  <strong>Human approval required.</strong> This task involves {currentTask.riskLevel}-risk actions.
+                  <div className="flex gap-2 mt-2">
+                    <Button size="sm" onClick={approveTask} className="bg-amber-500 hover:bg-amber-600">
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      Approve & Execute
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setCurrentTask(null)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+            
             {/* Subtasks Progress */}
             {currentTask.subtasks && currentTask.subtasks.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Progress</span>
+                  <span>Execution Plan</span>
                   <span>{currentTask.subtasks.filter(s => s.status === 'completed').length}/{currentTask.subtasks.length}</span>
                 </div>
                 <Progress 
@@ -367,7 +570,7 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
                 />
                 <ScrollArea className="h-32">
                   <div className="space-y-1">
-                    {currentTask.subtasks.map((subtask, i) => (
+                    {currentTask.subtasks.map((subtask) => (
                       <div 
                         key={subtask.id}
                         className={`flex items-center gap-2 text-xs p-2 rounded ${
@@ -381,6 +584,9 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
                         {subtask.status === 'failed' && <AlertCircle className="h-3 w-3 text-destructive" />}
                         {subtask.status === 'pending' && <Clock className="h-3 w-3 text-muted-foreground" />}
                         <span className="flex-1">{subtask.description}</span>
+                        {subtask.tool && (
+                          <Badge variant="outline" className="text-[9px] px-1">{subtask.tool}</Badge>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -462,12 +668,16 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
         </Card>
       )}
 
-      {/* Info */}
+      {/* Architecture Info */}
       <Alert className="bg-primary/5 border-primary/20">
         <Bot className="h-4 w-4 text-primary" />
         <AlertDescription className="text-xs">
-          <strong>ShadowAgent</strong> uses generative AI for analysis and agentic AI for autonomous execution. 
-          It can research, code, analyze data, and execute multi-step tasks without manual intervention.
+          <strong>ShadowAgent</strong> uses a Clawdbot-inspired hybrid architecture:
+          <ul className="mt-1 space-y-0.5 text-muted-foreground">
+            <li>• <strong>Brain:</strong> Lovable AI Gateway for reasoning</li>
+            <li>• <strong>Hands:</strong> Agentic executor for browser/terminal/automation</li>
+            <li>• <strong>Memory:</strong> Supabase for persistent context & learning</li>
+          </ul>
         </AlertDescription>
       </Alert>
     </div>
