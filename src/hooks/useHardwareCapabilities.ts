@@ -26,35 +26,56 @@ export interface HardwareCapabilities {
   recommendedModels: string[];
 }
 
+// =============================================================================
+// HARDWARE TIER DEFINITIONS
+// =============================================================================
+// Low (4GB RAM, no GPU): Basic chat only - Llama 3.2 1B
+// Mid (8GB RAM): Good reasoning - Llama 3.2 3B  
+// High (16GB+ RAM, GPU): Full capability - Llama 3.1 8B
+// Enterprise (32GB+ RAM, RTX): Expert mode - Mistral 7B / Qwen 7B
+// =============================================================================
+
 const MODEL_TIERS = {
   low: {
-    maxSize: '360M',
-    models: ['SmolLM2-360M-Instruct-q4f16_1-MLC'],
+    maxSize: '1B',
+    maxSizeBytes: 1_000_000_000,
+    models: [
+      'Llama-3.2-1B-Instruct-q4f16_1-MLC',
+      'SmolLM2-360M-Instruct-q4f16_1-MLC',
+    ],
+    description: 'Basic chat (360M-1B)',
   },
   mid: {
-    maxSize: '1.7B',
+    maxSize: '3B',
+    maxSizeBytes: 3_000_000_000,
     models: [
-      'SmolLM2-1.7B-Instruct-q4f16_1-MLC',
+      'Llama-3.2-3B-Instruct-q4f16_1-MLC',
       'Llama-3.2-1B-Instruct-q4f16_1-MLC',
       'Qwen2.5-1.5B-Instruct-q4f16_1-MLC',
     ],
+    description: 'Good reasoning (1.5B-3B)',
   },
   high: {
-    maxSize: '3B',
+    maxSize: '8B',
+    maxSizeBytes: 8_000_000_000,
     models: [
-      'Qwen2.5-3B-Instruct-q4f16_1-MLC',
+      'Llama-3.1-8B-Instruct-q4f16_1-MLC',
+      'Mistral-7B-Instruct-v0.3-q4f16_1-MLC',
+      'Llama-3.2-3B-Instruct-q4f16_1-MLC',
       'Phi-3.5-mini-instruct-q4f16_1-MLC',
-      'SmolLM2-1.7B-Instruct-q4f16_1-MLC',
     ],
+    description: 'Full capability (7B-8B)',
   },
   enterprise: {
-    maxSize: '7B',
+    maxSize: '13B',
+    maxSizeBytes: 13_000_000_000,
     models: [
-      'Llama-3.2-3B-Instruct-q4f16_1-MLC',
+      'Llama-3.1-8B-Instruct-q4f16_1-MLC',
       'Mistral-7B-Instruct-v0.3-q4f16_1-MLC',
       'Qwen2.5-7B-Instruct-q4f16_1-MLC',
       'Phi-3.5-mini-instruct-q4f16_1-MLC',
     ],
+    description: 'Expert mode (8B-13B)',
   },
 };
 
@@ -193,18 +214,20 @@ export const useHardwareCapabilities = () => {
       '3B': 3,
       '3.8B': 3.8,
       '7B': 7,
+      '8B': 8,
       '13B': 13,
+      '70B': 70,
     };
 
     const maxMap: Record<string, number> = {
-      '360M': 0.36,
-      '1.7B': 1.7,
+      '1B': 1,
       '3B': 3,
-      '7B': 7,
+      '8B': 8,
+      '13B': 13,
     };
 
     const requestedSize = sizeMap[modelSize] || 0;
-    const maxAllowed = maxMap[capabilities.maxModelSize] || 0.36;
+    const maxAllowed = maxMap[capabilities.maxModelSize] || 1;
 
     return requestedSize <= maxAllowed;
   }, [capabilities.maxModelSize]);
@@ -218,20 +241,20 @@ export const useHardwareCapabilities = () => {
 
     switch (task) {
       case 'fast':
-        // Always use smallest available
-        if (tier === 'low') return 'SmolLM2-360M-Instruct-q4f16_1-MLC';
-        return 'SmolLM2-1.7B-Instruct-q4f16_1-MLC';
+        // Always use smallest available for speed
+        if (tier === 'low') return 'Llama-3.2-1B-Instruct-q4f16_1-MLC';
+        return 'Llama-3.2-3B-Instruct-q4f16_1-MLC';
       
       case 'code':
-        // Qwen models are better for code
-        if (tier === 'enterprise') return 'Qwen2.5-7B-Instruct-q4f16_1-MLC';
-        if (tier === 'high') return 'Qwen2.5-3B-Instruct-q4f16_1-MLC';
-        if (tier === 'mid') return 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC';
+        // Qwen and Llama 8B are better for code
+        if (tier === 'enterprise' || tier === 'high') return 'Llama-3.1-8B-Instruct-q4f16_1-MLC';
+        if (tier === 'mid') return 'Llama-3.2-3B-Instruct-q4f16_1-MLC';
         return recommendedModels[0];
       
       case 'reasoning':
-        // Phi models excel at reasoning
-        if (tier === 'high' || tier === 'enterprise') return 'Phi-3.5-mini-instruct-q4f16_1-MLC';
+        // Llama 8B and Phi excel at reasoning
+        if (tier === 'high' || tier === 'enterprise') return 'Llama-3.1-8B-Instruct-q4f16_1-MLC';
+        if (tier === 'mid') return 'Llama-3.2-3B-Instruct-q4f16_1-MLC';
         return recommendedModels[0];
       
       case 'chat':
