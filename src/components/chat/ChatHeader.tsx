@@ -36,6 +36,7 @@ import { ProviderSelector, AIProvider } from "./ProviderSelector";
 import { ModelSelector, AIModel } from "./ModelSelector";
 import { MemoryPanel } from "./MemoryPanel";
 import { CustomInstructions } from "./CustomInstructions";
+import { BunkerModeToggle } from "./BunkerModeToggle";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive" | "spicy";
@@ -409,6 +410,9 @@ export const ChatHeader = ({
           <span className="text-muted-foreground">•</span>
           <span>{isProOrHigher ? '∞' : `${dailyChats}/${maxChats}`}</span>
         </Badge>
+
+        {/* Bunker Mode Toggle */}
+        <BunkerModeToggle />
 
         {/* Offline Mode Indicator */}
         <OfflineModeIndicator />
