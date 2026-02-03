@@ -252,22 +252,22 @@ const ChatbotPage = () => {
     };
     
     loadOfflineData();
-  }, [isOffline, offlineChatHistory.isReady]);
+  }, [isOffline, offlineChatHistory.isReady, personality]);
 
   // Initialize - ALLOW GUESTS with limited usage!
   useEffect(() => {
     // Check for offline session first
     const offlineSession = getOfflineSession();
     
-    // CHANGED: Don't redirect guests - let them use limited features
-    if (user || offlineSession) {
-      if (!isOffline) {
-        loadConversations();
-        checkSubscription();
-      }
+    // **FIX**: Also load conversations when coming back online after being offline
+    const shouldLoadConversations = (user || offlineSession) && !isOffline;
+    
+    if (shouldLoadConversations) {
+      loadConversations();
+      checkSubscription();
       // Request push notification permission for Elite users
-      if (isElite && !isOffline) requestPermission();
-    } else {
+      if (isElite) requestPermission();
+    } else if (!user && !offlineSession && !isOffline) {
       // Guest mode - create a local conversation for them
       const guestConvId = 'guest-' + Date.now();
       setCurrentConversationId(guestConvId);
@@ -279,7 +279,30 @@ const ChatbotPage = () => {
       }]);
       setConversations([{ id: guestConvId, title: 'Guest Conversation', created_at: new Date().toISOString() }]);
     }
-  }, [user, isElite, isOffline, getOfflineSession]);
+    // Note: Offline mode with user handled by the offline loading useEffect above
+  }, [user, isElite, isOffline, getOfflineSession, checkSubscription]);
+
+  // Sync conversations when coming back online
+  useEffect(() => {
+    const handleOnline = async () => {
+      if (user && offlineChatHistory.isReady) {
+        console.log('[ChatbotPage] Back online - syncing conversations...');
+        
+        // Load fresh data from server
+        loadConversations();
+        
+        // TODO: Sync pending offline messages to server
+        const pending = await offlineChatHistory.getPendingSync();
+        if (pending.length > 0) {
+          console.log('[ChatbotPage] Pending sync items:', pending.length);
+          // Future: implement actual sync logic
+        }
+      }
+    };
+    
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [user, offlineChatHistory.isReady]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

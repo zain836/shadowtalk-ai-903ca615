@@ -91,12 +91,14 @@ export const BunkerModeToggle: React.FC<BunkerModeToggleProps> = ({ className })
     setShowConsentDialog(false);
   };
 
-  const completedTasks = tasks.filter(t => t.status === 'completed');
+  const completedTasks = tasks.filter(t => t.status === 'completed' || t.status === 'cached');
   const pendingTasks = tasks.filter(t => t.status === 'queued' || t.status === 'downloading');
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed': return <Check className="h-3 w-3 text-emerald-500" />;
+      case 'completed': 
+      case 'cached':
+        return <Check className="h-3 w-3 text-emerald-500" />;
       case 'downloading': return <Loader2 className="h-3 w-3 animate-spin text-blue-500" />;
       case 'paused': return <Pause className="h-3 w-3 text-amber-500" />;
       case 'error': return <AlertCircle className="h-3 w-3 text-destructive" />;
@@ -305,8 +307,9 @@ export const BunkerModeToggle: React.FC<BunkerModeToggleProps> = ({ className })
                 <p className="text-sm font-medium">Quick Download</p>
                 <div className="grid gap-2">
                   {quickQueueModels.map(model => {
-                    const isQueued = tasks.some(t => t.modelId === model.id);
-                    const isComplete = tasks.some(t => t.modelId === model.id && t.status === 'completed');
+                    const taskForModel = tasks.find(t => t.modelId === model.id);
+                    const isQueued = !!taskForModel;
+                    const isComplete = taskForModel?.status === 'completed' || taskForModel?.status === 'cached';
                     
                     return (
                       <Button
@@ -326,7 +329,7 @@ export const BunkerModeToggle: React.FC<BunkerModeToggleProps> = ({ className })
                           {model.name}
                         </span>
                         <span className="text-muted-foreground text-xs">
-                          {isComplete ? 'Ready' : isQueued ? 'Queued' : model.size}
+                          {isComplete ? (taskForModel?.status === 'cached' ? 'Cached' : 'Ready') : isQueued ? 'Queued' : model.size}
                         </span>
                       </Button>
                     );
@@ -345,7 +348,7 @@ export const BunkerModeToggle: React.FC<BunkerModeToggleProps> = ({ className })
                       key={task.id}
                       className={cn(
                         'p-3 rounded-lg border flex items-center justify-between',
-                        task.status === 'completed' && 'bg-emerald-500/5 border-emerald-500/30',
+                        (task.status === 'completed' || task.status === 'cached') && 'bg-emerald-500/5 border-emerald-500/30',
                         task.status === 'error' && 'bg-destructive/5 border-destructive/30'
                       )}
                     >
@@ -356,9 +359,11 @@ export const BunkerModeToggle: React.FC<BunkerModeToggleProps> = ({ className })
                           <p className="text-xs text-muted-foreground">
                             {task.status === 'completed' 
                               ? 'Ready for offline use' 
-                              : task.status === 'error'
-                                ? task.error
-                                : `${task.progress}% • ${formatBytes(task.totalBytes)}`
+                              : task.status === 'cached'
+                                ? 'Already cached - ready to use'
+                                : task.status === 'error'
+                                  ? task.error
+                                  : `${task.progress}% • ${formatBytes(task.totalBytes)}`
                             }
                           </p>
                         </div>
