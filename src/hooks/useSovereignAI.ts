@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useHardwareCapabilities } from './useHardwareCapabilities';
 import { useOfflineRAG } from './useOfflineRAG';
 import { useBusinessMemory } from './useBusinessMemory';
+import { useModelCache } from './useModelCache';
 
 // =============================================================================
 // SOVEREIGN AI ENGINE - Llama 3 Powered Offline Intelligence
@@ -132,6 +133,7 @@ export const useSovereignAI = () => {
   const { capabilities, canRunModel, getOptimalModel } = useHardwareCapabilities();
   const { search: ragSearch, documentCount } = useOfflineRAG();
   const { memories } = useBusinessMemory();
+  const { getBestCachedModel, markModelCached, isModelCached: checkIfModelCached } = useModelCache();
 
   const [state, setState] = useState<SovereignAIState>({
     isReady: false,
@@ -210,10 +212,28 @@ export const useSovereignAI = () => {
     });
   }, [capabilities.tier]);
 
-  // Get recommended model for current hardware
+  // Get recommended model for current hardware - prioritize cached models
   const getRecommendedModel = useCallback((): SovereignModel => {
     const tier = capabilities.tier;
     
+    // **FIX**: First check if we have a cached model that matches our tier
+    const tierMap: Record<string, 'standard' | 'elite' | 'enterprise'> = {
+      'enterprise': 'enterprise',
+      'high': 'elite',
+      'mid': 'standard',
+      'low': 'standard',
+    };
+    
+    const cachedModelId = getBestCachedModel(tierMap[tier] || 'standard');
+    if (cachedModelId) {
+      const cachedModel = SOVEREIGN_MODELS.find(m => m.id === cachedModelId);
+      if (cachedModel) {
+        console.log('[SovereignAI] Using cached model:', cachedModelId);
+        return cachedModel;
+      }
+    }
+    
+    // Fallback to tier-based recommendation if no cached model
     // Enterprise: Full 8B Llama
     if (tier === 'enterprise') {
       return SOVEREIGN_MODELS.find(m => m.id.includes('8B'))!;
@@ -228,7 +248,7 @@ export const useSovereignAI = () => {
     }
     // Low: 1B Llama
     return SOVEREIGN_MODELS.find(m => m.size === '1B')!;
-  }, [capabilities.tier]);
+  }, [capabilities.tier, getBestCachedModel]);
 
   // Initialize the Sovereign AI engine
   const initializeSovereignEngine = useCallback(async (modelId?: string): Promise<boolean> => {
@@ -237,9 +257,15 @@ export const useSovereignAI = () => {
       return initPromiseRef.current;
     }
 
-    const targetModel = modelId 
-      ? SOVEREIGN_MODELS.find(m => m.id === modelId) 
-      : getRecommendedModel();
+    // **FIX**: If no modelId provided, check for cached models first
+    let targetModel: SovereignModel | undefined;
+    
+    if (modelId) {
+      targetModel = SOVEREIGN_MODELS.find(m => m.id === modelId);
+    } else {
+      // Try to use a cached model first
+      targetModel = getRecommendedModel();
+    }
 
     if (!targetModel) {
       setState(prev => ({ ...prev, error: 'No compatible model found for your device' }));
@@ -296,6 +322,9 @@ export const useSovereignAI = () => {
 
         engineRef.current = await Promise.race([loadPromise, timeoutPromise]);
 
+        // Mark model as cached for future reference
+        markModelCached(targetModel.id, targetModel.sizeBytes);
+        
         setState(prev => ({
           ...prev,
           isReady: true,
@@ -312,14 +341,18 @@ export const useSovereignAI = () => {
       } catch (e: any) {
         console.error('[SovereignAI] Failed to load model:', e);
 
-        // Try fallback to smaller model
+        // Try fallback to smaller model - prioritize cached ones
         const currentIdx = SOVEREIGN_MODELS.findIndex(m => m.id === targetModel.id);
-        const fallback = SOVEREIGN_MODELS.slice(currentIdx + 1).find(m => 
+        const fallbackCandidates = SOVEREIGN_MODELS.slice(currentIdx + 1).filter(m => 
           m.tier === 'standard' || (capabilities.tier === 'mid' && m.size <= '3B')
         );
+        
+        // Check if any fallback is cached
+        const cachedFallback = fallbackCandidates.find(m => checkIfModelCached(m.id));
+        const fallback = cachedFallback || fallbackCandidates[0];
 
         if (fallback) {
-          console.log('[SovereignAI] Trying fallback:', fallback.name);
+          console.log('[SovereignAI] Trying fallback:', fallback.name, cachedFallback ? '(cached)' : '');
           initPromiseRef.current = null;
           return initializeSovereignEngine(fallback.id);
         }
@@ -336,7 +369,7 @@ export const useSovereignAI = () => {
     })();
 
     return initPromiseRef.current;
-  }, [getRecommendedModel, capabilities.tier]);
+  }, [getRecommendedModel, capabilities.tier, markModelCached, checkIfModelCached]);
 
   // Build context from business memories
   const buildBusinessContext = useCallback((): string => {

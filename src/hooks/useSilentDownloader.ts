@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useModelCache } from './useModelCache';
 
 // =============================================================================
 // SILENT BACKGROUND DOWNLOADER - Service Worker Architecture
@@ -10,6 +11,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 // - Battery sensitivity - pauses on battery power
 // - Smart-silent "Prepare Bunker" consent UX
 // - Chunked downloads with resume capability
+// - **FIX**: Now checks WebLLM cache before downloading to prevent re-downloads
 // =============================================================================
 
 export interface DownloadTask {
@@ -19,7 +21,7 @@ export interface DownloadTask {
   totalBytes: number;
   downloadedBytes: number;
   progress: number;
-  status: 'queued' | 'downloading' | 'paused' | 'completed' | 'error';
+  status: 'queued' | 'downloading' | 'paused' | 'completed' | 'error' | 'cached';
   chunks: DownloadChunk[];
   startedAt?: Date;
   completedAt?: Date;
@@ -59,6 +61,7 @@ interface SilentDownloaderState {
     isCharging: boolean;
     level: number;
   } | null;
+  cacheVerified: boolean; // NEW: Track if we've verified cache
 }
 
 // Model download URLs and metadata
@@ -106,6 +109,8 @@ const STORAGE_KEYS = {
 };
 
 export const useSilentDownloader = () => {
+  const { isModelCached, markModelCached, verifyCachedModels, checkModelCache } = useModelCache();
+  
   const [state, setState] = useState<SilentDownloaderState>({
     isEnabled: false,
     bunkerMode: false,
@@ -118,12 +123,41 @@ export const useSilentDownloader = () => {
     estimatedStorageAvailable: 0,
     bandwidthUsage: MAX_BANDWIDTH_PERCENT,
     batteryStatus: null,
+    cacheVerified: false,
   });
 
   const workerRef = useRef<ServiceWorker | null>(null);
   const downloadControllerRef = useRef<AbortController | null>(null);
   const batteryRef = useRef<BatteryManager | null>(null);
   const downloadIntervalRef = useRef<number | null>(null);
+  
+  // Verify cache on mount to mark already-downloaded models
+  useEffect(() => {
+    const verifyOnMount = async () => {
+      if (state.cacheVerified) return;
+      
+      console.log('[SilentDownloader] Verifying cached models on mount...');
+      const cachedModels = await verifyCachedModels();
+      
+      // Update tasks to mark cached models as completed
+      setState(prev => {
+        const updatedTasks = prev.tasks.map(task => {
+          if (cachedModels.some(m => m.modelId === task.modelId)) {
+            return { ...task, status: 'cached' as const, progress: 100 };
+          }
+          return task;
+        });
+        
+        return {
+          ...prev,
+          tasks: updatedTasks,
+          cacheVerified: true,
+        };
+      });
+    };
+    
+    verifyOnMount();
+  }, [state.cacheVerified, verifyCachedModels]);
 
   // Initialize battery monitoring
   useEffect(() => {
@@ -238,7 +272,7 @@ export const useSilentDownloader = () => {
   }, []);
 
   // Queue a model for background download
-  const queueModelDownload = useCallback((modelId: string, modelName: string, priority: number = 1) => {
+  const queueModelDownload = useCallback(async (modelId: string, modelName: string, priority: number = 1) => {
     const modelInfo = MODEL_DOWNLOADS[modelId];
     if (!modelInfo) {
       console.error('[SilentDownloader] Unknown model:', modelId);
@@ -251,7 +285,34 @@ export const useSilentDownloader = () => {
       return;
     }
 
-    // Create chunks
+    // **FIX**: Check if model is already cached in WebLLM before queuing
+    const alreadyCached = await checkModelCache(modelId);
+    if (alreadyCached) {
+      console.log('[SilentDownloader] Model already cached, skipping download:', modelId);
+      markModelCached(modelId, modelInfo.sizeBytes);
+      
+      // Add as "cached" task so UI shows it as complete
+      const cachedTask: DownloadTask = {
+        id: `cached_${Date.now()}_${modelId}`,
+        modelId,
+        modelName,
+        totalBytes: modelInfo.sizeBytes,
+        downloadedBytes: modelInfo.sizeBytes,
+        progress: 100,
+        status: 'cached',
+        chunks: [],
+        completedAt: new Date(),
+        priority,
+      };
+      
+      setState(prev => ({
+        ...prev,
+        tasks: [...prev.tasks.filter(t => t.modelId !== modelId), cachedTask],
+      }));
+      return;
+    }
+
+    // Create chunks for new download
     const numChunks = Math.ceil(modelInfo.sizeBytes / CHUNK_SIZE);
     const chunks: DownloadChunk[] = Array.from({ length: numChunks }, (_, i) => ({
       index: i,
@@ -279,7 +340,7 @@ export const useSilentDownloader = () => {
     }));
 
     console.log(`[SilentDownloader] Queued ${modelName} for background download (${(modelInfo.sizeBytes / 1e9).toFixed(1)} GB)`);
-  }, [state.tasks]);
+  }, [state.tasks, checkModelCache, markModelCached]);
 
   // Pause download
   const pauseDownload = useCallback((reason: 'battery' | 'bandwidth' | 'user' = 'user') => {
@@ -377,7 +438,9 @@ export const useSilentDownloader = () => {
       // Unload after caching - we just wanted to download
       await engine.unload();
 
-      // Mark as completed
+      // Mark as completed and register in cache
+      markModelCached(pendingTask.modelId, pendingTask.totalBytes);
+      
       setState(prev => ({
         ...prev,
         isDownloading: false,
@@ -451,12 +514,12 @@ export const useSilentDownloader = () => {
 
   // Get completed models (ready for offline use)
   const getCompletedModels = useCallback(() => {
-    return state.tasks.filter(t => t.status === 'completed');
+    return state.tasks.filter(t => t.status === 'completed' || t.status === 'cached');
   }, [state.tasks]);
 
-  // Check if a model is cached
-  const isModelCached = useCallback((modelId: string) => {
-    return state.tasks.some(t => t.modelId === modelId && t.status === 'completed');
+  // Check if a model is downloaded/cached locally
+  const isModelDownloaded = useCallback((modelId: string) => {
+    return state.tasks.some(t => t.modelId === modelId && (t.status === 'completed' || t.status === 'cached'));
   }, [state.tasks]);
 
   // Cancel current download
@@ -502,6 +565,7 @@ export const useSilentDownloader = () => {
     estimatedStorageAvailable: state.estimatedStorageAvailable,
     bandwidthUsage: state.bandwidthUsage,
     batteryStatus: state.batteryStatus,
+    cacheVerified: state.cacheVerified,
 
     // Actions
     enableBunkerMode,
@@ -512,7 +576,7 @@ export const useSilentDownloader = () => {
     setBandwidthLimit,
     removeTask,
     getCompletedModels,
-    isModelCached,
+    isModelDownloaded, // Renamed from isModelCached to avoid conflict
     getTimeRemaining,
   };
 };
