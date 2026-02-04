@@ -64,20 +64,41 @@ const prompts = [
 ];
 
 export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
+  // Show fewer prompts on mobile
+  const mobilePrompts = prompts.slice(0, 4);
+  
   return (
-    <div className="flex flex-wrap gap-2 justify-center py-4">
-      {prompts.map((p, i) => (
-        <Button
-          key={i}
-          variant="outline"
-          size="sm"
-          onClick={() => onSelect(p.prompt)}
-          className="gap-2 hover:bg-muted/80 transition-colors"
-        >
-          <span className={p.color}>{p.icon}</span>
-          {p.label}
-        </Button>
-      ))}
+    <div className="flex flex-wrap gap-1.5 md:gap-2 justify-center py-2 md:py-4 px-2">
+      {/* Mobile: show only 4 prompts */}
+      <div className="flex flex-wrap gap-1.5 justify-center md:hidden">
+        {mobilePrompts.map((p, i) => (
+          <Button
+            key={i}
+            variant="outline"
+            size="sm"
+            onClick={() => onSelect(p.prompt)}
+            className="gap-1.5 hover:bg-muted/80 transition-colors text-xs h-8 px-2"
+          >
+            <span className={p.color}>{p.icon}</span>
+            {p.label}
+          </Button>
+        ))}
+      </div>
+      {/* Desktop: show all prompts */}
+      <div className="hidden md:flex flex-wrap gap-2 justify-center">
+        {prompts.map((p, i) => (
+          <Button
+            key={i}
+            variant="outline"
+            size="sm"
+            onClick={() => onSelect(p.prompt)}
+            className="gap-2 hover:bg-muted/80 transition-colors"
+          >
+            <span className={p.color}>{p.icon}</span>
+            {p.label}
+          </Button>
+        ))}
+      </div>
     </div>
   );
 };
