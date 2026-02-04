@@ -56,6 +56,7 @@ export const ChatRequestSchema = z.object({
   webSearch: z.boolean().optional(),
   searchQuery: z.string().max(500).optional(),
   deepResearch: z.boolean().optional(),
+  isResearch: z.boolean().optional(), // Flag for research/strategy agent mode
   researchQuery: z.string().max(500).optional(),
   agentWorkflow: z.object({
     workflowId: z.string(),

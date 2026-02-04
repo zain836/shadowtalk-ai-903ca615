@@ -78,7 +78,6 @@ interface ChatHeaderProps {
   onOpenVisualReasoning: () => void;
   onOpenCreativeSynthesis: () => void;
   onOpenImageGenerator: () => void;
-  onOpenPerplexityPages: () => void;
   onOpenShadowCowork: () => void;
   onOpenShadowTalkLive: () => void;
   onOpenOfflineTools: () => void;
@@ -154,7 +153,6 @@ export const ChatHeader = ({
   onOpenVisualReasoning,
   onOpenCreativeSynthesis,
   onOpenImageGenerator,
-  onOpenPerplexityPages,
   onOpenShadowCowork,
   onOpenShadowTalkLive,
   onOpenOfflineTools,
@@ -216,9 +214,9 @@ export const ChatHeader = ({
           onClick={() => handleMenuAction(onOpenImageGenerator)}
         />
         <MenuItem
-          icon={<Globe className="h-5 w-5 text-cyan-500" />}
-          label="Create Shareable Page"
-          onClick={() => handleMenuAction(onOpenPerplexityPages)}
+          icon={<Terminal className="h-5 w-5 text-amber-500" />}
+          label="Shadow Cowork (W)"
+          onClick={() => handleMenuAction(onOpenShadowCowork)}
         />
         <MenuItem
           icon={<Terminal className="h-5 w-5 text-amber-500" />}
@@ -475,10 +473,6 @@ export const ChatHeader = ({
                 <Image className="h-4 w-4 mr-2 text-orange-500" />
                 Image Generator
                 <span className="ml-auto text-xs text-muted-foreground">⇧E</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onOpenPerplexityPages}>
-                <Globe className="h-4 w-4 mr-2 text-cyan-500" />
-                Create Shareable Page
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onOpenShadowCowork}>
                 <Terminal className="h-4 w-4 mr-2 text-amber-500" />

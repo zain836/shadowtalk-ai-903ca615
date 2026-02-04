@@ -28,7 +28,6 @@ import { DeepResearchPanel } from "@/components/chat/DeepResearchPanel";
 import { AgenticTaskRunner } from "@/components/chat/AgenticTaskRunner";
 import { VisualReasoning } from "@/components/chat/VisualReasoning";
 import { CreativeSynthesis } from "@/components/chat/CreativeSynthesis";
-import { PerplexityPages } from "@/components/chat/PerplexityPages";
 import { ShadowCowork } from "@/components/chat/ShadowCowork";
 import { ShadowTalkLive } from "@/components/chat/ShadowTalkLive";
 import ShadowAgentPanel from "@/components/chat/ShadowAgentPanel";
@@ -135,7 +134,6 @@ const ChatbotPage = () => {
   const [showAgenticRunner, setShowAgenticRunner] = useState(false);
   const [showVisualReasoning, setShowVisualReasoning] = useState(false);
   const [showCreativeSynthesis, setShowCreativeSynthesis] = useState(false);
-  const [showPerplexityPages, setShowPerplexityPages] = useState(false);
   const [showShadowCowork, setShowShadowCowork] = useState(false);
   const [showShadowTalkLive, setShowShadowTalkLive] = useState(false);
   const [showOfflineTools, setShowOfflineTools] = useState(false);
@@ -1020,7 +1018,6 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             onOpenVisualReasoning={() => setShowVisualReasoning(true)}
             onOpenCreativeSynthesis={() => setShowCreativeSynthesis(true)}
             onOpenImageGenerator={() => setShowImageGenerator(true)}
-            onOpenPerplexityPages={() => setShowPerplexityPages(true)}
             onOpenShadowCowork={() => setShowShadowCowork(true)}
             onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
             onOpenOfflineTools={() => setShowOfflineTools(true)}
@@ -1163,16 +1160,6 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             setShowCreativeSynthesis(false);
             setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content, timestamp: new Date() }]);
           }}
-        />
-      )}
-      
-      {/* Perplexity Pages */}
-      {showPerplexityPages && (
-        <PerplexityPages
-          isOpen={showPerplexityPages}
-          onClose={() => setShowPerplexityPages(false)}
-          messages={messages}
-          conversationTitle={conversations.find(c => c.id === currentConversationId)?.title}
         />
       )}
       
