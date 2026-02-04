@@ -339,13 +339,13 @@ export const ChatHeader = ({
   );
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card/50 backdrop-blur-sm">
+    <div className="flex items-center justify-between px-2 py-2 md:px-4 md:py-3 border-b border-border/50 bg-card/50 backdrop-blur-sm">
       {/* Left Section */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1.5 md:gap-3">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="h-9 w-9 rounded-xl">
+              <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="h-8 w-8 md:h-9 md:w-9 rounded-lg md:rounded-xl">
                 <MessageSquare className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -356,7 +356,7 @@ export const ChatHeader = ({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="h-9 w-9 rounded-xl">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="h-8 w-8 md:h-9 md:w-9 rounded-lg md:rounded-xl hidden sm:flex">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -364,21 +364,21 @@ export const ChatHeader = ({
           </Tooltip>
         </TooltipProvider>
         
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-sm">
-            <Bot className="h-5 w-5 text-primary-foreground" />
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 md:w-9 md:h-9 rounded-lg md:rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-sm">
+            <Bot className="h-4 w-4 md:h-5 md:w-5 text-primary-foreground" />
           </div>
-          <div className="hidden sm:block">
+          <div className="hidden md:block">
             <h1 className="text-sm font-semibold">ShadowTalk AI</h1>
           </div>
         </div>
       </div>
 
       {/* Right Section */}
-      <div className="flex items-center gap-2">
-        {/* Personality Selector - Compact on mobile */}
+      <div className="flex items-center gap-1 md:gap-2">
+        {/* Personality Selector - Hidden on very small screens */}
         <Select value={personality} onValueChange={(v) => onPersonalityChange(v as Personality)}>
-          <SelectTrigger className="w-[120px] sm:w-[140px] h-9 text-xs rounded-xl border-border/50">
+          <SelectTrigger className="w-[90px] sm:w-[120px] md:w-[140px] h-8 md:h-9 text-xs rounded-lg md:rounded-xl border-border/50 hidden xs:flex">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="w-[280px]">
@@ -396,31 +396,37 @@ export const ChatHeader = ({
           </SelectContent>
         </Select>
 
-        {/* Provider Selector */}
-        <ProviderSelector
-          provider={aiProvider}
-          onProviderChange={onProviderChange}
-        />
+        {/* Provider Selector - Hidden on mobile */}
+        <div className="hidden sm:block">
+          <ProviderSelector
+            provider={aiProvider}
+            onProviderChange={onProviderChange}
+          />
+        </div>
 
         {/* Plan Badge - Desktop only */}
-        <Badge className={`hidden md:flex gap-1.5 px-3 py-1 rounded-xl border ${getPlanBadgeStyle(userPlan)}`}>
+        <Badge className={`hidden lg:flex gap-1.5 px-3 py-1 rounded-xl border ${getPlanBadgeStyle(userPlan)}`}>
           {getPlanIcon(userPlan)}
           <span className="capitalize">{userPlan}</span>
           <span className="text-muted-foreground">•</span>
           <span>{isProOrHigher ? '∞' : `${dailyChats}/${maxChats}`}</span>
         </Badge>
 
-        {/* Bunker Mode Toggle */}
-        <BunkerModeToggle />
+        {/* Bunker Mode Toggle - Compact on mobile */}
+        <div className="hidden sm:block">
+          <BunkerModeToggle />
+        </div>
 
-        {/* Sovereign AI / Offline Mode Indicator */}
-        <SovereignModeIndicator />
+        {/* Sovereign AI / Offline Mode Indicator - Hidden on mobile */}
+        <div className="hidden md:block">
+          <SovereignModeIndicator />
+        </div>
 
         {/* Mobile: Drawer */}
         {isMobile ? (
           <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
             <DrawerTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
+              <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-lg md:rounded-xl">
                 <Menu className="h-4 w-4" />
               </Button>
             </DrawerTrigger>
@@ -440,7 +446,7 @@ export const ChatHeader = ({
           /* Desktop: Dropdown */
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
+              <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 rounded-lg md:rounded-xl">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

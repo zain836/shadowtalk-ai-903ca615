@@ -37,7 +37,7 @@ export const ConversationSidebar = ({
   onClearAll,
 }: ConversationSidebarProps) => {
   return (
-    <div className="w-60 bg-card/50 backdrop-blur-sm border-r border-border flex flex-col">
+    <div className="w-60 shrink-0 bg-card/50 backdrop-blur-sm border-r border-border flex flex-col max-md:absolute max-md:left-0 max-md:top-0 max-md:h-full max-md:z-50 max-md:shadow-xl">
       <div className="p-3 space-y-2">
         <Button onClick={onCreateNew} className="w-full btn-glow" size="sm">
           <Plus className="h-4 w-4 mr-2" /> New Chat

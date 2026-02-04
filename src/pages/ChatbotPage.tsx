@@ -109,7 +109,7 @@ const ChatbotPage = () => {
   const [personality, setPersonality] = useState<Personality>("friendly");
   const [chatMode, setChatMode] = useState<ChatMode>("general");
   const [aiProvider, setAiProvider] = useState<AIProvider>("lovable");
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(false); // Default to hidden on mobile
   
   // Voice state
   const [isListening, setIsListening] = useState(false);
@@ -980,14 +980,22 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="flex h-screen w-full">
-        {/* Sidebar */}
+      <div className="flex h-screen w-full relative">
+        {/* Mobile Sidebar Overlay */}
+        {showSidebar && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            onClick={() => setShowSidebar(false)}
+          />
+        )}
+        
+        {/* Sidebar - positioned absolutely on mobile, normal flow on desktop */}
         {showSidebar && (
           <ConversationSidebar
             conversations={conversations}
             currentConversationId={currentConversationId}
-            onCreateNew={createNewConversation}
-            onSelect={loadConversation}
+            onCreateNew={() => { createNewConversation(); setShowSidebar(false); }}
+            onSelect={(id) => { loadConversation(id); setShowSidebar(false); }}
             onDelete={deleteConversation}
             onClearAll={clearAllConversations}
           />
@@ -1028,19 +1036,21 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             dailyChats={dailyChats}
           />
 
-          {/* Offline AI Indicator */}
-          <div className="px-4 py-2 border-b border-border/50">
-            <OfflineAIIndicator
-              isOffline={isOffline}
-              isModelLoaded={offlineAI.isModelLoaded}
-              isLoading={offlineAI.isLoading}
-              loadProgress={offlineAI.loadProgress}
-              loadStage={offlineAI.loadStage}
-              isSupported={offlineAI.isSupported}
-              error={offlineAI.error}
-              onLoadModel={offlineAI.initializeModel}
-            />
-          </div>
+          {/* Offline AI Indicator - hidden if not relevant */}
+          {(isOffline || offlineAI.isModelLoaded || offlineAI.isLoading || offlineAI.error) && (
+            <div className="px-2 py-1.5 md:px-4 md:py-2 border-b border-border/50">
+              <OfflineAIIndicator
+                isOffline={isOffline}
+                isModelLoaded={offlineAI.isModelLoaded}
+                isLoading={offlineAI.isLoading}
+                loadProgress={offlineAI.loadProgress}
+                loadStage={offlineAI.loadStage}
+                isSupported={offlineAI.isSupported}
+                error={offlineAI.error}
+                onLoadModel={offlineAI.initializeModel}
+              />
+            </div>
+          )}
 
           {/* Special Mode Panels */}
           {chatMode === 'agent' && <ShadowAgentPanel onExecuteTask={handleExecuteAgentTask} isExecuting={isExecutingAgent} />}
