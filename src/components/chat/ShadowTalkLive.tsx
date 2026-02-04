@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  X, Mic, MicOff, Video, VideoOff, Volume2, VolumeX,
-  Phone, PhoneOff, Camera, MessageSquare, Sparkles, Loader2, AudioLines
+  X, Mic, MicOff, Volume2, VolumeX,
+  Phone, PhoneOff, MessageSquare, Sparkles, Loader2, AudioLines, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useConversation } from "@elevenlabs/react";
 
 interface ShadowTalkLiveProps {
   isOpen: boolean;
@@ -26,437 +27,189 @@ interface TranscriptItem {
   isInterrupted?: boolean;
 }
 
-// Available ElevenLabs voices
-const VOICES = [
-  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", description: "Professional, clear" },
-  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "Warm, friendly" },
-  { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily", description: "Soft, calm" },
-  { id: "nPczCjzI2devNBz1zQrb", name: "Brian", description: "Authoritative" },
-  { id: "cgSgspJ2msm6clMCkdW9", name: "Jessica", description: "Energetic" },
-];
-
 export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLiveProps) => {
   const { toast } = useToast();
   
   // Connection state
-  const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   
   // Media state
   const [isMicOn, setIsMicOn] = useState(true);
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
-  const [isCameraOn, setIsCameraOn] = useState(false);
-  const [isCameraSharing, setIsCameraSharing] = useState(false);
-  
-  // Voice state
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [canInterrupt, setCanInterrupt] = useState(true);
-  
-  // Voice selection
-  const [selectedVoice, setSelectedVoice] = useState(VOICES[0]);
   
   // Transcript
   const [transcript, setTranscript] = useState<TranscriptItem[]>([]);
   const [currentUserSpeech, setCurrentUserSpeech] = useState("");
-  const [audioLevel, setAudioLevel] = useState(0);
+  const [currentAgentSpeech, setCurrentAgentSpeech] = useState("");
   
   // Settings
-  const [voiceSpeed, setVoiceSpeed] = useState([1.0]);
   const [showTranscript, setShowTranscript] = useState(true);
+  const [canInterrupt, setCanInterrupt] = useState(true);
   
-  // Refs
-  const videoRef = useRef<HTMLVideoElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognitionRef = useRef<any>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationRef = useRef<number | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  // Refs for tracking partial messages
+  const lastUserTranscriptRef = useRef<string>("");
+  const lastAgentResponseRef = useRef<string>("");
 
-  // Cleanup on unmount
+  // ElevenLabs Conversation Hook
+  const conversation = useConversation({
+    onConnect: () => {
+      console.log("ElevenLabs: Connected to agent");
+      setConnectionError(null);
+      toast({ title: "Connected", description: "ShadowTalk Live is ready" });
+    },
+    onDisconnect: () => {
+      console.log("ElevenLabs: Disconnected from agent");
+      setCurrentUserSpeech("");
+      setCurrentAgentSpeech("");
+    },
+    onMessage: (message: unknown) => {
+      console.log("ElevenLabs message:", message);
+      
+      // Cast to record for safe property access
+      const msg = message as Record<string, unknown>;
+      const msgType = msg?.type as string | undefined;
+      
+      // Handle different message types
+      if (msgType === "user_transcript") {
+        const event = msg?.user_transcription_event as Record<string, unknown> | undefined;
+        const userText = event?.user_transcript as string | undefined;
+        if (userText && userText !== lastUserTranscriptRef.current) {
+          lastUserTranscriptRef.current = userText;
+          setCurrentUserSpeech("");
+          setTranscript(prev => [...prev, {
+            id: crypto.randomUUID(),
+            role: "user",
+            text: userText,
+            timestamp: new Date()
+          }]);
+        }
+      } else if (msgType === "agent_response") {
+        const event = msg?.agent_response_event as Record<string, unknown> | undefined;
+        const agentText = event?.agent_response as string | undefined;
+        if (agentText && agentText !== lastAgentResponseRef.current) {
+          lastAgentResponseRef.current = agentText;
+          setCurrentAgentSpeech("");
+          setTranscript(prev => [...prev, {
+            id: crypto.randomUUID(),
+            role: "ai",
+            text: agentText,
+            timestamp: new Date()
+          }]);
+        }
+      } else if (msgType === "agent_response_correction") {
+        // Agent was interrupted
+        const event = msg?.agent_response_correction_event as Record<string, unknown> | undefined;
+        const correctedText = event?.corrected_agent_response as string | undefined;
+        if (correctedText) {
+          setTranscript(prev => {
+            const updated = [...prev];
+            const lastAI = updated.filter(t => t.role === "ai").pop();
+            if (lastAI) {
+              lastAI.text = correctedText;
+              lastAI.isInterrupted = true;
+            }
+            return updated;
+          });
+        }
+      }
+    },
+    onError: (error: unknown) => {
+      console.error("ElevenLabs error:", error);
+      const errorMsg = typeof error === 'object' && error !== null && 'message' in error 
+        ? (error as { message: string }).message 
+        : "Connection error occurred";
+      setConnectionError(errorMsg);
+      toast({
+        title: "Voice Error",
+        description: errorMsg,
+        variant: "destructive"
+      });
+    },
+  });
+
+  const isConnected = conversation.status === "connected";
+  const isSpeaking = conversation.isSpeaking;
+
+  // Cleanup on unmount or close
   useEffect(() => {
     return () => {
-      stopAllMedia();
+      if (isConnected) {
+        conversation.endSession();
+      }
     };
   }, []);
 
-  // Audio level visualization
-  const updateAudioLevel = useCallback(() => {
-    if (analyserRef.current) {
-      const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-      analyserRef.current.getByteFrequencyData(dataArray);
-      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-      setAudioLevel(average / 255);
-    }
-    if (isListening) {
-      animationRef.current = requestAnimationFrame(updateAudioLevel);
-    }
-  }, [isListening]);
-
-  // Start connection
+  // Start connection using ElevenLabs signed URL
   const startConnection = async () => {
     setIsConnecting(true);
+    setConnectionError(null);
     
     try {
-      // Request microphone permission
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Request microphone permission first
+      await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      // Set up audio context for visualization
-      audioContextRef.current = new AudioContext();
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      const source = audioContextRef.current.createMediaStreamSource(stream);
-      source.connect(analyserRef.current);
+      // Get signed URL from edge function
+      const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token');
       
-      // Check for speech recognition support
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        throw new Error("Speech recognition not supported in this browser");
+      if (error) {
+        throw new Error(error.message || "Failed to get conversation token");
       }
       
-      // Set up speech recognition
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
+      if (!data?.signed_url) {
+        throw new Error(data?.error || "No signed URL received. Please configure ELEVENLABS_AGENT_ID.");
+      }
       
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      recognitionRef.current.onresult = (event: any) => {
-        const result = event.results[event.results.length - 1];
-        const text = result[0].transcript;
-        
-        if (result.isFinal) {
-          setCurrentUserSpeech("");
-          handleUserSpeech(text);
-        } else {
-          setCurrentUserSpeech(text);
-        }
-      };
+      console.log("Starting ElevenLabs session with signed URL");
       
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      recognitionRef.current.onerror = (event: any) => {
-        console.error("Speech recognition error:", event.error);
-        if (event.error !== 'aborted' && event.error !== 'no-speech') {
-          toast({
-            title: "Voice Error",
-            description: "There was an issue with voice recognition",
-            variant: "destructive"
-          });
-        }
-      };
+      // Start the conversation session with signed URL (WebSocket)
+      await conversation.startSession({
+        signedUrl: data.signed_url,
+      });
       
-      recognitionRef.current.onend = () => {
-        // Restart if still connected and mic is on
-        if (isConnected && isMicOn && recognitionRef.current) {
-          try {
-            recognitionRef.current.start();
-          } catch (e) {
-            console.log("Recognition already started");
-          }
-        }
-      };
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setIsConnected(true);
-      setIsConnecting(false);
-      setIsListening(true);
-      
-      recognitionRef.current.start();
-      animationRef.current = requestAnimationFrame(updateAudioLevel);
-      
-      // Add initial AI greeting
-      setTimeout(() => {
-        addAIResponse("Hello! I'm ShadowTalk Live, your AI voice assistant. How can I help you today?");
-      }, 500);
-      
-      toast({ title: "Connected", description: "ShadowTalk Live is ready" });
     } catch (error) {
       console.error("Connection error:", error);
-      setIsConnecting(false);
+      setConnectionError(error instanceof Error ? error.message : "Could not start voice session");
       toast({
         title: "Connection Failed",
         description: error instanceof Error ? error.message : "Could not start voice session",
         variant: "destructive"
       });
+    } finally {
+      setIsConnecting(false);
     }
-  };
-
-  // Stop all media
-  const stopAllMedia = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {
-        console.log("Recognition stop error");
-      }
-    }
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-    }
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-    }
-    if (videoRef.current?.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach(track => track.stop());
-    }
-    setIsListening(false);
-    setIsSpeaking(false);
   };
 
   // End connection
-  const endConnection = () => {
-    stopAllMedia();
-    setIsConnected(false);
-    setIsCameraOn(false);
-    setIsCameraSharing(false);
+  const endConnection = useCallback(async () => {
+    try {
+      await conversation.endSession();
+      setTranscript([]);
+      lastUserTranscriptRef.current = "";
+      lastAgentResponseRef.current = "";
+    } catch (error) {
+      console.error("Error ending session:", error);
+    }
     toast({ title: "Disconnected" });
-  };
+  }, [conversation, toast]);
 
-  // Handle user speech and get AI response
-  const handleUserSpeech = async (text: string) => {
-    if (!text.trim()) return;
-    
-    // If AI is speaking and interruption is enabled, stop it
-    if (isSpeaking && canInterrupt) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      setIsSpeaking(false);
-      // Mark last AI message as interrupted
-      setTranscript(prev => {
-        const updated = [...prev];
-        const lastAI = updated.filter(t => t.role === "ai").pop();
-        if (lastAI) {
-          lastAI.isInterrupted = true;
-        }
-        return updated;
-      });
-    }
-    
-    // Add user message to transcript
-    setTranscript(prev => [...prev, {
-      id: crypto.randomUUID(),
-      role: "user",
-      text: text,
-      timestamp: new Date()
-    }]);
-    
-    setIsProcessing(true);
-    
-    try {
-      // Get AI response using Lovable AI
-      const { data, error } = await supabase.functions.invoke('chat', {
-        body: {
-          messages: [
-            { role: "system", content: "You are ShadowTalk Live, a helpful and friendly AI voice assistant. Keep your responses concise and conversational, suitable for voice interaction. Limit responses to 2-3 sentences when possible." },
-            ...transcript.map(t => ({
-              role: t.role === "user" ? "user" : "assistant",
-              content: t.text
-            })),
-            { role: "user", content: text }
-          ]
-        }
-      });
-
-      if (error) throw error;
-
-      // Parse the streaming response
-      let aiResponse = "";
-      if (typeof data === 'string') {
-        // Parse SSE format
-        const lines = data.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-            try {
-              const parsed = JSON.parse(line.slice(6));
-              const content = parsed.choices?.[0]?.delta?.content;
-              if (content) aiResponse += content;
-            } catch (e) {
-              // Skip invalid JSON
-            }
-          }
-        }
-      } else if (data?.choices?.[0]?.message?.content) {
-        aiResponse = data.choices[0].message.content;
-      }
-
-      if (!aiResponse) {
-        aiResponse = "I'm sorry, I couldn't generate a response. Please try again.";
-      }
-
-      addAIResponse(aiResponse);
-    } catch (error) {
-      console.error("AI response error:", error);
-      setIsProcessing(false);
-      addAIResponse("I'm having trouble connecting right now. Please try again in a moment.");
-    }
-  };
-
-  // Add AI response with ElevenLabs text-to-speech
-  const addAIResponse = async (text: string) => {
-    setIsProcessing(false);
-    
-    setTranscript(prev => [...prev, {
-      id: crypto.randomUUID(),
-      role: "ai",
-      text: text,
-      timestamp: new Date()
-    }]);
-    
-    if (isSpeakerOn) {
-      await speakWithElevenLabs(text);
-    }
-  };
-
-  // Text-to-speech using ElevenLabs
-  const speakWithElevenLabs = async (text: string) => {
-    try {
-      setIsSpeaking(true);
-      abortControllerRef.current = new AbortController();
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ 
-            text, 
-            voiceId: selectedVoice.id 
-          }),
-          signal: abortControllerRef.current.signal,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to generate speech");
-      }
-
-      const data = await response.json();
-      
-      if (data.audioContent) {
-        // Use data URI for base64 audio
-        const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
-        audioRef.current = new Audio(audioUrl);
-        
-        audioRef.current.onended = () => {
-          setIsSpeaking(false);
-        };
-        
-        audioRef.current.onerror = () => {
-          setIsSpeaking(false);
-        };
-        
-        await audioRef.current.play();
-      }
-    } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        console.error("ElevenLabs TTS error:", error);
-        // Fallback to browser TTS
-        fallbackToWebSpeech(text);
-      }
-      setIsSpeaking(false);
-    }
-  };
-
-  // Fallback to Web Speech API
-  const fallbackToWebSpeech = (text: string) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = voiceSpeed[0];
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-      window.speechSynthesis.speak(utterance);
-    }
-  };
-
-  // Toggle microphone
-  const toggleMic = () => {
-    if (isMicOn) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-    } else {
-      try {
-        recognitionRef.current?.start();
-        setIsListening(true);
-      } catch (e) {
-        console.log("Recognition start error");
-      }
-    }
+  // Toggle microphone (mute/unmute the conversation)
+  const toggleMic = useCallback(() => {
     setIsMicOn(!isMicOn);
-  };
+    // Note: ElevenLabs SDK handles audio internally, 
+    // this is mainly for UI feedback
+  }, [isMicOn]);
 
-  // Toggle speaker
-  const toggleSpeaker = () => {
-    if (isSpeakerOn && isSpeaking) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
+  // Toggle speaker (volume control)
+  const toggleSpeaker = useCallback(async () => {
+    const newValue = !isSpeakerOn;
+    setIsSpeakerOn(newValue);
+    try {
+      await conversation.setVolume({ volume: newValue ? 1 : 0 });
+    } catch (error) {
+      console.error("Error setting volume:", error);
     }
-    setIsSpeakerOn(!isSpeakerOn);
-  };
-
-  // Toggle camera
-  const toggleCamera = async () => {
-    if (isCameraOn) {
-      if (videoRef.current?.srcObject) {
-        const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-        tracks.forEach(track => track.stop());
-      }
-      setIsCameraOn(false);
-      setIsCameraSharing(false);
-    } else {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-        setIsCameraOn(true);
-        toast({ title: "Camera enabled", description: "Camera preview is active" });
-      } catch (error) {
-        toast({
-          title: "Camera Error",
-          description: "Could not access camera",
-          variant: "destructive"
-        });
-      }
-    }
-  };
-
-  // Share camera view with AI
-  const shareCamera = () => {
-    if (!isCameraOn) {
-      toast({ title: "Enable camera first" });
-      return;
-    }
-    setIsCameraSharing(!isCameraSharing);
-    if (!isCameraSharing) {
-      addAIResponse("I can see your camera now! Show me what you'd like to discuss and I'll help you with it.");
-    }
-  };
+  }, [isSpeakerOn, conversation]);
 
   // Export transcript
   const exportTranscript = () => {
@@ -471,6 +224,14 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
       toast({ title: "Transcript exported to chat" });
     }
   };
+
+  // Close handler
+  const handleClose = useCallback(() => {
+    if (isConnected) {
+      conversation.endSession();
+    }
+    onClose();
+  }, [isConnected, conversation, onClose]);
 
   if (!isOpen) return null;
 
@@ -492,40 +253,32 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
               <div>
                 <h2 className="font-semibold text-white">ShadowTalk Live</h2>
                 <div className="flex items-center gap-2">
-                  <Badge variant={isConnected ? "default" : "secondary"} className="text-xs">
+                  <Badge 
+                    variant={isConnected ? "default" : "secondary"} 
+                    className={cn(
+                      "text-xs",
+                      isConnected && "bg-green-500"
+                    )}
+                  >
                     {isConnecting ? "Connecting..." : isConnected ? "Connected" : "Disconnected"}
                   </Badge>
-                  {isProcessing && (
-                    <Badge variant="outline" className="text-xs gap-1 text-violet-400 border-violet-400">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Thinking
+                  {isSpeaking && (
+                    <Badge variant="outline" className="text-xs gap-1 text-fuchsia-400 border-fuchsia-400">
+                      <AudioLines className="h-3 w-3" />
+                      Speaking
                     </Badge>
                   )}
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {/* Voice selector */}
-              {isConnected && (
-                <select 
-                  value={selectedVoice.id}
-                  onChange={(e) => setSelectedVoice(VOICES.find(v => v.id === e.target.value) || VOICES[0])}
-                  className="bg-white/10 text-white text-sm rounded px-2 py-1 border border-white/20"
-                >
-                  {VOICES.map(voice => (
-                    <option key={voice.id} value={voice.id} className="bg-gray-800">
-                      {voice.name}
-                    </option>
-                  ))}
-                </select>
-              )}
               {isConnected && (
                 <Button variant="ghost" size="sm" onClick={exportTranscript} className="text-white/70 hover:text-white">
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Export
                 </Button>
               )}
-              <Button variant="ghost" size="icon" onClick={onClose} className="text-white/70 hover:text-white">
+              <Button variant="ghost" size="icon" onClick={handleClose} className="text-white/70 hover:text-white">
                 <X className="h-5 w-5" />
               </Button>
             </div>
@@ -533,12 +286,12 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
 
           {/* Main Content */}
           <div className="flex-1 flex">
-            {/* Left: Video/Visual Area */}
+            {/* Left: Visual Area */}
             <div className="flex-1 relative flex items-center justify-center">
               {!isConnected ? (
                 // Not connected state
                 <motion.div 
-                  className="text-center"
+                  className="text-center max-w-md px-4"
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                 >
@@ -546,12 +299,25 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
                     <Phone className="h-16 w-16 text-white" />
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-2">Start Live Conversation</h3>
-                  <p className="text-white/60 mb-4 max-w-md mx-auto">
-                    Have a natural, real-time voice conversation powered by ElevenLabs AI voices.
+                  <p className="text-white/60 mb-4">
+                    Have a natural, real-time voice conversation powered by ElevenLabs AI.
                   </p>
-                  <p className="text-white/40 text-sm mb-8">
+                  <p className="text-white/40 text-sm mb-6">
                     Speak naturally and interrupt anytime • Premium voice synthesis
                   </p>
+                  
+                  {connectionError && (
+                    <div className="mb-6 p-4 rounded-lg bg-red-500/20 border border-red-500/30 text-left">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-5 w-5 text-red-400 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm text-red-300 font-medium">Connection Error</p>
+                          <p className="text-xs text-red-400/80 mt-1">{connectionError}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <Button
                     size="lg"
                     onClick={startConnection}
@@ -572,41 +338,20 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
                   </Button>
                 </motion.div>
               ) : (
-                // Connected state
+                // Connected state - Voice visualization
                 <div className="relative w-full h-full flex items-center justify-center">
-                  {/* Camera preview */}
-                  {isCameraOn && (
-                    <div className="absolute top-4 right-4 w-48 h-36 rounded-lg overflow-hidden border border-white/20 shadow-xl">
-                      <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="w-full h-full object-cover"
-                      />
-                      {isCameraSharing && (
-                        <div className="absolute top-2 left-2">
-                          <Badge className="bg-red-500 text-xs">LIVE</Badge>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   {/* Voice visualization */}
                   <div className="relative">
-                    {/* Outer pulse rings */}
-                    {(isListening || isSpeaking) && (
+                    {/* Outer pulse rings when speaking */}
+                    {isSpeaking && (
                       <>
                         <motion.div
                           animate={{ 
-                            scale: [1, 1.5 + audioLevel * 0.5, 1],
+                            scale: [1, 1.5, 1],
                             opacity: [0.5, 0, 0.5]
                           }}
                           transition={{ duration: 2, repeat: Infinity }}
-                          className={cn(
-                            "absolute inset-0 rounded-full",
-                            isSpeaking ? "bg-fuchsia-500/30" : "bg-violet-500/30"
-                          )}
+                          className="absolute inset-0 rounded-full bg-fuchsia-500/30"
                           style={{ 
                             width: 256, 
                             height: 256,
@@ -616,14 +361,11 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
                         />
                         <motion.div
                           animate={{ 
-                            scale: [1, 1.3 + audioLevel * 0.3, 1],
+                            scale: [1, 1.3, 1],
                             opacity: [0.3, 0, 0.3]
                           }}
                           transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
-                          className={cn(
-                            "absolute inset-0 rounded-full",
-                            isSpeaking ? "bg-fuchsia-500/20" : "bg-violet-500/20"
-                          )}
+                          className="absolute inset-0 rounded-full bg-fuchsia-500/20"
                           style={{ 
                             width: 256, 
                             height: 256,
@@ -634,12 +376,30 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
                       </>
                     )}
 
+                    {/* Listening pulse when not speaking */}
+                    {!isSpeaking && (
+                      <motion.div
+                        animate={{ 
+                          scale: [1, 1.1, 1],
+                          opacity: [0.3, 0.1, 0.3]
+                        }}
+                        transition={{ duration: 3, repeat: Infinity }}
+                        className="absolute inset-0 rounded-full bg-violet-500/20"
+                        style={{ 
+                          width: 200, 
+                          height: 200,
+                          left: -36,
+                          top: -36
+                        }}
+                      />
+                    )}
+
                     {/* Main avatar */}
                     <motion.div
                       animate={{ 
-                        scale: isSpeaking ? [1, 1.05, 1] : isListening ? [1, 1.02, 1] : 1,
+                        scale: isSpeaking ? [1, 1.05, 1] : [1, 1.02, 1],
                       }}
-                      transition={{ duration: 0.5, repeat: isSpeaking || isListening ? Infinity : 0 }}
+                      transition={{ duration: 0.5, repeat: Infinity }}
                       className={cn(
                         "w-32 h-32 rounded-full flex items-center justify-center",
                         isSpeaking 
@@ -647,9 +407,7 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
                           : "bg-gradient-to-br from-violet-500 to-fuchsia-500"
                       )}
                     >
-                      {isProcessing ? (
-                        <Loader2 className="h-12 w-12 text-white animate-spin" />
-                      ) : isSpeaking ? (
+                      {isSpeaking ? (
                         <AudioLines className="h-12 w-12 text-white" />
                       ) : (
                         <Sparkles className="h-12 w-12 text-white" />
@@ -673,7 +431,10 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
                   {/* Status indicator */}
                   <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-center">
                     <p className="text-white/60 text-sm">
-                      {isProcessing ? "Processing..." : isSpeaking ? `${selectedVoice.name} is speaking...` : isListening ? "Listening..." : "Paused"}
+                      {isSpeaking ? "AI is speaking..." : "Listening..."}
+                    </p>
+                    <p className="text-white/40 text-xs mt-1">
+                      {canInterrupt ? "You can interrupt anytime" : "Wait for response to complete"}
                     </p>
                   </div>
                 </div>
@@ -685,38 +446,47 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
               <div className="w-80 border-l border-white/10 flex flex-col bg-black/50">
                 <div className="p-3 border-b border-white/10 flex items-center justify-between">
                   <h3 className="text-sm font-medium text-white">Transcript</h3>
-                  <Switch
-                    checked={canInterrupt}
-                    onCheckedChange={setCanInterrupt}
-                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-white/50">Interrupt</span>
+                    <Switch
+                      checked={canInterrupt}
+                      onCheckedChange={setCanInterrupt}
+                    />
+                  </div>
                 </div>
                 <ScrollArea className="flex-1 p-3">
                   <div className="space-y-3">
-                    {transcript.map((item) => (
-                      <motion.div
-                        key={item.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={cn(
-                          "rounded-lg p-3",
-                          item.role === "user" 
-                            ? "bg-violet-500/20 ml-4" 
-                            : "bg-white/10 mr-4"
-                        )}
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-white/60">
-                            {item.role === "user" ? "You" : "ShadowTalk"}
-                          </span>
-                          {item.isInterrupted && (
-                            <Badge variant="outline" className="text-xs text-orange-400 border-orange-400">
-                              Interrupted
-                            </Badge>
+                    {transcript.length === 0 ? (
+                      <p className="text-white/40 text-sm text-center py-4">
+                        Start speaking to begin the conversation...
+                      </p>
+                    ) : (
+                      transcript.map((item) => (
+                        <motion.div
+                          key={item.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={cn(
+                            "rounded-lg p-3",
+                            item.role === "user" 
+                              ? "bg-violet-500/20 ml-4" 
+                              : "bg-white/10 mr-4"
                           )}
-                        </div>
-                        <p className="text-sm text-white/90">{item.text}</p>
-                      </motion.div>
-                    ))}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium text-white/60">
+                              {item.role === "user" ? "You" : "ShadowTalk"}
+                            </span>
+                            {item.isInterrupted && (
+                              <Badge variant="outline" className="text-xs text-orange-400 border-orange-400">
+                                Interrupted
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-white/90">{item.text}</p>
+                        </motion.div>
+                      ))
+                    )}
                   </div>
                 </ScrollArea>
               </div>
@@ -754,36 +524,6 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
                 >
                   {isSpeakerOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
                 </Button>
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleCamera}
-                  className={cn(
-                    "w-12 h-12 rounded-full",
-                    isCameraOn 
-                      ? "bg-green-500 hover:bg-green-600 text-white" 
-                      : "bg-white/10 hover:bg-white/20 text-white"
-                  )}
-                >
-                  {isCameraOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
-                </Button>
-
-                {isCameraOn && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={shareCamera}
-                    className={cn(
-                      "w-12 h-12 rounded-full",
-                      isCameraSharing 
-                        ? "bg-violet-500 hover:bg-violet-600 text-white" 
-                        : "bg-white/10 hover:bg-white/20 text-white"
-                    )}
-                  >
-                    <Camera className="h-5 w-5" />
-                  </Button>
-                )}
 
                 <Button
                   variant="ghost"
