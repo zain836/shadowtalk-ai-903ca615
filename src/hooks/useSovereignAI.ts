@@ -306,23 +306,51 @@ export const useSovereignAI = () => {
 
     initPromiseRef.current = (async () => {
       let lastError: Error | null = null;
+      let hasAnyCachedModel = false;
 
-      for (const targetModel of modelQueue) {
-        console.log(`[SovereignAI] Attempting to load: ${targetModel.name} (${targetModel.id})`);
+      // Import WebLLM once
+      const webllm = await import('@mlc-ai/web-llm');
+      console.log('[SovereignAI] WebLLM imported');
+
+      // First, check which models are cached
+      const cachedModels: SovereignModel[] = [];
+      for (const model of modelQueue) {
+        try {
+          const inCache = await webllm.hasModelInCache(model.id);
+          if (inCache) {
+            cachedModels.push(model);
+            hasAnyCachedModel = true;
+            console.log(`[SovereignAI] ✓ Model cached: ${model.name}`);
+          }
+        } catch (e) {
+          console.warn(`[SovereignAI] Cache check failed for ${model.name}:`, e);
+        }
+      }
+
+      // Prioritize cached models
+      const prioritizedQueue = [
+        ...cachedModels,
+        ...modelQueue.filter(m => !cachedModels.some(c => c.id === m.id)),
+      ];
+
+      console.log('[SovereignAI] Prioritized queue:', 
+        prioritizedQueue.map(m => `${m.name}${cachedModels.includes(m) ? ' (cached)' : ''}`).join(' → '));
+
+      for (const targetModel of prioritizedQueue) {
+        const isCached = cachedModels.includes(targetModel);
+        console.log(`[SovereignAI] Attempting to load: ${targetModel.name} (${targetModel.id})${isCached ? ' [CACHED]' : ''}`);
         
         setState(prev => ({
           ...prev,
           isLoading: true,
           error: null,
-          loadStage: `🔐 Loading ${targetModel.name}...`,
+          loadStage: isCached 
+            ? `🔐 Loading ${targetModel.name} from cache...` 
+            : `📥 Downloading ${targetModel.name}...`,
           loadProgress: 0,
         }));
 
         try {
-          // Import WebLLM dynamically
-          const webllm = await import('@mlc-ai/web-llm');
-          console.log('[SovereignAI] WebLLM imported');
-
           // Progress callback with detailed stages
           const progressCallback = (progress: any) => {
             const percent = Math.round((progress.progress || 0) * 100);
@@ -330,7 +358,9 @@ export const useSovereignAI = () => {
             
             // Clean up and brand the progress messages
             if (stage.includes('Fetching') || stage.includes('Loading')) {
-              stage = `📥 Downloading ${targetModel.name}... ${percent}%`;
+              stage = isCached 
+                ? `🔐 Loading ${targetModel.name} from cache... ${percent}%`
+                : `📥 Downloading ${targetModel.name}... ${percent}%`;
             } else if (stage.includes('Compiling') || stage.includes('shader')) {
               stage = stateRef.current.isWASMFallback 
                 ? `🔧 Compiling for CPU... ${percent}%`
@@ -357,9 +387,10 @@ export const useSovereignAI = () => {
           }
 
           // Calculate timeout based on model size (min 60s, max 300s)
-          const baseTimeout = 60000;
+          // Cached models get shorter timeout since no download needed
+          const baseTimeout = isCached ? 30000 : 60000;
           const sizeMultiplier = targetModel.sizeBytes / 100_000_000; // Per 100MB
-          const timeoutMs = Math.min(Math.max(baseTimeout, sizeMultiplier * 15000), 300000);
+          const timeoutMs = Math.min(Math.max(baseTimeout, sizeMultiplier * (isCached ? 5000 : 15000)), 300000);
           console.log(`[SovereignAI] Using timeout: ${Math.round(timeoutMs/1000)}s`);
 
           // Create engine with timeout
@@ -394,7 +425,7 @@ export const useSovereignAI = () => {
           lastError = e;
           
           // Show fallback message
-          const nextModel = modelQueue[modelQueue.indexOf(targetModel) + 1];
+          const nextModel = prioritizedQueue[prioritizedQueue.indexOf(targetModel) + 1];
           if (nextModel) {
             setState(prev => ({
               ...prev,
@@ -407,13 +438,31 @@ export const useSovereignAI = () => {
         }
       }
 
-      // All models failed
-      const errorMsg = `Unable to load offline AI. ${lastError?.message || 'Unknown error'}
+      // All models failed - provide helpful guidance
+      let errorMsg: string;
+      
+      if (!hasAnyCachedModel) {
+        // No models downloaded - user needs to use Bunker Mode
+        errorMsg = `No offline models downloaded yet.
 
+To use offline AI:
+1. Click "Bunker" in the header
+2. Enable Bunker Mode
+3. Download a model (Llama 3.2 1B recommended)
+4. Wait for download to complete
+5. Then offline AI will work!
+
+${!stateRef.current.isWebGPUAvailable ? '⚠️ WebGPU not available - using CPU mode (slower)' : ''}`;
+      } else {
+        // Models are cached but failed to load - hardware/browser issue
+        errorMsg = `Unable to load offline AI. ${lastError?.message || 'Unknown error'}
+
+${!stateRef.current.isWebGPUAvailable ? '⚠️ WebGPU not available - this may limit performance.\n' : ''}
 Please try:
 • Closing other browser tabs
 • Using Chrome, Edge, or Brave
 • Refreshing the page`;
+      }
 
       console.error('[SovereignAI] All models failed');
       
@@ -421,7 +470,7 @@ Please try:
         ...prev,
         isLoading: false,
         error: errorMsg,
-        loadStage: '❌ Failed to initialize',
+        loadStage: hasAnyCachedModel ? '❌ Failed to initialize' : '⬇️ Download models first',
       }));
       
       initPromiseRef.current = null;

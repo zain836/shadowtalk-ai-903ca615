@@ -160,6 +160,7 @@ export const BunkerModeToggle: React.FC<BunkerModeToggleProps> = ({ className })
           <Button
             variant={bunkerMode ? 'default' : 'outline'}
             size="sm"
+            data-bunker-trigger
             className={cn(
               'gap-2 relative',
               bunkerMode && 'bg-emerald-600 hover:bg-emerald-700',

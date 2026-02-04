@@ -3,7 +3,7 @@ import {
   Shield, Wifi, WifiOff, Zap, Brain, Battery, 
   BatteryLow, BatteryCharging, HardDrive,
   AlertTriangle, CheckCircle, Loader2, Download,
-  RefreshCw
+  RefreshCw, ArrowRight
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,13 +21,25 @@ import {
 } from "@/components/ui/popover";
 import { useOfflineChat } from "@/hooks/useOfflineChat";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
+import { useSilentDownloader } from "@/hooks/useSilentDownloader";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const SovereignModeIndicator = () => {
   const offlineChat = useOfflineChat();
   const { isOffline } = useOfflineMode();
+  const { bunkerMode, tasks } = useSilentDownloader();
   const [showDetails, setShowDetails] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+
+  // Check if any models are downloaded
+  const downloadedModels = tasks.filter(t => t.status === 'completed' || t.status === 'cached');
+  const hasDownloadedModels = downloadedModels.length > 0;
+  const isDownloading = tasks.some(t => t.status === 'downloading');
+
+  // Determine if the error is about missing models
+  const needsModelDownload = offlineChat.error?.includes('No offline models') || 
+                              offlineChat.error?.includes('Download models') ||
+                              (!hasDownloadedModels && offlineChat.error);
 
   // Battery icon based on level and charging state
   const getBatteryIcon = () => {
@@ -213,16 +225,49 @@ export const SovereignModeIndicator = () => {
 
             {/* Actions */}
             <div className="flex gap-2">
-              {!offlineChat.isReady && !offlineChat.isInitializing && !isRetrying && (
+              {/* Show "Open Bunker" when models need downloading */}
+              {needsModelDownload && !offlineChat.isInitializing && !isRetrying && (
+                <Button 
+                  size="sm" 
+                  variant="default"
+                  onClick={() => {
+                    setShowDetails(false);
+                    // Trigger click on Bunker button in header
+                    const bunkerBtn = document.querySelector('[data-bunker-trigger]') as HTMLButtonElement;
+                    if (bunkerBtn) bunkerBtn.click();
+                  }}
+                  className="flex-1 gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+                >
+                  <Download className="h-4 w-4" />
+                  Download Models
+                  <ArrowRight className="h-3 w-3" />
+                </Button>
+              )}
+              
+              {/* Show retry only when models are downloaded but failed to load */}
+              {!needsModelDownload && !offlineChat.isReady && !offlineChat.isInitializing && !isRetrying && hasDownloadedModels && (
                 <Button 
                   size="sm" 
                   onClick={handleInitialize}
                   className="flex-1 gap-1.5"
                 >
-                  <Download className="h-4 w-4" />
-                  {offlineChat.error ? 'Retry Initialization' : 'Initialize Offline AI'}
+                  <RefreshCw className="h-4 w-4" />
+                  Retry Initialization
                 </Button>
               )}
+              
+              {/* Show initialize when ready to go */}
+              {!offlineChat.isReady && !offlineChat.isInitializing && !isRetrying && hasDownloadedModels && !offlineChat.error && (
+                <Button 
+                  size="sm" 
+                  onClick={handleInitialize}
+                  className="flex-1 gap-1.5"
+                >
+                  <Zap className="h-4 w-4" />
+                  Initialize Offline AI
+                </Button>
+              )}
+              
               {(offlineChat.isInitializing || isRetrying) && (
                 <Button 
                   size="sm" 
@@ -233,17 +278,7 @@ export const SovereignModeIndicator = () => {
                   Loading...
                 </Button>
               )}
-              {offlineChat.error && !offlineChat.isInitializing && !isRetrying && (
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={handleInitialize}
-                  className="gap-1.5"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Retry
-                </Button>
-              )}
+              
               {offlineChat.isReady && offlineChat.batteryLevel !== null && 
                offlineChat.batteryLevel < 30 && !offlineChat.isPluggedIn && (
                 <Button 
@@ -258,10 +293,20 @@ export const SovereignModeIndicator = () => {
               )}
             </div>
 
-            {/* Warning */}
+            {/* Download Status */}
+            {isDownloading && (
+              <div className="p-2 bg-blue-500/10 rounded-md border border-blue-500/20">
+                <p className="text-xs text-blue-400 flex items-center gap-1.5">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Downloading models in background...
+                </p>
+              </div>
+            )}
+
+            {/* Warning - show helpful message based on state */}
             {offlineChat.error && (
               <div className="p-2 bg-destructive/10 rounded-md border border-destructive/20">
-                <p className="text-xs text-destructive">{offlineChat.error}</p>
+                <p className="text-xs text-destructive whitespace-pre-line">{offlineChat.error}</p>
               </div>
             )}
 
