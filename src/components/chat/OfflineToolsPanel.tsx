@@ -9,7 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Mic, MicOff, Volume2, VolumeX, Search, Calculator, 
   Languages, FileText, Code, Image, Database, RefreshCw,
-  Download, Play, Square, Loader2, X, Sparkles
+  Download, Play, Square, Loader2, X, Sparkles, FolderOpen,
+  Brain, Zap, Shield
 } from "lucide-react";
 import { useOfflineVoice } from "@/hooks/useOfflineVoice";
 import { useOfflineCodeExecution } from "@/hooks/useOfflineCodeExecution";
@@ -18,6 +19,8 @@ import { useOfflineMath } from "@/hooks/useOfflineMath";
 import { useOfflineTranslation } from "@/hooks/useOfflineTranslation";
 import { useOfflineTemplates } from "@/hooks/useOfflineTemplates";
 import { useModelManager } from "@/hooks/useModelManager";
+import { useOfflineChat } from "@/hooks/useOfflineChat";
+import { useOfflineRAG } from "@/hooks/useOfflineRAG";
 import { useToast } from "@/hooks/use-toast";
 
 interface OfflineToolsPanelProps {
@@ -37,6 +40,8 @@ export const OfflineToolsPanel = ({ isOpen, onClose, onInsertToChat }: OfflineTo
   const translation = useOfflineTranslation();
   const templates = useOfflineTemplates();
   const modelManager = useModelManager();
+  const offlineChat = useOfflineChat();
+  const rag = useOfflineRAG();
   
   // Local state
   const [searchQuery, setSearchQuery] = useState("");
@@ -113,8 +118,14 @@ export const OfflineToolsPanel = ({ isOpen, onClose, onInsertToChat }: OfflineTo
           </Button>
         </div>
 
-        <Tabs defaultValue="voice" className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="w-full justify-start px-4 py-2 bg-muted/50 rounded-none border-b border-border">
+        <Tabs defaultValue="sovereign" className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="w-full justify-start px-4 py-2 bg-muted/50 rounded-none border-b border-border flex-wrap">
+            <TabsTrigger value="sovereign" className="gap-2">
+              <Brain className="h-4 w-4" /> Sovereign AI
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="gap-2">
+              <FolderOpen className="h-4 w-4" /> Documents
+            </TabsTrigger>
             <TabsTrigger value="voice" className="gap-2">
               <Mic className="h-4 w-4" /> Voice
             </TabsTrigger>
@@ -139,6 +150,141 @@ export const OfflineToolsPanel = ({ isOpen, onClose, onInsertToChat }: OfflineTo
           </TabsList>
 
           <ScrollArea className="flex-1 p-4">
+            {/* Sovereign AI Tab */}
+            <TabsContent value="sovereign" className="mt-0 space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-primary" />
+                    Sovereign AI Engine
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={offlineChat.isReady ? "default" : "secondary"}>
+                        {offlineChat.isReady ? "🟢 Ready" : 
+                         offlineChat.isInitializing ? "⏳ Loading..." : 
+                         "⚪ Not initialized"}
+                      </Badge>
+                      {offlineChat.activeModel && (
+                        <Badge variant="outline">{offlineChat.activeModel}</Badge>
+                      )}
+                    </div>
+                    <Badge variant="outline" className="capitalize">
+                      {offlineChat.modelTier} Tier
+                    </Badge>
+                  </div>
+                  
+                  {offlineChat.isInitializing && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>{offlineChat.loadStage}</span>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary transition-all duration-300"
+                          style={{ width: `${offlineChat.loadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {!offlineChat.isReady && !offlineChat.isInitializing && (
+                    <Button onClick={() => offlineChat.initialize()} className="w-full gap-2">
+                      <Brain className="h-4 w-4" />
+                      Initialize Llama 3 Offline AI
+                    </Button>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground">Battery</p>
+                      <p className="font-medium">
+                        {offlineChat.batteryLevel !== null ? `${offlineChat.batteryLevel}%` : 'N/A'}
+                        {offlineChat.isPluggedIn && " ⚡"}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground">Documents</p>
+                      <p className="font-medium">{rag.documentCount} indexed</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Capabilities:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {offlineChat.capabilities.map(cap => (
+                        <Badge key={cap} variant="outline" className="text-xs">
+                          {cap === 'chat' && '💬 Chat'}
+                          {cap === 'reasoning' && '🧠 Reasoning'}
+                          {cap === 'code' && '💻 Code Generation'}
+                          {cap === 'math' && '🔢 Math'}
+                          {cap === 'multilingual' && '🌍 100+ Languages'}
+                          {cap === 'rag' && '📚 Document Analysis'}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
+                    <p className="text-xs text-muted-foreground">
+                      <strong>🛡️ Zero-Server Promise:</strong> All processing happens on your device. 
+                      Your data never leaves your browser. Perfect for sensitive documents and private conversations.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Documents Tab */}
+            <TabsContent value="documents" className="mt-0 space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FolderOpen className="h-4 w-4" />
+                    Private Document Vault
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Upload documents for offline AI analysis. The AI will cite specific sections when answering questions.
+                  </p>
+                  
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <span className="text-sm">Documents indexed:</span>
+                    <Badge variant="secondary">{rag.documentCount}</Badge>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Supported Features:</p>
+                    <ul className="text-xs text-muted-foreground space-y-1">
+                      <li>✓ PDF, TXT, MD, CSV, JSON files</li>
+                      <li>✓ AI-powered semantic search</li>
+                      <li>✓ Citations from your documents</li>
+                      <li>✓ Zero-cloud privacy guarantee</li>
+                    </ul>
+                  </div>
+
+                  <Button 
+                    variant="outline" 
+                    className="w-full gap-2"
+                    onClick={() => {
+                      // This will be handled by the OfflineDocumentUpload component
+                      toast({ 
+                        title: "Document Upload", 
+                        description: "Use the Document Vault button in the chat header to upload files." 
+                      });
+                    }}
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                    Open Document Vault
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             {/* Voice Tab */}
             <TabsContent value="voice" className="mt-0 space-y-4">
               <Card>
