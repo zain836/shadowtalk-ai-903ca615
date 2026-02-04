@@ -38,15 +38,13 @@ export const SovereignModeIndicator = () => {
   // Status color based on state
   const getStatusColor = () => {
     if (offlineChat.isReady) return "bg-green-500";
-    if (offlineChat.isInitializing) return "bg-yellow-500";
+    if (offlineChat.isInitializing) return "bg-yellow-500 animate-pulse";
     if (offlineChat.error) return "bg-destructive";
     return "bg-muted-foreground";
   };
 
-  // Don't show if online and not initialized
-  if (!isOffline && !offlineChat.isReady && !offlineChat.isInitializing) {
-    return null;
-  }
+  // Always show when offline, or when initializing/ready
+  // This helps users see the offline AI status
 
   return (
     <TooltipProvider>

@@ -162,21 +162,26 @@ export const useSovereignAI = () => {
   // Detect WebGPU and determine execution mode
   useEffect(() => {
     const detectRuntime = async () => {
+      let webGPUAvailable = false;
+      
       if ('gpu' in navigator) {
         try {
           const adapter = await (navigator as any).gpu?.requestAdapter();
           if (adapter) {
+            webGPUAvailable = true;
             setState(prev => ({ ...prev, isWebGPUAvailable: true, isWASMFallback: false }));
             console.log('[SovereignAI] WebGPU available - GPU acceleration enabled');
-            return;
           }
         } catch (e) {
           console.warn('[SovereignAI] WebGPU check failed:', e);
         }
       }
-      // Fall back to WASM
-      setState(prev => ({ ...prev, isWebGPUAvailable: false, isWASMFallback: true }));
-      console.log('[SovereignAI] WebGPU not available - using WASM CPU fallback');
+      
+      if (!webGPUAvailable) {
+        // Fall back to WASM - this is fine, WebLLM supports WASM fallback
+        setState(prev => ({ ...prev, isWebGPUAvailable: false, isWASMFallback: true }));
+        console.log('[SovereignAI] WebGPU not available - using WASM CPU fallback (this is normal)');
+      }
     };
 
     detectRuntime();
@@ -185,10 +190,7 @@ export const useSovereignAI = () => {
     const handleOnline = () => setState(prev => ({ ...prev, mode: 'hybrid' }));
     const handleOffline = () => {
       setState(prev => ({ ...prev, mode: 'stealth' }));
-      // Auto-initialize if offline and not loaded
-      if (!stateRef.current.isReady && !stateRef.current.isLoading) {
-        initializeSovereignEngine();
-      }
+      console.log('[SovereignAI] Network offline - activating stealth mode');
     };
 
     window.addEventListener('online', handleOnline);
@@ -254,44 +256,58 @@ export const useSovereignAI = () => {
   const initializeSovereignEngine = useCallback(async (modelId?: string): Promise<boolean> => {
     // Return existing promise if loading
     if (initPromiseRef.current) {
+      console.log('[SovereignAI] Already loading, returning existing promise');
       return initPromiseRef.current;
     }
 
-    // **FIX**: If no modelId provided, check for cached models first
+    // If already ready with the requested model, return true
+    if (stateRef.current.isReady && (!modelId || stateRef.current.activeModel?.id === modelId)) {
+      console.log('[SovereignAI] Engine already ready with model:', stateRef.current.activeModel?.name);
+      return true;
+    }
+
+    // Get target model
     let targetModel: SovereignModel | undefined;
     
     if (modelId) {
       targetModel = SOVEREIGN_MODELS.find(m => m.id === modelId);
     } else {
-      // Try to use a cached model first
       targetModel = getRecommendedModel();
     }
 
     if (!targetModel) {
-      setState(prev => ({ ...prev, error: 'No compatible model found for your device' }));
+      const errorMsg = 'No compatible model found for your device';
+      console.error('[SovereignAI]', errorMsg);
+      setState(prev => ({ ...prev, error: errorMsg }));
       return false;
     }
+
+    console.log('[SovereignAI] Initializing with model:', targetModel.name, targetModel.id);
 
     initPromiseRef.current = (async () => {
       setState(prev => ({
         ...prev,
         isLoading: true,
         error: null,
-        loadStage: `🔐 Initializing Stealth Vault...`,
+        loadStage: `🔐 Initializing Stealth Vault with ${targetModel.name}...`,
         loadProgress: 0,
       }));
 
       try {
+        console.log('[SovereignAI] Importing WebLLM...');
         const webllm = await import('@mlc-ai/web-llm');
+        console.log('[SovereignAI] WebLLM imported successfully');
 
         const progressCallback = (progress: any) => {
           const percent = Math.round((progress.progress || 0) * 100);
           let stage = progress.text || 'Loading...';
           
           // Branded progress messages
-          if (percent < 20) stage = '🛡️ Preparing Sovereign Engine...';
-          else if (percent < 50) stage = `📥 Downloading ${targetModel.name} (${Math.round(targetModel.sizeBytes / 1e9 * percent / 100 * 10) / 10} GB)...`;
-          else if (percent < 80) stage = '🔧 Compiling for your GPU...';
+          if (percent < 10) stage = '🛡️ Preparing Sovereign Engine...';
+          else if (percent < 50) stage = `📥 Loading ${targetModel.name}...`;
+          else if (percent < 80) stage = stateRef.current.isWASMFallback 
+            ? '🔧 Compiling for CPU (WASM)...' 
+            : '🔧 Compiling for GPU...';
           else if (percent < 95) stage = '⚡ Optimizing inference...';
           else stage = '✅ Stealth Vault ready!';
 
@@ -300,22 +316,29 @@ export const useSovereignAI = () => {
             loadProgress: percent,
             loadStage: stage,
           }));
+          
+          if (percent % 20 === 0) {
+            console.log(`[SovereignAI] Loading progress: ${percent}%`);
+          }
         };
 
         // Unload previous model
         if (engineRef.current) {
           try {
+            console.log('[SovereignAI] Unloading previous model...');
             await engineRef.current.unload();
           } catch (e) {
             console.warn('[SovereignAI] Error unloading previous model:', e);
           }
         }
 
-        // Load with timeout (3 minutes for large models)
+        // Load with timeout (5 minutes for large models on slow connections)
+        const timeoutMs = 300000; // 5 minutes
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Model loading timeout (180s)')), 180000)
+          setTimeout(() => reject(new Error(`Model loading timeout (${timeoutMs/1000}s)`)), timeoutMs)
         );
 
+        console.log('[SovereignAI] Creating MLC Engine for:', targetModel.id);
         const loadPromise = webllm.CreateMLCEngine(targetModel.id, {
           initProgressCallback: progressCallback,
         });
@@ -336,31 +359,35 @@ export const useSovereignAI = () => {
           maxContextTokens: targetModel.tier === 'elite' ? 8192 : 4096,
         }));
 
-        console.log('[SovereignAI] Sovereign engine ready:', targetModel.name);
+        console.log('[SovereignAI] ✅ Sovereign engine ready:', targetModel.name);
         return true;
       } catch (e: any) {
-        console.error('[SovereignAI] Failed to load model:', e);
+        console.error('[SovereignAI] Failed to load model:', targetModel.name, e);
 
-        // Try fallback to smaller model - prioritize cached ones
+        // Try fallback to smaller model
         const currentIdx = SOVEREIGN_MODELS.findIndex(m => m.id === targetModel.id);
-        const fallbackCandidates = SOVEREIGN_MODELS.slice(currentIdx + 1).filter(m => 
-          m.tier === 'standard' || (capabilities.tier === 'mid' && m.size <= '3B')
+        const fallbackCandidates = SOVEREIGN_MODELS.filter((m, idx) => 
+          idx > currentIdx && (m.tier === 'standard' || m.size === '1B')
         );
         
         // Check if any fallback is cached
         const cachedFallback = fallbackCandidates.find(m => checkIfModelCached(m.id));
         const fallback = cachedFallback || fallbackCandidates[0];
 
-        if (fallback) {
-          console.log('[SovereignAI] Trying fallback:', fallback.name, cachedFallback ? '(cached)' : '');
+        if (fallback && fallback.id !== targetModel.id) {
+          console.log('[SovereignAI] Trying fallback model:', fallback.name, cachedFallback ? '(cached)' : '');
           initPromiseRef.current = null;
           return initializeSovereignEngine(fallback.id);
         }
 
+        const errorMsg = `Failed to initialize offline AI: ${e.message}. Please ensure you have sufficient memory and try refreshing the page.`;
+        console.error('[SovereignAI]', errorMsg);
+        
         setState(prev => ({
           ...prev,
           isLoading: false,
-          error: `Failed to initialize: ${e.message}`,
+          error: errorMsg,
+          loadStage: '❌ Failed to load model',
         }));
         return false;
       } finally {
@@ -369,7 +396,7 @@ export const useSovereignAI = () => {
     })();
 
     return initPromiseRef.current;
-  }, [getRecommendedModel, capabilities.tier, markModelCached, checkIfModelCached]);
+  }, [getRecommendedModel, markModelCached, checkIfModelCached]);
 
   // Build context from business memories
   const buildBusinessContext = useCallback((): string => {

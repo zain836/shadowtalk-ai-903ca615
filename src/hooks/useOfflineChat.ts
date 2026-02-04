@@ -133,31 +133,45 @@ export const useOfflineChat = () => {
 
   // Initialize offline chat
   const initialize = useCallback(async (): Promise<boolean> => {
-    if (sovereignAI.isReady) return true;
+    console.log('[OfflineChat] Initialize called, current state:', {
+      isReady: sovereignAI.isReady,
+      isLoading: sovereignAI.isLoading,
+      activeModel: sovereignAI.activeModel?.name
+    });
+    
+    if (sovereignAI.isReady) {
+      console.log('[OfflineChat] Already ready with model:', sovereignAI.activeModel?.name);
+      return true;
+    }
     
     setState(prev => ({ ...prev, isInitializing: true, error: null }));
     
     try {
       // Check battery - use smaller model if low battery
       if (state.batteryLevel !== null && state.batteryLevel < 20 && !state.isPluggedIn) {
-        console.log('[OfflineChat] Low battery - recommending smaller model');
-        // The Sovereign AI will auto-select based on hardware tier
+        console.log('[OfflineChat] Low battery - system will auto-select efficient model');
       }
       
+      console.log('[OfflineChat] Calling sovereignAI.initializeSovereignEngine()...');
       const success = await sovereignAI.initializeSovereignEngine();
+      console.log('[OfflineChat] Initialization result:', success);
       
       if (success) {
         setState(prev => ({ ...prev, isInitializing: false, isReady: true }));
+        console.log('[OfflineChat] ✅ Offline chat ready with Llama 3');
       } else {
+        const errorMsg = sovereignAI.error || 'Failed to initialize offline AI engine';
+        console.error('[OfflineChat] ❌ Initialization failed:', errorMsg);
         setState(prev => ({ 
           ...prev, 
           isInitializing: false, 
-          error: 'Failed to initialize offline AI' 
+          error: errorMsg
         }));
       }
       
       return success;
     } catch (e: any) {
+      console.error('[OfflineChat] Exception during initialization:', e);
       setState(prev => ({ 
         ...prev, 
         isInitializing: false, 
@@ -258,12 +272,27 @@ export const useOfflineChat = () => {
     messages: OfflineChatMessage[],
     onChunk?: (chunk: string) => void
   ): Promise<string> => {
+    console.log('[OfflineChat] generateResponse called, isReady:', sovereignAI.isReady);
+    
+    // Initialize if not ready
     if (!sovereignAI.isReady) {
+      console.log('[OfflineChat] Engine not ready, initializing...');
+      
+      // Stream initialization status to user
+      if (onChunk) {
+        onChunk('🔄 Initializing local AI engine... ');
+      }
+      
       const initialized = await initialize();
+      
       if (!initialized) {
-        const errorMsg = "⚠️ Initializing offline AI... Please wait a moment and try again.";
+        const errorMsg = `\n\n⚠️ **Offline AI Initialization Failed**\n\nCouldn't start the local AI model. This could be due to:\n• **Insufficient memory** - Close other tabs/apps and try again\n• **Browser compatibility** - Try Chrome, Edge, or Brave\n• **Model not downloaded** - Enable "Bunker Mode" to download offline models\n\nIn the meantime, please connect to the internet for cloud AI.`;
         if (onChunk) onChunk(errorMsg);
         return errorMsg;
+      }
+      
+      if (onChunk) {
+        onChunk('Ready!\n\n');
       }
     }
 
@@ -274,7 +303,7 @@ export const useOfflineChat = () => {
       const lastUserMessage = messages.filter(m => m.role === 'user').pop()?.content || '';
       const intent = detectIntent(lastUserMessage);
       
-      console.log('[OfflineChat] Detected intent:', intent.type);
+      console.log('[OfflineChat] Generating response, intent:', intent.type, 'model:', sovereignAI.activeModel?.name);
       
       // Build enhanced prompt based on intent
       const enhancedMessage = await buildEnhancedPrompt(lastUserMessage, intent);
@@ -289,11 +318,6 @@ export const useOfflineChat = () => {
         };
       }
 
-      // Add capability context for Elite models
-      if (state.modelTier === 'elite' || state.modelTier === 'enterprise') {
-        // Sovereign AI already has rich system prompt, just generate
-      }
-
       // Generate with Sovereign AI
       const response = await sovereignAI.generateResponse(enhancedMessages, {
         onChunk,
@@ -303,17 +327,18 @@ export const useOfflineChat = () => {
         temperature: 0.7,
       });
 
+      console.log('[OfflineChat] Response generated, length:', response.length);
       setState(prev => ({ ...prev, isGenerating: false }));
       return response;
     } catch (e: any) {
       console.error('[OfflineChat] Generation error:', e);
       setState(prev => ({ ...prev, isGenerating: false, error: e.message }));
       
-      const errorMsg = `⚠️ Error: ${e.message}. Please try again.`;
+      const errorMsg = `\n\n⚠️ **Generation Error**\n\n${e.message}\n\nPlease try again or refresh the page.`;
       if (onChunk) onChunk(errorMsg);
       return errorMsg;
     }
-  }, [sovereignAI, initialize, detectIntent, buildEnhancedPrompt, state.modelTier]);
+  }, [sovereignAI, initialize, detectIntent, buildEnhancedPrompt]);
 
   // Cancel ongoing generation
   const cancelGeneration = useCallback(() => {
