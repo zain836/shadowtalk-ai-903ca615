@@ -191,10 +191,27 @@ const ChatbotPage = () => {
   // Auto-initialize offline AI when going offline - use Sovereign AI (Llama 3)
   useEffect(() => {
     if (isOffline && !offlineChat.isReady && !offlineChat.isInitializing) {
-      console.log('[ChatbotPage] Auto-initializing Sovereign AI (Llama 3) for offline mode...');
-      offlineChat.initialize();
+      console.log('[ChatbotPage] Network offline - auto-initializing Sovereign AI (Llama 3)...');
+      toast({ 
+        title: "🔌 Offline Mode", 
+        description: "Initializing local AI engine..." 
+      });
+      offlineChat.initialize().then(success => {
+        if (success) {
+          toast({ 
+            title: "✅ Offline AI Ready", 
+            description: `${offlineChat.activeModel || 'Llama 3'} loaded locally` 
+          });
+        } else {
+          toast({ 
+            title: "⚠️ Offline AI Failed", 
+            description: "Could not load local model. Try refreshing.", 
+            variant: "destructive" 
+          });
+        }
+      });
     }
-  }, [isOffline, offlineChat.isReady, offlineChat.isInitializing]);
+  }, [isOffline, offlineChat.isReady, offlineChat.isInitializing, toast]);
 
   // Load cached conversations from IndexedDB when offline
   useEffect(() => {
