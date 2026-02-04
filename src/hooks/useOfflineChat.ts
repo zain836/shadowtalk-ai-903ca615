@@ -131,37 +131,32 @@ export const useOfflineChat = () => {
     }));
   }, [sovereignAI.isReady, sovereignAI.isLoading, sovereignAI.activeModel, sovereignAI.error, rag.documentCount]);
 
-  // Initialize offline chat
+  // Initialize offline chat with better error handling
   const initialize = useCallback(async (): Promise<boolean> => {
-    console.log('[OfflineChat] Initialize called, current state:', {
-      isReady: sovereignAI.isReady,
-      isLoading: sovereignAI.isLoading,
-      activeModel: sovereignAI.activeModel?.name
-    });
+    console.log('[OfflineChat] Initialize called');
     
     if (sovereignAI.isReady) {
-      console.log('[OfflineChat] Already ready with model:', sovereignAI.activeModel?.name);
+      console.log('[OfflineChat] Already ready with:', sovereignAI.activeModel?.name);
       return true;
+    }
+    
+    if (state.isInitializing) {
+      console.log('[OfflineChat] Already initializing...');
+      return false;
     }
     
     setState(prev => ({ ...prev, isInitializing: true, error: null }));
     
     try {
-      // Check battery - use smaller model if low battery
-      if (state.batteryLevel !== null && state.batteryLevel < 20 && !state.isPluggedIn) {
-        console.log('[OfflineChat] Low battery - system will auto-select efficient model');
-      }
-      
-      console.log('[OfflineChat] Calling sovereignAI.initializeSovereignEngine()...');
+      console.log('[OfflineChat] Starting Sovereign AI initialization...');
       const success = await sovereignAI.initializeSovereignEngine();
-      console.log('[OfflineChat] Initialization result:', success);
       
       if (success) {
         setState(prev => ({ ...prev, isInitializing: false, isReady: true }));
-        console.log('[OfflineChat] ✅ Offline chat ready with Llama 3');
+        console.log('[OfflineChat] ✅ Ready with:', sovereignAI.activeModel?.name);
       } else {
-        const errorMsg = sovereignAI.error || 'Failed to initialize offline AI engine';
-        console.error('[OfflineChat] ❌ Initialization failed:', errorMsg);
+        const errorMsg = sovereignAI.error || 'Failed to initialize offline AI';
+        console.error('[OfflineChat] ❌ Failed:', errorMsg);
         setState(prev => ({ 
           ...prev, 
           isInitializing: false, 
@@ -171,7 +166,7 @@ export const useOfflineChat = () => {
       
       return success;
     } catch (e: any) {
-      console.error('[OfflineChat] Exception during initialization:', e);
+      console.error('[OfflineChat] Exception:', e);
       setState(prev => ({ 
         ...prev, 
         isInitializing: false, 
@@ -179,7 +174,7 @@ export const useOfflineChat = () => {
       }));
       return false;
     }
-  }, [sovereignAI, state.batteryLevel, state.isPluggedIn]);
+  }, [sovereignAI, state.isInitializing]);
 
   // Detect message intent for routing
   const detectIntent = useCallback((message: string): {

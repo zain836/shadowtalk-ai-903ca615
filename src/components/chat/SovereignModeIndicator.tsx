@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
   Shield, Wifi, WifiOff, Zap, Brain, Battery, 
-  BatteryLow, BatteryCharging, Cpu, HardDrive,
-  AlertTriangle, CheckCircle, Loader2, Download
+  BatteryLow, BatteryCharging, HardDrive,
+  AlertTriangle, CheckCircle, Loader2, Download,
+  RefreshCw
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ export const SovereignModeIndicator = () => {
   const offlineChat = useOfflineChat();
   const { isOffline } = useOfflineMode();
   const [showDetails, setShowDetails] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // Battery icon based on level and charging state
   const getBatteryIcon = () => {
@@ -38,13 +40,20 @@ export const SovereignModeIndicator = () => {
   // Status color based on state
   const getStatusColor = () => {
     if (offlineChat.isReady) return "bg-green-500";
-    if (offlineChat.isInitializing) return "bg-yellow-500 animate-pulse";
+    if (offlineChat.isInitializing || isRetrying) return "bg-yellow-500 animate-pulse";
     if (offlineChat.error) return "bg-destructive";
     return "bg-muted-foreground";
   };
 
-  // Always show when offline, or when initializing/ready
-  // This helps users see the offline AI status
+  // Handle initialization with retry logic
+  const handleInitialize = async () => {
+    setIsRetrying(true);
+    try {
+      await offlineChat.initialize();
+    } finally {
+      setIsRetrying(false);
+    }
+  };
 
   return (
     <TooltipProvider>
@@ -204,14 +213,35 @@ export const SovereignModeIndicator = () => {
 
             {/* Actions */}
             <div className="flex gap-2">
-              {!offlineChat.isReady && !offlineChat.isInitializing && (
+              {!offlineChat.isReady && !offlineChat.isInitializing && !isRetrying && (
                 <Button 
                   size="sm" 
-                  onClick={() => offlineChat.initialize()}
+                  onClick={handleInitialize}
                   className="flex-1 gap-1.5"
                 >
                   <Download className="h-4 w-4" />
-                  Initialize Offline AI
+                  {offlineChat.error ? 'Retry Initialization' : 'Initialize Offline AI'}
+                </Button>
+              )}
+              {(offlineChat.isInitializing || isRetrying) && (
+                <Button 
+                  size="sm" 
+                  disabled
+                  className="flex-1 gap-1.5"
+                >
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading...
+                </Button>
+              )}
+              {offlineChat.error && !offlineChat.isInitializing && !isRetrying && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={handleInitialize}
+                  className="gap-1.5"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Retry
                 </Button>
               )}
               {offlineChat.isReady && offlineChat.batteryLevel !== null && 
