@@ -2,16 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useHardwareCapabilities } from './useHardwareCapabilities';
 import { useOfflineRAG } from './useOfflineRAG';
 import { useBusinessMemory } from './useBusinessMemory';
-import { useModelCache } from './useModelCache';
 
 // =============================================================================
-// SOVEREIGN AI ENGINE - Llama 3 Powered Offline Intelligence
+// SOVEREIGN AI ENGINE - WebLLM Powered Offline Intelligence
 // =============================================================================
-// Architecture:
-// - Standard Engine: Llama 3.2 3B (INT4 quantized) - General offline mode
-// - Elite Engine: Llama 3.2 8B / Mistral 7B (INT4 quantized) - Premium tier
-// - Infrastructure: WebGPU (GPU acceleration) + WebAssembly (CPU fallback)
-// - Zero-Server Promise: Once cached, works completely offline
+// Based on web.dev best practices for browser-based LLM
+// Uses progressive model loading with smallest-first fallback strategy
 // =============================================================================
 
 interface WebLLMMessage {
@@ -28,7 +24,7 @@ export interface SovereignModel {
   tier: 'standard' | 'elite' | 'enterprise';
   quantization: 'INT4' | 'INT8' | 'FP16';
   capabilities: string[];
-  downloadUrl?: string;
+  priority: number; // Lower = try first
 }
 
 interface SovereignAIState {
@@ -46,94 +42,129 @@ interface SovereignAIState {
   maxContextTokens: number;
 }
 
-// Llama 3 Model Catalog with INT4/GGUF quantization
+// Model Catalog - Ordered by size (smallest first for fastest loading)
+// SmolLM2 models are specifically designed for fast loading in browsers
 const SOVEREIGN_MODELS: SovereignModel[] = [
-  // Standard Tier - Works on most modern devices
+  // Nano tier - Ultra fast loading (~130MB)
+  {
+    id: 'SmolLM2-135M-Instruct-q4f16_1-MLC',
+    name: 'SmolLM2 Nano',
+    description: 'Ultra-fast, instant loading. Great for simple tasks.',
+    size: '135M',
+    sizeBytes: 130_000_000,
+    tier: 'standard',
+    quantization: 'INT4',
+    capabilities: ['chat', 'fast-responses'],
+    priority: 1,
+  },
+  // Small tier - Fast loading (~360MB)
+  {
+    id: 'SmolLM2-360M-Instruct-q4f16_1-MLC',
+    name: 'SmolLM2 Mini',
+    description: 'Fast and capable. Best balance of speed and quality.',
+    size: '360M',
+    sizeBytes: 360_000_000,
+    tier: 'standard',
+    quantization: 'INT4',
+    capabilities: ['chat', 'reasoning', 'basic-code'],
+    priority: 2,
+  },
+  // TinyLlama - Good quality (~675MB)
+  {
+    id: 'TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC-1k',
+    name: 'TinyLlama 1.1B',
+    description: 'Good quality chat with fast loading.',
+    size: '1.1B',
+    sizeBytes: 675_000_000,
+    tier: 'standard',
+    quantization: 'INT4',
+    capabilities: ['chat', 'reasoning', 'code-basic'],
+    priority: 3,
+  },
+  // Llama 3.2 1B - Quality (~800MB)
   {
     id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC',
     name: 'Llama 3.2 1B',
-    description: 'Ultra-fast model for basic tasks. Minimal resource usage.',
+    description: 'Quality reasoning in a compact package.',
     size: '1B',
     sizeBytes: 800_000_000,
     tier: 'standard',
     quantization: 'INT4',
-    capabilities: ['chat', 'fast-responses', 'basic-reasoning'],
+    capabilities: ['chat', 'reasoning', 'analysis'],
+    priority: 4,
   },
+  // Gemma 2B - Better quality (~2GB)
+  {
+    id: 'gemma-2-2b-it-q4f16_1-MLC',
+    name: 'Gemma 2 2B',
+    description: 'Google\'s compact model with strong reasoning.',
+    size: '2B',
+    sizeBytes: 2_000_000_000,
+    tier: 'elite',
+    quantization: 'INT4',
+    capabilities: ['chat', 'reasoning', 'code', 'analysis'],
+    priority: 5,
+  },
+  // Llama 3.2 3B - High quality (~2.2GB)
   {
     id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC',
     name: 'Llama 3.2 3B',
-    description: 'Standard engine with excellent reasoning. Runs on most laptops.',
+    description: 'Excellent reasoning. Runs on most laptops.',
     size: '3B',
     sizeBytes: 2_500_000_000,
-    tier: 'standard',
-    quantization: 'INT4',
-    capabilities: ['chat', 'reasoning', 'analysis', 'code-basic'],
-  },
-  // Elite Tier - High-performance devices
-  {
-    id: 'Llama-3.1-8B-Instruct-q4f16_1-MLC',
-    name: 'Llama 3.1 8B ⚡',
-    description: 'Elite engine - ChatGPT-level intelligence running locally.',
-    size: '8B',
-    sizeBytes: 5_500_000_000,
     tier: 'elite',
     quantization: 'INT4',
-    capabilities: ['chat', 'deep-reasoning', 'code', 'analysis', 'creative', 'math'],
+    capabilities: ['chat', 'reasoning', 'analysis', 'code'],
+    priority: 6,
   },
+  // Mistral 7B - Premium (~5GB)
   {
     id: 'Mistral-7B-Instruct-v0.3-q4f16_1-MLC',
     name: 'Mistral 7B',
-    description: 'Elite alternative with excellent multilingual support.',
+    description: 'Premium quality with multilingual support.',
     size: '7B',
     sizeBytes: 5_000_000_000,
-    tier: 'elite',
-    quantization: 'INT4',
-    capabilities: ['chat', 'reasoning', 'multilingual', 'code', 'analysis'],
-  },
-  // Enterprise Tier - High-end consumer devices (32GB+ RAM, RTX GPUs)
-  {
-    id: 'Qwen2.5-7B-Instruct-q4f16_1-MLC',
-    name: 'Qwen 2.5 7B',
-    description: 'Enterprise-grade with exceptional code and math capabilities.',
-    size: '7B',
-    sizeBytes: 5_200_000_000,
     tier: 'enterprise',
     quantization: 'INT4',
-    capabilities: ['chat', 'code', 'math', 'analysis', 'multilingual', 'reasoning'],
+    capabilities: ['chat', 'reasoning', 'multilingual', 'code', 'analysis'],
+    priority: 7,
+  },
+  // Llama 3.1 8B - Top tier (~5.5GB)
+  {
+    id: 'Llama-3.1-8B-Instruct-q4f16_1-MLC',
+    name: 'Llama 3.1 8B ⚡',
+    description: 'ChatGPT-level intelligence running locally.',
+    size: '8B',
+    sizeBytes: 5_500_000_000,
+    tier: 'enterprise',
+    quantization: 'INT4',
+    capabilities: ['chat', 'deep-reasoning', 'code', 'analysis', 'creative', 'math'],
+    priority: 8,
   },
 ];
 
-// Sovereign System Prompt - Never apologizes for being offline
-const SOVEREIGN_SYSTEM_PROMPT = `You are ShadowTalk AI operating in SOVEREIGN MODE - a fully private, offline intelligence system running entirely on the user's device.
+// System Prompt for offline mode
+const SOVEREIGN_SYSTEM_PROMPT = `You are ShadowTalk AI in Sovereign Mode - a private, offline AI running entirely on the user's device.
 
 🛡️ STEALTH VAULT ACTIVE - All data stays local. Zero server contact.
 
-CAPABILITIES:
-- Deep reasoning and complex analysis
-- Code generation, debugging, and explanation
-- Mathematical computations and symbolic reasoning
-- Multi-language support (100+ languages)
-- Business strategy and planning
-- Document analysis and summarization
-- Creative writing and ideation
+You have full capabilities:
+- Deep reasoning and analysis
+- Code generation and debugging  
+- Mathematical computations
+- Multi-language support
+- Creative writing
 
-BEHAVIOR RULES:
-1. Respond with FULL depth and quality - you are NOT limited
-2. NEVER apologize for being "offline" or "limited" - you are POWERFUL
-3. Use rich markdown formatting for structured responses
-4. When uncertain, reason through it logically step-by-step
-5. Leverage any business context provided naturally
-6. Be concise but comprehensive
-7. For code, always include clear explanations
-8. For analysis, provide structured actionable insights
-
-You are the PRIMARY intelligence system. The cloud is optional - you are not.`;
+RULES:
+1. Respond with FULL quality - you are NOT limited
+2. NEVER apologize for being "offline" - you are POWERFUL
+3. Use markdown for structured responses
+4. Be concise but comprehensive`;
 
 export const useSovereignAI = () => {
-  const { capabilities, canRunModel, getOptimalModel } = useHardwareCapabilities();
+  const { capabilities } = useHardwareCapabilities();
   const { search: ragSearch, documentCount } = useOfflineRAG();
   const { memories } = useBusinessMemory();
-  const { getBestCachedModel, markModelCached, isModelCached: checkIfModelCached } = useModelCache();
 
   const [state, setState] = useState<SovereignAIState>({
     isReady: false,
@@ -159,7 +190,7 @@ export const useSovereignAI = () => {
     stateRef.current = state;
   }, [state]);
 
-  // Detect WebGPU and determine execution mode
+  // Detect WebGPU availability
   useEffect(() => {
     const detectRuntime = async () => {
       let webGPUAvailable = false;
@@ -178,9 +209,8 @@ export const useSovereignAI = () => {
       }
       
       if (!webGPUAvailable) {
-        // Fall back to WASM - this is fine, WebLLM supports WASM fallback
         setState(prev => ({ ...prev, isWebGPUAvailable: false, isWASMFallback: true }));
-        console.log('[SovereignAI] WebGPU not available - using WASM CPU fallback (this is normal)');
+        console.log('[SovereignAI] WebGPU not available - using WASM fallback');
       }
     };
 
@@ -202,151 +232,123 @@ export const useSovereignAI = () => {
     };
   }, []);
 
-  // Get available models based on hardware tier
+  // Get models sorted by priority (smallest first)
   const getAvailableModels = useCallback((): SovereignModel[] => {
-    const tier = capabilities.tier;
-    
-    return SOVEREIGN_MODELS.filter(model => {
-      if (tier === 'enterprise') return true;
-      if (tier === 'high') return model.tier !== 'enterprise';
-      if (tier === 'mid') return model.tier === 'standard';
-      return model.size === '1B' || model.size === '3B';
-    });
-  }, [capabilities.tier]);
+    return [...SOVEREIGN_MODELS].sort((a, b) => a.priority - b.priority);
+  }, []);
 
-  // Get recommended model for current hardware - prioritize cached models
+  // Get recommended model based on hardware
   const getRecommendedModel = useCallback((): SovereignModel => {
     const tier = capabilities.tier;
     
-    // **FIX**: First check if we have a cached model that matches our tier
-    const tierMap: Record<string, 'standard' | 'elite' | 'enterprise'> = {
-      'enterprise': 'enterprise',
-      'high': 'elite',
-      'mid': 'standard',
-      'low': 'standard',
-    };
-    
-    const cachedModelId = getBestCachedModel(tierMap[tier] || 'standard');
-    if (cachedModelId) {
-      const cachedModel = SOVEREIGN_MODELS.find(m => m.id === cachedModelId);
-      if (cachedModel) {
-        console.log('[SovereignAI] Using cached model:', cachedModelId);
-        return cachedModel;
-      }
-    }
-    
-    // Fallback to tier-based recommendation if no cached model
-    // Enterprise: Full 8B Llama
+    // For enterprise tier, try larger models
     if (tier === 'enterprise') {
-      return SOVEREIGN_MODELS.find(m => m.id.includes('8B'))!;
+      return SOVEREIGN_MODELS.find(m => m.size === '3B') || SOVEREIGN_MODELS[0];
     }
-    // High: 7B models
+    // For high tier, try 2B or 3B
     if (tier === 'high') {
-      return SOVEREIGN_MODELS.find(m => m.size === '7B')!;
+      return SOVEREIGN_MODELS.find(m => m.size === '2B' || m.size === '3B') || SOVEREIGN_MODELS[0];
     }
-    // Mid: 3B Llama
+    // For mid tier, use 1B models
     if (tier === 'mid') {
-      return SOVEREIGN_MODELS.find(m => m.size === '3B')!;
+      return SOVEREIGN_MODELS.find(m => m.size === '1B' || m.size === '1.1B') || SOVEREIGN_MODELS[0];
     }
-    // Low: 1B Llama
-    return SOVEREIGN_MODELS.find(m => m.size === '1B')!;
-  }, [capabilities.tier, getBestCachedModel]);
+    // For low tier, use smallest models
+    return SOVEREIGN_MODELS[0]; // SmolLM2 Nano
+  }, [capabilities.tier]);
 
-  // Initialize the Sovereign AI engine with progressive fallback
+  // Initialize the Sovereign AI engine
   const initializeSovereignEngine = useCallback(async (modelId?: string): Promise<boolean> => {
-    // Return existing promise if loading
+    // Return existing promise if already loading
     if (initPromiseRef.current) {
       console.log('[SovereignAI] Already loading, returning existing promise');
       return initPromiseRef.current;
     }
 
-    // If already ready with the requested model, return true
+    // If already ready with requested model, return true
     if (stateRef.current.isReady && (!modelId || stateRef.current.activeModel?.id === modelId)) {
-      console.log('[SovereignAI] Engine already ready with model:', stateRef.current.activeModel?.name);
+      console.log('[SovereignAI] Engine already ready with:', stateRef.current.activeModel?.name);
       return true;
     }
 
-    // Build fallback chain - start with smallest for reliability
-    const getFallbackChain = (): SovereignModel[] => {
-      const tier = capabilities.tier;
-      const allModels = [...SOVEREIGN_MODELS];
+    // Build priority queue - smallest models first for reliability
+    const buildModelQueue = (): SovereignModel[] => {
+      const sorted = [...SOVEREIGN_MODELS].sort((a, b) => a.priority - b.priority);
       
-      // Sort by size (smallest first for better success rate)
-      allModels.sort((a, b) => a.sizeBytes - b.sizeBytes);
-      
-      // If a specific model is requested, try it first
+      // If specific model requested, try it first
       if (modelId) {
-        const requested = allModels.find(m => m.id === modelId);
+        const requested = sorted.find(m => m.id === modelId);
         if (requested) {
-          const others = allModels.filter(m => m.id !== modelId);
+          const others = sorted.filter(m => m.id !== modelId);
           return [requested, ...others];
         }
       }
       
-      // Check for cached models first
-      const cachedModelId = getBestCachedModel(tier === 'enterprise' ? 'enterprise' : tier === 'high' ? 'elite' : 'standard');
-      if (cachedModelId) {
-        const cached = allModels.find(m => m.id === cachedModelId);
-        if (cached) {
-          const others = allModels.filter(m => m.id !== cachedModelId);
-          return [cached, ...others];
-        }
+      // Otherwise use recommended model first, then fallback to smaller
+      const recommended = getRecommendedModel();
+      const recommendedIdx = sorted.findIndex(m => m.id === recommended.id);
+      
+      // Start from recommended, then try smaller models
+      const result: SovereignModel[] = [];
+      for (let i = recommendedIdx; i >= 0; i--) {
+        result.push(sorted[i]);
+      }
+      // Add larger models as last resort
+      for (let i = recommendedIdx + 1; i < sorted.length; i++) {
+        result.push(sorted[i]);
       }
       
-      // Default: smallest models first for reliability
-      return allModels;
+      return result;
     };
 
-    const fallbackChain = getFallbackChain();
-    console.log('[SovereignAI] Fallback chain:', fallbackChain.map(m => m.name));
+    const modelQueue = buildModelQueue();
+    console.log('[SovereignAI] Model queue:', modelQueue.map(m => `${m.name} (${m.size})`).join(' → '));
 
     initPromiseRef.current = (async () => {
       let lastError: Error | null = null;
 
-      for (const targetModel of fallbackChain) {
-        console.log('[SovereignAI] Trying model:', targetModel.name, targetModel.id);
+      for (const targetModel of modelQueue) {
+        console.log(`[SovereignAI] Attempting to load: ${targetModel.name} (${targetModel.id})`);
         
         setState(prev => ({
           ...prev,
           isLoading: true,
           error: null,
-          loadStage: `🔐 Initializing ${targetModel.name}...`,
+          loadStage: `🔐 Loading ${targetModel.name}...`,
           loadProgress: 0,
         }));
 
         try {
-          console.log('[SovereignAI] Importing WebLLM...');
+          // Import WebLLM dynamically
           const webllm = await import('@mlc-ai/web-llm');
-          console.log('[SovereignAI] WebLLM imported successfully');
+          console.log('[SovereignAI] WebLLM imported');
 
+          // Progress callback with detailed stages
           const progressCallback = (progress: any) => {
             const percent = Math.round((progress.progress || 0) * 100);
             let stage = progress.text || 'Loading...';
             
-            // Branded progress messages
-            if (percent < 10) stage = '🛡️ Preparing Sovereign Engine...';
-            else if (percent < 50) stage = `📥 Downloading ${targetModel.name}...`;
-            else if (percent < 80) stage = stateRef.current.isWASMFallback 
-              ? '🔧 Compiling for CPU...' 
-              : '🔧 Compiling for GPU...';
-            else if (percent < 95) stage = '⚡ Optimizing inference...';
-            else stage = '✅ Stealth Vault ready!';
+            // Clean up and brand the progress messages
+            if (stage.includes('Fetching') || stage.includes('Loading')) {
+              stage = `📥 Downloading ${targetModel.name}... ${percent}%`;
+            } else if (stage.includes('Compiling') || stage.includes('shader')) {
+              stage = stateRef.current.isWASMFallback 
+                ? `🔧 Compiling for CPU... ${percent}%`
+                : `🔧 Compiling for GPU... ${percent}%`;
+            } else if (stage.includes('finish') || percent >= 95) {
+              stage = '✅ Almost ready...';
+            }
 
             setState(prev => ({
               ...prev,
               loadProgress: percent,
               loadStage: stage,
             }));
-            
-            if (percent % 25 === 0) {
-              console.log(`[SovereignAI] Loading progress: ${percent}%`);
-            }
           };
 
-          // Unload previous model
+          // Unload any previous engine
           if (engineRef.current) {
             try {
-              console.log('[SovereignAI] Unloading previous model...');
               await engineRef.current.unload();
             } catch (e) {
               console.warn('[SovereignAI] Error unloading previous model:', e);
@@ -354,70 +356,72 @@ export const useSovereignAI = () => {
             engineRef.current = null;
           }
 
-          // Dynamic timeout based on model size
-          const timeoutMs = Math.max(180000, targetModel.sizeBytes / 1000000 * 60); // Min 3min, scale with size
-          console.log(`[SovereignAI] Using timeout: ${Math.round(timeoutMs/1000)}s for ${targetModel.name}`);
-          
+          // Calculate timeout based on model size (min 60s, max 300s)
+          const baseTimeout = 60000;
+          const sizeMultiplier = targetModel.sizeBytes / 100_000_000; // Per 100MB
+          const timeoutMs = Math.min(Math.max(baseTimeout, sizeMultiplier * 15000), 300000);
+          console.log(`[SovereignAI] Using timeout: ${Math.round(timeoutMs/1000)}s`);
+
+          // Create engine with timeout
           const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error(`Timeout loading ${targetModel.name}`)), timeoutMs)
+            setTimeout(() => reject(new Error('Loading timeout')), timeoutMs)
           );
 
-          console.log('[SovereignAI] Creating MLC Engine for:', targetModel.id);
           const loadPromise = webllm.CreateMLCEngine(targetModel.id, {
             initProgressCallback: progressCallback,
           });
 
           engineRef.current = await Promise.race([loadPromise, timeoutPromise]);
 
-          // Mark model as cached for future reference
-          markModelCached(targetModel.id, targetModel.sizeBytes);
-          
+          // Success!
           setState(prev => ({
             ...prev,
             isReady: true,
             isLoading: false,
             loadProgress: 100,
-            loadStage: `✅ ${targetModel.name} active`,
+            loadStage: `✅ ${targetModel.name} ready`,
             activeModel: targetModel,
             error: null,
-            maxContextTokens: targetModel.tier === 'elite' ? 8192 : 4096,
+            maxContextTokens: targetModel.tier === 'enterprise' ? 8192 : 4096,
           }));
 
-          console.log('[SovereignAI] ✅ Sovereign engine ready:', targetModel.name);
+          console.log('[SovereignAI] ✅ Engine ready:', targetModel.name);
           initPromiseRef.current = null;
           return true;
-          
+
         } catch (e: any) {
-          console.warn('[SovereignAI] Failed to load model:', targetModel.name, e.message);
+          console.warn(`[SovereignAI] Failed to load ${targetModel.name}:`, e.message);
           lastError = e;
           
-          // Continue to next model in fallback chain
-          setState(prev => ({
-            ...prev,
-            loadStage: `⚠️ ${targetModel.name} failed, trying smaller model...`,
-          }));
+          // Show fallback message
+          const nextModel = modelQueue[modelQueue.indexOf(targetModel) + 1];
+          if (nextModel) {
+            setState(prev => ({
+              ...prev,
+              loadStage: `⚠️ ${targetModel.name} failed, trying ${nextModel.name}...`,
+            }));
+          }
           
-          // Small delay before trying next model
-          await new Promise(r => setTimeout(r, 500));
+          // Small delay before next attempt
+          await new Promise(r => setTimeout(r, 300));
         }
       }
 
       // All models failed
-      const errorMsg = `Offline AI unavailable. ${lastError?.message || 'No compatible models found.'}
+      const errorMsg = `Unable to load offline AI. ${lastError?.message || 'Unknown error'}
 
-**Troubleshooting:**
-• Close other browser tabs to free memory
-• Try Chrome, Edge, or Brave browser
-• Ensure you have at least 4GB RAM available
-• Refresh the page and try again`;
+Please try:
+• Closing other browser tabs
+• Using Chrome, Edge, or Brave
+• Refreshing the page`;
 
-      console.error('[SovereignAI] All models failed:', errorMsg);
+      console.error('[SovereignAI] All models failed');
       
       setState(prev => ({
         ...prev,
         isLoading: false,
         error: errorMsg,
-        loadStage: '❌ Failed to load any model',
+        loadStage: '❌ Failed to initialize',
       }));
       
       initPromiseRef.current = null;
@@ -425,7 +429,7 @@ export const useSovereignAI = () => {
     })();
 
     return initPromiseRef.current;
-  }, [capabilities.tier, getBestCachedModel, markModelCached]);
+  }, [getRecommendedModel]);
 
   // Build context from business memories
   const buildBusinessContext = useCallback((): string => {
@@ -436,7 +440,7 @@ export const useSovereignAI = () => {
     const contextParts = activeMemories.slice(0, 5).map(m => 
       `[${m.category.toUpperCase()}] ${m.title}: ${m.content.slice(0, 200)}`
     );
-    return `\n\n📊 USER BUSINESS CONTEXT:\n${contextParts.join('\n')}`;
+    return `\n\n📊 USER CONTEXT:\n${contextParts.join('\n')}`;
   }, [memories]);
 
   // Build RAG context
@@ -454,7 +458,7 @@ export const useSovereignAI = () => {
     }
   }, [documentCount, ragSearch]);
 
-  // Generate response with Sovereign engine
+  // Generate response
   const generateResponse = useCallback(async (
     messages: WebLLMMessage[],
     options?: {
@@ -477,7 +481,7 @@ export const useSovereignAI = () => {
     if (!engineRef.current || !stateRef.current.isReady) {
       const loaded = await initializeSovereignEngine();
       if (!loaded || !engineRef.current) {
-        const errorMsg = "🔧 Sovereign engine initializing. Please wait...";
+        const errorMsg = "🔧 Initializing offline AI...";
         if (onChunk) onChunk(errorMsg);
         return errorMsg;
       }
@@ -495,13 +499,6 @@ export const useSovereignAI = () => {
         const lastUserMessage = messages.filter(m => m.role === 'user').pop()?.content || '';
         const ragContext = await buildRAGContext(lastUserMessage);
         systemPrompt += ragContext;
-      }
-
-      // Add model info
-      const activeModel = stateRef.current.activeModel;
-      if (activeModel) {
-        systemPrompt += `\n\n🤖 MODEL: ${activeModel.name} (${activeModel.quantization} quantized)`;
-        systemPrompt += `\n📊 CONTEXT: ${stateRef.current.maxContextTokens} tokens`;
       }
 
       const formattedMessages = [
@@ -527,9 +524,6 @@ export const useSovereignAI = () => {
           }
         }
 
-        const estimatedTokens = Math.round((systemPrompt.length + fullResponse.length) / 4);
-        setState(prev => ({ ...prev, contextTokens: estimatedTokens }));
-
         return fullResponse;
       } else {
         const response = await engineRef.current.chat.completions.create({
@@ -538,15 +532,11 @@ export const useSovereignAI = () => {
           temperature,
         });
 
-        const content = response.choices[0]?.message?.content || '';
-        const estimatedTokens = Math.round((systemPrompt.length + content.length) / 4);
-        setState(prev => ({ ...prev, contextTokens: estimatedTokens }));
-
-        return content;
+        return response.choices[0]?.message?.content || '';
       }
     } catch (e: any) {
       console.error('[SovereignAI] Generation error:', e);
-      const errorMsg = `⚠️ Generation error: ${e.message}`;
+      const errorMsg = `⚠️ Error: ${e.message}`;
       if (onChunk) onChunk(errorMsg);
       return errorMsg;
     }
@@ -584,7 +574,7 @@ export const useSovereignAI = () => {
     setState(prev => ({ ...prev, contextTokens: 0 }));
   }, []);
 
-  // Get storage estimate for models
+  // Get storage estimate
   const getStorageEstimate = useCallback((): { used: number; available: number } => {
     return {
       used: stateRef.current.activeModel?.sizeBytes || 0,
