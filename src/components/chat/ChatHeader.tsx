@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/drawer";
 import { Heart, Laugh, Briefcase, Lightbulb, Scale, MessageCircle, Target, HelpCircle } from "lucide-react";
 import { OfflineModeIndicator } from "./OfflineModeIndicator";
+import { SovereignModeIndicator } from "./SovereignModeIndicator";
 import { ProviderSelector, AIProvider } from "./ProviderSelector";
 import { ModelSelector, AIModel } from "./ModelSelector";
 import { MemoryPanel } from "./MemoryPanel";
@@ -414,8 +415,8 @@ export const ChatHeader = ({
         {/* Bunker Mode Toggle */}
         <BunkerModeToggle />
 
-        {/* Offline Mode Indicator */}
-        <OfflineModeIndicator />
+        {/* Sovereign AI / Offline Mode Indicator */}
+        <SovereignModeIndicator />
 
         {/* Mobile: Drawer */}
         {isMobile ? (
