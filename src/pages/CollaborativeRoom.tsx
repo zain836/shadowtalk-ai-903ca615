@@ -9,12 +9,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Send, Users, Bot, Loader2, Link2, Check, Shield, FileEdit, MessageSquare } from "lucide-react";
+import { ArrowLeft, Send, Users, Bot, Loader2, Link2, Check, Shield, FileEdit, MessageSquare, Pointer } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import RoomModeration from "@/components/chat/RoomModeration";
 import CollaborativeEditor from "@/components/collaboration/CollaborativeEditor";
 import PresenceAvatars from "@/components/collaboration/PresenceAvatars";
 import { useRealtimePresence } from "@/hooks/useRealtimePresence";
+import { LiveCursors } from "@/components/collaboration/LiveCursors";
+import { MentionInput } from "@/components/collaboration/MentionInput";
 interface RoomMessage {
   id: string;
   room_id: string;
@@ -51,11 +53,19 @@ const CollaborativeRoom = () => {
   const [activeTab, setActiveTab] = useState<'chat' | 'editor'>('chat');
   const [sharedDocument, setSharedDocument] = useState("");
   const [documentLoading, setDocumentLoading] = useState(false);
+  const [showLiveCursors, setShowLiveCursors] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const documentUpdateTimeout = useRef<NodeJS.Timeout | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   
   // Real-time presence
   const { onlineUsers: presenceUsers } = useRealtimePresence({ channelName: `room-presence-${roomId}` });
+  
+  // Convert participants to mention-compatible format
+  const mentionUsers = participants.map(p => ({
+    id: p.user_id,
+    displayName: p.display_name || 'Anonymous',
+  }));
 
   useEffect(() => {
     if (!user || !roomId) {
@@ -426,18 +436,46 @@ const CollaborativeRoom = () => {
               </Tooltip>
             </TooltipProvider>
             
+            {/* Live Cursors Toggle */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant={showLiveCursors ? "default" : "outline"} 
+                    size="sm" 
+                    onClick={() => setShowLiveCursors(!showLiveCursors)} 
+                    className="rounded-xl gap-2"
+                  >
+                    <Pointer className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{showLiveCursors ? 'Hide' : 'Show'} live cursors</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
             {/* Presence Avatars */}
             <PresenceAvatars users={presenceUsers} maxVisible={5} />
           </div>
         </div>
       </header>
 
+      {/* Live Cursors Overlay */}
+      {activeTab === 'chat' && (
+        <LiveCursors 
+          channelName={`room-cursors-${roomId}`}
+          containerRef={chatContainerRef}
+          enabled={showLiveCursors}
+        />
+      )}
+
       {/* Content Area */}
       {activeTab === 'chat' ? (
         <>
           {/* Messages */}
           <ScrollArea className="flex-1 p-4">
-            <div className="max-w-3xl mx-auto space-y-4">
+            <div ref={chatContainerRef} className="max-w-3xl mx-auto space-y-4 relative">
               {messages.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
                   <Bot className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -482,16 +520,17 @@ const CollaborativeRoom = () => {
             </div>
           </ScrollArea>
 
-          {/* Input */}
+          {/* Input with @mentions */}
           <div className="border-t border-border p-4">
             <div className="max-w-3xl mx-auto flex gap-2">
-              <Input
+              <MentionInput
                 value={message}
-                onChange={e => setMessage(e.target.value)}
-                onKeyPress={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-                placeholder="Type a message..."
-                className="rounded-xl"
+                onChange={setMessage}
+                onSubmit={sendMessage}
+                users={mentionUsers}
+                placeholder="Type a message... Use @ to mention"
                 disabled={isLoading}
+                className="flex-1"
               />
               <Button onClick={sendMessage} disabled={isLoading || !message.trim()} className="rounded-xl btn-glow">
                 <Send className="h-4 w-4" />
