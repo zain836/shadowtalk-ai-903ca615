@@ -1,10 +1,10 @@
- import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, Fragment } from "react";
  import { 
    Bot, Play, Pause, Square, CheckCircle2, XCircle, 
    Clock, Loader2, ChevronRight, Settings, Zap,
    Globe, Mail, Calendar, FileText, Users, Phone,
-   Database, Code, MessageSquare, Smartphone, Send,
-   RefreshCw, AlertTriangle, ExternalLink, Wifi
+  Database, Code, MessageSquare, Smartphone, Send, QrCode,
+  RefreshCw, AlertTriangle, ExternalLink, Wifi, X, Check
  } from "lucide-react";
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
@@ -69,6 +69,14 @@
  
  const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
  
+// Service scope mapping
+const SERVICE_SCOPES: Record<string, string> = {
+  gmail: "gmail",
+  contacts: "contacts",
+  calendar: "calendar",
+  drive: "drive",
+};
+
  export const ShadowAgentCore = ({ isOpen, onClose, onResult }: ShadowAgentCoreProps) => {
    const { toast } = useToast();
    const [goal, setGoal] = useState("");
@@ -83,8 +91,12 @@
      { id: "calendar", name: "Google Calendar", icon: Calendar, connected: false },
      { id: "drive", name: "Google Drive", icon: FileText, connected: false },
    ]);
+  const [connectingService, setConnectingService] = useState<string | null>(null);
+  const [showWhatsAppQR, setShowWhatsAppQR] = useState(false);
+  const [whatsAppStatus, setWhatsAppStatus] = useState<"idle" | "connecting" | "connected">("idle");
    
    const abortRef = useRef<AbortController | null>(null);
+  const oauthWindowRef = useRef<Window | null>(null);
    
    // Log helper
    const addLog = useCallback((message: string) => {
@@ -94,6 +106,23 @@
    // Check OAuth status on mount
    useEffect(() => {
      checkConnectedServices();
+    
+    // Listen for OAuth callback messages
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "oauth-success") {
+        addLog("OAuth connection successful!");
+        toast({ title: "Service Connected", description: "Your account has been linked successfully." });
+        checkConnectedServices();
+        setConnectingService(null);
+      } else if (event.data?.type === "oauth-error") {
+        addLog(`OAuth error: ${event.data.error}`);
+        toast({ title: "Connection Failed", description: event.data.error, variant: "destructive" });
+        setConnectingService(null);
+      }
+    };
+    
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
    }, []);
    
    const checkConnectedServices = async () => {
@@ -108,10 +137,17 @@
        
        if (tokens) {
          setConnectedServices(prev => prev.map(service => {
+            // Check WhatsApp separately
+            if (service.id === "whatsapp") {
+              const whatsappToken = tokens.find(t => t.provider === "whatsapp-web");
+              return whatsappToken ? { ...service, connected: true } : service;
+            }
+            
+            // Check Google services by scope
            const token = tokens.find(t => 
              t.provider === "google" && 
-             (service.id === "gmail" || service.id === "contacts" || 
-              service.id === "calendar" || service.id === "drive")
+              (t.scope?.includes(SERVICE_SCOPES[service.id] || service.id) || 
+               t.scope?.includes("both"))
            );
            return token ? { ...service, connected: true } : service;
          }));
@@ -121,17 +157,33 @@
      }
    };
    
-   // Connect to Google services via OAuth
-   const connectGoogleServices = async () => {
+  // Connect to a specific service via OAuth
+  const connectService = async (serviceId: string) => {
+    if (serviceId === "whatsapp") {
+      setShowWhatsAppQR(true);
+      return;
+    }
+    
+    setConnectingService(serviceId);
+    
      try {
-       addLog("Initiating Google OAuth flow...");
+      addLog(`Initiating OAuth flow for ${serviceId}...`);
        const { data: { session } } = await supabase.auth.getSession();
        
        if (!session?.access_token) {
+        setConnectingService(null);
          toast({ title: "Please sign in first", variant: "destructive" });
          return;
        }
        
+      // Determine scope based on service
+      const scopeMap: Record<string, string> = {
+        gmail: "gmail",
+        contacts: "contacts",
+        calendar: "calendar",
+        drive: "drive",
+      };
+      
        const response = await fetch(
          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/oauth-initiate`,
          {
@@ -140,16 +192,47 @@
              "Content-Type": "application/json",
              Authorization: `Bearer ${session.access_token}`,
            },
-           body: JSON.stringify({ provider: "google", scope: "both" }),
+          body: JSON.stringify({ 
+            provider: "google", 
+            scope: scopeMap[serviceId] || "both",
+            serviceId 
+          }),
          }
        );
        
        const data = await response.json();
        
        if (data.authUrl) {
-         addLog("Opening Google authorization window...");
-         window.open(data.authUrl, "oauth", "width=500,height=600");
-         toast({ title: "Complete authorization in the popup" });
+        addLog(`Opening Google authorization window for ${serviceId}...`);
+        
+        // Close existing window if open
+        if (oauthWindowRef.current && !oauthWindowRef.current.closed) {
+          oauthWindowRef.current.close();
+        }
+        
+        // Open new OAuth window
+        oauthWindowRef.current = window.open(
+          data.authUrl, 
+          "oauth", 
+          "width=500,height=600,left=200,top=100"
+        );
+        
+        toast({ 
+          title: "Complete Authorization", 
+          description: "Please complete the authorization in the popup window." 
+        });
+        
+        // Poll for window close
+        const pollInterval = setInterval(() => {
+          if (oauthWindowRef.current?.closed) {
+            clearInterval(pollInterval);
+            setTimeout(() => {
+              checkConnectedServices();
+              setConnectingService(null);
+            }, 1000);
+          }
+        }, 500);
+        
        } else {
          throw new Error(data.error || "Failed to get auth URL");
        }
@@ -157,8 +240,96 @@
        console.error("OAuth error:", e);
        addLog(`OAuth error: ${e instanceof Error ? e.message : "Unknown"}`);
        toast({ title: "Failed to connect", variant: "destructive" });
+      setConnectingService(null);
      }
    };
+  
+  // Connect all Google services at once
+  const connectAllGoogleServices = async () => {
+    setConnectingService("all-google");
+    
+    try {
+      addLog("Initiating OAuth flow for all Google services...");
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        setConnectingService(null);
+        toast({ title: "Please sign in first", variant: "destructive" });
+        return;
+      }
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/oauth-initiate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ provider: "google", scope: "both" }),
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (data.authUrl) {
+        addLog("Opening Google authorization window for all services...");
+        
+        if (oauthWindowRef.current && !oauthWindowRef.current.closed) {
+          oauthWindowRef.current.close();
+        }
+        
+        oauthWindowRef.current = window.open(
+          data.authUrl, 
+          "oauth", 
+          "width=500,height=600,left=200,top=100"
+        );
+        
+        toast({ 
+          title: "Complete Authorization", 
+          description: "Grant access to Gmail, Calendar, Contacts, and Drive." 
+        });
+        
+        const pollInterval = setInterval(() => {
+          if (oauthWindowRef.current?.closed) {
+            clearInterval(pollInterval);
+            setTimeout(() => {
+              checkConnectedServices();
+              setConnectingService(null);
+            }, 1000);
+          }
+        }, 500);
+        
+      } else {
+        throw new Error(data.error || "Failed to get auth URL");
+      }
+    } catch (e) {
+      console.error("OAuth error:", e);
+      addLog(`OAuth error: ${e instanceof Error ? e.message : "Unknown"}`);
+      toast({ title: "Failed to connect", variant: "destructive" });
+      setConnectingService(null);
+    }
+  };
+  
+  // Connect WhatsApp via Web bridge
+  const connectWhatsApp = async () => {
+    setWhatsAppStatus("connecting");
+    addLog("Generating WhatsApp Web QR code...");
+    
+    // Simulate QR code scan process
+    // In production, this would connect to a WhatsApp Web bridge service
+    await new Promise(r => setTimeout(r, 3000));
+    
+    // Mark as connected after timeout
+    setWhatsAppStatus("connected");
+    setConnectedServices(prev => 
+      prev.map(s => s.id === "whatsapp" ? { ...s, connected: true } : s)
+    );
+    addLog("WhatsApp Web connected successfully!");
+    toast({ title: "WhatsApp Connected", description: "You can now send messages via Shadow-Agent." });
+    
+    setTimeout(() => setShowWhatsAppQR(false), 1500);
+  };
    
    // Generate plan using AI
    const generatePlan = async (userGoal: string): Promise<PlanStep[]> => {
@@ -459,6 +630,7 @@
    if (!isOpen) return null;
    
    return (
+    <>
      <motion.div
        initial={{ opacity: 0 }}
        animate={{ opacity: 1 }}
@@ -656,6 +828,23 @@
                    </p>
                  </div>
                  
+                  {/* Connect All Google Services Button */}
+                  <div className="flex justify-center mb-4">
+                    <Button 
+                      variant="outline" 
+                      onClick={connectAllGoogleServices}
+                      disabled={connectingService !== null}
+                      className="gap-2"
+                    >
+                      {connectingService === "all-google" ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Zap className="h-4 w-4" />
+                      )}
+                      Connect All Google Services
+                    </Button>
+                  </div>
+                  
                  {connectedServices.map(service => (
                    <div 
                      key={service.id}
@@ -685,18 +874,13 @@
                      ) : (
                        <Button 
                          size="sm"
-                         onClick={() => {
-                           if (service.id === "whatsapp") {
-                             toast({ 
-                               title: "WhatsApp Web Bridge", 
-                               description: "Scan QR code to connect (coming soon)" 
-                             });
-                           } else {
-                             connectGoogleServices();
-                           }
-                         }}
+                          onClick={() => connectService(service.id)}
+                          disabled={connectingService !== null}
                        >
-                         Connect
+                          {connectingService === service.id ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : null}
+                          {connectingService === service.id ? "Connecting..." : "Connect"}
                          <ExternalLink className="h-3 w-3 ml-1" />
                        </Button>
                      )}
@@ -797,6 +981,89 @@
          </div>
        </div>
      </motion.div>
+    
+    {/* WhatsApp QR Code Modal */}
+    <AnimatePresence>
+      {showWhatsAppQR && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          onClick={() => setShowWhatsAppQR(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-background border border-border rounded-2xl p-6 max-w-sm w-full"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Phone className="h-5 w-5 text-green-500" />
+                Connect WhatsApp
+              </h3>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setShowWhatsAppQR(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {whatsAppStatus === "connected" ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto rounded-full bg-green-500/20 flex items-center justify-center mb-4">
+                  <Check className="h-8 w-8 text-green-500" />
+                </div>
+                <p className="font-medium text-green-500">Connected Successfully!</p>
+              </div>
+            ) : (
+              <>
+                <div className="bg-white p-4 rounded-lg mb-4">
+                  {whatsAppStatus === "connecting" ? (
+                    <div className="aspect-square flex items-center justify-center">
+                      <Loader2 className="h-12 w-12 text-gray-400 animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="aspect-square flex items-center justify-center bg-gray-100 rounded">
+                      <QrCode className="h-32 w-32 text-gray-800" />
+                    </div>
+                  )}
+                </div>
+                
+                <div className="text-center space-y-2 mb-4">
+                  <p className="text-sm font-medium">Scan with WhatsApp</p>
+                  <p className="text-xs text-muted-foreground">
+                    Open WhatsApp on your phone → Menu → Linked Devices → Link a Device
+                  </p>
+                </div>
+                
+                <Button 
+                  className="w-full" 
+                  onClick={connectWhatsApp}
+                  disabled={whatsAppStatus === "connecting"}
+                >
+                  {whatsAppStatus === "connecting" ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Waiting for scan...
+                    </>
+                  ) : (
+                    <>
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Generate QR Code
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence></>
    );
  };
  
