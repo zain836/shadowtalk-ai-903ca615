@@ -881,219 +881,214 @@
    // ==========================================================================
    // MAIN AGENT UI
    // ==========================================================================
-   return (
-     <div className="space-y-4 p-4">
-       <div className="flex items-center justify-between">
-         <div className="flex items-center gap-2">
-           <Bot className="h-6 w-6 text-primary" />
-           <div>
-             <h2 className="text-lg font-bold bg-gradient-to-r from-primary to-violet-500 bg-clip-text text-transparent">
-               ShadowAgent
-             </h2>
-             <p className="text-xs text-muted-foreground">Sovereign Compliance Officer</p>
-           </div>
-         </div>
-         <Badge variant="secondary" className="gap-1 bg-gradient-to-r from-amber-500/20 to-orange-500/20">
-           <Crown className="h-3 w-3 text-amber-500" /> ELITE
-         </Badge>
-       </div>
- 
-       <Card className="border-amber-500/30 bg-amber-500/5">
-         <CardContent className="pt-4 pb-3">
-           <div className="flex items-center justify-between">
-             <div className="flex items-center gap-2">
-               <Shield className="h-4 w-4 text-amber-500" />
-               <div>
-                 <p className="text-sm font-medium">Human-in-the-Loop</p>
-                 <p className="text-xs text-muted-foreground">Approve risky actions</p>
-               </div>
-             </div>
-             <Switch checked={humanInLoop} onCheckedChange={setHumanInLoop} />
-           </div>
-         </CardContent>
-       </Card>
- 
-       <Card className="border-green-500/30 bg-gradient-to-r from-green-900/10 to-emerald-900/10 cursor-pointer hover:border-green-400/50 transition-colors" onClick={() => setComplianceMode('fbr')}>
-         <CardContent className="pt-4 pb-3">
-           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-               <Flag className="h-5 w-5 text-white" />
-             </div>
-             <div className="flex-1">
-               <p className="text-sm font-medium flex items-center gap-2">
-                 🇵🇰 Pakistani Business Protocol
-                 <Badge variant="secondary" className="text-[10px] bg-green-500/20 text-green-400">SOVEREIGN</Badge>
-               </p>
-               <p className="text-xs text-muted-foreground">FBR Tax • SECP Filing • Audit Guard</p>
-             </div>
-             <ChevronRight className="h-4 w-4 text-muted-foreground" />
-           </div>
-         </CardContent>
-       </Card>
- 
-      <Card className="border-purple-500/30 bg-gradient-to-r from-purple-900/10 to-indigo-900/10 cursor-pointer hover:border-purple-400/50 transition-colors" onClick={() => { setGlobalMode('zero_knowledge'); setComplianceMode('global'); }}>
-        <CardContent className="pt-4 pb-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-              <Server className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium flex items-center gap-2">
-                🌍 Global Edge Architect
-                <Badge variant="secondary" className="text-[10px] bg-purple-500/20 text-purple-400">AIR-GAPPED</Badge>
-              </p>
-              <p className="text-xs text-muted-foreground">Zero-Knowledge • Green AI • Cross-Border</p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
 
-       <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20">
-         <CardHeader className="pb-2">
-           <CardTitle className="text-sm flex items-center gap-2"><Cog className="h-4 w-4" /> Agent Skills</CardTitle>
-         </CardHeader>
-         <CardContent>
-           <div className="grid grid-cols-4 gap-2">
-             {skills.slice(0, 8).map((s) => (
-               <div key={s.id} className="flex flex-col items-center p-2 rounded-lg bg-primary/10 border border-primary/30" title={s.description}>
-                 <div className="text-primary">{s.icon}</div>
-                 <span className="text-[10px] font-medium mt-1">{s.name}</span>
-               </div>
-             ))}
+  // Quick Templates for the grid
+  const QUICK_TEMPLATES = [
+    { id: 'research', label: 'Research & Report', icon: <Globe className="h-5 w-5" />, color: 'text-blue-500', task: 'Research the latest developments and create a summary report' },
+    { id: 'email', label: 'Email Draft', icon: <Briefcase className="h-5 w-5" />, color: 'text-muted-foreground', task: 'Draft a professional email' },
+    { id: 'schedule', label: 'Schedule Planning', icon: <Clock className="h-5 w-5" />, color: 'text-muted-foreground', task: 'Create a schedule and planning for my project' },
+    { id: 'compare', label: 'Product Comparison', icon: <Target className="h-5 w-5" />, color: 'text-primary', task: 'Compare products and give recommendations' },
+    { id: 'travel', label: 'Travel Planning', icon: <Plane className="h-5 w-5" />, color: 'text-purple-500', task: 'Plan a travel itinerary' },
+    { id: 'code', label: 'Code Generation', icon: <Code className="h-5 w-5" />, color: 'text-muted-foreground', task: 'Generate code for my project' },
+    { id: 'data', label: 'Data Analysis', icon: <FileSearch className="h-5 w-5" />, color: 'text-muted-foreground', task: 'Analyze data and provide insights' },
+    { id: 'document', label: 'Document Creation', icon: <FileText className="h-5 w-5" />, color: 'text-muted-foreground', task: 'Create a professional document' },
+  ];
+
+   return (
+    <div className="flex h-full relative">
+      {/* Main Panel */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/20 to-violet-500/20 flex items-center justify-center">
+              <Bot className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">AI Agent</h2>
+              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[10px] px-2">
+                Agentic Mode
+              </Badge>
+            </div>
            </div>
-           <div className="mt-2 pt-2 border-t border-border/50">
-             <p className="text-[10px] text-muted-foreground mb-2">🇵🇰 Pakistan Compliance</p>
-             <div className="grid grid-cols-3 gap-2">
-               {skills.slice(8, 11).map((s) => (
-                 <div key={s.id} className="flex flex-col items-center p-2 rounded-lg bg-green-500/10 border border-green-500/30" title={s.description}>
-                   <div className="text-green-500">{s.icon}</div>
-                   <span className="text-[10px] font-medium mt-1">{s.name}</span>
+          <p className="text-xs text-muted-foreground">Autonomous task execution with multi-step reasoning</p>
+         </div>
+ 
+        {/* Content */}
+        <ScrollArea className="flex-1 p-5">
+          <div className="space-y-6">
+            {/* Task Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">What would you like me to do?</label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g., Research the latest AI developments and create a summary report"
+                  value={taskInput}
+                  onChange={(e) => setTaskInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && executeTask()}
+                  disabled={isExecuting}
+                  className="flex-1 h-11"
+                />
+                <Button
+                  onClick={executeTask}
+                  disabled={isExecuting || !taskInput.trim()}
+                  className="h-11 px-6 gap-2 bg-primary hover:bg-primary/90"
+                >
+                  {isExecuting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                  Start
+                </Button>
+              </div>
+            </div>
+
+            {/* Quick Templates */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium">Quick Templates</label>
+              <div className="grid grid-cols-4 gap-3">
+                {QUICK_TEMPLATES.map((template) => (
+                  <button
+                    key={template.id}
+                    onClick={() => setTaskInput(template.task)}
+                    disabled={isExecuting}
+                    className="flex flex-col items-start gap-2 p-4 rounded-xl bg-card border border-border/50 hover:border-primary/50 hover:bg-muted/50 transition-all text-left group disabled:opacity-50"
+                  >
+                    <div className={template.color}>{template.icon}</div>
+                    <span className="text-sm font-medium">{template.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Protocol Cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setComplianceMode('fbr')}
+                className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 hover:border-green-400/50 transition-all text-left"
+              >
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shrink-0">
+                  <Flag className="h-5 w-5 text-white" />
                  </div>
-               ))}
+                <div>
+                  <p className="text-sm font-medium">🇵🇰 Pakistan Protocol</p>
+                  <p className="text-xs text-muted-foreground">FBR • SECP • Audit</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => { setGlobalMode('zero_knowledge'); setComplianceMode('global'); }}
+                className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/30 hover:border-purple-400/50 transition-all text-left"
+              >
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0">
+                  <Server className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">🌍 Edge Architect</p>
+                  <p className="text-xs text-muted-foreground">Zero-Knowledge • Green AI</p>
+                </div>
+              </button>
              </div>
-           </div>
-           <div className="mt-2 pt-2 border-t border-border/50">
-             <p className="text-[10px] text-muted-foreground mb-2">🌍 Global Edge Architect</p>
-             <div className="grid grid-cols-3 gap-2">
-               {skills.slice(11).map((s) => (
-                 <div key={s.id} className="flex flex-col items-center p-2 rounded-lg bg-purple-500/10 border border-purple-500/30" title={s.description}>
-                   <div className="text-purple-500">{s.icon}</div>
-                   <span className="text-[10px] font-medium mt-1">{s.name}</span>
+
+            {/* Auto-approve toggle */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-card border border-border/50">
+              <div className="flex items-center gap-3">
+                <Cog className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Auto-approve actions</p>
+                  <p className="text-xs text-muted-foreground">Skip confirmation prompts for each step</p>
                  </div>
-               ))}
+              </div>
+              <Switch checked={!humanInLoop} onCheckedChange={(v) => setHumanInLoop(!v)} />
              </div>
-           </div>
-         </CardContent>
-       </Card>
  
-       <Card className="border-primary/30">
-         <CardHeader className="pb-2">
-           <CardTitle className="text-sm flex items-center gap-2"><Terminal className="h-4 w-4 text-primary" /> Command Center</CardTitle>
-         </CardHeader>
-         <CardContent className="space-y-3">
-           <Textarea placeholder="Describe your task..." value={taskInput} onChange={(e) => setTaskInput(e.target.value)} 
-             className="min-h-[80px] resize-none" disabled={isExecuting} />
-           <div className="flex flex-wrap gap-1">
-             {EXAMPLE_TASKS.slice(0, 3).map((t, i) => (
-               <Button key={i} variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={() => setTaskInput(t)} disabled={isExecuting}>
-                 <ChevronRight className="h-3 w-3 mr-1" />{t.slice(0, 35)}...
-               </Button>
-             ))}
-           </div>
-           <div className="flex gap-2">
-             <Button onClick={executeTask} disabled={isExecuting || !taskInput.trim()} 
-               className="flex-1 gap-2 bg-gradient-to-r from-primary to-violet-500">
-               {isExecuting ? <><Loader2 className="h-4 w-4 animate-spin" /> Working...</> : <><Play className="h-4 w-4" /> Execute</>}
-             </Button>
-             <Button variant="outline" size="icon" onClick={() => setShowHistory(!showHistory)}><History className="h-4 w-4" /></Button>
-           </div>
-         </CardContent>
-       </Card>
- 
-       {currentTask && (
-         <Card className={`border-2 ${currentTask.status === 'running' ? 'border-primary/50' : currentTask.status === 'awaiting_approval' ? 'border-amber-500/50' : currentTask.status === 'completed' ? 'border-green-500/50' : 'border-border'}`}>
-           <CardHeader className="pb-2">
-             <div className="flex items-center justify-between">
-               <div className="flex items-center gap-2">{getTaskIcon(currentTask.type)}<CardTitle className="text-sm">Current Task</CardTitle></div>
-               <Badge variant="secondary">{currentTask.status}</Badge>
-             </div>
-           </CardHeader>
-           <CardContent className="space-y-3">
-             <p className="text-sm text-muted-foreground">{currentTask.description}</p>
-             {currentTask.status === 'awaiting_approval' && (
-               <Alert className="border-amber-500/50 bg-amber-500/10">
-                 <Shield className="h-4 w-4 text-amber-500" />
-                 <AlertDescription className="text-sm">
-                   <strong>Approval required</strong> - {currentTask.riskLevel} risk
-                   <div className="flex gap-2 mt-2">
-                     <Button size="sm" onClick={approveTask} className="bg-amber-500">Approve</Button>
-                     <Button size="sm" variant="outline" onClick={() => setCurrentTask(null)}>Cancel</Button>
-                   </div>
-                 </AlertDescription>
-               </Alert>
-             )}
-             {currentTask.subtasks && (
-               <div className="space-y-2">
-                 <Progress value={(currentTask.subtasks.filter(s => s.status === 'completed').length / currentTask.subtasks.length) * 100} className="h-2" />
-                 <ScrollArea className="h-24">
-                   {currentTask.subtasks.map((s) => (
-                     <div key={s.id} className={`flex items-center gap-2 text-xs p-1 rounded ${s.status === 'completed' ? 'bg-green-500/10' : 'bg-muted/50'}`}>
-                       {s.status === 'running' && <Loader2 className="h-3 w-3 animate-spin" />}
-                       {s.status === 'completed' && <CheckCircle2 className="h-3 w-3 text-green-500" />}
-                       {s.status === 'pending' && <Clock className="h-3 w-3 text-muted-foreground" />}
-                       <span>{s.description}</span>
-                     </div>
-                   ))}
-                 </ScrollArea>
-               </div>
-             )}
-             {currentTask.result && <div className="p-3 bg-muted/50 rounded text-sm">{currentTask.result}</div>}
-           </CardContent>
-         </Card>
-       )}
- 
-       {agentMemory.length > 0 && (
-         <Card className="bg-card/50">
-           <CardHeader className="pb-2">
-             <CardTitle className="text-sm flex items-center gap-2"><Database className="h-4 w-4" /> Memory</CardTitle>
-           </CardHeader>
-           <CardContent>
-             <ScrollArea className="h-20">
-               {agentMemory.slice(0, 3).map((m) => (
-                 <div key={m.id} className="flex items-start gap-2 text-xs p-1">
-                   <Brain className="h-3 w-3 text-blue-500 mt-0.5" />
-                   <span className="text-muted-foreground truncate">{m.content}</span>
-                 </div>
-               ))}
-             </ScrollArea>
-           </CardContent>
-         </Card>
-       )}
- 
-       {showHistory && taskHistory.length > 0 && (
-         <Card>
-           <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><History className="h-4 w-4" /> History</CardTitle></CardHeader>
-           <CardContent>
-             <ScrollArea className="h-32">
-               {taskHistory.map((t) => (
-                 <div key={t.id} className="flex items-center gap-2 p-2 rounded bg-muted/50 cursor-pointer hover:bg-muted mb-1" onClick={() => setTaskInput(t.description)}>
-                   {getTaskIcon(t.type)}
-                   <span className="text-xs truncate flex-1">{t.description}</span>
-                   <Badge variant="outline" className="text-[10px]">{t.status}</Badge>
-                 </div>
-               ))}
-             </ScrollArea>
-           </CardContent>
-         </Card>
-       )}
- 
-       <Alert className="bg-primary/5 border-primary/20">
-         <Bot className="h-4 w-4 text-primary" />
-         <AlertDescription className="text-xs">
-           <strong>ShadowAgent</strong> - Hybrid: Brain (LLM), Hands (Executor), 🇵🇰 Bunker (Pakistan), 🌍 Edge (Global)
-         </AlertDescription>
-       </Alert>
+            {/* Current Task */}
+            {currentTask && (
+              <Card className={`border-2 ${currentTask.status === 'running' ? 'border-primary/50' : currentTask.status === 'awaiting_approval' ? 'border-amber-500/50' : currentTask.status === 'completed' ? 'border-green-500/50' : 'border-border'}`}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {getTaskIcon(currentTask.type)}
+                      <CardTitle className="text-sm">Current Task</CardTitle>
+                    </div>
+                    <Badge variant="secondary">{currentTask.status}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">{currentTask.description}</p>
+                  {currentTask.status === 'awaiting_approval' && (
+                    <Alert className="border-amber-500/50 bg-amber-500/10">
+                      <Shield className="h-4 w-4 text-amber-500" />
+                      <AlertDescription className="text-sm">
+                        <strong>Approval required</strong> - {currentTask.riskLevel} risk
+                        <div className="flex gap-2 mt-2">
+                          <Button size="sm" onClick={approveTask} className="bg-amber-500">Approve</Button>
+                          <Button size="sm" variant="outline" onClick={() => setCurrentTask(null)}>Cancel</Button>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {currentTask.subtasks && (
+                    <div className="space-y-2">
+                      <Progress value={(currentTask.subtasks.filter(s => s.status === 'completed').length / currentTask.subtasks.length) * 100} className="h-2" />
+                      <ScrollArea className="h-24">
+                        {currentTask.subtasks.map((s) => (
+                          <div key={s.id} className={`flex items-center gap-2 text-xs p-1 rounded ${s.status === 'completed' ? 'bg-green-500/10' : 'bg-muted/50'}`}>
+                            {s.status === 'running' && <Loader2 className="h-3 w-3 animate-spin" />}
+                            {s.status === 'completed' && <CheckCircle2 className="h-3 w-3 text-green-500" />}
+                            {s.status === 'pending' && <Clock className="h-3 w-3 text-muted-foreground" />}
+                            <span>{s.description}</span>
+                          </div>
+                        ))}
+                      </ScrollArea>
+                    </div>
+                  )}
+                  {currentTask.result && <div className="p-3 bg-muted/50 rounded text-sm">{currentTask.result}</div>}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+
+      {/* Right Panel - Agent Logs */}
+      {showHistory && (
+        <div className="w-72 border-l border-border/50 flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+            <div className="flex items-center gap-2">
+              <Terminal className="h-4 w-4" />
+              <span className="text-sm font-medium">Agent Logs</span>
+            </div>
+            <Switch checked={showHistory} onCheckedChange={setShowHistory} />
+          </div>
+          <ScrollArea className="flex-1 p-3">
+            {taskHistory.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-8">No logs yet</p>
+            ) : (
+              <div className="space-y-2">
+                {taskHistory.map((task) => (
+                  <div key={task.id} className="p-2 rounded-lg bg-muted/50 text-xs cursor-pointer hover:bg-muted" onClick={() => setTaskInput(task.description)}>
+                    <div className="flex items-center gap-2 mb-1">
+                      {getTaskIcon(task.type)}
+                      <Badge variant="secondary" className="text-[10px]">{task.status}</Badge>
+                    </div>
+                    <p className="text-muted-foreground line-clamp-2">{task.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+      )}
+
+      {/* Floating Logs Toggle */}
+      {!showHistory && (
+        <button
+          onClick={() => setShowHistory(true)}
+          className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border/50 hover:bg-muted/50 transition-colors"
+        >
+          <Terminal className="h-4 w-4" />
+          <span className="text-sm">Agent Logs</span>
+          <Switch checked={showHistory} onCheckedChange={setShowHistory} className="scale-75" />
+        </button>
+      )}
      </div>
    );
  };
