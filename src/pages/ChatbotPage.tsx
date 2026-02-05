@@ -38,6 +38,8 @@ import { WelcomeDialog } from "@/components/chat/WelcomeDialog";
 import { MultiModelOrchestrator } from "@/components/chat/MultiModelOrchestrator";
 import { APIMarketplace } from "@/components/chat/APIMarketplace";
  import { SignInPrompt } from "@/components/chat/SignInPrompt";
+import { CameraCapture } from "@/components/chat/CameraCapture";
+import { DataOrganizer } from "@/components/chat/DataOrganizer";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -142,6 +144,8 @@ const ChatbotPage = () => {
   const [showAPIMarketplace, setShowAPIMarketplace] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
    const [signInPromptReason, setSignInPromptReason] = useState<'chats' | 'images' | 'deepResearch' | 'general'>('general');
+  const [showCameraCapture, setShowCameraCapture] = useState(false);
+  const [showDataOrganizer, setShowDataOrganizer] = useState(false);
   
   
   // Check if welcome dialog should be shown (after boot screen)
@@ -1063,6 +1067,20 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
              onModeChange={(mode) => { 
                setChatMode(mode); 
                trackModeSwitch(mode);
+               // Open dedicated UI for advanced modes
+               if (mode === 'camera') {
+                 setShowCameraCapture(true);
+               } else if (mode === 'organize') {
+                 setShowDataOrganizer(true);
+               } else if (mode === 'research' || mode === 'academic') {
+                 setShowDeepResearch(true);
+               } else if (mode === 'math') {
+                 // Math mode uses chat with LaTeX rendering - no separate UI
+               } else if (mode === 'ppag') {
+                 // Will be handled by the eco actions in chat
+               } else if (mode === 'hsca') {
+                 // Security audit mode - could open dedicated panel if needed
+               }
              }}
             personality={personality}
           />
@@ -1296,6 +1314,55 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
          usedCount={guestUsage.usage[signInPromptReason === 'general' ? 'chats' : signInPromptReason]}
          limitCount={GUEST_LIMITS[signInPromptReason === 'general' ? 'chats' : signInPromptReason]}
        />
+
+      {/* Camera Capture - Visual Analysis */}
+      <CameraCapture
+        isOpen={showCameraCapture}
+        onClose={() => setShowCameraCapture(false)}
+        onCapture={(imageData, question) => {
+          // Add the image and question to chat
+          const userMsg: Message = {
+            id: crypto.randomUUID(),
+            type: 'user',
+            content: question,
+            timestamp: new Date(),
+            attachment: {
+              type: 'image',
+              data: imageData,
+              name: 'camera-capture.jpg',
+              mimeType: 'image/jpeg'
+            }
+          };
+          setMessages(prev => [...prev, userMsg]);
+          setSelectedFile({
+            type: 'image',
+            data: imageData,
+            name: 'camera-capture.jpg',
+            mimeType: 'image/jpeg'
+          });
+          setMessage(question);
+          // Trigger send after a short delay
+          setTimeout(() => {
+            const form = document.querySelector('form');
+            if (form) form.requestSubmit();
+          }, 100);
+        }}
+      />
+
+      {/* Data Organizer - Structure Data */}
+      <DataOrganizer
+        isOpen={showDataOrganizer}
+        onClose={() => setShowDataOrganizer(false)}
+        onOrganize={(input, output, format) => {
+          // Add organized data to chat
+          setMessages(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'ai',
+            content: `📊 **Data Organized** (${format.toUpperCase()})\n\n\`\`\`${format === 'json' ? 'json' : 'markdown'}\n${output}\n\`\`\``,
+            timestamp: new Date()
+          }]);
+        }}
+      />
      </div>
   );
 };
