@@ -19,7 +19,8 @@
    | 'calculator'
    | 'web_search'
    | 'document_generator'
-   | 'daily_planner';
+  | 'daily_planner'
+  | 'wordle_game';
  
  interface ToolDetectionResult {
    tool: ToolType | null;
@@ -267,6 +268,20 @@
     extractParams: (msg) => {
       return { prompt: msg };
     }
+  },
+  // Wordle Game - offline word puzzle
+  {
+    tool: 'wordle_game',
+    patterns: [
+      /\b(play|start|open|launch)\s+(a\s+)?wordle/i,
+      /\bwordle\s*(game|bot|puzzle)?/i,
+      /\bword\s*guess(ing)?\s*(game|puzzle)/i,
+      /\blet'?s?\s+play\s+wordle/i,
+      /\bi\s+want\s+to\s+play\s+wordle/i,
+    ],
+    priority: 8,
+    autoExecute: true,
+    extractParams: () => ({})
   },
  ];
  
