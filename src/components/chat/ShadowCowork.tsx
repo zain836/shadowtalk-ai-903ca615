@@ -12,6 +12,7 @@ import {
   PanelLeftClose, PanelLeft, Send, Braces, Hash, FileText,
   FolderTree, Undo2, Redo2, Command, ArrowRight
 } from "lucide-react";
+import { Github } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,8 @@ import { cn } from "@/lib/utils";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import Editor from "@monaco-editor/react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ProjectImportDialog } from "./cowork/ProjectImportDialog";
+import { AutonomousAgent } from "./cowork/AutonomousAgent";
 
 interface ShadowCoworkProps {
   isOpen: boolean;
@@ -231,6 +234,8 @@ export const ShadowCowork = ({ isOpen, onClose, onInsertToChat }: ShadowCoworkPr
   const [newProjectName, setNewProjectName] = useState("");
   const [commitMessage, setCommitMessage] = useState("");
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showAgent, setShowAgent] = useState(true);
   
   const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
   const files = activeProject?.files || [];
@@ -293,6 +298,33 @@ export const ShadowCowork = ({ isOpen, onClose, onInsertToChat }: ShadowCoworkPr
   // Undo/Redo stack
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
+
+  // Import project handler
+  const handleImportProject = useCallback((importedFiles: FileNode[], projectName: string, source: 'github' | 'local') => {
+    const newProject: Project = {
+      id: crypto.randomUUID(),
+      name: projectName,
+      description: `Imported from ${source}`,
+      createdAt: new Date(),
+      files: importedFiles,
+      commits: [{ 
+        id: "import", 
+        message: `Imported from ${source}`, 
+        timestamp: new Date(), 
+        files: [], 
+        snapshot: [] 
+      }],
+      currentBranch: "main",
+      branches: ["main"]
+    };
+    
+    setProjects(prev => [...prev, newProject]);
+    setActiveProjectId(newProject.id);
+    toast({ 
+      title: "✓ Project imported", 
+      description: `${projectName} is now ready` 
+    });
+  }, [toast]);
 
   // Auto-scroll terminal
   useEffect(() => {
@@ -1011,10 +1043,31 @@ export const ShadowCowork = ({ isOpen, onClose, onInsertToChat }: ShadowCoworkPr
               <Badge variant="secondary" className="text-xs">
                 {activeProject?.name || "Project"}
               </Badge>
+              
+              {/* Import Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowImportDialog(true)}
+                className="h-7 gap-1.5 text-xs"
+              >
+                <Github className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">Import</span>
+              </Button>
             </div>
             
             <div className="flex items-center gap-2">
               {/* Quick actions */}
+              <Button
+                variant={showAgent ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setShowAgent(prev => !prev)}
+                className="h-7 gap-1.5 text-xs"
+              >
+                <Bot className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">Agent</span>
+              </Button>
+              
               <Button
                 variant="ghost"
                 size="sm"
@@ -1056,7 +1109,8 @@ export const ShadowCowork = ({ isOpen, onClose, onInsertToChat }: ShadowCoworkPr
           </div>
           
           {/* Main Content */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden flex">
+            <div className="flex-1 overflow-hidden">
             <ResizablePanelGroup direction="horizontal">
               {/* Sidebar */}
               {showSidebar && (
@@ -1461,8 +1515,71 @@ export const ShadowCowork = ({ isOpen, onClose, onInsertToChat }: ShadowCoworkPr
                 </ResizablePanelGroup>
               </ResizablePanel>
             </ResizablePanelGroup>
+            </div>
+            
+            {/* Agent Panel - Right Side */}
+            {showAgent && (
+              <div className="w-80 border-l border-border shrink-0 h-full">
+                <AutonomousAgent
+                  files={files}
+                  selectedFile={selectedFile}
+                  fileContent={fileContent}
+                  onCreateFile={(folderPath, fileName, content) => {
+                    createNode(folderPath, fileName, "file");
+                    // Find and update the new file's content
+                    setTimeout(() => {
+                      setFiles(prev => {
+                        const updateContent = (nodes: FileNode[]): FileNode[] => {
+                          return nodes.map(node => {
+                            const targetPath = `${folderPath}/${fileName}`;
+                            if (node.path === targetPath) {
+                              return { ...node, content };
+                            }
+                            if (node.children) {
+                              return { ...node, children: updateContent(node.children) };
+                            }
+                            return node;
+                          });
+                        };
+                        return updateContent(prev);
+                      });
+                    }, 100);
+                  }}
+                  onUpdateFile={(path, content) => {
+                    setFiles(prev => {
+                      const updateContent = (nodes: FileNode[]): FileNode[] => {
+                        return nodes.map(node => {
+                          if (node.path === path) {
+                            return { ...node, content };
+                          }
+                          if (node.children) {
+                            return { ...node, children: updateContent(node.children) };
+                          }
+                          return node;
+                        });
+                      };
+                      return updateContent(prev);
+                    });
+                    if (selectedFile?.path === path) {
+                      setFileContent(content);
+                      setSelectedFile(prev => prev ? { ...prev, content } : null);
+                    }
+                  }}
+                  onDeleteFile={(path) => deleteNode(path)}
+                  onTerminalCommand={(command) => executeCommand(command)}
+                  projectName={activeProject?.name || "Project"}
+                />
+              </div>
+            )}
           </div>
         </div>
+        
+        {/* Import Dialog */}
+        <ProjectImportDialog
+          isOpen={showImportDialog}
+          onClose={() => setShowImportDialog(false)}
+          onImport={handleImportProject}
+        />
       </motion.div>
     </AnimatePresence>
   );
