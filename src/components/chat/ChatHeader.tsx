@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2, FileEdit, PenLine, Search, Image, Play, Eye, Wand2, Sparkles, Globe, Terminal, Mic, WifiOff, Compass } from "lucide-react";
+import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, MessageSquare, BarChart3, Workflow, Crown, Star, Shield, Zap, Brain, Palette, Users, MoreVertical, Menu, Key, Activity, Share2, FileEdit, PenLine, Search, Image, Play, Eye, Wand2, Sparkles, Globe, Terminal, Mic, WifiOff, Compass, Flag, Calculator } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +81,7 @@ interface ChatHeaderProps {
   onOpenShadowTalkLive: () => void;
    onOpenOfflineTools?: () => void; // Optional - offline now handled automatically
   onOpenBrowser: () => void;
+  onOpenPakistanCompliance?: () => void;
   aiProvider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
   maxChats: string;
@@ -155,6 +156,7 @@ export const ChatHeader = ({
   onOpenShadowTalkLive,
   onOpenOfflineTools,
   onOpenBrowser,
+  onOpenPakistanCompliance,
   aiProvider,
   onProviderChange,
   maxChats,
@@ -221,6 +223,13 @@ export const ChatHeader = ({
           label="ShadowBrowser (B)"
           onClick={() => handleMenuAction(onOpenBrowser)}
         />
+        {onOpenPakistanCompliance && (
+          <MenuItem
+            icon={<Flag className="h-5 w-5 text-green-500" />}
+            label="🇵🇰 FBR/SECP Helper (P)"
+            onClick={() => handleMenuAction(onOpenPakistanCompliance)}
+          />
+        )}
       </div>
 
       {/* Canvas */}
@@ -478,6 +487,13 @@ export const ChatHeader = ({
                 ShadowBrowser
                 <span className="ml-auto text-xs text-muted-foreground">⇧B</span>
               </DropdownMenuItem>
+              {onOpenPakistanCompliance && (
+                <DropdownMenuItem onClick={onOpenPakistanCompliance}>
+                  <Flag className="h-4 w-4 mr-2 text-green-500" />
+                  🇵🇰 FBR/SECP Helper
+                  <span className="ml-auto text-xs text-muted-foreground">⇧P</span>
+                </DropdownMenuItem>
+              )}
 
               <DropdownMenuSeparator />
 

@@ -30,7 +30,14 @@ import {
   Cog,
   Eye,
   MousePointer,
-  Workflow
+  Workflow,
+  Calculator,
+  Building2,
+  FileText,
+  Flag,
+  Landmark,
+  Scale,
+  Receipt
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthProvider';
@@ -47,7 +54,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface AgentTask {
   id: string;
-  type: 'analyze' | 'research' | 'execute' | 'code' | 'data' | 'browse' | 'automate';
+  type: 'analyze' | 'research' | 'execute' | 'code' | 'data' | 'browse' | 'automate' | 'fbr_tax' | 'secp_filing' | 'audit_guard';
   description: string;
   status: 'pending' | 'planning' | 'running' | 'awaiting_approval' | 'completed' | 'failed';
   result?: string;
@@ -100,6 +107,9 @@ const AGENT_SKILLS: AgentSkill[] = [
   { id: 'browse', name: 'Browser Control', description: 'Autonomous web browsing', icon: <MousePointer className="h-4 w-4" />, enabled: true },
   { id: 'automate', name: 'Task Automation', description: 'Script execution & scheduling', icon: <Workflow className="h-4 w-4" />, enabled: true },
   { id: 'observe', name: 'Observation', description: 'Monitor & react to changes', icon: <Eye className="h-4 w-4" />, enabled: true },
+  { id: 'fbr_helper', name: 'FBR Helper', description: '🇵🇰 Tax calculation & Challan generation', icon: <Calculator className="h-4 w-4" />, enabled: true },
+  { id: 'secp_drafter', name: 'SECP Drafter', description: '🇵🇰 Company forms & resolutions', icon: <Building2 className="h-4 w-4" />, enabled: true },
+  { id: 'audit_guard', name: 'Audit Guard', description: '🇵🇰 Pre-filing risk assessment', icon: <Shield className="h-4 w-4" />, enabled: true },
 ];
 
 const EXAMPLE_TASKS = [
@@ -107,8 +117,9 @@ const EXAMPLE_TASKS = [
   "Analyze this codebase for security vulnerabilities and suggest fixes",
   "Build a marketing strategy for launching a SaaS product",
   "Create a comprehensive business plan with financial projections",
-  "Monitor competitor pricing pages and alert me to changes",
-  "Scrape job postings matching my skills and create a summary report",
+  "🇵🇰 Calculate my FBR tax liability for income of 50 lac rupees",
+  "🇵🇰 Generate SECP Form A for my private limited company",
+  "🇵🇰 Audit my expenses for potential FBR notice triggers",
 ];
 
 const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({ 
@@ -202,6 +213,30 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
           { id: crypto.randomUUID(), description: '⚙️ Configure triggers', status: 'pending', tool: 'trigger_setup' },
           { id: crypto.randomUUID(), description: '🔄 Execute automation', status: 'pending', tool: 'script_execution' },
           { id: crypto.randomUUID(), description: '📊 Monitor & report', status: 'pending', tool: 'monitoring' }
+        );
+        break;
+      case 'fbr_tax':
+        subtasks.push(
+          { id: crypto.randomUUID(), description: '📄 Parse income data locally', status: 'pending', tool: 'bunker_parser' },
+          { id: crypto.randomUUID(), description: '💰 Apply FBR tax slabs 2024', status: 'pending', tool: 'fbr_calculator' },
+          { id: crypto.randomUUID(), description: '🧮 Calculate deductions & credits', status: 'pending', tool: 'tax_optimizer' },
+          { id: crypto.randomUUID(), description: '📝 Generate Challan CPR form', status: 'pending', tool: 'challan_generator' }
+        );
+        break;
+      case 'secp_filing':
+        subtasks.push(
+          { id: crypto.randomUUID(), description: '🏢 Extract company details', status: 'pending', tool: 'bunker_parser' },
+          { id: crypto.randomUUID(), description: '📋 Draft Board Resolution', status: 'pending', tool: 'secp_drafter' },
+          { id: crypto.randomUUID(), description: '📑 Generate Form A/Form 29', status: 'pending', tool: 'form_generator' },
+          { id: crypto.randomUUID(), description: '✅ Validate SECP compliance', status: 'pending', tool: 'compliance_checker' }
+        );
+        break;
+      case 'audit_guard':
+        subtasks.push(
+          { id: crypto.randomUUID(), description: '📊 Analyze expense categories', status: 'pending', tool: 'bunker_analyzer' },
+          { id: crypto.randomUUID(), description: '🔍 Scan for FBR red flags', status: 'pending', tool: 'audit_scanner' },
+          { id: crypto.randomUUID(), description: '⚖️ Check Section 21/153 compliance', status: 'pending', tool: 'regulation_matcher' },
+          { id: crypto.randomUUID(), description: '📝 Generate risk report', status: 'pending', tool: 'risk_reporter' }
         );
         break;
       default:
@@ -334,6 +369,11 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
 
   const detectTaskType = (task: string): AgentTask['type'] => {
     const lower = task.toLowerCase();
+    // Pakistan Compliance Detection
+    if (lower.includes('fbr') || lower.includes('tax') || lower.includes('challan') || lower.includes('income tax') || lower.includes('ntn')) return 'fbr_tax';
+    if (lower.includes('secp') || lower.includes('company') || lower.includes('form a') || lower.includes('form 29') || lower.includes('board resolution') || lower.includes('annual return')) return 'secp_filing';
+    if (lower.includes('audit') || lower.includes('risk') || lower.includes('notice') || lower.includes('compliance check') || lower.includes('pre-filing')) return 'audit_guard';
+    // Standard task types
     if (lower.includes('research') || lower.includes('find info') || lower.includes('search for')) return 'research';
     if (lower.includes('code') || lower.includes('build') || lower.includes('create app') || lower.includes('program')) return 'code';
     if (lower.includes('analyze') || lower.includes('audit') || lower.includes('review')) return 'analyze';
@@ -351,6 +391,9 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
       case 'data': return <Database className="h-4 w-4" />;
       case 'browse': return <MousePointer className="h-4 w-4" />;
       case 'automate': return <Workflow className="h-4 w-4" />;
+      case 'fbr_tax': return <Calculator className="h-4 w-4 text-green-500" />;
+      case 'secp_filing': return <Building2 className="h-4 w-4 text-blue-500" />;
+      case 'audit_guard': return <Shield className="h-4 w-4 text-amber-500" />;
       default: return <Zap className="h-4 w-4" />;
     }
   };
@@ -418,17 +461,35 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
         </CardContent>
       </Card>
 
-      {/* Agent Skills */}
+      {/* Pakistan Protocol Badge */}
+      <Card className="border-green-500/30 bg-gradient-to-r from-green-900/10 to-emerald-900/10">
+        <CardContent className="pt-4 pb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+              <Flag className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium flex items-center gap-2">
+                🇵🇰 Pakistani Business Protocol
+                <Badge variant="secondary" className="text-[10px] bg-green-500/20 text-green-400">SOVEREIGN</Badge>
+              </p>
+              <p className="text-xs text-muted-foreground">FBR Tax • SECP Filing • Audit Guard • Zero Data Leakage</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Agent Skills - Now with Pakistan Compliance */}
       <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Cog className="h-4 w-4" />
-            Agent Skills (Clawdbot Architecture)
+            Agent Skills (Clawdbot + Pakistan Protocol)
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-4 gap-2">
-            {skills.map((skill) => (
+            {skills.slice(0, 8).map((skill) => (
               <div 
                 key={skill.id} 
                 className={`flex flex-col items-center text-center p-2 rounded-lg transition-all ${
@@ -440,6 +501,22 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
                 <span className="text-[10px] font-medium mt-1">{skill.name}</span>
               </div>
             ))}
+          </div>
+          {/* Pakistan Compliance Skills */}
+          <div className="mt-2 pt-2 border-t border-border/50">
+            <p className="text-[10px] text-muted-foreground mb-2">🇵🇰 Pakistan Compliance</p>
+            <div className="grid grid-cols-3 gap-2">
+              {skills.slice(8).map((skill) => (
+                <div 
+                  key={skill.id} 
+                  className="flex flex-col items-center text-center p-2 rounded-lg bg-green-500/10 border border-green-500/30"
+                  title={skill.description}
+                >
+                  <div className="text-green-500">{skill.icon}</div>
+                  <span className="text-[10px] font-medium mt-1">{skill.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -677,6 +754,7 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({
             <li>• <strong>Brain:</strong> Lovable AI Gateway for reasoning</li>
             <li>• <strong>Hands:</strong> Agentic executor for browser/terminal/automation</li>
             <li>• <strong>Memory:</strong> Supabase for persistent context & learning</li>
+            <li>• <strong>🇵🇰 Bunker:</strong> Local FBR/SECP processing (zero data leakage)</li>
           </ul>
         </AlertDescription>
       </Alert>
