@@ -1,4 +1,4 @@
-import { Code, Languages, FileText, Bug, Lightbulb, Image, MessageSquare, Pen, Music, Brain, Leaf, Shield, Search, Camera, Table, Calculator, GraduationCap, Mail, FileCheck, Lock, Sparkles, Crown } from "lucide-react";
+ import { Code, Languages, FileText, Bug, Lightbulb, Image, MessageSquare, Pen, Music, Brain, Leaf, Shield, Search, Camera, Table, Calculator, GraduationCap, Mail, FileCheck, Lock, Sparkles, Crown, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,7 +31,8 @@ export type ChatMode =
   | "organize"
   | "academic"
   | "email"
-  | "proofread";
+   | "proofread"
+   | "agent";
 
 interface ModeSelectorProps {
   mode: ChatMode;
@@ -43,7 +44,8 @@ interface ModeSelectorProps {
 const modeFeatureMap: Partial<Record<ChatMode, string>> = {
   research: "pceEngine",
   ppag: "lifeEventSuggestions",
-  hsca: "stealthMode",
+   hsca: "stealthMode",
+   agent: "pceEngine",
   camera: "imageGeneration",
   math: "advancedCodeGeneration",
   organize: "documentGeneration",
@@ -183,14 +185,22 @@ const modes: { value: ChatMode; label: string; icon: React.ReactNode; prompt: st
     color: "text-emerald-500",
     tier: "elite"
   },
-  { 
-    value: "hsca", 
-    label: "🔒 Security Audit", 
-    icon: <Shield className="h-4 w-4" />,
-    prompt: "You are the Hyper-Security Contextual Auditor (HSCA). Analyze code for security vulnerabilities, trace data flows across stacks, generate proof-of-concept exploits, and provide secure code remediation.",
-    color: "text-red-500",
-    tier: "elite"
-  },
+ { 
+     value: "hsca", 
+     label: "🔒 Security Audit", 
+     icon: <Shield className="h-4 w-4" />,
+     prompt: "You are the Hyper-Security Contextual Auditor (HSCA). Analyze code for security vulnerabilities, trace data flows across stacks, generate proof-of-concept exploits, and provide secure code remediation.",
+     color: "text-red-500",
+     tier: "elite"
+   },
+   { 
+     value: "agent", 
+     label: "🤖 Shadow-Agent", 
+     icon: <Bot className="h-4 w-4" />,
+     prompt: "You are Shadow-Agent, an autonomous AI agent with access to WhatsApp, Gmail, Calendar, Contacts, Drive, and app launching capabilities. Execute multi-step tasks autonomously with human approval for sensitive actions.",
+     color: "text-purple-500",
+     tier: "elite"
+   },
 ];
 
 export const getModePrompt = (mode: ChatMode): string => {
@@ -203,7 +213,7 @@ export const ModeSelector = ({ mode, onModeChange, disabled }: ModeSelectorProps
   const currentMode = modes.find(m => m.value === mode) || modes[0];
   const standardModes = modes.filter(m => !['ppag', 'hsca', 'research', 'math', 'camera', 'organize', 'academic'].includes(m.value));
   const specialModes = modes.filter(m => ['research', 'math', 'camera', 'organize', 'academic'].includes(m.value));
-  const advancedModes = modes.filter(m => ['ppag', 'hsca'].includes(m.value));
+   const advancedModes = modes.filter(m => ['ppag', 'hsca', 'agent'].includes(m.value));
 
   const handleModeSelect = (selectedMode: ChatMode) => {
     const featureKey = modeFeatureMap[selectedMode];

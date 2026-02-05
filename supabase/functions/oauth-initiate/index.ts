@@ -2,15 +2,24 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 
-const GOOGLE_OAUTH_CONFIG = {
-  clientId: Deno.env.get("GOOGLE_OAUTH_CLIENT_ID"),
-  redirectUri: `${Deno.env.get("SUPABASE_URL")}/functions/v1/oauth-callback`,
-  scopes: {
-    gmail: "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send",
-    calendar: "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events",
-    both: "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events",
-  },
-};
+ const GOOGLE_OAUTH_CONFIG = {
+   clientId: Deno.env.get("GOOGLE_OAUTH_CLIENT_ID"),
+   redirectUri: `${Deno.env.get("SUPABASE_URL")}/functions/v1/oauth-callback`,
+   scopes: {
+     gmail: "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send",
+     calendar: "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events",
+     contacts: "https://www.googleapis.com/auth/contacts.readonly",
+     drive: "https://www.googleapis.com/auth/drive.readonly",
+     both: [
+       "https://www.googleapis.com/auth/gmail.readonly",
+       "https://www.googleapis.com/auth/gmail.send",
+       "https://www.googleapis.com/auth/calendar.readonly",
+       "https://www.googleapis.com/auth/calendar.events",
+       "https://www.googleapis.com/auth/contacts.readonly",
+       "https://www.googleapis.com/auth/drive.readonly",
+     ].join(" "),
+   },
+ };
 
 serve(async (req) => {
   const origin = req.headers.get("origin");

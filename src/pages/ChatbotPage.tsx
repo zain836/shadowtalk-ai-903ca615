@@ -37,7 +37,8 @@ import { ShadowBrowser } from "@/components/chat/ShadowBrowser";
 import { WelcomeDialog } from "@/components/chat/WelcomeDialog";
 import { MultiModelOrchestrator } from "@/components/chat/MultiModelOrchestrator";
 import { APIMarketplace } from "@/components/chat/APIMarketplace";
-import { SignInPrompt } from "@/components/chat/SignInPrompt";
+ import { SignInPrompt } from "@/components/chat/SignInPrompt";
+ import ShadowAgentCore from "@/components/chat/ShadowAgentCore";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -141,7 +142,8 @@ const ChatbotPage = () => {
   const [showMultiModel, setShowMultiModel] = useState(false);
   const [showAPIMarketplace, setShowAPIMarketplace] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
-  const [signInPromptReason, setSignInPromptReason] = useState<'chats' | 'images' | 'deepResearch' | 'general'>('general');
+   const [signInPromptReason, setSignInPromptReason] = useState<'chats' | 'images' | 'deepResearch' | 'general'>('general');
+   const [showShadowAgent, setShowShadowAgent] = useState(false);
   
   // Check if welcome dialog should be shown (after boot screen)
   useEffect(() => {
@@ -371,10 +373,14 @@ const ChatbotPage = () => {
           e.preventDefault();
           setShowMultiModel(true);
           break;
-        case 'p': // API Marketplace
-          e.preventDefault();
-          setShowAPIMarketplace(true);
-          break;
+         case 'p': // API Marketplace
+           e.preventDefault();
+           setShowAPIMarketplace(true);
+           break;
+         case 'g': // Shadow-Agent
+           e.preventDefault();
+           setShowShadowAgent(true);
+           break;
       }
     };
 
@@ -1059,7 +1065,14 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             selectedFile={selectedFile}
             onFileSelect={(file) => { setSelectedFile(file); if (file) trackFileUpload(file.mimeType); }}
             chatMode={chatMode}
-            onModeChange={(mode) => { setChatMode(mode); trackModeSwitch(mode); }}
+             onModeChange={(mode) => { 
+               setChatMode(mode); 
+               trackModeSwitch(mode);
+               // Open Shadow-Agent panel when agent mode is selected
+               if (mode === 'agent') {
+                 setShowShadowAgent(true);
+               }
+             }}
             personality={personality}
           />
         </div>
@@ -1284,15 +1297,29 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         onClose={() => setShowAPIMarketplace(false)}
       />
 
-      {/* Sign In Prompt - For guests who hit usage limits */}
-      <SignInPrompt
-        open={showSignInPrompt}
-        onOpenChange={setShowSignInPrompt}
-        reason={signInPromptReason}
-        usedCount={guestUsage.usage[signInPromptReason === 'general' ? 'chats' : signInPromptReason]}
-        limitCount={GUEST_LIMITS[signInPromptReason === 'general' ? 'chats' : signInPromptReason]}
-      />
-    </div>
+       {/* Sign In Prompt - For guests who hit usage limits */}
+       <SignInPrompt
+         open={showSignInPrompt}
+         onOpenChange={setShowSignInPrompt}
+         reason={signInPromptReason}
+         usedCount={guestUsage.usage[signInPromptReason === 'general' ? 'chats' : signInPromptReason]}
+         limitCount={GUEST_LIMITS[signInPromptReason === 'general' ? 'chats' : signInPromptReason]}
+       />
+ 
+       {/* Shadow-Agent - Autonomous AI with WhatsApp, Gmail, Calendar, Contacts, Drive */}
+       <ShadowAgentCore
+         isOpen={showShadowAgent}
+         onClose={() => setShowShadowAgent(false)}
+         onResult={(result) => {
+           setMessages(prev => [...prev, {
+             id: crypto.randomUUID(),
+             type: 'ai',
+             content: result,
+             timestamp: new Date()
+           }]);
+         }}
+       />
+     </div>
   );
 };
 
