@@ -292,22 +292,52 @@
  Be thorough and create complete, working code. Don't use placeholders - implement full functionality.`;
  
        // Call AI
-       const response = await supabase.functions.invoke('chat', {
-         body: {
-           messages: [
-             { role: "system", content: systemPrompt },
-             ...messages.filter(m => m.role !== "system").map(m => ({
-               role: m.role === "agent" ? "assistant" : m.role,
-               content: m.content
-             })),
-             { role: "user", content: input }
-           ]
-         }
-       });
-       
-       const aiContent = response.data?.choices?.[0]?.message?.content || 
-                         response.data?.generatedText || 
-                         "I couldn't process that request.";
+        // Call AI with streaming and read full response
+        const { data: streamData, error: streamError } = await supabase.functions.invoke('chat', {
+          body: {
+            messages: [
+              { role: "system", content: systemPrompt },
+              ...messages.filter(m => m.role !== "system").map(m => ({
+                role: m.role === "agent" ? "assistant" : m.role,
+                content: m.content
+              })),
+              { role: "user", content: input }
+            ]
+          }
+        });
+        
+        if (streamError) {
+          throw new Error(streamError.message || "Failed to get AI response");
+        }
+        
+        // Handle streaming response - parse SSE chunks
+        let aiContent = "";
+        
+        if (typeof streamData === "string") {
+          // Parse SSE format
+          const lines = streamData.split("\n");
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const jsonStr = line.slice(6).trim();
+              if (jsonStr === "[DONE]") continue;
+              try {
+                const parsed = JSON.parse(jsonStr);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) aiContent += content;
+              } catch {
+                // Skip invalid JSON
+              }
+            }
+          }
+        } else if (streamData?.choices?.[0]?.message?.content) {
+          aiContent = streamData.choices[0].message.content;
+        } else if (streamData?.text) {
+          aiContent = streamData.text;
+        }
+        
+        if (!aiContent) {
+          aiContent = "I couldn't process that request. Please try again.";
+        }
        
        // Parse response for actions
        let parsedActions: AgentAction[] = [];
