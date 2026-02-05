@@ -34,7 +34,6 @@ import ShadowAgentPanel from "@/components/chat/ShadowAgentPanel";
 import PlanetaryActionPanel from "@/components/chat/PlanetaryActionPanel";
 import SecurityAuditPanel from "@/components/chat/SecurityAuditPanel";
 import { OfflineAIIndicator } from "@/components/chat/OfflineAIIndicator";
-import { OfflineToolsPanel } from "@/components/chat/OfflineToolsPanel";
 import { ShadowBrowser } from "@/components/chat/ShadowBrowser";
 import { WelcomeDialog } from "@/components/chat/WelcomeDialog";
 import { MultiModelOrchestrator } from "@/components/chat/MultiModelOrchestrator";
@@ -47,6 +46,7 @@ import { useUsageTracking } from "@/hooks/useUsageTracking";
 import { useOfflineAuth } from "@/hooks/useOfflineAuth";
 import { useOfflineAI } from "@/hooks/useOfflineAI";
 import { useOfflineChat } from "@/hooks/useOfflineChat";
+ import { useAutoOfflineAI } from "@/hooks/useAutoOfflineAI";
 import { useOfflineChatHistory } from "@/hooks/useOfflineChatHistory";
 import { useGeoLocation } from "@/hooks/useGeoLocation";
 import { useBusinessMemory } from "@/hooks/useBusinessMemory";
@@ -136,7 +136,6 @@ const ChatbotPage = () => {
   const [showCreativeSynthesis, setShowCreativeSynthesis] = useState(false);
   const [showShadowCowork, setShowShadowCowork] = useState(false);
   const [showShadowTalkLive, setShowShadowTalkLive] = useState(false);
-  const [showOfflineTools, setShowOfflineTools] = useState(false);
   const [showShadowBrowser, setShowShadowBrowser] = useState(false);
   const [browserInitialUrl, setBrowserInitialUrl] = useState<string | undefined>(undefined);
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
@@ -365,10 +364,6 @@ const ChatbotPage = () => {
         case 'l': // ShadowTalk Live
           e.preventDefault();
           setShowShadowTalkLive(true);
-          break;
-        case 'o': // Offline Tools
-          e.preventDefault();
-          setShowOfflineTools(true);
           break;
         case 'b': // Browser
           e.preventDefault();
@@ -1028,7 +1023,6 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             onOpenImageGenerator={() => setShowImageGenerator(true)}
             onOpenShadowCowork={() => setShowShadowCowork(true)}
             onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
-            onOpenOfflineTools={() => setShowOfflineTools(true)}
             onOpenBrowser={() => setShowShadowBrowser(true)}
             aiProvider={aiProvider}
             onProviderChange={setAiProvider}
@@ -1270,16 +1264,6 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             console.error('Canvas AI assist error:', error);
             throw error;
           }
-        }}
-      />
-
-      {/* Offline Tools Panel */}
-      <OfflineToolsPanel
-        isOpen={showOfflineTools}
-        onClose={() => setShowOfflineTools(false)}
-        onInsertToChat={(text) => {
-          setMessage(prev => prev + text);
-          setShowOfflineTools(false);
         }}
       />
 
