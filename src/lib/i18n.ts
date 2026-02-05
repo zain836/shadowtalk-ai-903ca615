@@ -1,5 +1,5 @@
 // Internationalization (i18n) system
-export type Language = 'en' | 'es' | 'fr' | 'de' | 'zh' | 'ja' | 'ar' | 'hi' | 'pt' | 'ru';
+export type Language = 'en' | 'es' | 'fr' | 'de' | 'zh' | 'ja' | 'ar' | 'hi' | 'pt' | 'ru' | 'ur';
 
 export interface Translations {
   [key: string]: string | Translations;
@@ -526,6 +526,58 @@ const translations: Record<Language, Translations> = {
       tokens: 'Использовано Токенов',
     },
   },
+  ur: {
+    nav: {
+      features: 'خصوصیات',
+      pricing: 'قیمتیں',
+      docs: 'دستاویزات',
+      changelog: 'تبدیلیوں کا ریکارڈ',
+      rooms: 'کمرے',
+      profile: 'پروفائل',
+      api: 'API',
+      analytics: 'تجزیات',
+      login: 'لاگ ان',
+      tryFree: 'مفت آزمائیں',
+    },
+    hero: {
+      title: 'اگلی نسل کا AI معاون',
+      subtitle: 'ہماری جدید ملٹی موڈل AI کے ساتھ گفتگو کا مستقبل تجربہ کریں',
+      cta: 'چیٹ شروع کریں',
+    },
+    common: {
+      loading: 'لوڈ ہو رہا ہے...',
+      error: 'خرابی',
+      success: 'کامیابی',
+      save: 'محفوظ کریں',
+      cancel: 'منسوخ',
+      delete: 'حذف کریں',
+      edit: 'ترمیم کریں',
+      create: 'بنائیں',
+      search: 'تلاش کریں',
+      filter: 'فلٹر',
+      export: 'برآمد کریں',
+      import: 'درآمد کریں',
+    },
+    api: {
+      title: 'ڈویلپر API',
+      description: 'ہماری REST API کے ساتھ طاقتور انضمام بنائیں',
+      getStarted: 'شروع کریں',
+      documentation: 'دستاویزات',
+      apiKeys: 'API کیز',
+      createKey: 'API کی بنائیں',
+      rateLimit: 'شرح کی حد',
+      endpoints: 'اینڈ پوائنٹس',
+    },
+    analytics: {
+      title: 'تجزیاتی ڈیش بورڈ',
+      overview: 'جائزہ',
+      usage: 'استعمال',
+      performance: 'کارکردگی',
+      messages: 'پیغامات',
+      users: 'فعال صارفین',
+      tokens: 'استعمال شدہ ٹوکنز',
+    },
+  },
 };
 
 export const languageNames: Record<Language, string> = {
@@ -539,6 +591,7 @@ export const languageNames: Record<Language, string> = {
   hi: 'हिन्दी',
   pt: 'Português',
   ru: 'Русский',
+  ur: 'اردو',
 };
 
 export const getTranslation = (lang: Language, key: string): string => {
@@ -577,5 +630,5 @@ export const getCurrentLanguage = (): Language => {
 export const setLanguage = (lang: Language): void => {
   localStorage.setItem('shadowtalk-language', lang);
   document.documentElement.lang = lang;
-  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  document.documentElement.dir = (lang === 'ar' || lang === 'ur') ? 'rtl' : 'ltr';
 };

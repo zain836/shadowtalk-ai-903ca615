@@ -50,6 +50,7 @@ const getFlagEmoji = (lang: Language): string => {
     hi: '🇮🇳',
     pt: '🇧🇷',
     ru: '🇷🇺',
+    ur: '🇵🇰',
   };
   return flags[lang] || '🌍';
 };
