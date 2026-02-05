@@ -36,6 +36,7 @@ import { ShadowBrowser } from "@/components/chat/ShadowBrowser";
 import { WelcomeDialog } from "@/components/chat/WelcomeDialog";
 import { MultiModelOrchestrator } from "@/components/chat/MultiModelOrchestrator";
 import { APIMarketplace } from "@/components/chat/APIMarketplace";
+import { PakistanCompliancePanel } from "@/components/chat/compliance/PakistanCompliancePanel";
  import { SignInPrompt } from "@/components/chat/SignInPrompt";
 import { CameraCapture } from "@/components/chat/CameraCapture";
 import { DataOrganizer } from "@/components/chat/DataOrganizer";
@@ -144,6 +145,7 @@ const ChatbotPage = () => {
    const [signInPromptReason, setSignInPromptReason] = useState<'chats' | 'images' | 'deepResearch' | 'general'>('general');
   const [showCameraCapture, setShowCameraCapture] = useState(false);
   const [showDataOrganizer, setShowDataOrganizer] = useState(false);
+  const [showPakistanCompliance, setShowPakistanCompliance] = useState(false);
   
   
   // Check if welcome dialog should be shown (after boot screen)
@@ -373,6 +375,9 @@ const ChatbotPage = () => {
          case 'p': // API Marketplace
            e.preventDefault();
            setShowAPIMarketplace(true);
+           break;
+         case 'o': // Pakistan Compliance (Shift+O for 🇵🇰)
+           // Already handled elsewhere, but we can also use 'o' for offline
            break;
       }
     };
@@ -995,6 +1000,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             onOpenImageGenerator={() => setShowImageGenerator(true)}
             onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
             onOpenBrowser={() => setShowShadowBrowser(true)}
+            onOpenPakistanCompliance={() => setShowPakistanCompliance(true)}
             aiProvider={aiProvider}
             onProviderChange={setAiProvider}
             maxChats={maxChats}
@@ -1170,6 +1176,23 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         />
       )}
       
+      {/* Pakistan Compliance Panel - Sovereign Compliance Officer */}
+      {showPakistanCompliance && (
+        <PakistanCompliancePanel
+          isOpen={showPakistanCompliance}
+          onClose={() => setShowPakistanCompliance(false)}
+          onInsertToChat={(content) => {
+            setShowPakistanCompliance(false);
+            setMessages(prev => [...prev, { 
+              id: crypto.randomUUID(), 
+              type: 'ai', 
+              content, 
+              timestamp: new Date() 
+            }]);
+          }}
+        />
+      )}
+
       {/* Canvas - ChatGPT-like document/code editor */}
       <Canvas
         isOpen={!!canvasState}
