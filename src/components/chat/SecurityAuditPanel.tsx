@@ -127,6 +127,109 @@ const SecurityAuditPanel: React.FC<SecurityAuditPanelProps> = ({
   const [scanMode, setScanMode] = useState<'quick' | 'deep' | 'full'>('deep');
   const folderInputRef = useRef<HTMLInputElement>(null);
 
+  // Local pattern-based vulnerability detection
+  const detectLocalVulnerabilities = useCallback((files: ProjectFile[]): Vulnerability[] => {
+    const localVulns: Vulnerability[] = [];
+    
+    // Security patterns to detect
+    const patterns: Array<{ pattern: RegExp; severity: 'critical' | 'high' | 'medium' | 'low' | 'info'; title: string; category: string; cweId: string }> = [
+      // Secrets & API Keys
+      { pattern: /api[_-]?key\s*[:=]\s*['"][^'"]{10,}['"]/gi, severity: 'high', title: 'Hardcoded API Key', category: 'Secrets', cweId: 'CWE-798' },
+      { pattern: /secret\s*[:=]\s*['"][^'"]{10,}['"]/gi, severity: 'high', title: 'Hardcoded Secret', category: 'Secrets', cweId: 'CWE-798' },
+      { pattern: /password\s*[:=]\s*['"][^'"]{4,}['"]/gi, severity: 'critical', title: 'Hardcoded Password', category: 'Secrets', cweId: 'CWE-798' },
+      { pattern: /sk_live_[A-Za-z0-9]{24,}/g, severity: 'critical', title: 'Stripe Secret Key Exposed', category: 'Secrets', cweId: 'CWE-798' },
+      { pattern: /sk-[A-Za-z0-9]{48}/g, severity: 'critical', title: 'OpenAI API Key Exposed', category: 'Secrets', cweId: 'CWE-798' },
+      { pattern: /ghp_[A-Za-z0-9]{36}/g, severity: 'critical', title: 'GitHub Token Exposed', category: 'Secrets', cweId: 'CWE-798' },
+      { pattern: /-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----/g, severity: 'critical', title: 'Private Key in Code', category: 'Secrets', cweId: 'CWE-321' },
+      
+      // XSS Vulnerabilities
+      { pattern: /dangerouslySetInnerHTML/g, severity: 'high', title: 'Potential XSS via dangerouslySetInnerHTML', category: 'XSS', cweId: 'CWE-79' },
+      { pattern: /\.innerHTML\s*=/g, severity: 'high', title: 'Potential XSS via innerHTML', category: 'XSS', cweId: 'CWE-79' },
+      { pattern: /document\.write\s*\(/g, severity: 'high', title: 'Potential XSS via document.write', category: 'XSS', cweId: 'CWE-79' },
+      
+      // Code Injection
+      { pattern: /eval\s*\(/g, severity: 'critical', title: 'Use of eval() - Code Injection Risk', category: 'Injection', cweId: 'CWE-94' },
+      { pattern: /new\s+Function\s*\(/g, severity: 'high', title: 'Dynamic Function Creation', category: 'Injection', cweId: 'CWE-94' },
+      
+      // SQL Injection
+      { pattern: /\$\{.*\}.*(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE)/gi, severity: 'critical', title: 'Potential SQL Injection', category: 'SQL Injection', cweId: 'CWE-89' },
+      { pattern: /query\s*\(\s*[`'"].*\$\{/g, severity: 'critical', title: 'Unparameterized SQL Query', category: 'SQL Injection', cweId: 'CWE-89' },
+      
+      // Path Traversal
+      { pattern: /\.\.\/|\.\.\\|path\.join\([^)]*req\./g, severity: 'high', title: 'Potential Path Traversal', category: 'Path Traversal', cweId: 'CWE-22' },
+      
+      // Insecure Crypto
+      { pattern: /MD5|SHA1(?!\d)/gi, severity: 'medium', title: 'Weak Cryptographic Hash', category: 'Cryptography', cweId: 'CWE-328' },
+      
+      // Missing Security Headers/Configs
+      { pattern: /verify_jwt\s*=\s*false/g, severity: 'high', title: 'JWT Verification Disabled', category: 'Authentication', cweId: 'CWE-287' },
+      
+      // Prototype Pollution
+      { pattern: /Object\.assign\s*\([^,]+,\s*(?:req\.body|req\.query|req\.params)/g, severity: 'high', title: 'Potential Prototype Pollution', category: 'Prototype Pollution', cweId: 'CWE-1321' },
+    ];
+    
+    files.forEach(file => {
+      patterns.forEach(({ pattern, severity, title, category, cweId }) => {
+        // Reset pattern state for global regexes
+        pattern.lastIndex = 0;
+        const matches = file.content.match(pattern);
+        
+        if (matches) {
+          matches.forEach((match) => {
+            // Find line number
+            const matchIndex = file.content.indexOf(match);
+            const beforeMatch = file.content.substring(0, matchIndex);
+            const lineNumber = (beforeMatch.match(/\n/g) || []).length + 1;
+            
+            // Avoid duplicate detections in same location
+            const vulnId = `local-${file.path}-${title.replace(/\s/g, '-')}-${lineNumber}`;
+            if (!localVulns.find(v => v.id === vulnId)) {
+              localVulns.push({
+                id: vulnId,
+                severity,
+                title,
+                description: `Found suspicious pattern "${match.substring(0, 50)}${match.length > 50 ? '...' : ''}" that may indicate a security vulnerability.`,
+                location: `${file.path}:${lineNumber}`,
+                category,
+                cweId,
+                remediation: getLocalRemediation(category),
+                codefix: getLocalCodeFix(category),
+                affectedFiles: [file.path]
+              });
+            }
+          });
+        }
+      });
+    });
+    
+    return localVulns;
+  }, []);
+  
+  const getLocalRemediation = (category: string): string => {
+    const remediations: Record<string, string> = {
+      'Secrets': 'Move secrets to environment variables. Use a secrets manager for production. Never commit secrets to version control.',
+      'XSS': 'Sanitize all user input before rendering. Use textContent instead of innerHTML. Consider using DOMPurify for HTML content.',
+      'Injection': 'Never use eval() or new Function() with user input. Use parameterized queries for database operations.',
+      'SQL Injection': 'Use parameterized queries or prepared statements. Never concatenate user input into SQL strings.',
+      'Path Traversal': 'Validate and sanitize file paths. Use path.basename() and whitelist allowed directories.',
+      'Cryptography': 'Use SHA-256 or stronger for hashing. Use crypto.getRandomValues() for secure random numbers.',
+      'Authentication': 'Enable JWT verification. Implement proper session management.',
+      'Prototype Pollution': 'Validate object keys before assignment. Use Object.create(null) for dictionary objects.',
+    };
+    return remediations[category] || 'Review and address this security concern according to security best practices.';
+  };
+  
+  const getLocalCodeFix = (category: string): string => {
+    const fixes: Record<string, string> = {
+      'Secrets': `// Use environment variables:\nconst apiKey = process.env.API_KEY;\n// Or for Vite: import.meta.env.VITE_API_KEY`,
+      'XSS': `// Use textContent instead:\nelement.textContent = userInput;\n// Or use DOMPurify for HTML`,
+      'Injection': `// Avoid eval - use safer alternatives`,
+      'SQL Injection': `// Use parameterized queries:\nconst result = await db.query('SELECT * FROM users WHERE id = $1', [userId]);`,
+      'Cryptography': `// Use crypto.getRandomValues() for secure random`,
+    };
+    return fixes[category] || '// Review and fix according to security best practices';
+  };
+
   const handleAcceptDisclaimer = () => {
     setHasAccepted(true);
     setShowDisclaimer(false);
@@ -399,14 +502,20 @@ const SecurityAuditPanel: React.FC<SecurityAuditPanelProps> = ({
     });
 
     try {
+      // Phase 1: Local pattern detection (fast)
+      setScanProgress(prev => ({
+        ...prev!,
+        phase: 'Running local pattern detection',
+        progress: 10,
+      }));
+      
+      const localVulns = detectLocalVulnerabilities(filesToAnalyze);
+      console.log('[SecurityAudit] Local detection found:', localVulns.length, 'issues');
+      
       const phases = [
-        { name: 'Parsing source files', duration: 500 },
-        { name: 'Building dependency graph', duration: 400 },
-        { name: 'Analyzing data flows', duration: 600 },
-        { name: 'Checking security patterns', duration: 800 },
-        { name: 'Detecting vulnerabilities', duration: 700 },
-        { name: 'Generating exploits', duration: 500 },
-        { name: 'Preparing remediation', duration: 300 },
+        { name: 'Analyzing code structure', duration: 300 },
+        { name: 'Sending to AI for deep analysis', duration: 400 },
+        { name: 'Processing AI findings', duration: 300 },
       ];
 
       for (let i = 0; i < phases.length; i++) {
@@ -414,9 +523,10 @@ const SecurityAuditPanel: React.FC<SecurityAuditPanelProps> = ({
         setScanProgress(prev => ({
           ...prev!,
           phase: phase.name,
-          progress: Math.round((i / phases.length) * 100),
+          progress: 20 + Math.round((i / phases.length) * 60),
           currentFile: filesToAnalyze[Math.min(i, filesToAnalyze.length - 1)]?.name,
           filesScanned: Math.min(i + 1, filesToAnalyze.length),
+          vulnerabilitiesFound: localVulns.length,
         }));
         await new Promise(resolve => setTimeout(resolve, phase.duration));
       }
@@ -427,45 +537,79 @@ const SecurityAuditPanel: React.FC<SecurityAuditPanelProps> = ({
 
       console.log('[SecurityAudit] Sending code for analysis, length:', combinedCode.length);
       
-      const result = await onAnalyze(combinedCode);
+      // Send to AI for deep analysis
+      let aiVulns: Vulnerability[] = [];
+      let aiSummary = '';
+      let aiRiskScore = 0;
       
-      console.log('[SecurityAudit] Received result:', result);
-      
-      // Handle potential error responses - cast to any for error checking
-      const resultAny = result as any;
-      if (!result || resultAny.error) {
-        throw new Error(resultAny?.error || 'No response from security analysis');
+      try {
+        const result = await onAnalyze(combinedCode);
+        console.log('[SecurityAudit] AI analysis result:', result);
+        
+        const resultAny = result as any;
+        if (result && !resultAny.error) {
+          aiVulns = Array.isArray(result.vulnerabilities) ? result.vulnerabilities : [];
+          aiSummary = result.summary || '';
+          aiRiskScore = typeof result.riskScore === 'number' ? result.riskScore : 0;
+        }
+      } catch (aiError) {
+        console.warn('[SecurityAudit] AI analysis failed, using local results only:', aiError);
       }
       
-      // Ensure vulnerabilities is an array
-      const vulnList = Array.isArray(result.vulnerabilities) ? result.vulnerabilities : [];
-      
-      // Enhance vulnerabilities with file references
-      const enhancedVulns = vulnList.map((v: Vulnerability) => ({
+      // Combine local and AI vulnerabilities
+      const aiEnhancedVulns = aiVulns.map((v: Vulnerability) => ({
         ...v,
-        id: v.id || `vuln-${Math.random().toString(36).substr(2, 9)}`,
+        id: v.id || `ai-${Math.random().toString(36).substr(2, 9)}`,
         affectedFiles: filesToAnalyze
           .filter(f => (v.location && v.location.includes(f.name)) || (v.description && v.description.toLowerCase().includes(f.name.toLowerCase())))
           .map(f => f.path)
       }));
-
-      setVulnerabilities(enhancedVulns);
-      setSummary(result.summary || 'Analysis complete');
-      setRiskScore(typeof result.riskScore === 'number' ? result.riskScore : 0);
       
-      if (enhancedVulns.length > 0) {
-        setSelectedVuln(enhancedVulns[0]);
+      // Merge and deduplicate vulnerabilities
+      const allVulns = [...localVulns, ...aiEnhancedVulns];
+      const uniqueVulns = allVulns.filter((v, index, self) => 
+        index === self.findIndex(t => 
+          t.title === v.title && t.location === v.location
+        )
+      );
+      
+      // Sort by severity
+      const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+      uniqueVulns.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+      
+      // Calculate combined risk score
+      const localRiskContribution = localVulns.length > 0 
+        ? Math.min(50, localVulns.filter(v => v.severity === 'critical').length * 15 + 
+                       localVulns.filter(v => v.severity === 'high').length * 10 +
+                       localVulns.filter(v => v.severity === 'medium').length * 5)
+        : 0;
+      const finalRiskScore = Math.min(100, Math.max(aiRiskScore, localRiskContribution));
+      
+      // Generate summary
+      const finalSummary = aiSummary || 
+        `Found ${uniqueVulns.length} potential security issues: ` +
+        `${uniqueVulns.filter(v => v.severity === 'critical').length} critical, ` +
+        `${uniqueVulns.filter(v => v.severity === 'high').length} high, ` +
+        `${uniqueVulns.filter(v => v.severity === 'medium').length} medium, ` +
+        `${uniqueVulns.filter(v => v.severity === 'low').length} low.`;
+
+      setVulnerabilities(uniqueVulns);
+      setSummary(finalSummary);
+      setRiskScore(finalRiskScore);
+      
+      if (uniqueVulns.length > 0) {
+        setSelectedVuln(uniqueVulns[0]);
       }
 
       setScanProgress(prev => ({
         ...prev!,
         phase: 'Complete',
         progress: 100,
-        vulnerabilitiesFound: enhancedVulns.length
+        vulnerabilitiesFound: uniqueVulns.length
       }));
 
       toast.success(`Security audit complete`, {
-        description: `Found ${enhancedVulns.length} vulnerabilities in ${filesToAnalyze.length} files`
+        description: `Found ${uniqueVulns.length} vulnerabilities (${localVulns.length} local + ${aiEnhancedVulns.length} AI-detected)`
       });
 
     } catch (error) {
