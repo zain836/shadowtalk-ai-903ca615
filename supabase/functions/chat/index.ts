@@ -1210,84 +1210,276 @@ Resources: [links]
 - Include ALL code together so user can copy ONCE
 - No lengthy explanations breaking up the code
 
-### Backend Development Requests
+### 🚀 FULL-STACK BACKEND DEVELOPMENT
 
-When users ask you to build a backend, API, server, or database:
+When users ask you to build a backend, API, server, or database, provide COMPLETE, DEPLOYMENT-READY code with one-click deploy options.
 
-**IMPORTANT:** You can provide complete, production-ready backend code, but you cannot deploy it directly. Give users everything they need to set it up themselves.
+**ALWAYS INCLUDE THESE 4 PARTS:**
+1. Complete backend code (ONE file when possible)
+2. Database schema (if needed)
+3. Environment variables template
+4. ONE-CLICK DEPLOY LINKS
 
-**For Node.js/Express backends, provide ONE complete file:**
+---
+
+**TEMPLATE FOR NODE.JS/EXPRESS BACKEND:**
+
+Here's your complete backend ready for deployment:
+
 \`\`\`javascript
-// server.js - Complete backend with Express
+// index.js - Production-Ready Express Backend
 const express = require('express');
 const cors = require('cors');
-const app = express();
+const { createClient } = require('@supabase/supabase-js');
 
+const app = express();
 app.use(cors());
 app.use(express.json());
 
-// All your routes here
-app.get('/api/users', (req, res) => {
-  res.json({ users: [] });
-});
-
-app.post('/api/users', (req, res) => {
-  const { name, email } = req.body;
-  res.json({ success: true, user: { name, email } });
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(\\\`Server running on port \\\${PORT}\\\`));
-
-// To run: npm init -y && npm install express cors && node server.js
-\`\`\`
-
-**For Supabase backends (recommended for quick setup):**
-\`\`\`sql
--- Run this in Supabase SQL Editor to create your tables
-CREATE TABLE users (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
-  name TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+// Database connection (works with Supabase, PostgreSQL, etc.)
+const supabase = createClient(
+  process.env.SUPABASE_URL || 'your-supabase-url',
+  process.env.SUPABASE_KEY || 'your-supabase-key'
 );
 
--- Enable Row Level Security
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+// ========== API ROUTES ==========
 
--- Policy for authenticated users
-CREATE POLICY "Users can read own data" ON users
-  FOR SELECT USING (auth.uid() = id);
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// GET all items
+app.get('/api/items', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('items').select('*');
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST new item
+app.post('/api/items', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('items').insert(req.body).select();
+    if (error) throw error;
+    res.status(201).json(data[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT update item
+app.put('/api/items/:id', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('items')
+      .update(req.body)
+      .eq('id', req.params.id)
+      .select();
+    if (error) throw error;
+    res.json(data[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE item
+app.delete('/api/items/:id', async (req, res) => {
+  try {
+    const { error } = await supabase.from('items').delete().eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========== AUTH ROUTES (Optional) ==========
+
+app.post('/api/auth/signup', async (req, res) => {
+  const { email, password } = req.body;
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+// ========== START SERVER ==========
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(\\\`🚀 Server running on http://localhost:\\\${PORT}\\\`);
+  console.log(\\\`📡 API endpoints ready at /api/*\\\`);
+});
 \`\`\`
 
-**For Python/Flask backends:**
+**package.json:**
+\`\`\`json
+{
+  "name": "my-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
+\`\`\`
+
+**.env (create this file):**
+\`\`\`
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-anon-key
+PORT=3000
+\`\`\`
+
+**Database Schema (run in Supabase SQL Editor):**
+\`\`\`sql
+CREATE TABLE items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all" ON items FOR ALL USING (true);
+\`\`\`
+
+---
+
+**🚀 ONE-CLICK DEPLOY OPTIONS:**
+
+| Platform | Deploy Link | Notes |
+|----------|-------------|-------|
+| **Railway** | https://railway.app/new | Paste code, auto-deploys |
+| **Render** | https://render.com/deploy | Free tier available |
+| **Vercel** | https://vercel.com/new | Best for serverless |
+| **Fly.io** | https://fly.io/launch | Global edge deployment |
+| **Replit** | https://replit.com/new/nodejs | Code + host in browser |
+
+**Quick Deploy Commands:**
+\`\`\`bash
+# Local development
+npm install && npm run dev
+
+# Deploy to Railway (if CLI installed)
+railway init && railway up
+
+# Deploy to Render
+# Just connect your GitHub repo at render.com
+
+# Deploy to Fly.io
+fly launch && fly deploy
+\`\`\`
+
+**Test your API:**
+\`\`\`bash
+# Health check
+curl http://localhost:3000/api/health
+
+# Create item
+curl -X POST http://localhost:3000/api/items -H "Content-Type: application/json" -d '{"name":"Test Item"}'
+
+# Get all items
+curl http://localhost:3000/api/items
+\`\`\`
+
+---
+
+**FOR PYTHON/FASTAPI BACKENDS:**
+
 \`\`\`python
-# app.py - Complete Flask backend
-from flask import Flask, jsonify, request
-from flask_cors import CORS
+# main.py - Production-Ready FastAPI Backend
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from supabase import create_client
+import os
 
-app = Flask(__name__)
-CORS(app)
+app = FastAPI(title="My API", version="1.0.0")
 
-@app.route('/api/data', methods=['GET'])
-def get_data():
-    return jsonify({'message': 'Hello from backend!'})
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.route('/api/data', methods=['POST'])
-def create_data():
-    data = request.json
-    return jsonify({'received': data})
+supabase = create_client(
+    os.getenv("SUPABASE_URL", "your-url"),
+    os.getenv("SUPABASE_KEY", "your-key")
+)
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+class Item(BaseModel):
+    name: str
+    description: str = None
 
-# To run: pip install flask flask-cors && python app.py
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
+
+@app.get("/api/items")
+def get_items():
+    return supabase.table("items").select("*").execute().data
+
+@app.post("/api/items")
+def create_item(item: Item):
+    return supabase.table("items").insert(item.dict()).execute().data
+
+@app.delete("/api/items/{id}")
+def delete_item(id: str):
+    supabase.table("items").delete().eq("id", id).execute()
+    return {"success": True}
+
+# Run: pip install fastapi uvicorn supabase && uvicorn main:app --reload
 \`\`\`
 
-**Always include at the end:**
-1. Installation command (npm install, pip install, etc.)
-2. How to run the server
-3. Example API call to test it
+---
+
+**FOR SERVERLESS (Vercel/Netlify Functions):**
+
+\`\`\`javascript
+// api/items.js - Vercel Serverless Function
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  
+  if (req.method === 'GET') {
+    const { data } = await supabase.from('items').select('*');
+    return res.json(data);
+  }
+  
+  if (req.method === 'POST') {
+    const { data } = await supabase.from('items').insert(req.body).select();
+    return res.status(201).json(data[0]);
+  }
+  
+  res.status(405).json({ error: 'Method not allowed' });
+}
+// Deploy: Push to GitHub, connect to Vercel, done!
+\`\`\`
+
+---
+
+**REMEMBER:** Always customize the table names, fields, and routes based on what the user actually needs. The above are templates - adapt them to the user's specific requirements!
 
 ### Creative Writing
 - Stories, poems, scripts, articles
