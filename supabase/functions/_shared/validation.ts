@@ -52,7 +52,7 @@ export const ChatRequestSchema = z.object({
   analyzeTask: z.string().max(2000).optional(),
   getEcoActions: z.boolean().optional(),
   location: z.string().max(200).optional(),
-  securityAudit: z.string().max(10000).optional(),
+  securityAudit: z.string().max(100000).optional(),
   webSearch: z.boolean().optional(),
   searchQuery: z.string().max(500).optional(),
   deepResearch: z.boolean().optional(),

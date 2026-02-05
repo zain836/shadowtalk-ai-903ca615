@@ -491,6 +491,7 @@ EROI (Environmental Return on Investment) should be 1-10 based on impact/effort 
     // HSCA: Security Audit
     if (securityAudit) {
       console.log("[CHAT] Running security audit on code");
+      console.log("[CHAT] Code length:", securityAudit.length);
       
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -500,6 +501,7 @@ EROI (Environmental Return on Investment) should be 1-10 based on impact/effort 
         },
         body: JSON.stringify({
           model: "google/gemini-2.5-pro",
+          max_tokens: 8000,
           messages: [
             { 
               role: "system", 
@@ -533,6 +535,15 @@ Analyze for:
 - Command injection
 - Insecure deserialization
 - Business logic flaws
+- Hardcoded secrets/API keys
+- Insecure dependencies
+- Missing input validation
+- Prototype pollution
+- Insecure cryptography
+- Server-side request forgery (SSRF)
+- Insecure file handling
+- Missing rate limiting
+- Improper error handling exposing sensitive data
 
 Return ONLY valid JSON in this exact format:
 {
@@ -547,7 +558,8 @@ Return ONLY valid JSON in this exact format:
       "exploit": "curl -X POST ... OR JavaScript payload OR attack sequence",
       "remediation": "How to fix this properly",
       "codefix": "Secure replacement code",
-      "category": "SQL Injection|XSS|Auth Bypass|etc"
+      "category": "SQL Injection|XSS|Auth Bypass|Secrets|Input Validation|SSRF|etc",
+      "cweId": "CWE-XXX"
     }
   ],
   "summary": "Overall security assessment summary",
@@ -555,7 +567,9 @@ Return ONLY valid JSON in this exact format:
 }
 
 riskScore is 0-100 based on overall risk (100 = critical, 0 = secure).
-Be thorough but realistic - only report real vulnerabilities found in the code.`
+Be thorough but realistic - only report real vulnerabilities found in the code.
+IMPORTANT: Scan the ENTIRE code provided. Do not skip any files or sections.
+Look for patterns like: eval(), innerHTML, dangerouslySetInnerHTML, exec(), raw SQL queries, hardcoded credentials, missing authentication checks.`
             },
             { role: "user", content: `Analyze this code for security vulnerabilities:\n\n\`\`\`\n${securityAudit}\n\`\`\`` }
           ],
@@ -563,22 +577,45 @@ Be thorough but realistic - only report real vulnerabilities found in the code.`
       });
 
       if (!response.ok) {
-        throw new Error("Security audit failed");
+        const errorText = await response.text();
+        console.error("[CHAT] Security audit API error:", response.status, errorText);
+        throw new Error(`Security audit failed: ${response.status}`);
       }
 
       const result = await response.json();
       const content = result.choices?.[0]?.message?.content || "";
       
+      console.log("[CHAT] Security audit response length:", content.length);
+      
       try {
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        // Try to extract JSON from the response - handle markdown code blocks
+        let jsonContent = content;
+        
+        // Remove markdown code blocks if present
+        const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (codeBlockMatch) {
+          jsonContent = codeBlockMatch[1].trim();
+        }
+        
+        const jsonMatch = jsonContent.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
+          
+          // Ensure proper structure
+          const response = {
+            vulnerabilities: Array.isArray(parsed.vulnerabilities) ? parsed.vulnerabilities : [],
+            summary: parsed.summary || "Security analysis complete",
+            riskScore: typeof parsed.riskScore === 'number' ? parsed.riskScore : 0
+          };
+          
+          console.log("[CHAT] Found", response.vulnerabilities.length, "vulnerabilities");
+          
           return new Response(JSON.stringify(parsed), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
       } catch (e) {
-        console.error("[CHAT] Failed to parse security audit:", e);
+        console.error("[CHAT] Failed to parse security audit:", e, "Content:", content.substring(0, 500));
       }
       
       return new Response(JSON.stringify({ 
