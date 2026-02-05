@@ -117,7 +117,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             : 'bg-card border border-border/50 shadow-sm rounded-bl-md'
         }`}>
           {isUser ? (
-            <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+            <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">{typeof message.content === 'string' ? message.content : String(message.content || '')}</p>
           ) : (
             <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-headings:mt-3 prose-headings:mb-1.5 [&_.katex]:text-foreground [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto overflow-hidden">
               <ReactMarkdown
@@ -188,7 +188,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   },
                 }}
               >
-                {message.content}
+                {typeof message.content === 'string' ? message.content : String(message.content || '')}
               </ReactMarkdown>
             </div>
           )}

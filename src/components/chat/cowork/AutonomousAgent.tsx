@@ -292,8 +292,8 @@
  Be thorough and create complete, working code. Don't use placeholders - implement full functionality.`;
  
        // Call AI
-        // Call AI with streaming and read full response
-        const { data: streamData, error: streamError } = await supabase.functions.invoke('chat', {
+        // Call AI - invoke returns data directly (not a Response object)
+        const { data: rawData, error: streamError } = await supabase.functions.invoke('chat', {
           body: {
             messages: [
               { role: "system", content: systemPrompt },
@@ -310,10 +310,21 @@
           throw new Error(streamError.message || "Failed to get AI response");
         }
         
-        // Handle streaming response - parse SSE chunks
+        // Handle response - rawData might be a string (SSE), object, or Response-like
         let aiContent = "";
         
-        if (typeof streamData === "string") {
+        // If rawData is a Response object, read it as text first
+        let streamData = rawData;
+        if (rawData && typeof rawData === 'object' && typeof rawData.text === 'function') {
+          try {
+            streamData = await rawData.text();
+          } catch (e) {
+            console.error('[AutonomousAgent] Failed to read response:', e);
+            streamData = "";
+          }
+        }
+        
+        if (typeof streamData === "string" && streamData.length > 0) {
           // Parse SSE format
           const lines = streamData.split("\n");
           for (const line of lines) {
@@ -322,17 +333,24 @@
               if (jsonStr === "[DONE]") continue;
               try {
                 const parsed = JSON.parse(jsonStr);
-                const content = parsed.choices?.[0]?.delta?.content;
+                const content = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content;
                 if (content) aiContent += content;
               } catch {
                 // Skip invalid JSON
               }
             }
           }
+          // If no SSE content was parsed, use the raw string
+          if (!aiContent && streamData.trim()) {
+            aiContent = streamData;
+          }
         } else if (streamData?.choices?.[0]?.message?.content) {
           aiContent = streamData.choices[0].message.content;
         } else if (streamData?.text) {
-          aiContent = streamData.text;
+          // Ensure text is a string, not a function
+          aiContent = typeof streamData.text === 'string' ? streamData.text : "";
+        } else if (streamData?.generatedText) {
+          aiContent = streamData.generatedText;
         }
         
         if (!aiContent) {
@@ -532,7 +550,7 @@
                      
                      <div className="prose prose-sm dark:prose-invert max-w-none">
                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                         {msg.content}
+                         {typeof msg.content === 'string' ? msg.content : String(msg.content || '')}
                        </ReactMarkdown>
                      </div>
                      
