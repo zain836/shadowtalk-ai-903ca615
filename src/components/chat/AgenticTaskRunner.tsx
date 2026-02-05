@@ -36,6 +36,8 @@ interface AgenticTaskRunnerProps {
   isOpen: boolean;
   onClose: () => void;
   onTaskComplete: (result: string) => void;
+  initialGoal?: string;
+  autoStart?: boolean;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -51,13 +53,14 @@ const TASK_TEMPLATES = [
   { icon: FileText, label: "Document Creation", prompt: "Create a [document type] for [purpose]" },
 ];
 
-export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete }: AgenticTaskRunnerProps) => {
+export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete, initialGoal, autoStart }: AgenticTaskRunnerProps) => {
   const { toast } = useToast();
-  const [goal, setGoal] = useState("");
+  const [goal, setGoal] = useState(initialGoal || "");
   const [currentTask, setCurrentTask] = useState<AgentTask | null>(null);
   const [autoApprove, setAutoApprove] = useState(false);
   const [showLogs, setShowLogs] = useState(true);
   const [logs, setLogs] = useState<string[]>([]);
+  const [hasAutoStarted, setHasAutoStarted] = useState(false);
 
   const addLog = (message: string) => {
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
@@ -254,6 +257,22 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete }: AgenticTa
     setCurrentTask(prev => prev ? { ...prev, status: "failed" } : null);
     addLog("Task cancelled by user");
   };
+
+  // Auto-start task when opened with a goal (after startTask is defined)
+  useEffect(() => {
+    if (autoStart && initialGoal && !currentTask && !hasAutoStarted) {
+      setHasAutoStarted(true);
+      startTask();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, initialGoal, hasAutoStarted]);
+
+  // Update goal when initialGoal changes
+  useEffect(() => {
+    if (initialGoal) {
+      setGoal(initialGoal);
+    }
+  }, [initialGoal]);
 
   const getStatusColor = (status: TaskStep["status"]) => {
     switch (status) {

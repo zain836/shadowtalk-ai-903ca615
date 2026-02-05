@@ -23,6 +23,8 @@
    confidence: number;
    action?: string;
    params?: Record<string, string>;
+  autoExecute?: boolean;
+  originalMessage?: string;
  }
  
  // Tool detection patterns with priority
@@ -30,6 +32,7 @@
    tool: ToolType;
    patterns: RegExp[];
    priority: number;
+  autoExecute?: boolean;
    extractParams?: (message: string) => Record<string, string>;
  }> = [
    {
@@ -42,9 +45,13 @@
        /\b(create|generate)\s+.*\s+(logo|banner|poster|artwork)/i,
      ],
      priority: 10,
+    autoExecute: true,
      extractParams: (msg) => {
-       const match = msg.match(/(?:generate|create|make|draw|design|imagine|visualize|render)\s+(?:an?\s+)?(?:image|picture|illustration|artwork|logo|icon|banner|poster)?\s*(?:of|for|about|showing)?\s*(.+)/i);
-       return { prompt: match?.[1]?.trim() || msg };
+      // Remove the command prefix to get the actual prompt
+      const cleaned = msg
+        .replace(/^(generate|create|make|draw|design|imagine|visualize|render|show me)\s+(an?\s+)?(image|picture|illustration|artwork|logo|icon|banner|poster)\s*(of|for|about|showing)?\s*/i, '')
+        .trim();
+      return { prompt: cleaned || msg };
      }
    },
    {
@@ -59,9 +66,13 @@
        /\btrend\s+analysis/i,
      ],
      priority: 9,
+    autoExecute: true,
      extractParams: (msg) => {
-       const cleaned = msg.replace(/^(research|investigate|analyze|study|explore)\s+(about|on|into|the)?\s*/i, '');
-       return { query: cleaned.trim() };
+      const cleaned = msg
+        .replace(/^(research|investigate|deep\s*dive|analyze|study|explore|find|search|look\s+up|give\s+me)\s+(about|on|into|the|a|an|detailed|comprehensive|in-?depth|information)?\s*/gi, '')
+        .replace(/^(market|competitor|trend)\s+(research|analysis)\s*(on|about|of|for)?\s*/i, '')
+        .trim();
+      return { query: cleaned || msg };
      }
    },
    {
@@ -75,6 +86,10 @@
        /\bopen\s+(?:the\s+)?(?:app|application)/i,
      ],
      priority: 8,
+    autoExecute: true,
+    extractParams: (msg) => {
+      return { goal: msg };
+    }
    },
    {
      tool: 'shadow_browser',
@@ -85,6 +100,7 @@
        /\bopen\s+(?:this\s+)?url/i,
      ],
      priority: 7,
+    autoExecute: false,
      extractParams: (msg) => {
        const urlMatch = msg.match(/(https?:\/\/[^\s]+)/i);
        return { url: urlMatch?.[1] || '' };
@@ -98,6 +114,7 @@
        /\b(read|extract|ocr)\s+(?:text\s+from|the)\s+(?:this\s+)?(?:image|picture|screenshot)/i,
      ],
      priority: 6,
+    autoExecute: false,
    },
    {
      tool: 'creative_synthesis',
@@ -108,6 +125,13 @@
        /\bstoryboard/i,
      ],
      priority: 5,
+    autoExecute: true,
+    extractParams: (msg) => {
+      const cleaned = msg
+        .replace(/^(brainstorm|ideate|generate\s+ideas|write|compose|draft|creative\s+writing|storyboard)\s+(a\s+)?(story|poem|song|script|essay|article|blog)?\s*(about|on|for)?\s*/i, '')
+        .trim();
+      return { prompt: cleaned || msg };
+    }
    },
    {
      tool: 'code_canvas',
@@ -118,6 +142,7 @@
        /\bopen\s+(?:the\s+)?code\s+(?:editor|canvas|workspace)/i,
      ],
      priority: 5,
+    autoExecute: false,
    },
    {
      tool: 'shadow_live',
@@ -126,6 +151,7 @@
        /\bstart\s+(?:a\s+)?(?:voice|live)\s+(?:call|chat|session)/i,
      ],
      priority: 4,
+    autoExecute: false,
    },
    {
      tool: 'data_organizer',
@@ -134,6 +160,7 @@
        /\b(create|make)\s+(?:a\s+)?(?:table|spreadsheet|database)/i,
      ],
      priority: 4,
+    autoExecute: false,
    },
    {
      tool: 'camera_capture',
@@ -143,6 +170,7 @@
        /\buse\s+(?:my\s+)?camera/i,
      ],
      priority: 4,
+    autoExecute: false,
    },
    {
      tool: 'stealth_vault',
@@ -152,6 +180,7 @@
        /\bsave\s+(?:to\s+)?(?:stealth\s+)?vault/i,
      ],
      priority: 3,
+    autoExecute: false,
    },
    {
      tool: 'calculator',
@@ -161,6 +190,7 @@
        /\bmath\s+(?:problem|equation|calculation)/i,
      ],
      priority: 3,
+    autoExecute: true,
      extractParams: (msg) => {
        const expr = msg.replace(/^(calculate|compute|solve|what\s+is)\s*/i, '');
        return { expression: expr.trim() };
@@ -173,6 +203,7 @@
        /\bwhat(?:'s| is)\s+(?:the\s+)?(?:latest|current|recent)\s+(?:news|update)/i,
      ],
      priority: 2,
+    autoExecute: true,
      extractParams: (msg) => {
        const cleaned = msg.replace(/^(search|google|look\s+up|find)\s+(?:for\s+)?(?:information\s+(?:about|on))?\s*/i, '');
        return { query: cleaned.trim() };
@@ -200,6 +231,8 @@
                tool: toolDef.tool,
                confidence,
                params: toolDef.extractParams?.(message),
+                autoExecute: toolDef.autoExecute ?? false,
+                originalMessage: message,
              };
            }
            break; // Found match for this tool, check next tool

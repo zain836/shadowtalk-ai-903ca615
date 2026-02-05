@@ -146,6 +146,16 @@ const ChatbotPage = () => {
   const [showCameraCapture, setShowCameraCapture] = useState(false);
   const [showDataOrganizer, setShowDataOrganizer] = useState(false);
   
+  // Tool params for auto-execution
+  const [imageGeneratorPrompt, setImageGeneratorPrompt] = useState<string | undefined>(undefined);
+  const [imageGeneratorAutoGenerate, setImageGeneratorAutoGenerate] = useState(false);
+  const [deepResearchQuery, setDeepResearchQuery] = useState<string | undefined>(undefined);
+  const [deepResearchAutoStart, setDeepResearchAutoStart] = useState(false);
+  const [agenticGoal, setAgenticGoal] = useState<string | undefined>(undefined);
+  const [agenticAutoStart, setAgenticAutoStart] = useState(false);
+  const [creativeSynthesisPrompt, setCreativeSynthesisPrompt] = useState<string | undefined>(undefined);
+  const [creativeSynthesisAutoGenerate, setCreativeSynthesisAutoGenerate] = useState(false);
+  
   
   // Check if welcome dialog should be shown (after boot screen)
   useEffect(() => {
@@ -639,60 +649,90 @@ const ChatbotPage = () => {
       
       switch (toolDetection.tool) {
         case 'image_generator':
+          setImageGeneratorPrompt(toolDetection.params?.prompt);
+          setImageGeneratorAutoGenerate(toolDetection.autoExecute ?? false);
           setShowImageGenerator(true);
-          if (toolDetection.params?.prompt) setMessage(toolDetection.params.prompt);
-          toast({ title: "🎨 Image Generator", description: "Opening image generator..." });
+          toast({ 
+            title: "🎨 Image Generator", 
+            description: toolDetection.autoExecute ? "Generating your image..." : "Opening image generator..." 
+          });
+          setMessage("");
           return;
         
         case 'deep_research':
+          setDeepResearchQuery(toolDetection.params?.query);
+          setDeepResearchAutoStart(toolDetection.autoExecute ?? false);
           setShowDeepResearch(true);
-          toast({ title: "🔬 Deep Research", description: "Opening research panel..." });
+          toast({ 
+            title: "🔬 Deep Research", 
+            description: toolDetection.autoExecute ? "Starting research..." : "Opening research panel..." 
+          });
+          setMessage("");
           return;
         
         case 'agentic_runner':
+          setAgenticGoal(toolDetection.params?.goal || toolDetection.originalMessage);
+          setAgenticAutoStart(toolDetection.autoExecute ?? false);
           setShowAgenticRunner(true);
-          toast({ title: "🤖 Agent Activated", description: "Opening task runner..." });
+          toast({ 
+            title: "🤖 Agent Activated", 
+            description: toolDetection.autoExecute ? "Starting autonomous task..." : "Opening task runner..." 
+          });
+          setMessage("");
           return;
         
         case 'shadow_browser':
           setBrowserInitialUrl(toolDetection.params?.url || 'https://google.com');
           setShowShadowBrowser(true);
           toast({ title: "🌐 Shadow Browser", description: "Opening browser..." });
+          setMessage("");
           return;
         
         case 'visual_reasoning':
           setShowVisualReasoning(true);
           toast({ title: "👁️ Visual Reasoning", description: "Upload an image to analyze..." });
+          setMessage("");
           return;
         
         case 'creative_synthesis':
+          setCreativeSynthesisPrompt(toolDetection.params?.prompt || toolDetection.originalMessage);
+          setCreativeSynthesisAutoGenerate(toolDetection.autoExecute ?? false);
           setShowCreativeSynthesis(true);
-          toast({ title: "✨ Creative Synthesis", description: "Opening creative workspace..." });
+          toast({ 
+            title: "✨ Creative Synthesis", 
+            description: toolDetection.autoExecute ? "Creating your content..." : "Opening creative workspace..." 
+          });
+          setMessage("");
           return;
         
         case 'shadow_live':
           setShowShadowTalkLive(true);
           toast({ title: "🎙️ ShadowTalk Live", description: "Starting voice conversation..." });
+          setMessage("");
           return;
         
         case 'code_canvas':
           setCanvasState({ content: "", type: "code", language: "javascript" });
           toast({ title: "💻 Code Canvas", description: "Opening code editor..." });
+          setMessage("");
           return;
         
         case 'data_organizer':
           setShowDataOrganizer(true);
           toast({ title: "📊 Data Organizer", description: "Opening data organizer..." });
+          setMessage("");
           return;
         
         case 'camera_capture':
           setShowCameraCapture(true);
           toast({ title: "📷 Camera", description: "Opening camera..." });
+          setMessage("");
           return;
         
         case 'stealth_vault':
           setShowStealthVault(true);
           toast({ title: "🔐 Stealth Vault", description: "Opening secure vault..." });
+          setMessage("");
           return;
         
         case 'calculator':
@@ -708,16 +748,19 @@ const ChatbotPage = () => {
         case 'multi_model':
           setShowMultiModel(true);
           toast({ title: "🧠 Multi-Model", description: "Opening AI orchestrator..." });
+          setMessage("");
           return;
         
         case 'api_marketplace':
           setShowAPIMarketplace(true);
           toast({ title: "🛒 API Marketplace", description: "Opening developer portal..." });
+          setMessage("");
           return;
         
         case 'analytics':
           setShowAnalytics(true);
           toast({ title: "📈 Analytics", description: "Opening analytics dashboard..." });
+          setMessage("");
           return;
         
         case 'web_search':
@@ -1184,9 +1227,15 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
       {/* Modals */}
       {showImageGenerator && (
         <ImageGenerator
-          onClose={() => setShowImageGenerator(false)}
+          onClose={() => {
+            setShowImageGenerator(false);
+            setImageGeneratorPrompt(undefined);
+            setImageGeneratorAutoGenerate(false);
+          }}
           onImageGenerated={(imageUrl, prompt) => {
             setShowImageGenerator(false);
+            setImageGeneratorPrompt(undefined);
+            setImageGeneratorAutoGenerate(false);
             trackImageGeneration(prompt);
             setMessages(prev => [...prev, 
               { id: crypto.randomUUID(), type: 'user', content: `/imagine ${prompt}`, timestamp: new Date() },
@@ -1199,6 +1248,8 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
               }
             ]);
           }}
+          initialPrompt={imageGeneratorPrompt}
+          autoGenerate={imageGeneratorAutoGenerate}
         />
       )}
 
@@ -1217,21 +1268,37 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
       {showDeepResearch && (
         <DeepResearchPanel
           isOpen={showDeepResearch}
-          onClose={() => setShowDeepResearch(false)}
+          onClose={() => {
+            setShowDeepResearch(false);
+            setDeepResearchQuery(undefined);
+            setDeepResearchAutoStart(false);
+          }}
           onInsertToChat={(content) => {
             setShowDeepResearch(false);
+            setDeepResearchQuery(undefined);
+            setDeepResearchAutoStart(false);
             setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content, timestamp: new Date() }]);
           }}
+          initialQuery={deepResearchQuery}
+          autoResearch={deepResearchAutoStart}
         />
       )}
       {showAgenticRunner && (
         <AgenticTaskRunner
           isOpen={showAgenticRunner}
-          onClose={() => setShowAgenticRunner(false)}
+          onClose={() => {
+            setShowAgenticRunner(false);
+            setAgenticGoal(undefined);
+            setAgenticAutoStart(false);
+          }}
           onTaskComplete={(result) => {
             setShowAgenticRunner(false);
+            setAgenticGoal(undefined);
+            setAgenticAutoStart(false);
             setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: result, timestamp: new Date() }]);
           }}
+          initialGoal={agenticGoal}
+          autoStart={agenticAutoStart}
         />
       )}
       {showVisualReasoning && (
@@ -1247,11 +1314,19 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
       {showCreativeSynthesis && (
         <CreativeSynthesis
           isOpen={showCreativeSynthesis}
-          onClose={() => setShowCreativeSynthesis(false)}
+          onClose={() => {
+            setShowCreativeSynthesis(false);
+            setCreativeSynthesisPrompt(undefined);
+            setCreativeSynthesisAutoGenerate(false);
+          }}
           onInsertToChat={(content) => {
             setShowCreativeSynthesis(false);
+            setCreativeSynthesisPrompt(undefined);
+            setCreativeSynthesisAutoGenerate(false);
             setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content, timestamp: new Date() }]);
           }}
+          initialPrompt={creativeSynthesisPrompt}
+          autoGenerate={creativeSynthesisAutoGenerate}
         />
       )}
       
