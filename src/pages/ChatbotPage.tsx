@@ -40,6 +40,8 @@ import { APIMarketplace } from "@/components/chat/APIMarketplace";
 import { SignInPrompt } from "@/components/chat/SignInPrompt";
 import { CameraCapture } from "@/components/chat/CameraCapture";
 import { DataOrganizer } from "@/components/chat/DataOrganizer";
+import { DocumentGenerator } from "@/components/chat/DocumentGenerator";
+import { DailyPlanner } from "@/components/chat/DailyPlanner";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -147,6 +149,8 @@ const ChatbotPage = () => {
    const [signInPromptReason, setSignInPromptReason] = useState<'chats' | 'images' | 'deepResearch' | 'general'>('general');
   const [showCameraCapture, setShowCameraCapture] = useState(false);
   const [showDataOrganizer, setShowDataOrganizer] = useState(false);
+  const [showDocumentGenerator, setShowDocumentGenerator] = useState(false);
+  const [showDailyPlanner, setShowDailyPlanner] = useState(false);
   
   // Tool params for auto-execution
   const [imageGeneratorPrompt, setImageGeneratorPrompt] = useState<string | undefined>(undefined);
@@ -160,6 +164,8 @@ const ChatbotPage = () => {
   const [showImageDecoder, setShowImageDecoder] = useState(false);
   const [imageDecoderImage, setImageDecoderImage] = useState<string | undefined>(undefined);
   const [imageDecoderAutoAnalyze, setImageDecoderAutoAnalyze] = useState(false);
+  const [documentGeneratorTopic, setDocumentGeneratorTopic] = useState<string | undefined>(undefined);
+  const [documentGeneratorAutoGenerate, setDocumentGeneratorAutoGenerate] = useState(false);
   
   
   // Check if welcome dialog should be shown (after boot screen)
@@ -788,6 +794,20 @@ const ChatbotPage = () => {
           setChatMode('research');
           // Continue with normal chat in research mode
           break;
+        
+        case 'document_generator':
+          setDocumentGeneratorTopic(toolDetection.params?.topic || messageToSend);
+          setDocumentGeneratorAutoGenerate(toolDetection.autoExecute || false);
+          setShowDocumentGenerator(true);
+          toast({ title: "📄 Document Generator", description: "Creating your document..." });
+          setMessage("");
+          return;
+        
+        case 'daily_planner':
+          setShowDailyPlanner(true);
+          toast({ title: "📅 Daily Planner", description: "Opening your day planner..." });
+          setMessage("");
+          return;
       }
     }
     
@@ -1547,6 +1567,40 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             id: crypto.randomUUID(),
             type: 'ai',
             content: `📊 **Data Organized** (${format.toUpperCase()})\n\n\`\`\`${format === 'json' ? 'json' : 'markdown'}\n${output}\n\`\`\``,
+            timestamp: new Date()
+          }]);
+        }}
+      />
+
+      {/* Document Generator - Create docs, articles, emails, PDFs */}
+      <DocumentGenerator
+        isOpen={showDocumentGenerator}
+        onClose={() => {
+          setShowDocumentGenerator(false);
+          setDocumentGeneratorTopic(undefined);
+          setDocumentGeneratorAutoGenerate(false);
+        }}
+        initialPrompt={documentGeneratorTopic}
+        autoGenerate={documentGeneratorAutoGenerate}
+        onDocumentGenerated={(content, type) => {
+          setMessages(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'ai',
+            content: `📄 **${type.charAt(0).toUpperCase() + type.slice(1)} Generated**\n\n${content}`,
+            timestamp: new Date()
+          }]);
+        }}
+      />
+
+      {/* Daily Planner - AI-powered day planning */}
+      <DailyPlanner
+        isOpen={showDailyPlanner}
+        onClose={() => setShowDailyPlanner(false)}
+        onPlanGenerated={(plan) => {
+          setMessages(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'ai',
+            content: plan,
             timestamp: new Date()
           }]);
         }}

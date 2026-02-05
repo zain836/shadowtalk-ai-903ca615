@@ -17,7 +17,9 @@
    | 'data_organizer'
    | 'camera_capture'
    | 'calculator'
-   | 'web_search';
+   | 'web_search'
+   | 'document_generator'
+   | 'daily_planner';
  
  interface ToolDetectionResult {
    tool: ToolType | null;
@@ -225,6 +227,42 @@
        return { query: cleaned.trim() };
      }
    },
+  // Document Generator - for creating docs, articles, emails, PDFs
+  {
+    tool: 'document_generator',
+    patterns: [
+      /\b(write|create|generate|draft|compose)\s+(a\s+|an\s+)?(document|doc|article|email|letter|report|proposal|blog\s*post|resume|cv)/i,
+      /\b(generate|write|create)\s+(?:me\s+)?(a\s+|an\s+)?(professional\s+)?(email|letter|report)/i,
+      /\bmake\s+(?:me\s+)?(a\s+|an\s+)?(document|article|email|report|pdf)/i,
+      /\bdraft\s+(an?\s+)?(email|letter|proposal|article)/i,
+      /\b(pdf|doc|article|email)\s+(?:about|for|on)\s+/i,
+    ],
+    priority: 8,
+    autoExecute: true,
+    extractParams: (msg) => {
+      const cleaned = msg
+        .replace(/^(write|create|generate|draft|compose|make)\s+(me\s+)?(a\s+|an\s+)?(professional\s+)?(document|doc|article|email|letter|report|proposal|blog\s*post|resume|cv)\s*(about|for|on)?\s*/i, '')
+        .trim();
+      return { topic: cleaned || msg };
+    }
+  },
+  // Daily Planner - for planning day, schedule, tasks
+  {
+    tool: 'daily_planner',
+    patterns: [
+      /\b(plan|schedule|organize)\s+(my\s+)?(day|daily|today|tomorrow|schedule)/i,
+      /\bdaily\s+(plan|planner|schedule|agenda)/i,
+      /\b(create|make|generate)\s+(a\s+)?(daily\s+)?(plan|schedule|agenda)/i,
+      /\bwhat\s+should\s+i\s+do\s+today/i,
+      /\bhelp\s+me\s+plan\s+(my\s+)?day/i,
+      /\bday\s+planner/i,
+    ],
+    priority: 7,
+    autoExecute: true,
+    extractParams: (msg) => {
+      return { prompt: msg };
+    }
+  },
  ];
  
  export const useToolOrchestrator = () => {
