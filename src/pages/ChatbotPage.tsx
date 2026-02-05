@@ -44,6 +44,8 @@ import { DocumentGenerator } from "@/components/chat/DocumentGenerator";
 import { DailyPlanner } from "@/components/chat/DailyPlanner";
 import { WordleGame } from "@/components/chat/WordleGame";
 import { VisionAgent } from "@/components/chat/VisionAgent";
+import { CommandPalette } from "@/components/chat/CommandPalette";
+import { ChatGPTBeaterIndicator } from "@/components/chat/ChatGPTBeaterIndicator";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -155,6 +157,7 @@ const ChatbotPage = () => {
   const [showDailyPlanner, setShowDailyPlanner] = useState(false);
   const [showWordleGame, setShowWordleGame] = useState(false);
   const [showVisionAgent, setShowVisionAgent] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
   
   // Tool params for auto-execution
   const [imageGeneratorPrompt, setImageGeneratorPrompt] = useState<string | undefined>(undefined);
@@ -353,6 +356,13 @@ const ChatbotPage = () => {
   // Keyboard shortcuts for AI tools
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Command Palette: Ctrl+K or Cmd+K
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !e.shiftKey) {
+        e.preventDefault();
+        setShowCommandPalette(true);
+        return;
+      }
+      
       // Only trigger with Ctrl+Shift (or Cmd+Shift on Mac)
       if (!(e.ctrlKey || e.metaKey) || !e.shiftKey) return;
       
@@ -1658,6 +1668,67 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             if (abortControllerRef.current) {
               abortControllerRef.current.abort();
             }
+          }
+        }}
+      />
+
+      {/* Command Palette - Power User Keyboard Shortcuts */}
+      <CommandPalette
+        open={showCommandPalette}
+        onOpenChange={setShowCommandPalette}
+        onAction={(action, params) => {
+          switch (action) {
+            case 'deep-research':
+              setShowDeepResearch(true);
+              break;
+            case 'multi-model':
+              setShowMultiModel(true);
+              break;
+            case 'agentic':
+              setShowAgenticRunner(true);
+              break;
+            case 'creative':
+              setShowCreativeSynthesis(true);
+              break;
+            case 'image':
+              setShowImageGenerator(true);
+              break;
+            case 'document':
+              setShowDocumentGenerator(true);
+              break;
+            case 'vault':
+              setShowStealthVault(true);
+              break;
+            case 'offline':
+              robustOfflineAI.loadModel();
+              break;
+            case 'security':
+              setChatMode('hsca');
+              break;
+            case 'voice':
+              setShowShadowTalkLive(true);
+              break;
+            case 'camera':
+              setShowCameraCapture(true);
+              break;
+            case 'vision':
+              setShowVisionAgent(prev => !prev);
+              break;
+            case 'planner':
+              setShowDailyPlanner(true);
+              break;
+            case 'organize':
+              setShowDataOrganizer(true);
+              break;
+            case 'code':
+              setCodeWorkspace({ code: '', language: 'typescript' });
+              break;
+            case 'new-chat':
+              createNewConversation();
+              break;
+            case 'wordle':
+              setShowWordleGame(true);
+              break;
           }
         }}
       />
