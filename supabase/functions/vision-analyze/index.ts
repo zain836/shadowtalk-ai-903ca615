@@ -1,4 +1,4 @@
- import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
  
  const corsHeaders = {
    "Access-Control-Allow-Origin": "*",
@@ -31,6 +31,7 @@
      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
  
      if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY not found in environment");
        return new Response(
          JSON.stringify({ error: "LOVABLE_API_KEY not configured" }),
          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -44,6 +45,27 @@
        );
      }
  
+    // Validate image data format
+    if (typeof imageData !== 'string' || !imageData.startsWith('data:image/')) {
+      console.error("Invalid image data format");
+      return new Response(
+        JSON.stringify({ error: "Invalid image format. Expected base64 data URL." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if image is too large (>4MB base64 = ~3MB actual)
+    const imageSizeKB = Math.round(imageData.length / 1024);
+    console.log(`Processing image: ${imageSizeKB}KB`);
+    
+    if (imageData.length > 4 * 1024 * 1024) {
+      console.error(`Image too large: ${imageSizeKB}KB`);
+      return new Response(
+        JSON.stringify({ error: "Image too large. Please use a smaller image." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
      const analysisPrompt = `You are an advanced behavioral AI that analyzes user camera feeds to understand their emotional state and engagement.
  
  Analyze this image of a user and return ONLY a valid JSON object (no markdown, no code blocks):
@@ -68,28 +90,42 @@
  
  Be empathetic and accurate. Focus on helping the user.`;
  
-     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-       method: "POST",
-       headers: {
-         "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-         "Content-Type": "application/json",
-       },
-       body: JSON.stringify({
-         model: "google/gemini-2.5-flash",
-         messages: [
-           {
-             role: "user",
-             content: [
-               { type: "text", text: analysisPrompt },
-               { type: "image_url", image_url: { url: imageData } }
-             ]
-           }
-         ],
-         max_tokens: 1000,
-       }),
-     });
+    console.log("Sending request to Lovable AI gateway...");
+    
+    let response: Response;
+    try {
+      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: analysisPrompt },
+                { type: "image_url", image_url: { url: imageData } }
+              ]
+            }
+          ],
+          max_tokens: 1000,
+        }),
+      });
+    } catch (fetchError) {
+      console.error("Network error calling AI gateway:", fetchError);
+      return new Response(
+        JSON.stringify({ error: "Network error connecting to AI service" }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
  
      if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Vision API error (${response.status}):`, errorText.substring(0, 500));
+      
        if (response.status === 429) {
          return new Response(
            JSON.stringify({ error: "Rate limited, please try again" }),
@@ -102,14 +138,14 @@
            { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
          );
        }
-       const errorText = await response.text();
-       console.error("Vision API error:", errorText);
+      
        return new Response(
-         JSON.stringify({ error: "Vision analysis failed" }),
+        JSON.stringify({ error: "Vision analysis failed", details: response.status }),
          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
        );
      }
  
+    console.log("AI gateway responded successfully");
      const data = await response.json();
      const content = data.choices?.[0]?.message?.content || "";
  
