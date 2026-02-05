@@ -38,7 +38,6 @@ import { WelcomeDialog } from "@/components/chat/WelcomeDialog";
 import { MultiModelOrchestrator } from "@/components/chat/MultiModelOrchestrator";
 import { APIMarketplace } from "@/components/chat/APIMarketplace";
  import { SignInPrompt } from "@/components/chat/SignInPrompt";
- import ShadowAgentCore from "@/components/chat/ShadowAgentCore";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -143,7 +142,7 @@ const ChatbotPage = () => {
   const [showAPIMarketplace, setShowAPIMarketplace] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
    const [signInPromptReason, setSignInPromptReason] = useState<'chats' | 'images' | 'deepResearch' | 'general'>('general');
-   const [showShadowAgent, setShowShadowAgent] = useState(false);
+  
   
   // Check if welcome dialog should be shown (after boot screen)
   useEffect(() => {
@@ -376,10 +375,6 @@ const ChatbotPage = () => {
          case 'p': // API Marketplace
            e.preventDefault();
            setShowAPIMarketplace(true);
-           break;
-         case 'g': // Shadow-Agent
-           e.preventDefault();
-           setShowShadowAgent(true);
            break;
       }
     };
@@ -1068,10 +1063,6 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
              onModeChange={(mode) => { 
                setChatMode(mode); 
                trackModeSwitch(mode);
-               // Open Shadow-Agent panel when agent mode is selected
-               if (mode === 'agent') {
-                 setShowShadowAgent(true);
-               }
              }}
             personality={personality}
           />
@@ -1304,20 +1295,6 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
          reason={signInPromptReason}
          usedCount={guestUsage.usage[signInPromptReason === 'general' ? 'chats' : signInPromptReason]}
          limitCount={GUEST_LIMITS[signInPromptReason === 'general' ? 'chats' : signInPromptReason]}
-       />
- 
-       {/* Shadow-Agent - Autonomous AI with WhatsApp, Gmail, Calendar, Contacts, Drive */}
-       <ShadowAgentCore
-         isOpen={showShadowAgent}
-         onClose={() => setShowShadowAgent(false)}
-         onResult={(result) => {
-           setMessages(prev => [...prev, {
-             id: crypto.randomUUID(),
-             type: 'ai',
-             content: result,
-             timestamp: new Date()
-           }]);
-         }}
        />
      </div>
   );
