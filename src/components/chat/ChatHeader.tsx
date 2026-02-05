@@ -81,7 +81,6 @@ interface ChatHeaderProps {
   onOpenShadowTalkLive: () => void;
    onOpenOfflineTools?: () => void; // Optional - offline now handled automatically
   onOpenBrowser: () => void;
-  onOpenPakistanCompliance?: () => void;
   aiProvider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
   maxChats: string;
@@ -156,7 +155,6 @@ export const ChatHeader = ({
   onOpenShadowTalkLive,
   onOpenOfflineTools,
   onOpenBrowser,
-  onOpenPakistanCompliance,
   aiProvider,
   onProviderChange,
   maxChats,
@@ -223,13 +221,11 @@ export const ChatHeader = ({
           label="ShadowBrowser (B)"
           onClick={() => handleMenuAction(onOpenBrowser)}
         />
-        {onOpenPakistanCompliance && (
-          <MenuItem
-            icon={<Flag className="h-5 w-5 text-green-500" />}
-            label="🇵🇰 FBR/SECP Helper (P)"
-            onClick={() => handleMenuAction(onOpenPakistanCompliance)}
-          />
-        )}
+        <MenuItem
+          icon={<Flag className="h-5 w-5 text-green-500" />}
+          label="🇵🇰 Pakistan Protocol (in Agent)"
+          onClick={() => handleMenuAction(onOpenAgenticRunner)}
+        />
       </div>
 
       {/* Canvas */}
@@ -487,13 +483,11 @@ export const ChatHeader = ({
                 ShadowBrowser
                 <span className="ml-auto text-xs text-muted-foreground">⇧B</span>
               </DropdownMenuItem>
-              {onOpenPakistanCompliance && (
-                <DropdownMenuItem onClick={onOpenPakistanCompliance}>
-                  <Flag className="h-4 w-4 mr-2 text-green-500" />
-                  🇵🇰 FBR/SECP Helper
-                  <span className="ml-auto text-xs text-muted-foreground">⇧P</span>
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem onClick={onOpenAgenticRunner}>
+                <Flag className="h-4 w-4 mr-2 text-green-500" />
+                🇵🇰 Pakistan Protocol
+                <span className="ml-auto text-xs text-muted-foreground">Agent</span>
+              </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 
