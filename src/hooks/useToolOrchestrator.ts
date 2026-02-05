@@ -236,14 +236,19 @@
       /\bmake\s+(?:me\s+)?(a\s+|an\s+)?(document|article|email|report|pdf)/i,
       /\bdraft\s+(an?\s+)?(email|letter|proposal|article)/i,
       /\b(pdf|doc|article|email)\s+(?:about|for|on)\s+/i,
+      /\b(write|create|generate|draft)\s+(a\s+|an\s+)?(book|book\s*extract|book\s*chapter|chapter|excerpt|novel\s*excerpt)/i,
+      /\bbook\s*(extract|chapter|excerpt|section)\s*(?:about|on|for)?\s*/i,
+      /\b(generate|write)\s+(?:me\s+)?(a\s+)?(story|fiction|narrative|book\s*content)/i,
     ],
     priority: 8,
     autoExecute: true,
     extractParams: (msg) => {
+      // Check if it's a book-related request
+      const isBookRequest = /\b(book|chapter|excerpt|novel|story|fiction|narrative)/i.test(msg);
       const cleaned = msg
-        .replace(/^(write|create|generate|draft|compose|make)\s+(me\s+)?(a\s+|an\s+)?(professional\s+)?(document|doc|article|email|letter|report|proposal|blog\s*post|resume|cv)\s*(about|for|on)?\s*/i, '')
+        .replace(/^(write|create|generate|draft|compose|make)\s+(me\s+)?(a\s+|an\s+)?(professional\s+)?(document|doc|article|email|letter|report|proposal|blog\s*post|resume|cv|book|book\s*extract|book\s*chapter|chapter|excerpt|novel\s*excerpt|story|fiction|narrative)\s*(about|for|on)?\s*/i, '')
         .trim();
-      return { topic: cleaned || msg };
+      return { topic: cleaned || msg, docType: isBookRequest ? 'book_extract' : undefined };
     }
   },
   // Daily Planner - for planning day, schedule, tasks
