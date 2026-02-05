@@ -46,6 +46,9 @@ import { WordleGame } from "@/components/chat/WordleGame";
 import { VisionAgent } from "@/components/chat/VisionAgent";
 import { CommandPalette } from "@/components/chat/CommandPalette";
 import { ChatGPTBeaterIndicator } from "@/components/chat/ChatGPTBeaterIndicator";
+import { ClaudeBeaterIndicator } from "@/components/chat/ClaudeBeaterIndicator";
+import { ThinkingTransparency, useThinkingSteps } from "@/components/chat/ThinkingTransparency";
+import { LiveCodeArtifact, extractCodeArtifacts } from "@/components/chat/LiveCodeArtifact";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -205,6 +208,10 @@ const ChatbotPage = () => {
   const { getMemoryContext, getActiveMemories } = useBusinessMemory();
   const guestUsage = useGuestUsage(); // Guest usage tracking
   const toolOrchestrator = useToolOrchestrator(); // Intelligent tool detection
+  const thinkingSteps = useThinkingSteps(); // Claude-style thinking transparency
+  
+  // Thinking transparency state
+  const [showThinkingPanel, setShowThinkingPanel] = useState(true);
   
   // Determine if user is a guest (not logged in)
   const isGuest = !user;
@@ -1213,6 +1220,26 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
           {/* Special Mode Panels */}
           {chatMode === 'ppag' && <PlanetaryActionPanel onGetActions={handleGetEcoActions} isLoading={isLoadingEcoActions} />}
           {chatMode === 'hsca' && <SecurityAuditPanel onAnalyze={handleSecurityAudit} isAnalyzing={isAnalyzingSecurity} />}
+
+          {/* Thinking Transparency - Claude-style reasoning display */}
+          {isLoading && thinkingSteps.steps.length > 0 && (
+            <div className="px-2 py-1.5 md:px-4 md:py-2 border-b border-border/50">
+              <ThinkingTransparency
+                isThinking={thinkingSteps.isThinking}
+                steps={thinkingSteps.steps}
+                isExpanded={showThinkingPanel}
+                onToggleExpand={() => setShowThinkingPanel(!showThinkingPanel)}
+              />
+            </div>
+          )}
+
+          {/* Claude Beater & ChatGPT Beater Indicators */}
+          {messages.length <= 2 && !isLoading && (
+            <div className="px-2 py-2 md:px-4 flex flex-wrap gap-2 items-center justify-center">
+              <ClaudeBeaterIndicator variant="compact" />
+              <ChatGPTBeaterIndicator />
+            </div>
+          )}
 
           {/* Messages */}
           {!isSpecialMode && (
