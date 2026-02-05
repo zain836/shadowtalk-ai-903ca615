@@ -14,6 +14,7 @@ import { CodeCanvas } from "@/components/chat/CodeCanvas";
 import { CodeWorkspace } from "@/components/chat/CodeWorkspace";
 import { Canvas } from "@/components/chat/Canvas";
 import { ImageGenerator } from "@/components/chat/ImageGenerator";
+import { ImageDecoder } from "@/components/chat/ImageDecoder";
 
 import { EditMessageDialog } from "@/components/chat/EditMessageDialog";
 import { AdBanner } from "@/components/chat/AdBanner";
@@ -155,6 +156,9 @@ const ChatbotPage = () => {
   const [agenticAutoStart, setAgenticAutoStart] = useState(false);
   const [creativeSynthesisPrompt, setCreativeSynthesisPrompt] = useState<string | undefined>(undefined);
   const [creativeSynthesisAutoGenerate, setCreativeSynthesisAutoGenerate] = useState(false);
+  const [showImageDecoder, setShowImageDecoder] = useState(false);
+  const [imageDecoderImage, setImageDecoderImage] = useState<string | undefined>(undefined);
+  const [imageDecoderAutoAnalyze, setImageDecoderAutoAnalyze] = useState(false);
   
   
   // Check if welcome dialog should be shown (after boot screen)
@@ -648,6 +652,24 @@ const ChatbotPage = () => {
       console.log('[ChatbotPage] Tool detected:', toolDetection.tool, 'confidence:', toolDetection.confidence);
       
       switch (toolDetection.tool) {
+        case 'image_decoder':
+          // If there's an attachment, use it for decoding
+          if (attachmentToSend?.type === 'image') {
+            setImageDecoderImage(attachmentToSend.data);
+            setImageDecoderAutoAnalyze(true);
+          } else {
+            setImageDecoderImage(undefined);
+            setImageDecoderAutoAnalyze(false);
+          }
+          setShowImageDecoder(true);
+          toast({ 
+            title: "🔍 Image Decoder", 
+            description: attachmentToSend?.type === 'image' ? "Analyzing your image..." : "Upload an image to decode..." 
+          });
+          setMessage("");
+          setSelectedFile(null);
+          return;
+        
         case 'image_generator':
           setImageGeneratorPrompt(toolDetection.params?.prompt);
           setImageGeneratorAutoGenerate(toolDetection.autoExecute ?? false);
@@ -1250,6 +1272,36 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
           }}
           initialPrompt={imageGeneratorPrompt}
           autoGenerate={imageGeneratorAutoGenerate}
+        />
+      )}
+
+      {/* Image Decoder - Professional Analysis */}
+      {showImageDecoder && (
+        <ImageDecoder
+          onClose={() => {
+            setShowImageDecoder(false);
+            setImageDecoderImage(undefined);
+            setImageDecoderAutoAnalyze(false);
+          }}
+          onDecoded={(analysis, enhancedImage) => {
+            setShowImageDecoder(false);
+            setImageDecoderImage(undefined);
+            setImageDecoderAutoAnalyze(false);
+            const imageContent = enhancedImage 
+              ? `🔍 **Image Decoded**\n\n${analysis}`
+              : `🔍 **Image Analysis**\n\n${analysis}`;
+            setMessages(prev => [...prev, 
+              { 
+                id: crypto.randomUUID(), 
+                type: 'ai', 
+                content: imageContent, 
+                timestamp: new Date(),
+                imageUrl: enhancedImage
+              }
+            ]);
+          }}
+          initialImage={imageDecoderImage}
+          autoAnalyze={imageDecoderAutoAnalyze}
         />
       )}
 

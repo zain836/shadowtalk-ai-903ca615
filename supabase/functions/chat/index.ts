@@ -174,7 +174,7 @@ serve(async (req) => {
     const { 
       messages, personality, generateImage, imagePrompt, imageEdit, originalImage, editPrompt,
       mode, modePrompt, userContext, businessMemory, analyzeTask, getEcoActions, location, securityAudit, 
-      webSearch, searchQuery, deepResearch, researchQuery, agentWorkflow 
+      webSearch, searchQuery, deepResearch, researchQuery, agentWorkflow, decodeImage, imageToAnalyze 
     } = validation.data;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
@@ -182,7 +182,99 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // AI Agent Workflows - Execute multi-step workflows
+    // Image Decoder - Professional analysis with enhanced output
+    if (decodeImage && imageToAnalyze) {
+      console.log("[CHAT] Decoding image with professional analysis");
+      
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-pro",
+          messages: [
+            { 
+              role: "system", 
+              content: `You are a professional image analyst and decoder. Provide comprehensive, detailed analysis of images in a structured professional format.
+
+Your analysis MUST include:
+
+## 📋 EXECUTIVE SUMMARY
+- One-paragraph overview of the image
+
+## 🎨 VISUAL COMPOSITION
+- Dominant colors and color palette (with hex codes if identifiable)
+- Lighting conditions and quality
+- Composition style (rule of thirds, symmetry, etc.)
+- Image quality assessment (resolution, sharpness, noise)
+
+## 📍 SUBJECT MATTER
+- Primary subjects and their positions
+- Background elements and context
+- Text/watermarks if present (transcribed exactly)
+- Objects identified with confidence levels
+
+## 🔍 TECHNICAL ANALYSIS
+- Estimated camera settings (if photo)
+- Post-processing indicators
+- AI-generated indicators (if applicable)
+- Style classification (photorealistic, illustration, CGI, etc.)
+
+## 💡 CONTEXTUAL INSIGHTS
+- Mood/atmosphere conveyed
+- Cultural or symbolic elements
+- Potential use cases for this image
+- Notable or unusual elements
+
+## 📊 METADATA INFERENCE
+- Estimated time of day (for photos)
+- Possible location context
+- Genre/category classification
+
+Be thorough, professional, and precise. Use bullet points for clarity.`
+            },
+            { 
+              role: "user", 
+              content: [
+                {
+                  type: "text",
+                  text: "Analyze and decode this image with complete professional detail:"
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: imageToAnalyze
+                  }
+                }
+              ]
+            }
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[CHAT] Image decode error:", response.status, errorText);
+        throw new Error("Image decoding failed");
+      }
+
+      const result = await response.json();
+      const analysis = result.choices?.[0]?.message?.content || "";
+      
+      console.log("[CHAT] Image decoded successfully, analysis length:", analysis.length);
+
+      return new Response(JSON.stringify({ 
+        type: "analysis",
+        analysis: analysis,
+        content: analysis
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // AI Agent Workflows - Execute multi-step workflows (existing code continues)
     if (agentWorkflow) {
       console.log("[CHAT] Executing agent workflow:", agentWorkflow.workflowId);
       

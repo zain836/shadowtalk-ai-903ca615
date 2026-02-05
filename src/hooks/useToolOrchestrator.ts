@@ -2,6 +2,7 @@
  
  export type ToolType = 
    | 'image_generator'
+  | 'image_decoder'
    | 'deep_research'
    | 'agentic_runner'
    | 'visual_reasoning'
@@ -35,6 +36,21 @@
   autoExecute?: boolean;
    extractParams?: (message: string) => Record<string, string>;
  }> = [
+  // Image Decoder - Hidden built-in tool (high priority)
+  {
+    tool: 'image_decoder',
+    patterns: [
+      /\b(decode|analyze|describe|explain|interpret|read)\s+(this\s+)?(image|picture|photo|screenshot)/i,
+      /\bwhat('s| is)\s+in\s+(this\s+)?(image|picture|photo)/i,
+      /\bextract\s+(text\s+|data\s+)?from\s+(this\s+)?(image|picture)/i,
+      /\bimage\s+(analysis|decode|decoding)/i,
+      /\bwhat\s+does\s+(this\s+)?(image|picture)\s+show/i,
+      /\b(scan|process)\s+(this\s+)?(image|picture)/i,
+    ],
+    priority: 11,
+    autoExecute: true,
+    extractParams: (msg) => ({ query: msg }),
+  },
    {
      tool: 'image_generator',
      patterns: [
