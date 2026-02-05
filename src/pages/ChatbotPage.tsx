@@ -399,7 +399,7 @@ const ChatbotPage = () => {
            e.preventDefault();
            setShowAPIMarketplace(true);
            break;
-        case 'v': // Vision Agent
+        case 'g': // Vision Agent (G for aGent)
           e.preventDefault();
           setShowVisionAgent(prev => !prev);
           break;
