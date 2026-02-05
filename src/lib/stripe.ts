@@ -50,7 +50,7 @@ export const PLAN_DETAILS = {
   },
   pro: {
     name: "Pro",
-    price: 9.99,
+    price: 5,
     features: [
       "Unlimited messages",
       "🖼️ 20 image generations/day",
@@ -66,7 +66,7 @@ export const PLAN_DETAILS = {
   },
   premium: {
     name: "Premium",
-    price: 29.99,
+    price: 15,
     features: [
       "Everything in Pro",
       "🖼️ 50 image generations/day",
@@ -83,7 +83,7 @@ export const PLAN_DETAILS = {
   },
   elite: {
     name: "Elite",
-    price: 49.99,
+    price: 20,
     features: [
       "Everything in Premium",
       "🖼️ Unlimited image generations",
