@@ -64,7 +64,7 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
   {
     id: 'pro',
     name: 'Pro',
-    price: 9.99,
+    price: 5,
     period: '/month',
     description: 'For freelancers & small teams',
     features: [
@@ -79,7 +79,7 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
   {
     id: 'premium',
     name: 'Premium',
-    price: 29.99,
+    price: 15,
     period: '/month',
     description: 'For agencies & businesses',
     features: [
@@ -118,7 +118,7 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
   {
     id: 'elite',
     name: 'Elite',
-    price: 39.99,
+    price: 20,
     period: '/month',
     description: 'Enterprise-grade for teams',
     badge: 'ENTERPRISE',
