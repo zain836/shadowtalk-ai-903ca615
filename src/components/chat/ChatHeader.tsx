@@ -80,7 +80,7 @@ interface ChatHeaderProps {
   onOpenImageGenerator: () => void;
   onOpenShadowCowork: () => void;
   onOpenShadowTalkLive: () => void;
-  onOpenOfflineTools: () => void;
+   onOpenOfflineTools?: () => void; // Optional - offline now handled automatically
   onOpenBrowser: () => void;
   aiProvider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
@@ -227,11 +227,6 @@ export const ChatHeader = ({
           icon={<Mic className="h-5 w-5 text-violet-500" />}
           label="ShadowTalk Live (L)"
           onClick={() => handleMenuAction(onOpenShadowTalkLive)}
-        />
-        <MenuItem
-          icon={<WifiOff className="h-5 w-5 text-emerald-500" />}
-          label="Offline Tools (O)"
-          onClick={() => handleMenuAction(onOpenOfflineTools)}
         />
         <MenuItem
           icon={<Compass className="h-5 w-5 text-sky-500" />}
