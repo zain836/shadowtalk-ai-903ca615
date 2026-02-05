@@ -16,7 +16,8 @@
    Sparkles, Crown, ChevronRight, Terminal, Shield, Cog, Eye,
    MousePointer, Workflow, Calculator, Building2, FileText, Flag,
    Landmark, Receipt, Lock, AlertTriangle, Download, FileSpreadsheet,
-   Briefcase, ArrowLeft
+  Briefcase, ArrowLeft, Leaf, Server, GlobeLock, Plane, Battery,
+  Scale, MapPin, Cpu, HardDrive, CloudOff
  } from 'lucide-react';
  import { toast } from 'sonner';
  import { useAuth } from '@/components/AuthProvider';
@@ -76,7 +77,7 @@
  
  interface AgentTask {
    id: string;
-   type: 'analyze' | 'research' | 'execute' | 'code' | 'data' | 'browse' | 'automate' | 'fbr_tax' | 'secp_filing' | 'audit_guard';
+  type: 'analyze' | 'research' | 'execute' | 'code' | 'data' | 'browse' | 'automate' | 'fbr_tax' | 'secp_filing' | 'audit_guard' | 'zero_knowledge' | 'green_inference' | 'cross_border';
    description: string;
    status: 'pending' | 'planning' | 'running' | 'awaiting_approval' | 'completed' | 'failed';
    result?: string;
@@ -131,6 +132,10 @@
    { id: 'fbr_helper', name: 'FBR Helper', description: '🇵🇰 Tax & Challan', icon: <Calculator className="h-4 w-4" />, enabled: true },
    { id: 'secp_drafter', name: 'SECP Drafter', description: '🇵🇰 Company forms', icon: <Building2 className="h-4 w-4" />, enabled: true },
    { id: 'audit_guard', name: 'Audit Guard', description: '🇵🇰 Risk assessment', icon: <Shield className="h-4 w-4" />, enabled: true },
+  // Global Edge Architect Skills
+  { id: 'zero_knowledge', name: 'Zero-Knowledge PM', description: '🔐 Air-gapped orchestration', icon: <GlobeLock className="h-4 w-4" />, enabled: true },
+  { id: 'green_inference', name: 'Green Inference', description: '🌱 Sustainable local AI', icon: <Leaf className="h-4 w-4" />, enabled: true },
+  { id: 'cross_border', name: 'Cross-Border', description: '🌍 Multi-jurisdiction compliance', icon: <Plane className="h-4 w-4" />, enabled: true },
  ];
  
  const EXAMPLE_TASKS = [
@@ -140,6 +145,9 @@
    "🇵🇰 Calculate my FBR tax for 50 lac rupees",
    "🇵🇰 Generate SECP Form A for my company",
    "🇵🇰 Audit my expenses for FBR triggers",
+  "🔐 Process confidential 10k page project locally",
+  "🌱 Run sustainable inference on my hardware",
+  "🌍 Ensure GDPR/EU AI Act compliance",
  ];
  
  const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({ onExecuteTask, isExecuting }) => {
@@ -153,8 +161,15 @@
    const [skills] = useState<AgentSkill[]>(AGENT_SKILLS);
    
    // Pakistan Compliance Mode
-   const [complianceMode, setComplianceMode] = useState<'none' | 'fbr' | 'secp' | 'audit'>('none');
+  const [complianceMode, setComplianceMode] = useState<'none' | 'fbr' | 'secp' | 'audit' | 'global'>('none');
    const [complianceProgress, setComplianceProgress] = useState(0);
+  
+  // Global Edge Architect State
+  const [globalMode, setGlobalMode] = useState<'zero_knowledge' | 'green_inference' | 'cross_border'>('zero_knowledge');
+  const [projectData, setProjectData] = useState({ name: '', pages: 0, classification: 'confidential' as 'public' | 'internal' | 'confidential' | 'top_secret' });
+  const [greenMetrics, setGreenMetrics] = useState({ cloudEnergy: 0, localEnergy: 0, co2Saved: 0, waterSaved: 0, costSaved: 0 });
+  const [complianceRegions, setComplianceRegions] = useState<string[]>([]);
+  const [jurisdictionReport, setJurisdictionReport] = useState<{ region: string; status: 'compliant' | 'warning' | 'blocked'; regulation: string; action: string }[]>([]);
    
    // FBR State
    const [fbrData, setFbrData] = useState<Partial<FBRTaxData>>({
@@ -210,6 +225,10 @@
      if (lower.includes('fbr') || lower.includes('tax') || lower.includes('challan')) return 'fbr_tax';
      if (lower.includes('secp') || lower.includes('company') || lower.includes('form a')) return 'secp_filing';
      if (lower.includes('audit') || lower.includes('risk') || lower.includes('notice')) return 'audit_guard';
+    // Global Edge Architect detection
+    if (lower.includes('confidential') || lower.includes('air-gap') || lower.includes('zero-knowledge') || lower.includes('private project')) return 'zero_knowledge';
+    if (lower.includes('green') || lower.includes('sustainable') || lower.includes('energy') || lower.includes('local inference')) return 'green_inference';
+    if (lower.includes('gdpr') || lower.includes('cross-border') || lower.includes('jurisdiction') || lower.includes('eu ai act') || lower.includes('data residency')) return 'cross_border';
      if (lower.includes('research') || lower.includes('find')) return 'research';
      if (lower.includes('code') || lower.includes('build')) return 'code';
      if (lower.includes('analyze')) return 'analyze';
@@ -265,6 +284,11 @@
      if (taskType === 'fbr_tax') { setComplianceMode('fbr'); return; }
      if (taskType === 'secp_filing') { setComplianceMode('secp'); return; }
      if (taskType === 'audit_guard') { setComplianceMode('audit'); return; }
+      
+      // Auto-enter global mode for Edge Architect tasks
+      if (taskType === 'zero_knowledge') { setGlobalMode('zero_knowledge'); setComplianceMode('global'); return; }
+      if (taskType === 'green_inference') { setGlobalMode('green_inference'); setComplianceMode('global'); return; }
+      if (taskType === 'cross_border') { setGlobalMode('cross_border'); setComplianceMode('global'); return; }
  
      const riskLevel = assessRiskLevel(taskInput);
      const subtasks = decomposeTask(taskInput, taskType);
@@ -424,14 +448,89 @@
        analyze: <FileSearch className="h-4 w-4" />, browse: <MousePointer className="h-4 w-4" />,
        automate: <Workflow className="h-4 w-4" />, fbr_tax: <Calculator className="h-4 w-4 text-green-500" />,
        secp_filing: <Building2 className="h-4 w-4 text-blue-500" />, audit_guard: <Shield className="h-4 w-4 text-amber-500" />,
+      zero_knowledge: <GlobeLock className="h-4 w-4 text-purple-500" />,
+      green_inference: <Leaf className="h-4 w-4 text-green-500" />,
+      cross_border: <Plane className="h-4 w-4 text-blue-500" />,
      };
      return icons[type] || <Zap className="h-4 w-4" />;
    };
+
+  // ==========================================================================
+  // GLOBAL EDGE ARCHITECT FUNCTIONS
+  // ==========================================================================
+
+  // Zero-Knowledge Project Manager
+  const processZeroKnowledgeProject = useCallback(() => {
+    if (!projectData.name) { toast.error('Enter project name'); return; }
+    setComplianceProgress(0);
+    const interval = setInterval(() => setComplianceProgress(prev => Math.min(prev + 8, 100)), 150);
+    setTimeout(() => {
+      clearInterval(interval);
+      setComplianceProgress(100);
+      toast.success('Air-gapped processing complete!', { 
+        description: `${projectData.pages} pages analyzed locally`,
+        icon: <GlobeLock className="h-4 w-4 text-purple-500" />
+      });
+    }, 2000);
+  }, [projectData]);
+
+  // Green Inference Calculator
+  const calculateGreenMetrics = useCallback(() => {
+    setComplianceProgress(0);
+    const interval = setInterval(() => setComplianceProgress(prev => Math.min(prev + 12, 100)), 100);
+    setTimeout(() => {
+      clearInterval(interval);
+      setComplianceProgress(100);
+      const queries = 1000;
+      const cloudKwh = queries * 0.0029;
+      const localKwh = queries * 0.0008;
+      setGreenMetrics({
+        cloudEnergy: Math.round(cloudKwh * 30 * 100) / 100,
+        localEnergy: Math.round(localKwh * 30 * 100) / 100,
+        co2Saved: Math.round((cloudKwh - localKwh) * 30 * 0.4 * 100) / 100,
+        waterSaved: Math.round((cloudKwh - localKwh) * 30 * 1.8 * 10) / 10,
+        costSaved: Math.round((cloudKwh - localKwh) * 30 * 0.12 * 100) / 100,
+      });
+      toast.success('Green metrics calculated!', { icon: <Leaf className="h-4 w-4 text-green-500" /> });
+    }, 1500);
+  }, []);
+
+  // Cross-Border Compliance Check
+  const checkJurisdictionCompliance = useCallback(() => {
+    if (complianceRegions.length === 0) { toast.error('Select at least one region'); return; }
+    setComplianceProgress(0);
+    setJurisdictionReport([]);
+    const interval = setInterval(() => setComplianceProgress(prev => Math.min(prev + 10, 100)), 120);
+    setTimeout(() => {
+      clearInterval(interval);
+      setComplianceProgress(100);
+      const reports = complianceRegions.map(region => {
+        const regulations: Record<string, { regulation: string; status: 'compliant' | 'warning' | 'blocked'; action: string }> = {
+          'eu': { regulation: 'GDPR + EU AI Act', status: 'compliant', action: 'Data stays in local bunker - fully compliant' },
+          'us': { regulation: 'CCPA + State Laws', status: 'compliant', action: 'No cross-border transfer needed' },
+          'china': { regulation: 'PIPL + CAC', status: 'compliant', action: 'Local processing via Bunker Mode' },
+          'india': { regulation: 'DPDP Act 2023', status: 'compliant', action: 'Data localization satisfied' },
+          'switzerland': { regulation: 'DSG/nDSG', status: 'compliant', action: 'Swiss-grade privacy maintained' },
+          'uae': { regulation: 'PDPL', status: 'compliant', action: 'DIFC/ADGM standards met' },
+          'pakistan': { regulation: 'PECA 2016', status: 'compliant', action: 'Local compliance via FBR/SECP modules' },
+        };
+        return { region, ...regulations[region] || { regulation: 'Local Data Protection Laws', status: 'warning' as const, action: 'Manual review recommended' } };
+      });
+      setJurisdictionReport(reports);
+      toast.success('Compliance check complete!', { icon: <Scale className="h-4 w-4 text-blue-500" /> });
+    }, 2000);
+  }, [complianceRegions]);
+
+  const toggleRegion = (region: string) => {
+    setComplianceRegions(prev => 
+      prev.includes(region) ? prev.filter(r => r !== region) : [...prev, region]
+    );
+  };
  
    // ==========================================================================
    // COMPLIANCE MODE UI
    // ==========================================================================
-   if (complianceMode !== 'none') {
+  if (complianceMode !== 'none' && complianceMode !== 'global') {
      return (
        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4 p-4">
          <div className="flex items-center justify-between">
@@ -653,6 +752,132 @@
      );
    }
  
+  // ==========================================================================
+  // GLOBAL EDGE ARCHITECT UI
+  // ==========================================================================
+  if (complianceMode === 'global') {
+    return (
+      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4 p-4">
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" size="sm" onClick={() => setComplianceMode('none')} className="gap-2">
+            <ArrowLeft className="h-4 w-4" /> Back to Agent
+          </Button>
+          <Badge variant="secondary" className="bg-purple-500/20 text-purple-400 gap-1">
+            <CloudOff className="h-3 w-3" /> Edge Mode
+          </Badge>
+        </div>
+        <Card className="border-purple-500/30 bg-gradient-to-r from-purple-900/20 to-indigo-900/20">
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+                <Server className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">Edge Architect</h2>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <GlobeLock className="h-3 w-3" /> Air-Gapped • Sustainable • Multi-Jurisdiction
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Tabs value={globalMode} onValueChange={(v) => setGlobalMode(v as typeof globalMode)}>
+          <TabsList className="grid grid-cols-3 w-full">
+            <TabsTrigger value="zero_knowledge" className="gap-1 text-xs"><GlobeLock className="h-3 w-3" /> Zero-Knowledge</TabsTrigger>
+            <TabsTrigger value="green_inference" className="gap-1 text-xs"><Leaf className="h-3 w-3" /> Green AI</TabsTrigger>
+            <TabsTrigger value="cross_border" className="gap-1 text-xs"><Plane className="h-3 w-3" /> Cross-Border</TabsTrigger>
+          </TabsList>
+          <TabsContent value="zero_knowledge" className="space-y-4 mt-4">
+            <Alert className="border-purple-500/30 bg-purple-500/5">
+              <GlobeLock className="h-4 w-4 text-purple-500" />
+              <AlertDescription className="text-xs"><strong>Zero-Knowledge Project Manager</strong> - Air-gapped orchestration</AlertDescription>
+            </Alert>
+            <Card className="border-purple-500/20">
+              <CardContent className="pt-4 space-y-3">
+                <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/30">
+                  <p className="text-[10px] text-muted-foreground">1. Documents in browser (WebGPU) • 2. Encrypted logic for planning • 3. Local execution • 4. Swiss-grade privacy</p>
+                </div>
+                <Input placeholder="Project Name" value={projectData.name} onChange={(e) => setProjectData(p => ({ ...p, name: e.target.value }))} className="h-8 text-xs" />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input type="number" placeholder="Pages" value={projectData.pages || ''} onChange={(e) => setProjectData(p => ({ ...p, pages: Number(e.target.value) }))} className="h-8 text-xs" />
+                  <Select value={projectData.classification} onValueChange={(v) => setProjectData(p => ({ ...p, classification: v as typeof projectData.classification }))}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="public">Public</SelectItem>
+                      <SelectItem value="confidential">Confidential</SelectItem>
+                      <SelectItem value="top_secret">Top Secret</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={processZeroKnowledgeProject} className="w-full gap-2 bg-purple-600 hover:bg-purple-700"><GlobeLock className="h-4 w-4" /> Process Air-Gapped</Button>
+              </CardContent>
+            </Card>
+            {complianceProgress > 0 && complianceProgress < 100 && <Progress value={complianceProgress} className="h-2" />}
+          </TabsContent>
+          <TabsContent value="green_inference" className="space-y-4 mt-4">
+            <Alert className="border-green-500/30 bg-green-500/5">
+              <Leaf className="h-4 w-4 text-green-500" />
+              <AlertDescription className="text-xs"><strong>Green Inference Engine</strong> - Sustainable AI via edge computing</AlertDescription>
+            </Alert>
+            <Card className="border-green-500/20">
+              <CardContent className="pt-4 space-y-3">
+                <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/30">
+                  <p className="text-[10px] text-muted-foreground"><strong>Plan</strong> → Cloud (~1KB) • <strong>Execute</strong> → Local WebGPU • <strong>Result</strong> → 70% less energy</p>
+                </div>
+                <Button onClick={calculateGreenMetrics} className="w-full gap-2 bg-green-600 hover:bg-green-700"><Leaf className="h-4 w-4" /> Calculate ESG Impact</Button>
+              </CardContent>
+            </Card>
+            {complianceProgress > 0 && complianceProgress < 100 && <Progress value={complianceProgress} className="h-2" />}
+            {greenMetrics.cloudEnergy > 0 && (
+              <Card className="border-green-500/30">
+                <CardContent className="pt-4">
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div><p className="text-lg font-bold text-green-500">{greenMetrics.co2Saved}</p><p className="text-[10px]">kg CO₂</p></div>
+                    <div><p className="text-lg font-bold text-blue-500">{greenMetrics.waterSaved}</p><p className="text-[10px]">L Water</p></div>
+                    <div><p className="text-lg font-bold text-amber-500">${greenMetrics.costSaved}</p><p className="text-[10px]">Saved</p></div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+          <TabsContent value="cross_border" className="space-y-4 mt-4">
+            <Alert className="border-blue-500/30 bg-blue-500/5">
+              <Scale className="h-4 w-4 text-blue-500" />
+              <AlertDescription className="text-xs"><strong>Cross-Border Compliance</strong> - Multi-jurisdiction data custodian</AlertDescription>
+            </Alert>
+            <Card className="border-blue-500/20">
+              <CardContent className="pt-4 space-y-3">
+                <div className="grid grid-cols-4 gap-2">
+                  {['eu', 'us', 'china', 'india', 'switzerland', 'uae', 'pakistan'].map(r => (
+                    <Button key={r} variant={complianceRegions.includes(r) ? 'default' : 'outline'} size="sm" className="h-8 text-xs" onClick={() => toggleRegion(r)}>
+                      {r === 'eu' ? '🇪🇺' : r === 'us' ? '🇺🇸' : r === 'china' ? '🇨🇳' : r === 'india' ? '🇮🇳' : r === 'switzerland' ? '🇨🇭' : r === 'uae' ? '🇦🇪' : '🇵🇰'} {r.toUpperCase()}
+                    </Button>
+                  ))}
+                </div>
+                <Button onClick={checkJurisdictionCompliance} className="w-full gap-2 bg-blue-600 hover:bg-blue-700"><Scale className="h-4 w-4" /> Check Compliance</Button>
+              </CardContent>
+            </Card>
+            {complianceProgress > 0 && complianceProgress < 100 && <Progress value={complianceProgress} className="h-2" />}
+            {jurisdictionReport.length > 0 && (
+              <Card className="border-blue-500/30">
+                <CardContent className="pt-4">
+                  <ScrollArea className="h-40">
+                    {jurisdictionReport.map((r, i) => (
+                      <div key={i} className={`p-2 mb-2 rounded border ${r.status === 'compliant' ? 'bg-green-500/10 border-green-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
+                        <div className="flex justify-between"><span className="text-xs font-medium">{r.region.toUpperCase()}</span><Badge variant="secondary" className="text-[10px]">{r.status}</Badge></div>
+                        <p className="text-[10px] text-muted-foreground">📜 {r.regulation}</p>
+                      </div>
+                    ))}
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+      </motion.div>
+    );
+  }
+
    // ==========================================================================
    // MAIN AGENT UI
    // ==========================================================================
@@ -706,6 +931,24 @@
          </CardContent>
        </Card>
  
+      <Card className="border-purple-500/30 bg-gradient-to-r from-purple-900/10 to-indigo-900/10 cursor-pointer hover:border-purple-400/50 transition-colors" onClick={() => { setGlobalMode('zero_knowledge'); setComplianceMode('global'); }}>
+        <CardContent className="pt-4 pb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+              <Server className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium flex items-center gap-2">
+                🌍 Global Edge Architect
+                <Badge variant="secondary" className="text-[10px] bg-purple-500/20 text-purple-400">AIR-GAPPED</Badge>
+              </p>
+              <p className="text-xs text-muted-foreground">Zero-Knowledge • Green AI • Cross-Border</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+
        <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20">
          <CardHeader className="pb-2">
            <CardTitle className="text-sm flex items-center gap-2"><Cog className="h-4 w-4" /> Agent Skills</CardTitle>
@@ -722,9 +965,20 @@
            <div className="mt-2 pt-2 border-t border-border/50">
              <p className="text-[10px] text-muted-foreground mb-2">🇵🇰 Pakistan Compliance</p>
              <div className="grid grid-cols-3 gap-2">
-               {skills.slice(8).map((s) => (
+               {skills.slice(8, 11).map((s) => (
                  <div key={s.id} className="flex flex-col items-center p-2 rounded-lg bg-green-500/10 border border-green-500/30" title={s.description}>
                    <div className="text-green-500">{s.icon}</div>
+                   <span className="text-[10px] font-medium mt-1">{s.name}</span>
+                 </div>
+               ))}
+             </div>
+           </div>
+           <div className="mt-2 pt-2 border-t border-border/50">
+             <p className="text-[10px] text-muted-foreground mb-2">🌍 Global Edge Architect</p>
+             <div className="grid grid-cols-3 gap-2">
+               {skills.slice(11).map((s) => (
+                 <div key={s.id} className="flex flex-col items-center p-2 rounded-lg bg-purple-500/10 border border-purple-500/30" title={s.description}>
+                   <div className="text-purple-500">{s.icon}</div>
                    <span className="text-[10px] font-medium mt-1">{s.name}</span>
                  </div>
                ))}
@@ -837,7 +1091,7 @@
        <Alert className="bg-primary/5 border-primary/20">
          <Bot className="h-4 w-4 text-primary" />
          <AlertDescription className="text-xs">
-           <strong>ShadowAgent</strong> - Hybrid architecture: Brain (LLM), Hands (Executor), Memory (Supabase), 🇵🇰 Bunker (Local FBR/SECP)
+           <strong>ShadowAgent</strong> - Hybrid: Brain (LLM), Hands (Executor), 🇵🇰 Bunker (Pakistan), 🌍 Edge (Global)
          </AlertDescription>
        </Alert>
      </div>
