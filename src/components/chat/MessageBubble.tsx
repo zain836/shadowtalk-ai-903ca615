@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { Bot, User, Copy, RefreshCw, Volume2, VolumeX, Lock, Edit2, ExternalLink, Compass } from 'lucide-react';
+ import { Bot, User, Copy, RefreshCw, Volume2, VolumeX, Lock, Edit2, ExternalLink, Compass, Sparkles, Brain, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+ import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -61,6 +62,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const { toast } = useToast();
   const isUser = message.type === 'user';
   const isWelcome = message.id === 'welcome';
+   
+   // Determine if this is a recent AI message (for animations)
+   const isRecent = Date.now() - message.timestamp.getTime() < 5000;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -68,18 +72,31 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   return (
-    <div className={`group flex items-start gap-2 sm:gap-3 ${isUser ? 'flex-row-reverse' : ''} animate-in fade-in-0 slide-in-from-bottom-2 duration-300`}>
+     <motion.div 
+       initial={{ opacity: 0, y: 20, scale: 0.98 }}
+       animate={{ opacity: 1, y: 0, scale: 1 }}
+       transition={{ duration: 0.3, ease: 'easeOut' }}
+       className={`group flex items-start gap-2 sm:gap-3 ${isUser ? 'flex-row-reverse' : ''}`}
+     >
       {/* Avatar */}
-      <div className={`w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm ${
+       <motion.div 
+         whileHover={{ scale: 1.05 }}
+         className={`w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 shadow-md ${
         isUser 
           ? 'bg-primary' 
-          : 'bg-gradient-to-br from-primary to-secondary'
-      }`}>
+           : 'bg-gradient-to-br from-primary via-secondary to-primary'
+       }`}
+       >
         {isUser 
           ? <User className="h-3 w-3 sm:h-4 sm:w-4 text-primary-foreground" /> 
-          : <Bot className="h-3 w-3 sm:h-4 sm:w-4 text-primary-foreground" />
+           : <motion.div
+               animate={isRecent && !isWelcome ? { rotate: [0, 10, -10, 0] } : {}}
+               transition={{ duration: 0.5 }}
+             >
+               <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-primary-foreground" />
+             </motion.div>
         }
-      </div>
+       </motion.div>
 
       {/* Content */}
       <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[75%]`}>
@@ -111,11 +128,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
 
         {/* Message bubble */}
-        <div className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-3 w-full overflow-hidden ${
+         <motion.div 
+           initial={isRecent ? { boxShadow: '0 0 20px 5px rgba(var(--primary-rgb), 0.2)' } : {}}
+           animate={{ boxShadow: '0 0 0 0 rgba(var(--primary-rgb), 0)' }}
+           transition={{ duration: 2 }}
+           className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-3 w-full overflow-hidden transition-shadow ${
           isUser 
-            ? 'bg-primary text-primary-foreground rounded-br-md' 
-            : 'bg-card border border-border/50 shadow-sm rounded-bl-md'
-        }`}>
+             ? 'bg-primary text-primary-foreground rounded-br-md shadow-md' 
+             : 'bg-card border border-border/50 shadow-sm rounded-bl-md hover:shadow-md'
+         }`}
+         >
           {isUser ? (
             <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">{typeof message.content === 'string' ? message.content : String(message.content || '')}</p>
           ) : (
@@ -192,7 +214,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               </ReactMarkdown>
             </div>
           )}
-        </div>
+         </motion.div>
 
         {/* Extracted URLs - Quick open buttons for AI responses */}
         {!isUser && !isWelcome && (() => {
@@ -301,6 +323,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </div>
         )}
       </div>
-    </div>
+     </motion.div>
   );
 };
