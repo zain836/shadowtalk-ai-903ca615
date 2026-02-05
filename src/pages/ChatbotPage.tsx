@@ -48,6 +48,7 @@ import { useOfflineAuth } from "@/hooks/useOfflineAuth";
 import { useOfflineAI } from "@/hooks/useOfflineAI";
 import { useOfflineChat } from "@/hooks/useOfflineChat";
  import { useAutoOfflineAI } from "@/hooks/useAutoOfflineAI";
+ import { useRobustOfflineAI } from "@/hooks/useRobustOfflineAI";
 import { useOfflineChatHistory } from "@/hooks/useOfflineChatHistory";
 import { useGeoLocation } from "@/hooks/useGeoLocation";
 import { useBusinessMemory } from "@/hooks/useBusinessMemory";
@@ -186,6 +187,7 @@ const ChatbotPage = () => {
   const { getOfflineSession } = useOfflineAuth();
   const offlineAI = useOfflineAI();
   const offlineChat = useOfflineChat(); // Sovereign AI powered offline chat
+   const robustOfflineAI = useRobustOfflineAI(); // 100% reliable offline AI
   const offlineChatHistory = useOfflineChatHistory();
   const { getMemoryContext, getActiveMemories } = useBusinessMemory();
   const guestUsage = useGuestUsage(); // Guest usage tracking
@@ -202,30 +204,27 @@ const ChatbotPage = () => {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-initialize offline AI when going offline - use Sovereign AI (Llama 3)
+   // Auto-initialize offline AI when going offline - use Robust Offline AI
   useEffect(() => {
-    if (isOffline && !offlineChat.isReady && !offlineChat.isInitializing) {
-      console.log('[ChatbotPage] Network offline - auto-initializing Sovereign AI (Llama 3)...');
+     if (isOffline && !robustOfflineAI.isReady && !robustOfflineAI.isLoading) {
+       console.log('[ChatbotPage] Network offline - auto-initializing Robust Offline AI...');
       toast({ 
         title: "🔌 Offline Mode", 
         description: "Initializing local AI engine..." 
       });
-      offlineChat.initialize().then(success => {
+       robustOfflineAI.loadModel().then(success => {
         if (success) {
           toast({ 
             title: "✅ Offline AI Ready", 
-            description: `${offlineChat.activeModel || 'Llama 3'} loaded locally` 
+             description: `${robustOfflineAI.activeModel || 'Local Model'} loaded locally` 
           });
         } else {
-          toast({ 
-            title: "⚠️ Offline AI Failed", 
-            description: "Could not load local model. Try refreshing.", 
-            variant: "destructive" 
-          });
+           // Don't show error - basic fallback mode is still available
+           console.log('[ChatbotPage] Model not loaded, basic fallback available');
         }
       });
     }
-  }, [isOffline, offlineChat.isReady, offlineChat.isInitializing, toast]);
+   }, [isOffline, robustOfflineAI.isReady, robustOfflineAI.isLoading, robustOfflineAI.activeModel, toast]);
 
   // Load cached conversations from IndexedDB when offline
   useEffect(() => {
@@ -849,15 +848,9 @@ const ChatbotPage = () => {
 
     // Offline mode - use Sovereign AI (Llama 3) for high-performance local reasoning
     if (isOffline) {
-      console.log('[ChatbotPage] Offline mode detected, using Sovereign AI (Llama 3)');
+       console.log('[ChatbotPage] Offline mode detected, using Robust Offline AI');
       
       try {
-        // Show battery warning if needed
-        const batteryWarning = offlineChat.getBatteryWarning();
-        if (batteryWarning) {
-          toast({ title: "Power Status", description: batteryWarning });
-        }
-        
         // Create AI message placeholder for streaming
         const aiMessageId = crypto.randomUUID();
         setMessages(prev => [...prev, { id: aiMessageId, type: "ai", content: "", timestamp: new Date() }]);
@@ -871,9 +864,8 @@ const ChatbotPage = () => {
           }));
         offlineMessages.push({ role: 'user' as const, content: messageToSend });
         
-        // Generate response with Sovereign AI (Llama 3) with streaming
-        // This provides: complex reasoning, code generation, math, multilingual (Urdu/Roman Urdu), and RAG
-        const fullResponse = await offlineChat.generateResponse(offlineMessages, (chunk) => {
+         // Generate response with Robust Offline AI - 100% reliable with fallback
+         const fullResponse = await robustOfflineAI.generateResponse(offlineMessages, (chunk) => {
           setMessages(prev => prev.map(m => 
             m.id === aiMessageId ? { ...m, content: m.content + chunk } : m
           ));
@@ -893,9 +885,9 @@ const ChatbotPage = () => {
         setIsLoading(false);
         return;
       } catch (e) {
-        console.error('[ChatbotPage] Sovereign AI error:', e);
+         console.error('[ChatbotPage] Robust Offline AI error:', e);
         
-        // Fallback: try basic offline AI if Sovereign fails
+         // Final fallback: use basic offline responses
         try {
           const aiMessageId = crypto.randomUUID();
           setMessages(prev => [...prev, { id: aiMessageId, type: "ai", content: "", timestamp: new Date() }]);
@@ -905,17 +897,17 @@ const ChatbotPage = () => {
             .map(m => ({ role: m.type === 'user' ? 'user' as const : 'assistant' as const, content: m.content }));
           offlineMessages.push({ role: 'user' as const, content: messageToSend });
           
-          const fullResponse = await offlineAI.generateResponse(offlineMessages, (chunk) => {
-            setMessages(prev => prev.map(m => 
-              m.id === aiMessageId ? { ...m, content: m.content + chunk } : m
-            ));
-          });
+           // Use the basic fallback from robust AI
+           const fallbackResponse = robustOfflineAI.getBasicFallback(messageToSend);
+           setMessages(prev => prev.map(m => 
+             m.id === aiMessageId ? { ...m, content: fallbackResponse } : m
+           ));
           
           setIsLoading(false);
           return;
         } catch (fallbackError) {
           console.error('[ChatbotPage] Fallback AI also failed:', fallbackError);
-          const errorResponse = "⚠️ I'm having trouble initializing the offline AI model. This could be due to:\n\n• **Limited device memory** - Try closing other tabs/apps\n• **WebGPU not available** - Check browser compatibility\n• **Model not cached** - Download may be needed\n\nPlease try again or connect to the internet for cloud AI.";
+           const errorResponse = `🔌 **Offline Mode Active**\n\nI'm running in basic offline mode. I can help with:\n• Time and date queries\n• Simple math calculations\n• Basic greetings\n\nFor full AI capabilities, please:\n1. Click "Bunker" in the header\n2. Download an offline model\n3. Or connect to the internet`;
           setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: errorResponse, timestamp: new Date() }]);
           setIsLoading(false);
           return;
@@ -1168,18 +1160,9 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
           />
 
           {/* Offline AI Indicator - hidden if not relevant */}
-          {(isOffline || offlineAI.isModelLoaded || offlineAI.isLoading || offlineAI.error) && (
+           {(isOffline || robustOfflineAI.isReady || robustOfflineAI.isLoading || robustOfflineAI.hasCachedModel) && (
             <div className="px-2 py-1.5 md:px-4 md:py-2 border-b border-border/50">
-              <OfflineAIIndicator
-                isOffline={isOffline}
-                isModelLoaded={offlineAI.isModelLoaded}
-                isLoading={offlineAI.isLoading}
-                loadProgress={offlineAI.loadProgress}
-                loadStage={offlineAI.loadStage}
-                isSupported={offlineAI.isSupported}
-                error={offlineAI.error}
-                onLoadModel={offlineAI.initializeModel}
-              />
+               <OfflineAIIndicator />
             </div>
           )}
 

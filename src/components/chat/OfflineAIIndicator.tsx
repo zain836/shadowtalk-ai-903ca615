@@ -2,51 +2,68 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Cpu, Download, WifiOff, Zap, AlertCircle } from 'lucide-react';
+ import { Cpu, Download, WifiOff, Zap, AlertCircle, Check, Shield } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+   TooltipProvider,
 } from '@/components/ui/tooltip';
+ import { useRobustOfflineAI } from '@/hooks/useRobustOfflineAI';
 
-interface OfflineAIIndicatorProps {
-  isOffline: boolean;
-  isModelLoaded: boolean;
-  isLoading: boolean;
-  loadProgress: number;
-  loadStage: string;
-  isSupported: boolean;
-  error: string | null;
-  onLoadModel: () => void;
-}
-
-export const OfflineAIIndicator: React.FC<OfflineAIIndicatorProps> = ({
-  isOffline,
-  isModelLoaded,
-  isLoading,
-  loadProgress,
-  loadStage,
-  isSupported,
-  error,
-  onLoadModel,
-}) => {
-  if (!isOffline && !isModelLoaded) return null;
+ export const OfflineAIIndicator: React.FC = () => {
+   const {
+     isReady,
+     isLoading,
+     loadProgress,
+     loadStage,
+     activeModel,
+     error,
+     hasWebGPU,
+     hasCachedModel,
+     loadModel,
+   } = useRobustOfflineAI();
+ 
+   const isOffline = !navigator.onLine;
+ 
+   // Don't show anything if online, no cached model, and not loading
+   if (!isOffline && !isReady && !isLoading && !hasCachedModel) return null;
 
   return (
-    <div className="flex items-center gap-2">
+     <TooltipProvider>
+       <div className="flex items-center gap-2">
       {isOffline && (
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge 
               variant="secondary" 
-              className="gap-1 bg-yellow-500/20 text-yellow-400 border-yellow-500/30 cursor-help"
+               className={`gap-1 cursor-help ${
+                 isReady 
+                   ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                   : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+               }`}
             >
-              <WifiOff className="h-3 w-3" />
-              Offline
+               {isReady ? (
+                 <>
+                   <Shield className="h-3 w-3" />
+                   Offline AI
+                 </>
+               ) : (
+                 <>
+                   <WifiOff className="h-3 w-3" />
+                   Offline
+                 </>
+               )}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            <p>You're offline. Using local AI model.</p>
+             {isReady ? (
+               <p>🛡️ {activeModel} running locally. 100% private.</p>
+             ) : hasCachedModel ? (
+               <p>You're offline. Click to load cached AI model.</p>
+             ) : (
+               <p>You're offline. Basic responses only.</p>
+             )}
           </TooltipContent>
         </Tooltip>
       )}
@@ -81,34 +98,35 @@ export const OfflineAIIndicator: React.FC<OfflineAIIndicatorProps> = ({
         </div>
       )}
 
-      {isModelLoaded && !isLoading && (
+       {isReady && !isLoading && (
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge 
               variant="secondary" 
               className="gap-1 bg-green-500/20 text-green-400 border-green-500/30 cursor-help"
             >
-              <Zap className="h-3 w-3" />
-              Local AI Ready
+               <Check className="h-3 w-3" />
+               {activeModel || 'Local AI'}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            <p>AI model loaded in browser. Works offline!</p>
+             <p>✅ {activeModel} loaded locally. Works offline!</p>
           </TooltipContent>
         </Tooltip>
       )}
 
-      {isOffline && !isModelLoaded && !isLoading && isSupported && !error && (
+       {isOffline && !isReady && !isLoading && hasCachedModel && !error && (
         <Button
           variant="outline"
           size="sm"
-          onClick={onLoadModel}
+           onClick={() => loadModel()}
           className="gap-1 h-7 text-xs"
         >
           <Cpu className="h-3 w-3" />
           Load Offline AI
         </Button>
       )}
-    </div>
+       </div>
+     </TooltipProvider>
   );
 };
