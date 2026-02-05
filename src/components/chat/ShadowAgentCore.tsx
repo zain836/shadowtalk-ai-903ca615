@@ -93,7 +93,7 @@ const SERVICE_SCOPES: Record<string, string> = {
    ]);
   const [connectingService, setConnectingService] = useState<string | null>(null);
   const [showWhatsAppQR, setShowWhatsAppQR] = useState(false);
-  const [whatsAppStatus, setWhatsAppStatus] = useState<"idle" | "connecting" | "connected">("idle");
+  const [whatsAppStatus, setWhatsAppStatus] = useState<"idle" | "checking" | "configured" | "not_configured">("idle");
    
    const abortRef = useRef<AbortController | null>(null);
   const oauthWindowRef = useRef<Window | null>(null);
@@ -312,23 +312,50 @@ const SERVICE_SCOPES: Record<string, string> = {
   };
   
   // Connect WhatsApp via Web bridge
-  const connectWhatsApp = async () => {
-    setWhatsAppStatus("connecting");
-    addLog("Generating WhatsApp Web QR code...");
+  const checkWhatsAppConfig = async () => {
+    setWhatsAppStatus("checking");
+    addLog("Checking Twilio WhatsApp configuration...");
     
-    // Simulate QR code scan process
-    // In production, this would connect to a WhatsApp Web bridge service
-    await new Promise(r => setTimeout(r, 3000));
-    
-    // Mark as connected after timeout
-    setWhatsAppStatus("connected");
-    setConnectedServices(prev => 
-      prev.map(s => s.id === "whatsapp" ? { ...s, connected: true } : s)
-    );
-    addLog("WhatsApp Web connected successfully!");
-    toast({ title: "WhatsApp Connected", description: "You can now send messages via Shadow-Agent." });
-    
-    setTimeout(() => setShowWhatsAppQR(false), 1500);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Test the WhatsApp tool to see if Twilio is configured
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shadow-agent-tools`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token || ""}`,
+          },
+          body: JSON.stringify({ 
+            tool: "send_whatsapp", 
+            params: { to: "test", message: "test" } 
+          }),
+        }
+      );
+      
+      const result = await response.json();
+      
+      // Check if the error is about configuration (not a send error)
+      if (result.error && result.error.includes("not configured")) {
+        setWhatsAppStatus("not_configured");
+        addLog("Twilio WhatsApp not configured - secrets needed");
+      } else {
+        // Either configured or different error (which means config exists)
+        setWhatsAppStatus("configured");
+        setConnectedServices(prev => 
+          prev.map(s => s.id === "whatsapp" ? { ...s, connected: true } : s)
+        );
+        addLog("Twilio WhatsApp is configured!");
+        toast({ title: "WhatsApp Ready", description: "Twilio WhatsApp is configured and ready to send messages." });
+        setTimeout(() => setShowWhatsAppQR(false), 1500);
+      }
+    } catch (e) {
+      console.error("WhatsApp check error:", e);
+      setWhatsAppStatus("not_configured");
+      addLog("Failed to check WhatsApp configuration");
+    }
   };
    
    // Generate plan using AI
@@ -996,7 +1023,7 @@ const SERVICE_SCOPES: Record<string, string> = {
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-background border border-border rounded-2xl p-6 max-w-sm w-full"
+            className="bg-background border border-border rounded-2xl p-6 max-w-md w-full"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
@@ -1013,50 +1040,70 @@ const SERVICE_SCOPES: Record<string, string> = {
               </Button>
             </div>
             
-            {whatsAppStatus === "connected" ? (
+            {whatsAppStatus === "configured" ? (
               <div className="text-center py-8">
                 <div className="w-16 h-16 mx-auto rounded-full bg-green-500/20 flex items-center justify-center mb-4">
                   <Check className="h-8 w-8 text-green-500" />
                 </div>
-                <p className="font-medium text-green-500">Connected Successfully!</p>
+                <p className="font-medium text-green-500">WhatsApp Configured!</p>
+                <p className="text-sm text-muted-foreground mt-2">Twilio WhatsApp is ready to send messages.</p>
+              </div>
+            ) : whatsAppStatus === "not_configured" ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                  <p className="text-sm font-medium text-yellow-500 mb-2">Configuration Required</p>
+                  <p className="text-xs text-muted-foreground">
+                    WhatsApp messaging requires Twilio. Add these secrets to your project:
+                  </p>
+                </div>
+                
+                <div className="space-y-2 font-mono text-xs">
+                  <div className="p-2 bg-muted rounded">TWILIO_ACCOUNT_SID</div>
+                  <div className="p-2 bg-muted rounded">TWILIO_AUTH_TOKEN</div>
+                  <div className="p-2 bg-muted rounded">TWILIO_WHATSAPP_NUMBER</div>
+                </div>
+                
+                <div className="text-xs text-muted-foreground space-y-2">
+                  <p><strong>To get Twilio WhatsApp credentials:</strong></p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Sign up at <a href="https://www.twilio.com" target="_blank" rel="noopener" className="text-primary underline">twilio.com</a></li>
+                    <li>Go to Messaging → Try WhatsApp</li>
+                    <li>Follow the sandbox setup</li>
+                    <li>Copy your Account SID, Auth Token, and WhatsApp number</li>
+                  </ol>
+                </div>
+                
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => setShowWhatsAppQR(false)}
+                >
+                  I'll Add Secrets Later
+                </Button>
+              </div>
+            ) : whatsAppStatus === "checking" ? (
+              <div className="text-center py-8">
+                <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin mb-4" />
+                <p className="text-sm text-muted-foreground">Checking Twilio configuration...</p>
               </div>
             ) : (
               <>
-                <div className="bg-white p-4 rounded-lg mb-4">
-                  {whatsAppStatus === "connecting" ? (
-                    <div className="aspect-square flex items-center justify-center">
-                      <Loader2 className="h-12 w-12 text-gray-400 animate-spin" />
-                    </div>
-                  ) : (
-                    <div className="aspect-square flex items-center justify-center bg-gray-100 rounded">
-                      <QrCode className="h-32 w-32 text-gray-800" />
-                    </div>
-                  )}
-                </div>
-                
-                <div className="text-center space-y-2 mb-4">
-                  <p className="text-sm font-medium">Scan with WhatsApp</p>
+                <div className="text-center py-4 mb-4">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-green-500/20 flex items-center justify-center mb-4">
+                    <Phone className="h-8 w-8 text-green-500" />
+                  </div>
+                  <p className="text-sm font-medium mb-2">Connect WhatsApp via Twilio</p>
                   <p className="text-xs text-muted-foreground">
-                    Open WhatsApp on your phone → Menu → Linked Devices → Link a Device
+                    Shadow-Agent uses Twilio's WhatsApp Business API to send real messages.
                   </p>
                 </div>
                 
                 <Button 
                   className="w-full" 
-                  onClick={connectWhatsApp}
-                  disabled={whatsAppStatus === "connecting"}
+                  onClick={checkWhatsAppConfig}
                 >
-                  {whatsAppStatus === "connecting" ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Waiting for scan...
-                    </>
-                  ) : (
-                    <>
-                      <QrCode className="h-4 w-4 mr-2" />
-                      Generate QR Code
-                    </>
-                  )}
+                  <Check className="h-4 w-4 mr-2" />
+                  Check Configuration
                 </Button>
               </>
             )}

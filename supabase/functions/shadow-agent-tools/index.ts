@@ -52,17 +52,53 @@
      
      switch (tool) {
        case "send_whatsapp": {
-         // WhatsApp Web Bridge - would require external service or Twilio
-         // For now, return a simulated response
-         result = {
-           success: true,
-           output: `WhatsApp message queued for ${params.to}: "${params.message}"`,
-           data: { 
-             messageId: crypto.randomUUID(),
-             status: "pending",
-             note: "WhatsApp Web Bridge integration pending setup"
+          // Real Twilio WhatsApp integration
+          const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
+          const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
+          const TWILIO_WHATSAPP_NUMBER = Deno.env.get("TWILIO_WHATSAPP_NUMBER");
+          
+          if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_WHATSAPP_NUMBER) {
+            result = { 
+              success: false, 
+              error: "WhatsApp not configured. Please add Twilio credentials (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER) in project secrets." 
+            };
+            break;
+          }
+          
+          const toNumber = params.to as string;
+          const message = params.message as string;
+          
+          // Format number for WhatsApp (add whatsapp: prefix)
+          const formattedTo = toNumber.startsWith("whatsapp:") ? toNumber : `whatsapp:${toNumber}`;
+          const formattedFrom = TWILIO_WHATSAPP_NUMBER.startsWith("whatsapp:") ? TWILIO_WHATSAPP_NUMBER : `whatsapp:${TWILIO_WHATSAPP_NUMBER}`;
+          
+          const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
+          const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+          
+          const twilioResponse = await fetch(twilioUrl, {
+            method: "POST",
+            headers: {
+              "Authorization": `Basic ${auth}`,
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+              From: formattedFrom,
+              To: formattedTo,
+              Body: message,
+            }),
+          });
+          
+          const twilioData = await twilioResponse.json();
+          
+          if (!twilioResponse.ok) {
+            result = { success: false, error: `Twilio error: ${twilioData.message || twilioData.error_message || "Failed to send"}` };
+          } else {
+            result = {
+              success: true,
+              output: `WhatsApp message sent to ${toNumber}`,
+              data: { sid: twilioData.sid, status: twilioData.status }
+            };
            }
-         };
          break;
        }
        

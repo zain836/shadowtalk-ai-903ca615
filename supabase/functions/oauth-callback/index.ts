@@ -116,8 +116,12 @@ serve(async (req) => {
         headers: { "Content-Type": "text/html" },
       });
     }
-    
-    return new Response(renderSuccessPage(), { 
+
+    // Get redirect URL for the app
+    const appOrigin = Deno.env.get("APP_URL") || "https://shadowtalk-ai.lovable.app";
+    const previewOrigin = "https://id-preview--0497e2a8-1dfb-4b9b-b437-30ee6b3f7741.lovable.app";
+
+    return new Response(renderSuccessPage(appOrigin, previewOrigin), { 
       headers: { "Content-Type": "text/html" } 
     });
   } catch (error) {
@@ -129,7 +133,7 @@ serve(async (req) => {
   }
 });
 
-function renderSuccessPage(): string {
+function renderSuccessPage(appOrigin: string, previewOrigin: string): string {
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -178,6 +182,20 @@ function renderSuccessPage(): string {
       display: inline-block;
     }
   </style>
+  <script>
+    // Notify parent window of successful OAuth
+    const origins = ["${appOrigin}", "${previewOrigin}", window.location.origin];
+    origins.forEach(origin => {
+      try {
+        if (window.opener) {
+          window.opener.postMessage({ type: "oauth-success", provider: "google" }, origin);
+        }
+      } catch(e) { console.log("Could not post to", origin); }
+    });
+    
+    // Auto-close after 2 seconds
+    setTimeout(() => window.close(), 2000);
+  </script>
 </head>
 <body>
   <div class="container">
@@ -189,6 +207,7 @@ function renderSuccessPage(): string {
     <h1>Authorization Successful!</h1>
     <p>Your account has been connected. You can now close this window and return to ShadowTalk AI.</p>
     <button class="btn" onclick="window.close()">Close Window</button>
+    <p style="margin-top: 1rem; font-size: 0.875rem; color: #71717a;">This window will close automatically...</p>
   </div>
 </body>
 </html>
@@ -245,6 +264,14 @@ function renderErrorPage(error: string): string {
       display: inline-block;
     }
   </style>
+  <script>
+    // Notify parent window of OAuth error
+    if (window.opener) {
+      try {
+        window.opener.postMessage({ type: "oauth-error", error: "${error}" }, "*");
+      } catch(e) {}
+    }
+  </script>
 </head>
 <body>
   <div class="container">
