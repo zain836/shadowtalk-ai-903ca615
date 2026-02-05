@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calculator, Search, Code2, Globe, MapPin, Calendar, CloudSun } from "lucide-react";
+import { Calculator, Search, Code2, Globe, MapPin, Calendar, CloudSun, Sparkles, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,10 +7,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 
-export type PluginType = 'calculator' | 'websearch' | 'code_interpreter' | 'browse' | 'location' | 'calendar' | 'weather';
+export type PluginType = 'calculator' | 'websearch' | 'code_interpreter' | 'browse' | 'location' | 'calendar' | 'weather' | 'image_gen' | 'research' | 'agent' | 'voice';
 
 interface Plugin {
   id: PluginType;
@@ -52,70 +53,97 @@ const availablePlugins: Plugin[] = [
     name: 'Web Browser',
     description: 'Browse and read web pages',
     icon: <Globe className="h-4 w-4" />,
-    enabled: false,
+    enabled: true,
   },
   {
     id: 'location',
     name: 'Location',
     description: 'Get location-based information',
     icon: <MapPin className="h-4 w-4" />,
-    enabled: false,
+    enabled: true,
   },
   {
     id: 'calendar',
     name: 'Calendar',
     description: 'Check dates and schedules',
     icon: <Calendar className="h-4 w-4" />,
-    enabled: false,
+    enabled: true,
   },
   {
     id: 'weather',
     name: 'Weather',
     description: 'Get current weather information',
     icon: <CloudSun className="h-4 w-4" />,
-    enabled: false,
+    enabled: true,
+  },
+  {
+    id: 'image_gen',
+    name: 'Image Generator',
+    description: 'Create images from text',
+    icon: <Sparkles className="h-4 w-4" />,
+    enabled: true,
+  },
+  {
+    id: 'research',
+    name: 'Deep Research',
+    description: 'In-depth analysis & reports',
+    icon: <Search className="h-4 w-4" />,
+    enabled: true,
+  },
+  {
+    id: 'agent',
+    name: 'AI Agent',
+    description: 'Autonomous task execution',
+    icon: <Globe className="h-4 w-4" />,
+    enabled: true,
+  },
+  {
+    id: 'voice',
+    name: 'Voice Chat',
+    description: 'Live voice conversation',
+    icon: <Sparkles className="h-4 w-4" />,
+    enabled: true,
   },
 ];
 
 export const PluginsManager = ({ enabledPlugins, onPluginsChange }: PluginsManagerProps) => {
-  const togglePlugin = (pluginId: PluginType) => {
-    if (enabledPlugins.includes(pluginId)) {
-      onPluginsChange(enabledPlugins.filter(p => p !== pluginId));
-    } else {
-      onPluginsChange([...enabledPlugins, pluginId]);
-    }
-  };
+  // All plugins are now auto-enabled - AI detects and triggers them automatically
+  const allEnabled = availablePlugins.length;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2 h-8 px-2 text-xs">
-          <Code2 className="h-4 w-4" />
-          <span className="hidden sm:inline">Plugins</span>
-          {enabledPlugins.length > 0 && (
-            <Badge variant="secondary" className="text-[10px] px-1">{enabledPlugins.length}</Badge>
-          )}
+        <Button variant="ghost" size="sm" className="gap-2 h-8 px-2 text-xs text-green-600 dark:text-green-400">
+          <Sparkles className="h-4 w-4" />
+          <span className="hidden sm:inline">All Tools</span>
+          <Badge variant="secondary" className="text-[10px] px-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+            {allEnabled} Active
+          </Badge>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
-        <div className="px-2 py-1.5 text-xs text-muted-foreground font-semibold uppercase tracking-wide">
-          AI Plugins & Tools
+      <DropdownMenuContent align="end" className="w-72">
+        <DropdownMenuLabel className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-green-500" />
+          <span>AI Auto-Tool Detection</span>
+        </DropdownMenuLabel>
+        <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/50 rounded-md mx-2 mb-2">
+          All tools are <span className="text-green-600 font-medium">always active</span>. 
+          Just ask naturally and I'll use the right tool automatically!
         </div>
         <DropdownMenuSeparator />
         {availablePlugins.map((plugin) => (
           <DropdownMenuItem
             key={plugin.id}
-            onClick={() => togglePlugin(plugin.id)}
-            className="flex items-center justify-between gap-2 px-3 py-2.5 cursor-pointer"
+            className="flex items-center justify-between gap-2 px-3 py-2.5 cursor-default"
           >
             <div className="flex items-center gap-2">
-              <span className="text-primary">{plugin.icon}</span>
+              <span className="text-green-500">{plugin.icon}</span>
               <div>
                 <div className="font-medium">{plugin.name}</div>
                 <div className="text-xs text-muted-foreground">{plugin.description}</div>
               </div>
             </div>
-            <div className={`w-2 h-2 rounded-full ${enabledPlugins.includes(plugin.id) ? 'bg-green-500' : 'bg-muted'}`} />
+            <Check className="h-4 w-4 text-green-500" />
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
