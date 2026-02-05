@@ -154,7 +154,19 @@ export const CommandPalette = ({ open, onOpenChange, onAction }: CommandPaletteP
       category: "Privacy",
       action: () => onAction("offline"),
       keywords: ["offline", "local", "sovereign", "private"],
-      badge: "Beats ChatGPT",
+      badge: "Beats Gemini",
+      badgeVariant: "default" as const,
+    },
+    {
+      id: "sovereign-models",
+      label: "Local Model Sovereignty",
+      description: "Manage on-device AI models",
+      icon: <Shield className="h-4 w-4" />,
+      shortcut: "⌘⇧S",
+      category: "Privacy",
+      action: () => onAction("sovereign"),
+      keywords: ["local", "sovereign", "models", "device", "privacy"],
+      badge: "Beats Gemini",
       badgeVariant: "default" as const,
     },
     {
@@ -228,6 +240,20 @@ export const CommandPalette = ({ open, onOpenChange, onAction }: CommandPaletteP
       keywords: ["code", "ide", "execute", "run", "programming"],
       badge: "Beats ChatGPT",
       badgeVariant: "default" as const,
+    },
+    
+    // Integrations
+    {
+      id: "google-integration",
+      label: "Google Integration",
+      description: "Connect Gmail, Drive, Docs, Calendar",
+      icon: <Globe className="h-4 w-4" />,
+      shortcut: "⌘⇧G",
+      category: "Integrations",
+      action: () => onAction("google"),
+      keywords: ["google", "gmail", "drive", "docs", "calendar", "integration"],
+      badge: "Match Gemini",
+      badgeVariant: "secondary" as const,
     },
     
     // Collaboration

@@ -47,6 +47,8 @@ import { VisionAgent } from "@/components/chat/VisionAgent";
 import { CommandPalette } from "@/components/chat/CommandPalette";
 import { ChatGPTBeaterIndicator } from "@/components/chat/ChatGPTBeaterIndicator";
 import { ClaudeBeaterIndicator } from "@/components/chat/ClaudeBeaterIndicator";
+import { GeminiBeaterIndicator } from "@/components/chat/GeminiBeaterIndicator";
+import { GoogleIntegrationPanel } from "@/components/chat/GoogleIntegrationPanel";
 import { ThinkingTransparency, useThinkingSteps } from "@/components/chat/ThinkingTransparency";
 import { LiveCodeArtifact, extractCodeArtifacts } from "@/components/chat/LiveCodeArtifact";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
@@ -161,6 +163,8 @@ const ChatbotPage = () => {
   const [showWordleGame, setShowWordleGame] = useState(false);
   const [showVisionAgent, setShowVisionAgent] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showGoogleIntegration, setShowGoogleIntegration] = useState(false);
+  const [showSovereignModels, setShowSovereignModels] = useState(false);
   
   // Tool params for auto-execution
   const [imageGeneratorPrompt, setImageGeneratorPrompt] = useState<string | undefined>(undefined);
@@ -416,9 +420,13 @@ const ChatbotPage = () => {
            e.preventDefault();
            setShowAPIMarketplace(true);
            break;
-        case 'g': // Vision Agent (G for aGent)
+        case 'g': // Google Integration
           e.preventDefault();
-          setShowVisionAgent(prev => !prev);
+          setShowGoogleIntegration(true);
+          break;
+        case 's': // Sovereign Models
+          e.preventDefault();
+          setShowSovereignModels(true);
           break;
          case 'o': // Pakistan Compliance (Shift+O for 🇵🇰)
            // Already handled elsewhere, but we can also use 'o' for offline
@@ -1233,11 +1241,14 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             </div>
           )}
 
-          {/* Claude Beater & ChatGPT Beater Indicators */}
+          {/* AI Beater Indicators - shows when chat is fresh */}
           {messages.length <= 2 && !isLoading && (
-            <div className="px-2 py-2 md:px-4 flex flex-wrap gap-2 items-center justify-center">
-              <ClaudeBeaterIndicator variant="compact" />
-              <ChatGPTBeaterIndicator />
+            <div className="px-2 py-2 md:px-4 space-y-2">
+              <GeminiBeaterIndicator />
+              <div className="flex flex-wrap gap-2 items-center justify-center">
+                <ClaudeBeaterIndicator variant="compact" />
+                <ChatGPTBeaterIndicator />
+              </div>
             </div>
           )}
 
@@ -1756,7 +1767,27 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             case 'wordle':
               setShowWordleGame(true);
               break;
+            case 'google':
+              setShowGoogleIntegration(true);
+              break;
+            case 'sovereign':
+              setShowSovereignModels(true);
+              break;
           }
+        }}
+      />
+
+      {/* Google Integration Panel */}
+      <GoogleIntegrationPanel
+        isOpen={showGoogleIntegration}
+        onClose={() => setShowGoogleIntegration(false)}
+        onImportContent={(content, source) => {
+          setMessages(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'ai',
+            content: `📁 **Imported from ${source}**\n\n${content}`,
+            timestamp: new Date()
+          }]);
         }}
       />
      </div>
