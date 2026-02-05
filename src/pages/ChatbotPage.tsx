@@ -51,6 +51,7 @@ import { useOfflineChatHistory } from "@/hooks/useOfflineChatHistory";
 import { useGeoLocation } from "@/hooks/useGeoLocation";
 import { useBusinessMemory } from "@/hooks/useBusinessMemory";
 import { useGuestUsage, GUEST_LIMITS } from "@/hooks/useGuestUsage";
+import { useToolOrchestrator, ToolType } from "@/hooks/useToolOrchestrator";
 
 // Types
 interface SpeechRecognitionEvent extends Event {
@@ -174,6 +175,7 @@ const ChatbotPage = () => {
   const offlineChatHistory = useOfflineChatHistory();
   const { getMemoryContext, getActiveMemories } = useBusinessMemory();
   const guestUsage = useGuestUsage(); // Guest usage tracking
+  const toolOrchestrator = useToolOrchestrator(); // Intelligent tool detection
   
   // Determine if user is a guest (not logged in)
   const isGuest = !user;
@@ -628,6 +630,102 @@ const ChatbotPage = () => {
     const attachmentToSend = customAttachment || selectedFile;
     
     if ((!messageToSend.trim() && !attachmentToSend) || isLoading || !currentConversationId) return;
+    
+    // Detect if user is requesting a tool action - auto-trigger the right tool
+    const toolDetection = toolOrchestrator.detectTool(messageToSend);
+    
+    if (toolDetection.tool && toolDetection.confidence >= 70) {
+      console.log('[ChatbotPage] Tool detected:', toolDetection.tool, 'confidence:', toolDetection.confidence);
+      
+      switch (toolDetection.tool) {
+        case 'image_generator':
+          setShowImageGenerator(true);
+          if (toolDetection.params?.prompt) setMessage(toolDetection.params.prompt);
+          toast({ title: "🎨 Image Generator", description: "Opening image generator..." });
+          return;
+        
+        case 'deep_research':
+          setShowDeepResearch(true);
+          toast({ title: "🔬 Deep Research", description: "Opening research panel..." });
+          return;
+        
+        case 'agentic_runner':
+          setShowAgenticRunner(true);
+          toast({ title: "🤖 Agent Activated", description: "Opening task runner..." });
+          return;
+        
+        case 'shadow_browser':
+          setBrowserInitialUrl(toolDetection.params?.url || 'https://google.com');
+          setShowShadowBrowser(true);
+          toast({ title: "🌐 Shadow Browser", description: "Opening browser..." });
+          return;
+        
+        case 'visual_reasoning':
+          setShowVisualReasoning(true);
+          toast({ title: "👁️ Visual Reasoning", description: "Upload an image to analyze..." });
+          return;
+        
+        case 'creative_synthesis':
+          setShowCreativeSynthesis(true);
+          toast({ title: "✨ Creative Synthesis", description: "Opening creative workspace..." });
+          return;
+        
+        case 'shadow_live':
+          setShowShadowTalkLive(true);
+          toast({ title: "🎙️ ShadowTalk Live", description: "Starting voice conversation..." });
+          return;
+        
+        case 'code_canvas':
+          setCanvasState({ content: "", type: "code", language: "javascript" });
+          toast({ title: "💻 Code Canvas", description: "Opening code editor..." });
+          return;
+        
+        case 'data_organizer':
+          setShowDataOrganizer(true);
+          toast({ title: "📊 Data Organizer", description: "Opening data organizer..." });
+          return;
+        
+        case 'camera_capture':
+          setShowCameraCapture(true);
+          toast({ title: "📷 Camera", description: "Opening camera..." });
+          return;
+        
+        case 'stealth_vault':
+          setShowStealthVault(true);
+          toast({ title: "🔐 Stealth Vault", description: "Opening secure vault..." });
+          return;
+        
+        case 'calculator':
+          const calcResult = toolOrchestrator.executeCalculator(toolDetection.params?.expression || messageToSend);
+          setMessages(prev => [
+            ...prev, 
+            { id: crypto.randomUUID(), type: 'user', content: messageToSend, timestamp: new Date() },
+            { id: crypto.randomUUID(), type: 'ai', content: `🧮 ${calcResult}`, timestamp: new Date() }
+          ]);
+          setMessage("");
+          return;
+        
+        case 'multi_model':
+          setShowMultiModel(true);
+          toast({ title: "🧠 Multi-Model", description: "Opening AI orchestrator..." });
+          return;
+        
+        case 'api_marketplace':
+          setShowAPIMarketplace(true);
+          toast({ title: "🛒 API Marketplace", description: "Opening developer portal..." });
+          return;
+        
+        case 'analytics':
+          setShowAnalytics(true);
+          toast({ title: "📈 Analytics", description: "Opening analytics dashboard..." });
+          return;
+        
+        case 'web_search':
+          setChatMode('research');
+          // Continue with normal chat in research mode
+          break;
+      }
+    }
     
     // GUEST USAGE CHECK - prompt sign in if limit reached
     if (isGuest) {
