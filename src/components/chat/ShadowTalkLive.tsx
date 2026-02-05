@@ -4,6 +4,36 @@ import {
   X, Mic, MicOff, Volume2, VolumeX,
   Phone, PhoneOff, MessageSquare, Sparkles, Loader2, AudioLines, AlertCircle
 } from "lucide-react";
+
+ // Premium voice wave visualization
+ const VoiceWaveform: React.FC<{ isActive: boolean; intensity?: number }> = ({ isActive, intensity = 1 }) => {
+   const bars = 12;
+   return (
+     <div className="flex items-center justify-center gap-1 h-16">
+       {Array.from({ length: bars }).map((_, i) => {
+         const delay = i * 0.05;
+         const maxHeight = 50 + Math.sin(i * 0.5) * 15;
+         
+         return (
+           <motion.div
+             key={i}
+             className="w-1 rounded-full bg-gradient-to-t from-violet-500 to-fuchsia-400"
+             animate={isActive ? {
+               height: [6, maxHeight * intensity, 10, maxHeight * 0.7 * intensity, 6],
+             } : { height: 6 }}
+             transition={{
+               duration: 0.8,
+               repeat: isActive ? Infinity : 0,
+               delay,
+               ease: 'easeInOut',
+             }}
+           />
+         );
+       })}
+     </div>
+   );
+ };
+
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -340,103 +370,75 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
               ) : (
                 // Connected state - Voice visualization
                 <div className="relative w-full h-full flex items-center justify-center">
-                  {/* Voice visualization */}
-                  <div className="relative">
-                    {/* Outer pulse rings when speaking */}
-                    {isSpeaking && (
-                      <>
-                        <motion.div
-                          animate={{ 
-                            scale: [1, 1.5, 1],
-                            opacity: [0.5, 0, 0.5]
-                          }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                          className="absolute inset-0 rounded-full bg-fuchsia-500/30"
-                          style={{ 
-                            width: 256, 
-                            height: 256,
-                            left: -64,
-                            top: -64
-                          }}
-                        />
-                        <motion.div
-                          animate={{ 
-                            scale: [1, 1.3, 1],
-                            opacity: [0.3, 0, 0.3]
-                          }}
-                          transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
-                          className="absolute inset-0 rounded-full bg-fuchsia-500/20"
-                          style={{ 
-                            width: 256, 
-                            height: 256,
-                            left: -64,
-                            top: -64
-                          }}
-                        />
-                      </>
-                    )}
-
-                    {/* Listening pulse when not speaking */}
-                    {!isSpeaking && (
-                      <motion.div
-                        animate={{ 
-                          scale: [1, 1.1, 1],
-                          opacity: [0.3, 0.1, 0.3]
-                        }}
-                        transition={{ duration: 3, repeat: Infinity }}
-                        className="absolute inset-0 rounded-full bg-violet-500/20"
-                        style={{ 
-                          width: 200, 
-                          height: 200,
-                          left: -36,
-                          top: -36
-                        }}
-                      />
-                    )}
-
-                    {/* Main avatar */}
-                    <motion.div
-                      animate={{ 
-                        scale: isSpeaking ? [1, 1.05, 1] : [1, 1.02, 1],
-                      }}
-                      transition={{ duration: 0.5, repeat: Infinity }}
-                      className={cn(
-                        "w-32 h-32 rounded-full flex items-center justify-center",
-                        isSpeaking 
-                          ? "bg-gradient-to-br from-fuchsia-500 to-pink-500" 
-                          : "bg-gradient-to-br from-violet-500 to-fuchsia-500"
-                      )}
-                    >
-                      {isSpeaking ? (
-                        <AudioLines className="h-12 w-12 text-white" />
-                      ) : (
-                        <Sparkles className="h-12 w-12 text-white" />
-                      )}
-                    </motion.div>
-                  </div>
-
-                  {/* Current speech indicator */}
-                  {currentUserSpeech && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="absolute bottom-32 left-1/2 -translate-x-1/2 max-w-md"
-                    >
-                      <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 text-white/80 text-sm">
-                        {currentUserSpeech}...
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Status indicator */}
-                  <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-center">
-                    <p className="text-white/60 text-sm">
-                      {isSpeaking ? "AI is speaking..." : "Listening..."}
-                    </p>
-                    <p className="text-white/40 text-xs mt-1">
-                      {canInterrupt ? "You can interrupt anytime" : "Wait for response to complete"}
-                    </p>
-                  </div>
+                   {/* Premium voice visualization */}
+                   <div className="flex flex-col items-center gap-6">
+                     {/* Waveform */}
+                     <VoiceWaveform isActive={isSpeaking || Boolean(currentUserSpeech)} intensity={isSpeaking ? 1 : 0.5} />
+                     
+                     {/* Main avatar with glow */}
+                     <div className="relative">
+                       {/* Outer glow */}
+                       <motion.div
+                         animate={{ 
+                           scale: isSpeaking ? [1, 1.3, 1] : [1, 1.1, 1],
+                           opacity: isSpeaking ? [0.4, 0.1, 0.4] : [0.2, 0.1, 0.2]
+                         }}
+                         transition={{ duration: isSpeaking ? 1 : 3, repeat: Infinity }}
+                         className={cn(
+                           "absolute inset-0 rounded-full",
+                           isSpeaking ? "bg-fuchsia-500/40" : "bg-violet-500/30"
+                         )}
+                         style={{ width: 160, height: 160, left: -16, top: -16 }}
+                       />
+                       
+                       {/* Main circle */}
+                       <motion.div
+                         animate={{ 
+                           scale: isSpeaking ? [1, 1.06, 1] : [1, 1.02, 1],
+                         }}
+                         transition={{ duration: isSpeaking ? 0.4 : 2, repeat: Infinity }}
+                         className={cn(
+                           "w-32 h-32 rounded-full flex items-center justify-center shadow-2xl relative z-10",
+                           isSpeaking 
+                             ? "bg-gradient-to-br from-fuchsia-500 via-pink-500 to-rose-500" 
+                             : "bg-gradient-to-br from-violet-600 via-purple-500 to-fuchsia-500"
+                         )}
+                       >
+                         {isSpeaking ? (
+                           <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 0.3, repeat: Infinity }}>
+                             <AudioLines className="h-14 w-14 text-white drop-shadow-lg" />
+                           </motion.div>
+                         ) : (
+                           <Sparkles className="h-14 w-14 text-white drop-shadow-lg" />
+                         )}
+                       </motion.div>
+                     </div>
+                     
+                     {/* Status */}
+                     <div className="text-center">
+                       <p className={cn("font-medium", isSpeaking ? "text-fuchsia-400" : "text-violet-400")}>
+                         {isSpeaking ? "AI Speaking" : "Listening..."}
+                       </p>
+                       <p className="text-white/40 text-xs mt-1">
+                         {canInterrupt ? "Interrupt anytime" : "Please wait"}
+                       </p>
+                     </div>
+                     
+                     {/* Current speech */}
+                     {currentUserSpeech && (
+                       <motion.div
+                         initial={{ opacity: 0, y: 10 }}
+                         animate={{ opacity: 1, y: 0 }}
+                         className="absolute bottom-8 left-1/2 -translate-x-1/2 max-w-md"
+                       >
+                         <div className="bg-white/10 backdrop-blur-md rounded-2xl px-5 py-3 text-white/90 text-sm border border-white/10">
+                           <span className="text-violet-300 mr-2">You:</span>
+                           {currentUserSpeech}
+                           <motion.span animate={{ opacity: [1, 0] }} transition={{ duration: 0.5, repeat: Infinity }}>|</motion.span>
+                         </div>
+                       </motion.div>
+                     )}
+                   </div>
                 </div>
               )}
             </div>

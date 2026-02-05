@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { useMultiModelConsensus } from "@/hooks/useMultiModelConsensus";
 import { 
   Brain, Zap, Target, Sparkles, Timer, 
-  CheckCircle2, Loader2, ArrowRight, Settings,
-  Cpu, Server, Globe
+   CheckCircle2, Loader2, ArrowRight, Settings, Trophy,
+   Cpu, Server, Globe, Shield, TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +80,7 @@ export const MultiModelOrchestrator = ({
   initialPrompt = ""
 }: MultiModelOrchestratorProps) => {
   const { toast } = useToast();
+   const consensus = useMultiModelConsensus();
   const [prompt, setPrompt] = useState(initialPrompt);
   const [selectedStrategy, setSelectedStrategy] = useState(ORCHESTRATION_STRATEGIES[0]);
   const [steps, setSteps] = useState<OrchestrationStep[]>([]);
@@ -86,6 +88,50 @@ export const MultiModelOrchestrator = ({
   const [finalResult, setFinalResult] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [autoOptimize, setAutoOptimize] = useState(true);
+
+
+   // Quick consensus mode - use our new engine
+   const runQuickConsensus = async () => {
+     if (!prompt.trim()) return;
+     
+     setIsRunning(true);
+     setFinalResult(null);
+     
+     const result = await consensus.runConsensus(prompt, {
+       strategy: selectedStrategy.id === 'chain' ? 'chain' : 'parallel',
+       modelsCount: 3,
+       synthesize: true,
+       onProgress: (modelName, index, total) => {
+         setSteps(prev => {
+           const updated = [...prev];
+           if (updated[index]) {
+             updated[index].status = 'running';
+           }
+           return updated;
+         });
+       }
+     });
+     
+     if (result) {
+       setFinalResult(result.synthesizedAnswer);
+       setSteps(result.responses.map((r, i) => ({
+         id: `step-${i}`,
+         model: r.modelId.split('/')[1] || r.modelId,
+         purpose: `Analysis ${i + 1}`,
+         status: 'completed' as const,
+         output: r.response.slice(0, 200) + '...',
+         latency: r.latencyMs,
+         tokens: Math.floor(r.response.length / 4)
+       })));
+       
+       toast({ 
+         title: `🎯 ${result.agreement}% Model Agreement`, 
+         description: `Synthesized from ${result.responses.length} models in ${(result.totalLatencyMs / 1000).toFixed(1)}s` 
+       });
+     }
+     
+     setIsRunning(false);
+   };
 
   const runOrchestration = async () => {
     if (!prompt.trim()) return;
@@ -318,7 +364,25 @@ export const MultiModelOrchestrator = ({
               <div className="text-xs text-muted-foreground">
                 Using {selectedStrategy.models.length} models in {selectedStrategy.name.toLowerCase()}
               </div>
-              <Button onClick={runOrchestration} disabled={!prompt.trim() || isRunning}>
+                 <div className="flex gap-2">
+                   <Button 
+                     variant="outline"
+                     onClick={runQuickConsensus} 
+                     disabled={!prompt.trim() || isRunning || consensus.isRunning}
+                   >
+                     {consensus.isRunning ? (
+                       <>
+                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                         {consensus.currentModel || 'Processing...'}
+                       </>
+                     ) : (
+                       <>
+                         <Trophy className="h-4 w-4 mr-2" />
+                         Quick Consensus
+                       </>
+                     )}
+                   </Button>
+                   <Button onClick={runOrchestration} disabled={!prompt.trim() || isRunning}>
                 {isRunning ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -330,7 +394,8 @@ export const MultiModelOrchestrator = ({
                     Run Orchestration
                   </>
                 )}
-              </Button>
+                   </Button>
+                 </div>
             </div>
           </div>
 
