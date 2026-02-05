@@ -1241,16 +1241,6 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             </div>
           )}
 
-          {/* AI Beater Indicators - shows when chat is fresh */}
-          {messages.length <= 2 && !isLoading && (
-            <div className="px-2 py-2 md:px-4 space-y-2">
-              <GeminiBeaterIndicator />
-              <div className="flex flex-wrap gap-2 items-center justify-center">
-                <ClaudeBeaterIndicator variant="compact" />
-                <ChatGPTBeaterIndicator />
-              </div>
-            </div>
-          )}
 
           {/* Messages */}
           {!isSpecialMode && (
