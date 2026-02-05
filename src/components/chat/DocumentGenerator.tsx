@@ -1,7 +1,7 @@
  import { useState } from "react";
  import { 
    FileText, Mail, Newspaper, FileCode, Download, 
-   Copy, Loader2, Sparkles, X, Check
+  Copy, Loader2, Sparkles, X, Check, BookOpen
  } from "lucide-react";
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
@@ -22,7 +22,7 @@
    autoGenerate?: boolean;
  }
  
- type DocumentType = "article" | "email" | "report" | "proposal" | "blog" | "resume" | "letter";
+type DocumentType = "article" | "email" | "report" | "proposal" | "blog" | "resume" | "letter" | "book_extract";
  
  const DOCUMENT_TYPES: { type: DocumentType; icon: typeof FileText; label: string; description: string }[] = [
    { type: "article", icon: Newspaper, label: "Article", description: "News or blog article" },
@@ -32,6 +32,7 @@
    { type: "blog", icon: Newspaper, label: "Blog Post", description: "Blog content" },
    { type: "resume", icon: FileText, label: "Resume", description: "CV/Resume" },
    { type: "letter", icon: Mail, label: "Letter", description: "Formal letter" },
+  { type: "book_extract", icon: BookOpen, label: "Book Extract", description: "Book chapter/excerpt" },
  ];
  
  const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -60,6 +61,7 @@
        blog: "You are a content creator. Write an engaging blog post with a catchy title, introduction hook, informative sections, and a call-to-action.",
        resume: "You are a career coach. Create a professional resume/CV with contact info, summary, experience, education, and skills sections. Use action verbs.",
        letter: "You are a professional writer. Write a formal letter with proper formatting, clear purpose, professional tone, and appropriate closing.",
+      book_extract: "You are a bestselling author. Write an engaging book extract/chapter with vivid descriptions, compelling narrative, character development, and immersive storytelling. Include a chapter title, opening hook, well-paced scenes, and an ending that makes readers want more.",
      };
      return prompts[type];
    };
