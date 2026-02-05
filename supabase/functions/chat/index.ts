@@ -4,6 +4,49 @@ import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { checkRateLimit, getRateLimitHeaders } from "../_shared/rate-limit.ts";
 import { ChatRequestSchema, validateInput } from "../_shared/validation.ts";
  
+// Retry helper for transient gateway errors
+async function fetchWithRetry(
+  url: string, 
+  options: RequestInit, 
+  maxRetries = 3, 
+  baseDelay = 1000
+): Promise<Response> {
+  let lastError: Error | null = null;
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(url, options);
+      
+      // Don't retry client errors except 429
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        return response;
+      }
+      
+      // Retry on 5xx errors (gateway issues) and 429
+      if (response.status >= 500 || response.status === 429) {
+        if (i < maxRetries - 1) {
+          const delay = baseDelay * Math.pow(2, i);
+          console.log(`[CHAT] Gateway error ${response.status}, retrying in ${delay}ms (attempt ${i + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+      }
+      
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      if (i < maxRetries - 1) {
+        const delay = baseDelay * Math.pow(2, i);
+        console.log(`[CHAT] Network error, retrying in ${delay}ms (attempt ${i + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError || new Error("Max retries exceeded");
+}
+ 
  // Robust JSON extraction with truncation handling
  function extractJsonFromResponse(response: string): { success: boolean; data: unknown; error?: string } {
    if (!response || response.trim().length === 0) {
@@ -1106,7 +1149,7 @@ When users ask you to open a website or URL:
 
     console.log("[CHAT] Using model:", model, "hasImages:", hasImageContent, "hasContext:", !!userContext);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -1132,6 +1175,12 @@ When users ask you to open a website or URL:
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "AI credits exhausted. Please add more credits." }), {
           status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 503) {
+        return new Response(JSON.stringify({ error: "AI service temporarily unavailable. Please try again in a moment." }), {
+          status: 503,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
