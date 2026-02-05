@@ -3,6 +3,108 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { checkRateLimit, getRateLimitHeaders } from "../_shared/rate-limit.ts";
 import { ChatRequestSchema, validateInput } from "../_shared/validation.ts";
+ 
+ // Robust JSON extraction with truncation handling
+ function extractJsonFromResponse(response: string): { success: boolean; data: unknown; error?: string } {
+   if (!response || response.trim().length === 0) {
+     return { success: false, data: null, error: "Empty response" };
+   }
+ 
+   // Step 1: Remove markdown code blocks
+   let cleaned = response
+     .replace(/```json\s*/gi, "")
+     .replace(/```\s*/g, "")
+     .trim();
+ 
+   // Step 2: Find JSON object boundaries
+   const jsonStart = cleaned.indexOf("{");
+   const jsonEnd = cleaned.lastIndexOf("}");
+ 
+   if (jsonStart === -1) {
+     // Try array
+     const arrayStart = cleaned.indexOf("[");
+     const arrayEnd = cleaned.lastIndexOf("]");
+     
+     if (arrayStart === -1) {
+       return { success: false, data: null, error: "No JSON found in response" };
+     }
+     
+     cleaned = cleaned.substring(arrayStart, arrayEnd + 1);
+   } else {
+     cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+   }
+ 
+   // Step 3: Attempt direct parse
+   try {
+     return { success: true, data: JSON.parse(cleaned) };
+   } catch (_e) {
+     // Continue to repair
+   }
+ 
+   // Step 4: Repair common issues
+   cleaned = cleaned
+     .replace(/,\s*}/g, "}") // Remove trailing commas before }
+     .replace(/,\s*]/g, "]") // Remove trailing commas before ]
+     .replace(/[\x00-\x1F\x7F]/g, "") // Remove control characters
+     .replace(/:\s*,/g, ": null,") // Replace empty values
+     .replace(/:\s*}/g, ": null}"); // Replace empty values at end
+ 
+   try {
+     return { success: true, data: JSON.parse(cleaned) };
+   } catch (_e) {
+     // Continue to truncation repair
+   }
+ 
+   // Step 5: Repair truncated JSON by balancing braces/brackets
+   let braces = 0, brackets = 0;
+   let lastValidIndex = -1;
+   
+   for (let i = 0; i < cleaned.length; i++) {
+     const char = cleaned[i];
+     if (char === '{') braces++;
+     else if (char === '}') { braces--; if (braces === 0 && brackets === 0) lastValidIndex = i; }
+     else if (char === '[') brackets++;
+     else if (char === ']') { brackets--; if (braces === 0 && brackets === 0) lastValidIndex = i; }
+   }
+ 
+   // If we found a valid end point, try parsing up to there
+   if (lastValidIndex > 0) {
+     try {
+       return { success: true, data: JSON.parse(cleaned.substring(0, lastValidIndex + 1)) };
+     } catch (_e) {
+       // Continue
+     }
+   }
+ 
+   // Try to close unclosed braces/brackets
+   let repaired = cleaned;
+   
+   // Remove any trailing incomplete key-value pairs
+   repaired = repaired.replace(/,\s*"[^"]*"\s*:\s*$/, "");
+   repaired = repaired.replace(/,\s*"[^"]*"\s*:\s*"[^"]*$/, "");
+   repaired = repaired.replace(/,\s*"[^"]*$/, "");
+   
+   // Recount after cleanup
+   braces = 0;
+   brackets = 0;
+   for (const char of repaired) {
+     if (char === '{') braces++;
+     else if (char === '}') braces--;
+     else if (char === '[') brackets++;
+     else if (char === ']') brackets--;
+   }
+   
+   // Close unclosed structures
+   while (brackets > 0) { repaired += ']'; brackets--; }
+   while (braces > 0) { repaired += '}'; braces--; }
+ 
+   try {
+     return { success: true, data: JSON.parse(repaired) };
+   } catch (e) {
+     console.error("[JSON Extract] All repair attempts failed:", e);
+     return { success: false, data: null, error: `JSON parse failed: ${e}` };
+   }
+ }
 
 serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -587,40 +689,31 @@ Look for patterns like: eval(), innerHTML, dangerouslySetInnerHTML, exec(), raw 
       
       console.log("[CHAT] Security audit response length:", content.length);
       
-      try {
-        // Try to extract JSON from the response - handle markdown code blocks
-        let jsonContent = content;
+      // Use robust JSON extraction with truncation handling
+      const extracted = extractJsonFromResponse(content);
+      
+      if (extracted.success && extracted.data) {
+        const parsed = extracted.data as { vulnerabilities?: unknown[]; summary?: string; riskScore?: number };
         
-        // Remove markdown code blocks if present
-        const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-        if (codeBlockMatch) {
-          jsonContent = codeBlockMatch[1].trim();
-        }
+        // Ensure proper structure
+        const auditResponse = {
+          vulnerabilities: Array.isArray(parsed.vulnerabilities) ? parsed.vulnerabilities : [],
+          summary: parsed.summary || "Security analysis complete",
+          riskScore: typeof parsed.riskScore === 'number' ? parsed.riskScore : 0
+        };
         
-        const jsonMatch = jsonContent.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          
-          // Ensure proper structure
-          const response = {
-            vulnerabilities: Array.isArray(parsed.vulnerabilities) ? parsed.vulnerabilities : [],
-            summary: parsed.summary || "Security analysis complete",
-            riskScore: typeof parsed.riskScore === 'number' ? parsed.riskScore : 0
-          };
-          
-          console.log("[CHAT] Found", response.vulnerabilities.length, "vulnerabilities");
-          
-          return new Response(JSON.stringify(parsed), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      } catch (e) {
-        console.error("[CHAT] Failed to parse security audit:", e, "Content:", content.substring(0, 500));
+        console.log("[CHAT] Found", auditResponse.vulnerabilities.length, "vulnerabilities");
+        
+        return new Response(JSON.stringify(auditResponse), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
+      
+      console.error("[CHAT] Failed to parse security audit:", extracted.error, "Content preview:", content.substring(0, 500));
       
       return new Response(JSON.stringify({ 
         vulnerabilities: [],
-        summary: "Unable to parse security analysis results. Please try again with different code.",
+        summary: `Security analysis returned incomplete results. ${extracted.error || 'Please try with smaller code blocks.'}`,
         riskScore: 0
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
