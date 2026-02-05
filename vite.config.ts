@@ -13,6 +13,8 @@ export default defineConfig(({ mode }) => {
   const supabaseUrl = env.VITE_SUPABASE_URL || 'https://axsudmhjpfzffcicfvuj.supabase.co';
   const supabaseAnon = env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4c3VkbWhqcGZ6ZmZjaWNmdnVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzY2NTgsImV4cCI6MjA4MDg1MjY1OH0.Jdbo00BVo0QqChuZCxwHYwzdyJK4oBzCxelv1hILEZ4';
   
+   const isProduction = mode === 'production';
+ 
   return {
     server: {
       host: "::",
@@ -22,6 +24,42 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
       'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(supabaseAnon),
     },
+     build: {
+       // Production optimizations
+       target: 'es2020',
+       minify: isProduction ? 'esbuild' : false,
+       sourcemap: isProduction ? 'hidden' : true,
+       rollupOptions: {
+         output: {
+           // Chunk splitting for better caching
+           manualChunks: {
+             // Vendor chunks
+             'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+             'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs'],
+             'query-vendor': ['@tanstack/react-query'],
+             'chart-vendor': ['recharts'],
+             // Feature chunks
+             'monaco': ['@monaco-editor/react'],
+           },
+           // Asset naming for long-term caching
+           assetFileNames: (assetInfo) => {
+             const info = assetInfo.name?.split('.') || [];
+             const ext = info[info.length - 1];
+             if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
+               return `assets/images/[name]-[hash][extname]`;
+             }
+             if (/woff2?|eot|ttf|otf/i.test(ext)) {
+               return `assets/fonts/[name]-[hash][extname]`;
+             }
+             return `assets/[name]-[hash][extname]`;
+           },
+           chunkFileNames: 'assets/js/[name]-[hash].js',
+           entryFileNames: 'assets/js/[name]-[hash].js',
+         },
+       },
+       // Performance hints
+       chunkSizeWarningLimit: 1000,
+     },
     plugins: [
       react(),
       mode === "development" && componentTagger(),
