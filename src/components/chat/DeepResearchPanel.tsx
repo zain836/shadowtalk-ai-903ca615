@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Search, Loader2, BookOpen, Globe, FileText, X, ExternalLink, Download, ChevronDown, ChevronUp, Sparkles, Clock, RefreshCw, AlertCircle, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,12 +35,14 @@ interface DeepResearchPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onInsertToChat: (content: string) => void;
+  initialQuery?: string;
+  autoResearch?: boolean;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
-export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat }: DeepResearchPanelProps) => {
-  const [query, setQuery] = useState("");
+export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat, initialQuery, autoResearch }: DeepResearchPanelProps) => {
+  const [query, setQuery] = useState(initialQuery || "");
   const [isResearching, setIsResearching] = useState(false);
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState("");
@@ -53,6 +55,24 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat }: DeepResea
   const { checkAccess, isPremiumOrHigher } = useFeatureGating();
   const { toast } = useToast();
   const MAX_RETRIES = 3;
+  const [hasAutoResearched, setHasAutoResearched] = useState(false);
+
+  // Auto-research when opened with a query
+  useEffect(() => {
+    if (autoResearch && initialQuery && !isResearching && !result && !hasAutoResearched) {
+      setHasAutoResearched(true);
+      // Small delay to ensure query state is set
+      setTimeout(() => handleResearch(), 100);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoResearch, initialQuery, hasAutoResearched]);
+
+  // Update query when initialQuery changes
+  useEffect(() => {
+    if (initialQuery) {
+      setQuery(initialQuery);
+    }
+  }, [initialQuery]);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev =>
