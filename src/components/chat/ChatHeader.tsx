@@ -78,7 +78,6 @@ interface ChatHeaderProps {
   onOpenVisualReasoning: () => void;
   onOpenCreativeSynthesis: () => void;
   onOpenImageGenerator: () => void;
-  onOpenShadowCowork: () => void;
   onOpenShadowTalkLive: () => void;
    onOpenOfflineTools?: () => void; // Optional - offline now handled automatically
   onOpenBrowser: () => void;
@@ -153,7 +152,6 @@ export const ChatHeader = ({
   onOpenVisualReasoning,
   onOpenCreativeSynthesis,
   onOpenImageGenerator,
-  onOpenShadowCowork,
   onOpenShadowTalkLive,
   onOpenOfflineTools,
   onOpenBrowser,
@@ -212,16 +210,6 @@ export const ChatHeader = ({
           icon={<Image className="h-5 w-5 text-orange-500" />}
           label="Image Generator (E)"
           onClick={() => handleMenuAction(onOpenImageGenerator)}
-        />
-        <MenuItem
-          icon={<Terminal className="h-5 w-5 text-amber-500" />}
-          label="Shadow Cowork (W)"
-          onClick={() => handleMenuAction(onOpenShadowCowork)}
-        />
-        <MenuItem
-          icon={<Terminal className="h-5 w-5 text-amber-500" />}
-          label="Shadow Cowork (W)"
-          onClick={() => handleMenuAction(onOpenShadowCowork)}
         />
         <MenuItem
           icon={<Mic className="h-5 w-5 text-violet-500" />}
@@ -474,11 +462,6 @@ export const ChatHeader = ({
                 <Image className="h-4 w-4 mr-2 text-orange-500" />
                 Image Generator
                 <span className="ml-auto text-xs text-muted-foreground">⇧E</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onOpenShadowCowork}>
-                <Terminal className="h-4 w-4 mr-2 text-amber-500" />
-                Shadow Cowork
-                <span className="ml-auto text-xs text-muted-foreground">⇧W</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onOpenShadowTalkLive}>
                 <Mic className="h-4 w-4 mr-2 text-violet-500" />

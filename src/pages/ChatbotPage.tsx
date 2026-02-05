@@ -28,7 +28,6 @@ import { DeepResearchPanel } from "@/components/chat/DeepResearchPanel";
 import { AgenticTaskRunner } from "@/components/chat/AgenticTaskRunner";
 import { VisualReasoning } from "@/components/chat/VisualReasoning";
 import { CreativeSynthesis } from "@/components/chat/CreativeSynthesis";
-import { ShadowCowork } from "@/components/chat/ShadowCowork";
 import { ShadowTalkLive } from "@/components/chat/ShadowTalkLive";
 import PlanetaryActionPanel from "@/components/chat/PlanetaryActionPanel";
 import SecurityAuditPanel from "@/components/chat/SecurityAuditPanel";
@@ -135,7 +134,6 @@ const ChatbotPage = () => {
   const [showAgenticRunner, setShowAgenticRunner] = useState(false);
   const [showVisualReasoning, setShowVisualReasoning] = useState(false);
   const [showCreativeSynthesis, setShowCreativeSynthesis] = useState(false);
-  const [showShadowCowork, setShowShadowCowork] = useState(false);
   const [showShadowTalkLive, setShowShadowTalkLive] = useState(false);
   const [showShadowBrowser, setShowShadowBrowser] = useState(false);
   const [browserInitialUrl, setBrowserInitialUrl] = useState<string | undefined>(undefined);
@@ -359,10 +357,6 @@ const ChatbotPage = () => {
         case 'k': // New Code Canvas
           e.preventDefault();
           setCanvasState({ content: "", type: "code", language: "javascript" });
-          break;
-        case 'w': // Shadow Cowork
-          e.preventDefault();
-          setShowShadowCowork(true);
           break;
         case 'l': // ShadowTalk Live
           e.preventDefault();
@@ -999,7 +993,6 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             onOpenVisualReasoning={() => setShowVisualReasoning(true)}
             onOpenCreativeSynthesis={() => setShowCreativeSynthesis(true)}
             onOpenImageGenerator={() => setShowImageGenerator(true)}
-            onOpenShadowCowork={() => setShowShadowCowork(true)}
             onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
             onOpenBrowser={() => setShowShadowBrowser(true)}
             aiProvider={aiProvider}
@@ -1157,22 +1150,6 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
           onInsertToChat={(content) => {
             setShowCreativeSynthesis(false);
             setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content, timestamp: new Date() }]);
-          }}
-        />
-      )}
-      
-      {/* Shadow Cowork Mode */}
-      {showShadowCowork && (
-        <ShadowCowork
-          isOpen={showShadowCowork}
-          onClose={() => setShowShadowCowork(false)}
-          onInsertToChat={(content) => {
-            setMessages(prev => [...prev, { 
-              id: crypto.randomUUID(), 
-              type: 'ai', 
-              content, 
-              timestamp: new Date() 
-            }]);
           }}
         />
       )}
