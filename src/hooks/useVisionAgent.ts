@@ -172,8 +172,8 @@
        // Create canvas for frame capture
        if (!canvasRef.current) {
          canvasRef.current = document.createElement('canvas');
-         canvasRef.current.width = 640;
-         canvasRef.current.height = 480;
+          canvasRef.current.width = 320;
+          canvasRef.current.height = 240;
        }
        
        setState(prev => ({ ...prev, isActive: true, permissionGranted: true }));
@@ -229,8 +229,10 @@
      const ctx = canvasRef.current.getContext('2d');
      if (!ctx) return null;
      
-     ctx.drawImage(videoRef.current, 0, 0, 640, 480);
-     return canvasRef.current.toDataURL('image/jpeg', 0.8);
+      // Draw at reduced size for faster API processing
+      ctx.drawImage(videoRef.current, 0, 0, 320, 240);
+      // Use lower quality to reduce payload size
+      return canvasRef.current.toDataURL('image/jpeg', 0.5);
    }, []);
    
    // Analyze a frame using the edge function
