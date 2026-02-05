@@ -111,7 +111,13 @@ interface ShadowBrowserProps {
 }
 
 const DEFAULT_HOME = "https://www.google.com";
-const PROXY_DOMAINS = ["google.com", "youtube.com", "github.com", "wikipedia.org"];
+
+// Sites that block iframe embedding via X-Frame-Options or CSP
+const BLOCKED_DOMAINS = [
+  "google.com", "youtube.com", "github.com", "facebook.com", "twitter.com", 
+  "x.com", "instagram.com", "linkedin.com", "netflix.com", "amazon.com",
+  "microsoft.com", "apple.com", "reddit.com", "twitch.tv", "discord.com"
+];
 
 export const ShadowBrowser = ({
   isOpen,
@@ -153,6 +159,7 @@ export const ShadowBrowser = ({
   const [pageInsights, setPageInsights] = useState<string[]>([]);
   const [autoAnalyze, setAutoAnalyze] = useState(true);
   const lastAnalyzedUrl = useRef<string>("");
+  const [iframeBlocked, setIframeBlocked] = useState(false);
   
   // Bookmarks & History
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(() => {
@@ -206,6 +213,7 @@ export const ShadowBrowser = ({
   // Navigate to URL
   const navigateTo = useCallback((url: string) => {
     const formattedUrl = formatUrl(url);
+    setIframeBlocked(false);
     
     setTabs((prev) =>
       prev.map((tab) =>
@@ -222,6 +230,16 @@ export const ShadowBrowser = ({
       ...prev.filter((h) => h.url !== formattedUrl),
     ]);
   }, [activeTabId]);
+
+  // Check if domain blocks embedding
+  const isBlockedDomain = useCallback((url: string) => {
+    try {
+      const domain = new URL(url).hostname.replace("www.", "");
+      return BLOCKED_DOMAINS.some(blocked => domain.includes(blocked));
+    } catch {
+      return false;
+    }
+  }, []);
   
   // Handle URL submission
   const handleUrlSubmit = (e: React.FormEvent) => {
@@ -281,6 +299,12 @@ export const ShadowBrowser = ({
           : tab
       )
     );
+    
+    // Check if iframe is blocked
+    setTimeout(() => {
+      const isBlocked = isBlockedDomain(activeTab.url);
+      setIframeBlocked(isBlocked);
+    }, 500);
     
     // Try to get page title (may fail due to CORS)
     try {
@@ -1592,27 +1616,71 @@ Be concise and helpful.`,
             title="Browser"
           />
           
-          {/* Fallback message for blocked iframes - Premium */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none max-w-md w-full px-4">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1 }}
-              className="bg-background/95 backdrop-blur-lg border border-border/50 rounded-2xl px-4 py-3 text-center pointer-events-auto shadow-xl"
-            >
-              <p className="text-xs text-muted-foreground">
-                Some websites block embedding. 
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="h-auto p-0 text-xs ml-1 text-primary hover:text-primary/80"
-                  onClick={() => window.open(activeTab.url, "_blank")}
-                >
-                  Open in new tab <ExternalLink className="h-3 w-3 ml-1" />
-                </Button>
-              </p>
-            </motion.div>
-          </div>
+          {/* Blocked site overlay */}
+          <AnimatePresence>
+            {iframeBlocked && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-background/95 backdrop-blur-md flex items-center justify-center z-20"
+              >
+                <div className="text-center max-w-md px-6">
+                  <div className="h-20 w-20 mx-auto rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/30 flex items-center justify-center mb-6 shadow-lg">
+                    <Globe className="h-10 w-10 text-amber-500" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">Site Blocks Embedding</h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    <span className="font-medium text-foreground">{(() => { try { return new URL(activeTab.url).hostname; } catch { return activeTab.url; } })()}</span> has security restrictions that prevent embedding. This is a common browser security feature.
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <Button
+                      onClick={() => window.open(activeTab.url, "_blank")}
+                      className="gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Open in New Tab
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigateTo("https://duckduckgo.com")}
+                      className="gap-2"
+                    >
+                      <Search className="h-4 w-4" />
+                      Use DuckDuckGo Instead
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Tip: DuckDuckGo and many other sites allow embedding.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          {/* Subtle fallback hint for non-blocked sites */}
+          {!iframeBlocked && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none max-w-md w-full px-4">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 2 }}
+                className="bg-background/95 backdrop-blur-lg border border-border/50 rounded-2xl px-4 py-3 text-center pointer-events-auto shadow-xl"
+              >
+                <p className="text-xs text-muted-foreground">
+                  Some websites block embedding. 
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-xs ml-1 text-primary hover:text-primary/80"
+                    onClick={() => window.open(activeTab.url, "_blank")}
+                  >
+                    Open in new tab <ExternalLink className="h-3 w-3 ml-1" />
+                  </Button>
+                </p>
+              </motion.div>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
