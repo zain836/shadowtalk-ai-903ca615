@@ -34,6 +34,21 @@
  ];
  
  const STORAGE_KEY = 'shadowtalk_robust_offline_model';
+
+// Clear invalid cached model on startup
+const clearInvalidCache = () => {
+  const cached = localStorage.getItem(STORAGE_KEY);
+  if (cached) {
+    const isValid = OFFLINE_MODELS.some(m => m.id === cached);
+    if (!isValid) {
+      console.log('[RobustOfflineAI] Clearing invalid cached model:', cached);
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+};
+
+// Run on module load
+clearInvalidCache();
  
  // Simple fallback responses when AI is unavailable
  const FALLBACK_RESPONSES: Record<string, string> = {
@@ -86,14 +101,19 @@
          const webllm = await import('@mlc-ai/web-llm');
          
          for (const model of OFFLINE_MODELS) {
-           const inCache = await webllm.hasModelInCache(model.id);
-           if (inCache) {
-             console.log('[RobustOfflineAI] ✓ Found cached model:', model.name);
-             localStorage.setItem(STORAGE_KEY, model.id);
-             if (mountedRef.current) {
-               setState(prev => ({ ...prev, hasCachedModel: true }));
+          try {
+            const inCache = await webllm.hasModelInCache(model.id);
+            if (inCache) {
+              console.log('[RobustOfflineAI] ✓ Found cached model:', model.name);
+              localStorage.setItem(STORAGE_KEY, model.id);
+              if (mountedRef.current) {
+                setState(prev => ({ ...prev, hasCachedModel: true }));
+              }
+              return;
              }
-             return;
+          } catch (e) {
+            // Model might not exist in config, skip it
+            console.warn(`[RobustOfflineAI] Skipping ${model.id}:`, e);
            }
          }
          console.log('[RobustOfflineAI] No cached models found');
