@@ -43,6 +43,7 @@ import { DataOrganizer } from "@/components/chat/DataOrganizer";
 import { DocumentGenerator } from "@/components/chat/DocumentGenerator";
 import { DailyPlanner } from "@/components/chat/DailyPlanner";
 import { WordleGame } from "@/components/chat/WordleGame";
+import { VisionAgent } from "@/components/chat/VisionAgent";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -153,6 +154,7 @@ const ChatbotPage = () => {
   const [showDocumentGenerator, setShowDocumentGenerator] = useState(false);
   const [showDailyPlanner, setShowDailyPlanner] = useState(false);
   const [showWordleGame, setShowWordleGame] = useState(false);
+  const [showVisionAgent, setShowVisionAgent] = useState(false);
   
   // Tool params for auto-execution
   const [imageGeneratorPrompt, setImageGeneratorPrompt] = useState<string | undefined>(undefined);
@@ -397,6 +399,10 @@ const ChatbotPage = () => {
            e.preventDefault();
            setShowAPIMarketplace(true);
            break;
+        case 'v': // Vision Agent
+          e.preventDefault();
+          setShowVisionAgent(prev => !prev);
+          break;
          case 'o': // Pakistan Compliance (Shift+O for 🇵🇰)
            // Already handled elsewhere, but we can also use 'o' for offline
            break;
@@ -1618,6 +1624,42 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
       <WordleGame
         isOpen={showWordleGame}
         onClose={() => setShowWordleGame(false)}
+      />
+
+      {/* Vision Agent - AI that sees and adapts */}
+      <VisionAgent
+        isEnabled={showVisionAgent}
+        onMessage={(msg, isProactive) => {
+          if (isProactive) {
+            setMessages(prev => [...prev, {
+              id: crypto.randomUUID(),
+              type: 'ai',
+              content: msg,
+              timestamp: new Date()
+            }]);
+          }
+        }}
+        onPersonalityChange={(personalityId) => {
+          // Map vision personalities to chat personalities
+          const personalityMap: Record<string, Personality> = {
+            'energetic': 'friendly',
+            'empathetic': 'diplomatic',
+            'solver': 'pragmatic',
+            'teacher': 'meticulous',
+            'gentle': 'friendly',
+            'efficient': 'professional'
+          };
+          const newPersonality = personalityMap[personalityId] || 'friendly';
+          setPersonality(newPersonality);
+        }}
+        onGestureCommand={(gesture) => {
+          if (gesture === 'stop') {
+            // Cancel any ongoing operation
+            if (abortControllerRef.current) {
+              abortControllerRef.current.abort();
+            }
+          }
+        }}
       />
      </div>
   );
