@@ -766,6 +766,26 @@ Look for patterns like: eval(), innerHTML, dangerouslySetInnerHTML, exec(), raw 
     if (generateImage && imagePrompt) {
       console.log("[CHAT] Generating image with prompt:", imagePrompt);
       
+      // Enhance prompt for photorealistic quality
+      const photorealisticEnhancements = [
+        "ultra photorealistic",
+        "shot on Canon EOS R5 with 85mm f/1.4 lens",
+        "natural lighting",
+        "8K resolution",
+        "hyperdetailed",
+        "professional photography",
+        "realistic skin texture and pores",
+        "volumetric lighting",
+        "film grain",
+        "shallow depth of field",
+        "RAW photo",
+        "award-winning photography"
+      ].join(", ");
+      
+      const enhancedPrompt = `${imagePrompt}. Style: ${photorealisticEnhancements}. NOT AI-generated looking, NOT digital art, NOT illustration, NOT CGI. Must look like a real photograph taken by a professional photographer.`;
+      
+      console.log("[CHAT] Enhanced prompt for photorealism:", enhancedPrompt.substring(0, 200) + "...");
+      
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -773,11 +793,11 @@ Look for patterns like: eval(), innerHTML, dangerouslySetInnerHTML, exec(), raw 
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image",
+          model: "google/gemini-3-pro-image-preview",
           messages: [
             { 
               role: "user", 
-              content: `Generate an image: ${imagePrompt}. High quality, detailed, visually appealing.`
+              content: `Generate an image: ${enhancedPrompt}`
             }
           ],
           modalities: ["image", "text"],
