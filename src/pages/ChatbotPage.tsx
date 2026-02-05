@@ -42,6 +42,7 @@ import { CameraCapture } from "@/components/chat/CameraCapture";
 import { DataOrganizer } from "@/components/chat/DataOrganizer";
 import { DocumentGenerator } from "@/components/chat/DocumentGenerator";
 import { DailyPlanner } from "@/components/chat/DailyPlanner";
+import { WordleGame } from "@/components/chat/WordleGame";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -151,6 +152,7 @@ const ChatbotPage = () => {
   const [showDataOrganizer, setShowDataOrganizer] = useState(false);
   const [showDocumentGenerator, setShowDocumentGenerator] = useState(false);
   const [showDailyPlanner, setShowDailyPlanner] = useState(false);
+  const [showWordleGame, setShowWordleGame] = useState(false);
   
   // Tool params for auto-execution
   const [imageGeneratorPrompt, setImageGeneratorPrompt] = useState<string | undefined>(undefined);
@@ -806,6 +808,12 @@ const ChatbotPage = () => {
         case 'daily_planner':
           setShowDailyPlanner(true);
           toast({ title: "📅 Daily Planner", description: "Opening your day planner..." });
+          setMessage("");
+          return;
+        
+        case 'wordle_game':
+          setShowWordleGame(true);
+          toast({ title: "🟩 Wordle Bot", description: "Starting offline word game..." });
           setMessage("");
           return;
       }
@@ -1604,6 +1612,12 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             timestamp: new Date()
           }]);
         }}
+      />
+
+      {/* Wordle Game - Offline word puzzle */}
+      <WordleGame
+        isOpen={showWordleGame}
+        onClose={() => setShowWordleGame(false)}
       />
      </div>
   );
