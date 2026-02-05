@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { 
   Bot, Play, Pause, Square, CheckCircle2, XCircle, 
   Clock, Loader2, ChevronRight, Settings, Zap,
-  Globe, Mail, Calendar, FileText, ShoppingCart, 
+  Globe, Mail, Calendar, FileText, ShoppingCart, CalendarDays,
   Plane, Database, Code, MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,8 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const TASK_TEMPLATES = [
   { icon: Globe, label: "Research & Report", prompt: "Research [topic] and create a detailed report" },
   { icon: Mail, label: "Email Draft", prompt: "Draft an email to [recipient] about [topic]" },
-  { icon: Calendar, label: "Schedule Planning", prompt: "Plan my schedule for [event/meeting]" },
+  { icon: CalendarDays, label: "Daily Planner", prompt: "Plan my productive day with work, exercise, and breaks" },
+  { icon: Calendar, label: "Meeting Schedule", prompt: "Plan my schedule for [event/meeting]" },
   { icon: ShoppingCart, label: "Product Comparison", prompt: "Compare products for [category] and recommend" },
   { icon: Plane, label: "Travel Planning", prompt: "Plan a trip to [destination] for [dates]" },
   { icon: Code, label: "Code Generation", prompt: "Build a [feature] with [technology]" },

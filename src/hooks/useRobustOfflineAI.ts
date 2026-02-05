@@ -25,12 +25,11 @@
  
  // Model catalog - smallest first for fastest loading and reliability
  const OFFLINE_MODELS = [
-  { id: 'SmolLM2-360M-Instruct-q0f16-MLC', name: 'SmolLM2 Mini', size: '360M', bytes: 360_000_000 },
-  { id: 'SmolLM2-1.7B-Instruct-q4f16_1-MLC', name: 'SmolLM2 1.7B', size: '1.7B', bytes: 900_000_000 },
-  { id: 'TinyLlama-1.1B-Chat-v0.4-q4f16_1-MLC', name: 'TinyLlama', size: '1.1B', bytes: 675_000_000 },
-  { id: 'gemma-3-1b-it-q4f32_1-MLC', name: 'Gemma 3 1B', size: '1B', bytes: 800_000_000 },
-  { id: 'Llama-3.2-1B-Instruct-q4f32_1-MLC', name: 'Llama 3.2 1B', size: '1B', bytes: 1_100_000_000 },
-  { id: 'Phi-3.5-mini-instruct-q4f16_1-MLC', name: 'Phi 3.5 Mini', size: '3.8B', bytes: 2_500_000_000 },
+  { id: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC', name: 'Qwen2.5 Mini', size: '0.5B', bytes: 350_000_000 },
+  { id: 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC', name: 'Qwen2.5 1.5B', size: '1.5B', bytes: 900_000_000 },
+  { id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', name: 'Llama 3.2 1B', size: '1B', bytes: 700_000_000 },
+  { id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC', name: 'Llama 3.2 3B', size: '3B', bytes: 1_800_000_000 },
+  { id: 'Phi-3.5-mini-instruct-q4f16_1-MLC', name: 'Phi 3.5 Mini', size: '3.8B', bytes: 2_200_000_000 },
  ];
  
  const STORAGE_KEY = 'shadowtalk_robust_offline_model';
