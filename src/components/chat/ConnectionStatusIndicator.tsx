@@ -25,82 +25,110 @@
  } from '@/components/ui/popover';
  import { useRobustOfflineAI } from '@/hooks/useRobustOfflineAI';
  
- export const ConnectionStatusIndicator: React.FC = () => {
-   const [isOnline, setIsOnline] = useState(navigator.onLine);
-   const {
-     isReady,
-     isLoading,
-     loadProgress,
-     loadStage,
-     activeModel,
-     hasCachedModel,
-     error,
-     loadModel,
-     models,
-     downloadModel,
-   } = useRobustOfflineAI();
- 
-   // Listen for online/offline events
-   useEffect(() => {
-     const handleOnline = () => setIsOnline(true);
-     const handleOffline = () => setIsOnline(false);
- 
-     window.addEventListener('online', handleOnline);
-     window.addEventListener('offline', handleOffline);
- 
-     return () => {
-       window.removeEventListener('online', handleOnline);
-       window.removeEventListener('offline', handleOffline);
-     };
-   }, []);
- 
-   // Determine status color and icon
-   const getStatusConfig = () => {
-     if (isLoading) {
-       return {
-         bgClass: 'bg-blue-500/15 border-blue-500/40',
-         textClass: 'text-blue-500',
-         icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
-         label: 'Loading',
-       };
-     }
- 
-     if (!isOnline) {
-       if (isReady) {
-         return {
-           bgClass: 'bg-green-500/15 border-green-500/40',
-           textClass: 'text-green-500',
-           icon: <WifiOff className="h-3.5 w-3.5" />,
-           label: 'Offline Ready',
-         };
-       }
-       return {
-         bgClass: 'bg-amber-500/15 border-amber-500/40',
-         textClass: 'text-amber-500',
-         icon: <WifiOff className="h-3.5 w-3.5" />,
-         label: 'Offline',
-       };
-     }
- 
-     // Online
-     if (isReady) {
-       return {
-         bgClass: 'bg-green-500/15 border-green-500/40',
-         textClass: 'text-green-500',
-         icon: <Wifi className="h-3.5 w-3.5" />,
-         label: 'Online + AI',
-       };
-     }
- 
-     return {
-       bgClass: 'bg-primary/15 border-primary/40',
-       textClass: 'text-primary',
-       icon: <Wifi className="h-3.5 w-3.5" />,
-       label: 'Online',
-     };
-   };
- 
-   const status = getStatusConfig();
+export const ConnectionStatusIndicator: React.FC = () => {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const {
+    isReady,
+    isLoading,
+    loadProgress,
+    loadStage,
+    activeModel,
+    hasCachedModel,
+    error,
+    loadModel,
+    models,
+    downloadModel,
+    isBackgroundDownloading,
+    backgroundProgress,
+    recommendedModel,
+  } = useRobustOfflineAI();
+
+  // Listen for online/offline events
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => {
+      setIsOnline(false);
+      // Auto-load model when going offline if cached
+      if (hasCachedModel && !isReady && !isLoading) {
+        console.log('[ConnectionStatus] Going offline - loading cached model');
+        loadModel();
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [hasCachedModel, isReady, isLoading, loadModel]);
+
+  // Determine status color and icon
+  const getStatusConfig = () => {
+    // Background downloading while online
+    if (isOnline && isBackgroundDownloading) {
+      return {
+        bgClass: 'bg-blue-500/15 border-blue-500/40',
+        textClass: 'text-blue-500',
+        icon: <Download className="h-3.5 w-3.5 animate-pulse" />,
+        label: `${backgroundProgress}%`,
+      };
+    }
+    
+    if (isLoading) {
+      return {
+        bgClass: 'bg-blue-500/15 border-blue-500/40',
+        textClass: 'text-blue-500',
+        icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
+        label: 'Loading',
+      };
+    }
+
+    if (!isOnline) {
+      if (isReady) {
+        return {
+          bgClass: 'bg-green-500/15 border-green-500/40',
+          textClass: 'text-green-500',
+          icon: <Brain className="h-3.5 w-3.5" />,
+          label: 'Offline AI',
+        };
+      }
+      if (hasCachedModel) {
+        return {
+          bgClass: 'bg-amber-500/15 border-amber-500/40',
+          textClass: 'text-amber-500',
+          icon: <WifiOff className="h-3.5 w-3.5" />,
+          label: 'Offline',
+        };
+      }
+      return {
+        bgClass: 'bg-red-500/15 border-red-500/40',
+        textClass: 'text-red-500',
+        icon: <WifiOff className="h-3.5 w-3.5" />,
+        label: 'No AI',
+      };
+    }
+
+    // Online states
+    if (isReady || hasCachedModel) {
+      return {
+        bgClass: 'bg-green-500/15 border-green-500/40',
+        textClass: 'text-green-500',
+        icon: <Wifi className="h-3.5 w-3.5" />,
+        label: isReady ? 'AI Ready' : 'Online',
+      };
+    }
+
+    return {
+      bgClass: 'bg-primary/15 border-primary/40',
+      textClass: 'text-primary',
+      icon: <Wifi className="h-3.5 w-3.5" />,
+      label: 'Online',
+    };
+  };
+
+  const status = getStatusConfig();
  
    return (
      <Popover>
@@ -181,57 +209,71 @@
                </div>
              )}
  
-             {/* Not Installed State */}
-             {!isReady && !isLoading && (
-               <div className="space-y-2">
-                 <div className={`p-2 rounded-lg flex items-center gap-2 ${
-                   hasCachedModel 
-                     ? 'bg-amber-500/10 border border-amber-500/20' 
-                     : 'bg-muted/50 border border-border'
-                 }`}>
-                   {hasCachedModel ? (
-                     <>
-                       <HardDrive className="h-4 w-4 text-amber-500 shrink-0" />
-                       <div className="flex-1 min-w-0">
-                         <p className="text-xs font-medium">Model Cached</p>
-                         <p className="text-[10px] text-muted-foreground">Click Load to activate</p>
-                       </div>
-                     </>
-                   ) : (
-                     <>
-                       <X className="h-4 w-4 text-muted-foreground shrink-0" />
-                       <div className="flex-1 min-w-0">
-                         <p className="text-xs font-medium">Not Installed</p>
-                         <p className="text-[10px] text-muted-foreground">Download a model for offline use</p>
-                       </div>
-                     </>
-                   )}
-                 </div>
- 
-                 {/* Quick Actions */}
-                 {hasCachedModel ? (
-                   <Button
-                     size="sm"
-                     onClick={() => loadModel()}
-                     className="w-full gap-1.5 h-8"
-                   >
-                     <Brain className="h-3.5 w-3.5" />
-                     Load Offline AI
-                   </Button>
-                 ) : (
-                   <Button
-                     size="sm"
-                     variant="outline"
-                     onClick={() => downloadModel(models[0]?.id)}
-                     disabled={!isOnline}
-                     className="w-full gap-1.5 h-8"
-                   >
-                     <Download className="h-3.5 w-3.5" />
-                     Download {models[0]?.name || 'Model'}
-                   </Button>
-                 )}
-               </div>
-             )}
+            {/* Background Download Progress */}
+            {isBackgroundDownloading && !isLoading && (
+              <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="truncate max-w-[150px]">Downloading {recommendedModel?.name}...</span>
+                  <span className="text-muted-foreground font-medium">{backgroundProgress}%</span>
+                </div>
+                <Progress value={backgroundProgress} className="h-1.5" />
+                <p className="text-[10px] text-muted-foreground mt-1.5">
+                  📥 Auto-downloading for full offline AI (reasoning, code, math)
+                </p>
+              </div>
+            )}
+
+            {/* Not Installed State */}
+            {!isReady && !isLoading && !isBackgroundDownloading && (
+              <div className="space-y-2">
+                <div className={`p-2 rounded-lg flex items-center gap-2 ${
+                  hasCachedModel 
+                    ? 'bg-amber-500/10 border border-amber-500/20' 
+                    : 'bg-muted/50 border border-border'
+                }`}>
+                  {hasCachedModel ? (
+                    <>
+                      <HardDrive className="h-4 w-4 text-amber-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium">Model Cached</p>
+                        <p className="text-[10px] text-muted-foreground">Click Load to activate</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <X className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium">Not Installed</p>
+                        <p className="text-[10px] text-muted-foreground">Download a model for offline use</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Quick Actions */}
+                {hasCachedModel ? (
+                  <Button
+                    size="sm"
+                    onClick={() => loadModel()}
+                    className="w-full gap-1.5 h-8"
+                  >
+                    <Brain className="h-3.5 w-3.5" />
+                    Load Offline AI
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => downloadModel(recommendedModel?.id || models[0]?.id)}
+                    disabled={!isOnline}
+                    className="w-full gap-1.5 h-8"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download {recommendedModel?.name || models[0]?.name || 'Model'}
+                  </Button>
+                )}
+              </div>
+            )}
  
              {/* Error State */}
              {error && (
@@ -241,16 +283,20 @@
              )}
            </div>
  
-           {/* Info Footer */}
-           <p className="text-[10px] text-muted-foreground text-center pt-1 border-t border-border">
-             {isReady
-               ? '✨ Works 100% offline with full AI capabilities'
-               : isOnline
-               ? 'Download a model to enable offline AI'
-               : 'Connect to internet to download offline AI'}
-           </p>
-         </div>
-       </PopoverContent>
-     </Popover>
-   );
- };
+          {/* Info Footer */}
+          <p className="text-[10px] text-muted-foreground text-center pt-1 border-t border-border">
+            {isReady
+              ? '✨ Works 100% offline - reasoning, code, math'
+              : isBackgroundDownloading
+              ? '⏳ Auto-downloading AI for full offline capabilities'
+              : hasCachedModel
+              ? '💾 Model cached - ready to load when offline'
+              : isOnline
+              ? '🚀 A powerful model will auto-download in background'
+              : 'Connect to internet to download offline AI'}
+          </p>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
