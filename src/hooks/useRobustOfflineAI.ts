@@ -23,14 +23,18 @@
    hasCachedModel: boolean;
  }
  
- // Model catalog - smallest first for fastest loading and reliability
- const OFFLINE_MODELS = [
-  { id: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC', name: 'Qwen2.5 Mini', size: '0.5B', bytes: 350_000_000 },
-  { id: 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC', name: 'Qwen2.5 1.5B', size: '1.5B', bytes: 900_000_000 },
-  { id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', name: 'Llama 3.2 1B', size: '1B', bytes: 700_000_000 },
-  { id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC', name: 'Llama 3.2 3B', size: '3B', bytes: 1_800_000_000 },
-  { id: 'Phi-3.5-mini-instruct-q4f16_1-MLC', name: 'Phi 3.5 Mini', size: '3.8B', bytes: 2_200_000_000 },
- ];
+// Model catalog - ordered by capability for offline use
+// Larger models are preferred for complex tasks (reasoning, code generation, math)
+const OFFLINE_MODELS = [
+ { id: 'Phi-3.5-mini-instruct-q4f16_1-MLC', name: 'Phi 3.5 Mini', size: '3.8B', bytes: 2_200_000_000, tier: 'premium' as const, capabilities: ['reasoning', 'code', 'math', 'chat'] },
+ { id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC', name: 'Llama 3.2 3B', size: '3B', bytes: 1_800_000_000, tier: 'premium' as const, capabilities: ['reasoning', 'code', 'math', 'chat'] },
+ { id: 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC', name: 'Qwen2.5 1.5B', size: '1.5B', bytes: 900_000_000, tier: 'standard' as const, capabilities: ['reasoning', 'chat', 'math'] },
+ { id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', name: 'Llama 3.2 1B', size: '1B', bytes: 700_000_000, tier: 'standard' as const, capabilities: ['chat', 'math'] },
+ { id: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC', name: 'Qwen2.5 Mini', size: '0.5B', bytes: 350_000_000, tier: 'basic' as const, capabilities: ['chat'] },
+];
+
+// The recommended model for full offline capabilities
+const RECOMMENDED_MODEL = OFFLINE_MODELS[0]; // Phi 3.5 Mini - best for complex reasoning, code, math
  
  const STORAGE_KEY = 'shadowtalk_robust_offline_model';
 
@@ -57,17 +61,21 @@ clearInvalidCache();
    default: "I'm currently in basic offline mode with limited capabilities. For full AI responses, please download an offline model or connect to the internet.",
  };
  
- export const useRobustOfflineAI = () => {
-   const [state, setState] = useState<OfflineAIState>({
-     isReady: false,
-     isLoading: false,
-     loadProgress: 0,
-     loadStage: '',
-     activeModel: null,
-     error: null,
-     hasWebGPU: false,
-     hasCachedModel: false,
-   });
+export const useRobustOfflineAI = () => {
+  const [state, setState] = useState<OfflineAIState>({
+    isReady: false,
+    isLoading: false,
+    loadProgress: 0,
+    loadStage: '',
+    activeModel: null,
+    error: null,
+    hasWebGPU: false,
+    hasCachedModel: false,
+  });
+  
+  const [isBackgroundDownloading, setIsBackgroundDownloading] = useState(false);
+  const [backgroundProgress, setBackgroundProgress] = useState(0);
+  const backgroundDownloadAttemptedRef = useRef(false);
  
    const engineRef = useRef<any>(null);
    const loadingRef = useRef<Promise<boolean> | null>(null);
@@ -93,36 +101,102 @@ clearInvalidCache();
      return () => { mountedRef.current = false; };
    }, []);
  
-   // Check for cached models on mount
-   useEffect(() => {
-     const checkCachedModels = async () => {
-       try {
-         const webllm = await import('@mlc-ai/web-llm');
-         
-         for (const model of OFFLINE_MODELS) {
-          try {
-            const inCache = await webllm.hasModelInCache(model.id);
-            if (inCache) {
-              console.log('[RobustOfflineAI] ✓ Found cached model:', model.name);
-              localStorage.setItem(STORAGE_KEY, model.id);
-              if (mountedRef.current) {
-                setState(prev => ({ ...prev, hasCachedModel: true }));
-              }
-              return;
+  // Background download of the recommended premium model
+  const triggerBackgroundDownload = useCallback(async () => {
+    if (backgroundDownloadAttemptedRef.current || !navigator.onLine) return;
+    backgroundDownloadAttemptedRef.current = true;
+    
+    console.log('[RobustOfflineAI] 🚀 Starting background download of', RECOMMENDED_MODEL.name);
+    setIsBackgroundDownloading(true);
+    setBackgroundProgress(0);
+    
+    try {
+      const webllm = await import('@mlc-ai/web-llm');
+      
+      // Check if recommended model is already cached
+      const inCache = await webllm.hasModelInCache(RECOMMENDED_MODEL.id);
+      if (inCache) {
+        console.log('[RobustOfflineAI] ✓ Recommended model already cached');
+        setIsBackgroundDownloading(false);
+        if (mountedRef.current) {
+          setState(prev => ({ ...prev, hasCachedModel: true }));
+        }
+        return;
+      }
+      
+      // Use requestIdleCallback if available for non-blocking download
+      const startDownload = async () => {
+        try {
+          const engine = await webllm.CreateMLCEngine(RECOMMENDED_MODEL.id, {
+            initProgressCallback: (progress: any) => {
+              const percent = Math.round((progress.progress || 0) * 100);
+              setBackgroundProgress(percent);
+            },
+          });
+          
+          // Unload after download - we just wanted to cache it
+          await engine.unload();
+          
+          localStorage.setItem(STORAGE_KEY, RECOMMENDED_MODEL.id);
+          if (mountedRef.current) {
+            setState(prev => ({ ...prev, hasCachedModel: true }));
+          }
+          setIsBackgroundDownloading(false);
+          
+          console.log('[RobustOfflineAI] ✅ Background download complete:', RECOMMENDED_MODEL.name);
+        } catch (e: any) {
+          console.warn('[RobustOfflineAI] Background download failed:', e.message);
+          setIsBackgroundDownloading(false);
+        }
+      };
+      
+      // Delay start to not interfere with page load
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(() => startDownload(), { timeout: 60000 });
+      } else {
+        setTimeout(startDownload, 15000);
+      }
+    } catch (e: any) {
+      console.warn('[RobustOfflineAI] Background download setup failed:', e.message);
+      setIsBackgroundDownloading(false);
+    }
+  }, []);
+
+  // Check for cached models on mount
+  useEffect(() => {
+    const checkCachedModels = async () => {
+      try {
+        const webllm = await import('@mlc-ai/web-llm');
+        
+        for (const model of OFFLINE_MODELS) {
+         try {
+           const inCache = await webllm.hasModelInCache(model.id);
+           if (inCache) {
+             console.log('[RobustOfflineAI] ✓ Found cached model:', model.name);
+             localStorage.setItem(STORAGE_KEY, model.id);
+             if (mountedRef.current) {
+               setState(prev => ({ ...prev, hasCachedModel: true }));
              }
-          } catch (e) {
-            // Model might not exist in config, skip it
-            console.warn(`[RobustOfflineAI] Skipping ${model.id}:`, e);
-           }
-         }
-         console.log('[RobustOfflineAI] No cached models found');
-       } catch (e) {
-         console.warn('[RobustOfflineAI] Cache check failed:', e);
-       }
-     };
- 
-     checkCachedModels();
-   }, []);
+             return;
+            }
+         } catch (e) {
+           // Model might not exist in config, skip it
+           console.warn(`[RobustOfflineAI] Skipping ${model.id}:`, e);
+          }
+        }
+        console.log('[RobustOfflineAI] No cached models found');
+        
+        // Trigger background download of recommended model if online
+        if (navigator.onLine && !backgroundDownloadAttemptedRef.current) {
+          triggerBackgroundDownload();
+        }
+      } catch (e) {
+        console.warn('[RobustOfflineAI] Cache check failed:', e);
+      }
+    };
+
+    checkCachedModels();
+  }, [triggerBackgroundDownload]);
  
    // Load the best available model
    const loadModel = useCallback(async (preferredModelId?: string): Promise<boolean> => {
@@ -493,13 +567,17 @@ clearInvalidCache();
      setState(prev => ({ ...prev, isReady: false, activeModel: null }));
    }, []);
  
-   return {
-     ...state,
-     models: OFFLINE_MODELS,
-     loadModel,
-     downloadModel,
-     generateResponse,
-     unloadModel,
-     getBasicFallback,
-   };
- };
+  return {
+    ...state,
+    models: OFFLINE_MODELS,
+    recommendedModel: RECOMMENDED_MODEL,
+    isBackgroundDownloading,
+    backgroundProgress,
+    loadModel,
+    downloadModel,
+    generateResponse,
+    unloadModel,
+    getBasicFallback,
+    triggerBackgroundDownload,
+  };
+};
