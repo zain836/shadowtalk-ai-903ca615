@@ -796,6 +796,152 @@ export type Database = {
           },
         ]
       }
+      mission_actions: {
+        Row: {
+          action_name: string
+          action_type: string
+          approved_at: string | null
+          completed_at: string | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          input_data: Json | null
+          mission_id: string
+          output_data: Json | null
+          requires_approval: boolean
+          started_at: string | null
+          status: string
+          tool_id: string | null
+          tool_name: string | null
+          user_id: string
+        }
+        Insert: {
+          action_name: string
+          action_type: string
+          approved_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          input_data?: Json | null
+          mission_id: string
+          output_data?: Json | null
+          requires_approval?: boolean
+          started_at?: string | null
+          status?: string
+          tool_id?: string | null
+          tool_name?: string | null
+          user_id: string
+        }
+        Update: {
+          action_name?: string
+          action_type?: string
+          approved_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          input_data?: Json | null
+          mission_id?: string
+          output_data?: Json | null
+          requires_approval?: boolean
+          started_at?: string | null
+          status?: string
+          tool_id?: string | null
+          tool_name?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mission_actions_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      missions: {
+        Row: {
+          actual_duration_ms: number | null
+          auto_approve: boolean
+          completed_at: string | null
+          created_at: string
+          current_step: number | null
+          description: string | null
+          error_message: string | null
+          estimated_duration_ms: number | null
+          goal: string
+          id: string
+          max_retries: number
+          notify_on_complete: boolean
+          priority: number
+          progress: number
+          result: Json | null
+          retry_count: number
+          scheduled_at: string | null
+          started_at: string | null
+          status: string
+          steps: Json
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actual_duration_ms?: number | null
+          auto_approve?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number | null
+          description?: string | null
+          error_message?: string | null
+          estimated_duration_ms?: number | null
+          goal: string
+          id?: string
+          max_retries?: number
+          notify_on_complete?: boolean
+          priority?: number
+          progress?: number
+          result?: Json | null
+          retry_count?: number
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          steps?: Json
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actual_duration_ms?: number | null
+          auto_approve?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number | null
+          description?: string | null
+          error_message?: string | null
+          estimated_duration_ms?: number | null
+          goal?: string
+          id?: string
+          max_retries?: number
+          notify_on_complete?: boolean
+          priority?: number
+          progress?: number
+          result?: Json | null
+          retry_count?: number
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string
+          steps?: Json
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       oauth_tokens: {
         Row: {
           access_token: string
@@ -1337,6 +1483,72 @@ export type Database = {
           id?: string
           total_consumed?: number
           total_purchased?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      shadow_vault_connections: {
+        Row: {
+          access_token_encrypted: string | null
+          created_at: string
+          credentials_encrypted: string | null
+          id: string
+          is_active: boolean
+          is_connected: boolean
+          iv: string | null
+          last_sync_at: string | null
+          last_used_at: string | null
+          permissions: Json | null
+          refresh_token_encrypted: string | null
+          salt: string | null
+          scopes: string[] | null
+          service_name: string
+          service_type: string
+          sync_status: string | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token_encrypted?: string | null
+          created_at?: string
+          credentials_encrypted?: string | null
+          id?: string
+          is_active?: boolean
+          is_connected?: boolean
+          iv?: string | null
+          last_sync_at?: string | null
+          last_used_at?: string | null
+          permissions?: Json | null
+          refresh_token_encrypted?: string | null
+          salt?: string | null
+          scopes?: string[] | null
+          service_name: string
+          service_type: string
+          sync_status?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token_encrypted?: string | null
+          created_at?: string
+          credentials_encrypted?: string | null
+          id?: string
+          is_active?: boolean
+          is_connected?: boolean
+          iv?: string | null
+          last_sync_at?: string | null
+          last_used_at?: string | null
+          permissions?: Json | null
+          refresh_token_encrypted?: string | null
+          salt?: string | null
+          scopes?: string[] | null
+          service_name?: string
+          service_type?: string
+          sync_status?: string | null
+          token_expires_at?: string | null
           updated_at?: string
           user_id?: string
         }

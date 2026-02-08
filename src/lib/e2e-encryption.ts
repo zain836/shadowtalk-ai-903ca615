@@ -227,3 +227,38 @@ export const hashForVerification = async (password: string, salt: string): Promi
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   return arrayToBase64(new Uint8Array(hashBuffer));
 };
+
+/**
+ * Convenience wrapper to encrypt arbitrary data with a password
+ * Returns encrypted string, IV, and salt
+ */
+export const encryptData = async (
+  data: string,
+  password: string
+): Promise<{ encrypted: string; iv: string; salt: string }> => {
+  const salt = generateSalt();
+  const iv = generateIV();
+  const key = await deriveKey(password, salt);
+  const encrypted = await encrypt(data, key, iv);
+  
+  return {
+    encrypted,
+    iv: arrayToBase64(iv),
+    salt: arrayToBase64(salt),
+  };
+};
+
+/**
+ * Convenience wrapper to decrypt data with a password
+ */
+export const decryptData = async (
+  encrypted: string,
+  iv: string,
+  salt: string,
+  password: string
+): Promise<string> => {
+  const saltArray = base64ToArray(salt);
+  const ivArray = base64ToArray(iv);
+  const key = await deriveKey(password, saltArray);
+  return await decrypt(encrypted, key, ivArray);
+};

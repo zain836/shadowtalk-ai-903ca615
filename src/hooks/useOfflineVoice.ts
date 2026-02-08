@@ -34,9 +34,10 @@ export const useOfflineVoice = () => {
 
     if (speechSupported && SpeechRecognitionClass) {
       recognitionRef.current = new SpeechRecognitionClass();
-      recognitionRef.current.continuous = true;
+      recognitionRef.current.continuous = false; // Changed to false for better desktop support
       recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = 'en-US';
+      recognitionRef.current.maxAlternatives = 1;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       recognitionRef.current.onresult = (event: any) => {
@@ -60,11 +61,15 @@ export const useOfflineVoice = () => {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       recognitionRef.current.onerror = (event: any) => {
-        setState(prev => ({
-          ...prev,
-          isListening: false,
-          error: `Speech recognition error: ${event.error}`,
-        }));
+        console.error('Speech recognition error:', event.error);
+        // Handle 'not-allowed' and 'no-speech' gracefully
+        if (event.error !== 'no-speech' && event.error !== 'aborted') {
+          setState(prev => ({
+            ...prev,
+            isListening: false,
+            error: `Speech recognition error: ${event.error}`,
+          }));
+        }
       };
 
       recognitionRef.current.onend = () => {
