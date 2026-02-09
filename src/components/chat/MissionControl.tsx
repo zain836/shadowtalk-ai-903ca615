@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useMissions, Mission } from "@/hooks/useMissions";
 import { useMissionExecutor } from "@/hooks/useMissionExecutor";
+import { useMissionQuota, MISSION_LIMITS } from "@/hooks/useMissionQuota";
 import { cn } from "@/lib/utils";
 
 interface MissionControlProps {
@@ -64,6 +65,7 @@ export const MissionControl = ({ isOpen, onClose, onMissionComplete, initialGoal
   const { toast } = useToast();
   const { missions, activeMission, actions, fetchActions, createMission, setActiveMission } = useMissions();
   const { isExecuting, executeMission, cancelExecution } = useMissionExecutor();
+  const { quotaInfo, canCreateMission, consumeMission, maxRetries } = useMissionQuota();
 
   const [title, setTitle] = useState("");
   const [goal, setGoal] = useState(initialGoal || "");
@@ -83,6 +85,15 @@ export const MissionControl = ({ isOpen, onClose, onMissionComplete, initialGoal
   const handleCreateMission = async () => {
     if (!goal.trim()) return;
 
+    if (!canCreateMission) {
+      toast({
+        title: "Mission quota reached",
+        description: `You've used all ${quotaInfo?.limit} missions this month. Upgrade for more.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const missionTitle = title.trim() || goal.slice(0, 50) + (goal.length > 50 ? '...' : '');
     const mission = await createMission(missionTitle, goal, { auto_approve: autoApprove });
     
@@ -91,8 +102,7 @@ export const MissionControl = ({ isOpen, onClose, onMissionComplete, initialGoal
       setActiveTab("active");
       setTitle("");
       setGoal("");
-      
-      // Auto-start execution
+      await consumeMission();
       executeMission(mission);
     }
   };
@@ -200,9 +210,27 @@ export const MissionControl = ({ isOpen, onClose, onMissionComplete, initialGoal
                     <Switch checked={autoApprove} onCheckedChange={setAutoApprove} />
                   </div>
 
+                  {/* Quota Info */}
+                  {quotaInfo && (
+                    <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        <Target className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-sm font-medium">
+                            {quotaInfo.remaining}/{quotaInfo.limit === Infinity ? '∞' : quotaInfo.limit} missions remaining
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {quotaInfo.plan.charAt(0).toUpperCase() + quotaInfo.plan.slice(1)} plan • Resets {new Date(quotaInfo.resetDate).toLocaleDateString()} • {maxRetries} free retries/mission
+                          </p>
+                        </div>
+                      </div>
+                      <Progress value={(quotaInfo.used / (quotaInfo.limit === Infinity ? 1 : quotaInfo.limit)) * 100} className="w-20 h-2" />
+                    </div>
+                  )}
+
                   <Button 
                     onClick={handleCreateMission} 
-                    disabled={!goal.trim() || isExecuting}
+                    disabled={!goal.trim() || isExecuting || !canCreateMission}
                     className="w-full h-12 gap-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600"
                   >
                     {isExecuting ? (
