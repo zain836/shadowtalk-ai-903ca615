@@ -161,11 +161,16 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
   const isConnected = conversation.status === "connected";
   const isSpeaking = conversation.isSpeaking;
 
-  // Cleanup on unmount or close
+  // Cleanup on unmount only
+  const conversationRef = useRef(conversation);
+  conversationRef.current = conversation;
+  
   useEffect(() => {
     return () => {
-      if (isConnected) {
-        conversation.endSession();
+      try {
+        conversationRef.current.endSession();
+      } catch {
+        // Ignore cleanup errors
       }
     };
   }, []);
