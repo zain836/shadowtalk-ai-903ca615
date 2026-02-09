@@ -270,14 +270,14 @@ Format your response as a clear, concise result.`
         } else {
           steps[i].status = 'failed';
           
-          // Retry logic
-          if (mission.retry_count < mission.max_retries) {
+          // Hybrid retry: 3 free retries before counting against quota
+          const currentRetries = mission.retry_count || 0;
+          if (currentRetries < 3) {
             await supabase
               .from('missions')
-              .update({ retry_count: mission.retry_count + 1 })
+              .update({ retry_count: currentRetries + 1 })
               .eq('id', mission.id);
             
-            // Retry the step
             const retry = await executeStep(step, mission.goal, context, results);
             if (retry.success) {
               steps[i].status = 'completed';

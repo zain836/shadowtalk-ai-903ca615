@@ -36,6 +36,9 @@ export const FEATURES: Record<string, FeatureConfig> = {
   codeCanvas: { name: "Code Canvas", requiredPlan: "premium" },
   collaborativeRooms: { name: "Collaborative Rooms", requiredPlan: "premium" },
 
+  // Mission-based features
+  missions: { name: "S.E.E. Missions", requiredPlan: "free", freeLimit: 3 },
+
   // Elite features  
   offlineMode: { name: "Offline Mode", requiredPlan: "elite" },
   stealthMode: { name: "Stealth Mode & Encrypted Vault", requiredPlan: "elite" },
