@@ -1125,7 +1125,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = true;
+    recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
     recognition.onstart = () => { setIsListening(true); toast({ title: "Listening...", description: "Speak now." }); trackVoiceInput(); };
