@@ -8,7 +8,7 @@
  
  export function SEOHead({ meta, structuredData }: SEOHeadProps) {
    const tags = generateMetaTags(meta);
-   const baseUrl = 'https://shadowtalk-ai.lovable.app';
+   const baseUrl = 'https://www.shadowtalk-ai.com';
  
    return (
      <Helmet>
