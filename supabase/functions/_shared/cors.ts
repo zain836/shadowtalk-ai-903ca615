@@ -5,6 +5,8 @@
  const PRODUCTION_ORIGINS = [
    "https://shadowtalk-ai.lovable.app",
    "https://shadowtalk.app",
+   "https://www.shadowtalk-ai.com",
+   "https://shadowtalk-ai.com",
  ];
  
  // Development origins (only matched in development mode)
