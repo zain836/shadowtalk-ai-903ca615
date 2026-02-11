@@ -177,7 +177,7 @@ Include realistic data for ${businessIdea.location} market in 2026. Be specific 
       setProgress(25);
       const researchResponse = await supabase.functions.invoke('chat', {
         body: { 
-          message: researchPrompt,
+          messages: [{ role: "user", content: researchPrompt }],
           isResearch: true
         }
       });
@@ -239,7 +239,7 @@ Be realistic and specific to ${businessIdea.industry} in ${businessIdea.location
 
       const analysisResponse = await supabase.functions.invoke('chat', {
         body: { 
-          message: analysisPrompt,
+          messages: [{ role: "user", content: analysisPrompt }],
           isResearch: true
         }
       });

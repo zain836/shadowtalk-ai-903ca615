@@ -174,7 +174,8 @@ serve(async (req) => {
     const { 
       messages, personality, generateImage, imagePrompt, imageEdit, originalImage, editPrompt,
       mode, modePrompt, userContext, businessMemory, analyzeTask, getEcoActions, location, securityAudit, 
-      webSearch, searchQuery, deepResearch, researchQuery, agentWorkflow, decodeImage, imageToAnalyze 
+      webSearch, searchQuery, deepResearch, researchQuery, agentWorkflow, decodeImage, imageToAnalyze,
+      isResearch
     } = validation.data;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
@@ -1013,6 +1014,39 @@ Look for patterns like: eval(), innerHTML, dangerouslySetInnerHTML, exec(), raw 
         type: "text",
         content: textContent || "Could not edit image. Please try a different instruction."
       }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Research mode (Strategy Agent) - returns JSON instead of streaming
+    if (isResearch && messages && messages.length > 0) {
+      console.log("[CHAT] Research mode - non-streaming JSON response");
+      
+      const response = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: "You are a business research analyst. Always respond with valid JSON when asked for JSON. Be thorough and specific." },
+            ...messages,
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[CHAT] Research mode error:", response.status, errorText);
+        throw new Error(`Research request failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const content = result.choices?.[0]?.message?.content || "";
+      
+      return new Response(JSON.stringify({ response: content }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
