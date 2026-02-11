@@ -17,6 +17,10 @@ import { ArrowLeft, User, Bell, Shield, Save, Loader2, Camera, Gift, BarChart3, 
 import ReferralProgram from "@/components/ReferralProgram";
 import UsageAnalytics from "@/components/UsageAnalytics";
 import { PLAN_DETAILS } from "@/lib/stripe";
+import { MissionValueDashboard } from "@/components/MissionValueDashboard";
+import { UsageHistoryTable } from "@/components/UsageHistoryTable";
+import { CreditEmptyPrompt } from "@/components/CreditEmptyPrompt";
+import { useShadowCredits } from "@/hooks/useShadowCredits";
 
 interface Profile {
   id: string;
@@ -66,6 +70,7 @@ const ProfilePage = () => {
   };
 
   const currentPlanDetails = PLAN_DETAILS[userPlan as keyof typeof PLAN_DETAILS] || PLAN_DETAILS.free;
+  const { balance, transactions, isLoading: creditsLoading } = useShadowCredits();
 
   useEffect(() => {
     if (!user) {
@@ -172,6 +177,19 @@ const ProfilePage = () => {
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
         <div className="space-y-6">
+          {/* Mission Value Dashboard */}
+          {!creditsLoading && balance && (
+            <MissionValueDashboard
+              transactions={transactions}
+              balance={balance.balance}
+            />
+          )}
+
+          {/* Credit Empty Prompt */}
+          {!creditsLoading && balance && balance.balance <= 0 && (
+            <CreditEmptyPrompt transactions={transactions} />
+          )}
+
           {/* Profile Info */}
           <Card>
             <CardHeader>
@@ -391,6 +409,11 @@ const ProfilePage = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Usage History */}
+          {!creditsLoading && transactions.length > 0 && (
+            <UsageHistoryTable transactions={transactions} />
+          )}
 
           {/* Account Security */}
           <Card>
