@@ -141,7 +141,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           {isUser ? (
             <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">{typeof message.content === 'string' ? message.content : String(message.content || '')}</p>
           ) : (
-            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-headings:mt-3 prose-headings:mb-1.5 [&_.katex]:text-foreground [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto overflow-hidden">
+            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-headings:mt-4 prose-headings:mb-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 [&_.katex]:text-foreground [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto overflow-hidden">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
@@ -166,7 +166,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   h1({ children }) { return <h1 className="text-base font-bold">{children}</h1>; },
                   h2({ children }) { return <h2 className="text-sm font-bold">{children}</h2>; },
                   h3({ children }) { return <h3 className="text-sm font-semibold">{children}</h3>; },
-                  p({ children }) { return <p className="text-sm leading-relaxed">{children}</p>; },
+                  p({ children }) { return <p className="text-sm leading-relaxed mb-3 last:mb-0">{children}</p>; },
                   a({ children, href }) { 
                     return (
                       <a 

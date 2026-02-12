@@ -6,7 +6,6 @@ import TestimonialsSection from "@/components/TestimonialsSection";
 import CommunitySection from "@/components/CommunitySection";
 import FAQSection from "@/components/FAQSection";
 import Footer from "@/components/Footer";
-import ChatWidget from "@/components/ChatWidget";
 import CouponBanner from "@/components/CouponBanner";
 import PWABanner from "@/components/PWABanner";
 
@@ -22,7 +21,6 @@ const Index = () => {
       <CommunitySection />
       <FAQSection />
       <Footer />
-      <ChatWidget />
       <PWABanner />
     </div>
   );
