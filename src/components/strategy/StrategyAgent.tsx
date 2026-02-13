@@ -1,5 +1,8 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useStrategyAccess } from "@/hooks/useStrategyAccess";
+import { useAuth } from "@/components/AuthProvider";
+import { StrategyPaywall } from "./StrategyPaywall";
 import {
   Brain,
   Search,
@@ -99,7 +102,9 @@ const industryOptions = [
 
 const StrategyAgent = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const chartsRef = useRef<HTMLDivElement>(null);
+  const { canUseStrategy, hasActiveDayPass, monthlyUsage, remainingFree, loading: accessLoading, recordUsage, FREE_REPORTS_PER_MONTH } = useStrategyAccess();
   
   const [phase, setPhase] = useState<AgentPhase>("idle");
   const [progress, setProgress] = useState(0);
@@ -143,6 +148,7 @@ const StrategyAgent = () => {
 
   const runStrategyAgent = async () => {
     if (!validateInput()) return;
+    if (!canUseStrategy) return;
     
     setError(null);
     setPhase("researching");
@@ -273,6 +279,9 @@ Be realistic and specific to ${businessIdea.industry} in ${businessIdea.location
       setPhase("complete");
       setActiveTab("overview");
 
+      // Record usage
+      await recordUsage(businessIdea.name, businessIdea.industry);
+
       toast({
         title: "Strategy Complete! 🎉",
         description: "Your business strategy has been generated successfully."
@@ -299,6 +308,15 @@ Be realistic and specific to ${businessIdea.industry} in ${businessIdea.location
   };
 
   const PhaseIcon = phaseInfo[phase].icon;
+
+  // Show paywall if access exhausted
+  if (!accessLoading && user && !canUseStrategy) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4 md:p-8">
+        <StrategyPaywall monthlyUsage={monthlyUsage} hasActiveDayPass={hasActiveDayPass} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4 md:p-8">
