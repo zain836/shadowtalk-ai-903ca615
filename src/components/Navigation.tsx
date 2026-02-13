@@ -7,6 +7,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useAuth } from "@/components/AuthProvider";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -112,6 +113,7 @@ const Navigation = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-2">
+            <NotificationBell />
             <LanguageSwitcher />
             <FeedbackForm />
             <Button

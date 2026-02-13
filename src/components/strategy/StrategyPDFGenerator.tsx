@@ -11,9 +11,12 @@ import {
   CheckCircle,
   Eye,
   Settings,
-  Sparkles
+  Sparkles,
+  Brain
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { BusinessIdea, StrategyResult } from "./StrategyAgent";
@@ -30,6 +33,7 @@ export const StrategyPDFGenerator = ({
   chartsRef 
 }: StrategyPDFGeneratorProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [includeCharts, setIncludeCharts] = useState(true);
   const [includeAppendix, setIncludeAppendix] = useState(true);
@@ -448,6 +452,29 @@ export const StrategyPDFGenerator = ({
 
       // Save the PDF
       pdf.save(`${businessIdea.name.replace(/\s+/g, '_')}_Strategy_Report.pdf`);
+
+      // Auto-save to business memories
+      if (user) {
+        try {
+          const memorySummary = `Industry: ${businessIdea.industry} | Location: ${businessIdea.location} | Target: ${businessIdea.targetMarket || 'General'} | Investment: ${businessIdea.initialInvestment || 'N/A'}\n\nExecutive Summary: ${result.executiveSummary?.substring(0, 500)}...\n\nKey Recommendations: ${result.recommendations?.slice(0, 3).join('; ')}`;
+          
+          await supabase.from('business_memories').insert({
+            user_id: user.id,
+            title: `Strategy Report: ${businessIdea.name}`,
+            content: memorySummary,
+            category: 'strategy_report',
+            is_active: true,
+            priority: 1,
+          });
+
+          toast({
+            title: "📊 Report Saved to AI Memory",
+            description: "ShadowTalk will monitor market changes for this business and notify you of updates.",
+          });
+        } catch (memErr) {
+          console.error('Error saving to business memory:', memErr);
+        }
+      }
 
       setIsComplete(true);
       toast({

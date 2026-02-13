@@ -1700,6 +1700,60 @@ export type Database = {
         }
         Relationships: []
       }
+      strategy_day_passes: {
+        Row: {
+          id: string
+          payment_method: string
+          purchased_at: string
+          status: string
+          user_id: string
+          valid_until: string
+        }
+        Insert: {
+          id?: string
+          payment_method?: string
+          purchased_at?: string
+          status?: string
+          user_id: string
+          valid_until: string
+        }
+        Update: {
+          id?: string
+          payment_method?: string
+          purchased_at?: string
+          status?: string
+          user_id?: string
+          valid_until?: string
+        }
+        Relationships: []
+      }
+      strategy_usage: {
+        Row: {
+          business_name: string
+          id: string
+          industry: string | null
+          report_type: string
+          used_at: string
+          user_id: string
+        }
+        Insert: {
+          business_name: string
+          id?: string
+          industry?: string | null
+          report_type?: string
+          used_at?: string
+          user_id: string
+        }
+        Update: {
+          business_name?: string
+          id?: string
+          industry?: string | null
+          report_type?: string
+          used_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscribers: {
         Row: {
           created_at: string
@@ -1880,6 +1934,42 @@ export type Database = {
           session_id?: string
           timezone?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          metadata: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          metadata?: Json | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          metadata?: Json | null
+          title?: string
+          type?: string
+          user_id?: string
         }
         Relationships: []
       }
