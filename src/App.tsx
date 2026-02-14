@@ -40,8 +40,10 @@ import BootScreen from "@/components/BootScreen";
  const MonetizationPage = lazy(() => import("./pages/MonetizationPage"));
  const FounderAccessPage = lazy(() => import("./pages/FounderAccessPage"));
  const StrategyAgentPage = lazy(() => import("./pages/StrategyAgentPage"));
- const WorkspacePage = lazy(() => import("./pages/WorkspacePage"));
- const LifetimeDealPage = lazy(() => import("./pages/LifetimeDealPage"));
+  const WorkspacePage = lazy(() => import("./pages/WorkspacePage"));
+  const MarketplacePage = lazy(() => import("./pages/MarketplacePage"));
+  const DevelopersPage = lazy(() => import("./pages/DevelopersPage"));
+  const LifetimeDealPage = lazy(() => import("./pages/LifetimeDealPage"));
 import PWABanner from "./components/PWABanner";
 import CookieConsent from "./components/CookieConsent";
 import CustomerSupportWidget from "./components/CustomerSupportWidget";
@@ -145,8 +147,10 @@ const App = () => {
                      <Route path="/founder-access" element={<FounderAccessPage />} />
                      <Route path="/lifetime-deal" element={<LifetimeDealPage />} />
                      <Route path="/strategy" element={<StrategyAgentPage />} />
-                     <Route path="/workspace" element={<WorkspacePage />} />
-                     <Route path="*" element={<NotFound />} />
+                      <Route path="/workspace" element={<WorkspacePage />} />
+                      <Route path="/marketplace" element={<MarketplacePage />} />
+                      <Route path="/developers" element={<DevelopersPage />} />
+                      <Route path="*" element={<NotFound />} />
                    </Routes>
                  </Suspense>
                 <JourneyTracker />
