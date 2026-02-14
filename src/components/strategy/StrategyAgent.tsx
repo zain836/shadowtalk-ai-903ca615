@@ -100,6 +100,45 @@ const industryOptions = [
   "Financial Services", "Retail", "Agriculture", "Entertainment"
 ];
 
+const ceoTemplates = [
+  {
+    name: "Board Meeting Prep",
+    icon: "📊",
+    description: "Generate encrypted board deck with financials, KPIs, and action items",
+    preset: {
+      description: "Prepare a comprehensive board meeting package including: executive summary of quarterly performance, financial highlights (revenue, burn rate, runway), key metrics dashboard, strategic initiatives update, risk register, and proposed resolutions for board approval. Include a structured agenda and time allocations.",
+      targetMarket: "Board of Directors, Investors",
+    }
+  },
+  {
+    name: "Financial Report Q-Review",
+    icon: "💰",
+    description: "Quarterly financial analysis with projections and variance reporting",
+    preset: {
+      description: "Generate a detailed quarterly financial review including: P&L analysis with year-over-year comparisons, cash flow statement, balance sheet highlights, budget vs actual variance analysis, unit economics breakdown, revenue growth trajectory, and 3-quarter forward projections with scenario modeling (base, optimistic, conservative).",
+      targetMarket: "CFO, Finance Team, Investors",
+    }
+  },
+  {
+    name: "Investor Update",
+    icon: "🚀",
+    description: "Professional investor update email with metrics and milestones",
+    preset: {
+      description: "Create a concise investor update covering: headline metrics (MRR, ARR, growth rate, burn), key wins and milestones achieved, product updates and roadmap highlights, team growth, challenges and how they're being addressed, upcoming milestones and goals for next quarter, and any specific asks from investors.",
+      targetMarket: "Investors, Advisory Board",
+    }
+  },
+  {
+    name: "Market Expansion Analysis",
+    icon: "🌍",
+    description: "Evaluate new market entry with regulatory and competitive landscape",
+    preset: {
+      description: "Conduct a comprehensive market expansion analysis including: total addressable market sizing, competitive landscape mapping, regulatory requirements and compliance costs, go-to-market strategy options, resource requirements, risk assessment, and phased entry timeline with milestones and decision gates.",
+      targetMarket: "C-Suite, Strategy Team",
+    }
+  },
+];
+
 const StrategyAgent = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -406,7 +445,45 @@ Be realistic and specific to ${businessIdea.industry} in ${businessIdea.location
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
             >
+              {/* CEO Suite Templates */}
+              <Card className="border-2 border-primary/10">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Shield className="h-5 w-5 text-primary" />
+                    CEO Suite — Quick Templates
+                  </CardTitle>
+                  <CardDescription>
+                    Pre-built encrypted workflows for executives. Click to auto-fill.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {ceoTemplates.map((template, i) => (
+                      <button
+                        key={i}
+                        disabled={phase !== "idle"}
+                        onClick={() => {
+                          setBusinessIdea(prev => ({
+                            ...prev,
+                            description: template.preset.description,
+                            targetMarket: template.preset.targetMarket,
+                            name: prev.name || "My Company",
+                          }));
+                          toast({ title: `${template.icon} ${template.name}`, description: "Template applied. Fill in your company details and generate." });
+                        }}
+                        className="p-4 rounded-lg border border-border/50 hover:border-primary/40 hover:bg-primary/5 text-left transition-all disabled:opacity-50 group"
+                      >
+                        <span className="text-2xl mb-2 block">{template.icon}</span>
+                        <p className="font-medium text-sm group-hover:text-primary transition-colors">{template.name}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card className="border-2 border-border/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

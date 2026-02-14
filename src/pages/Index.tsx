@@ -1,5 +1,6 @@
 import Navigation from "@/components/Navigation";
 import HeroSection from "@/components/HeroSection";
+import CompetitiveComparison from "@/components/CompetitiveComparison";
 import FeaturesSection from "@/components/FeaturesSection";
 import PricingSection from "@/components/PricingSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
@@ -15,6 +16,7 @@ const Index = () => {
       <CouponBanner />
       <Navigation />
       <HeroSection />
+      <CompetitiveComparison />
       <FeaturesSection />
       <PricingSection />
       <TestimonialsSection />

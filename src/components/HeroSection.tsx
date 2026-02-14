@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Sparkles, Zap, ArrowRight } from "lucide-react";
+import { MessageCircle, Shield, Zap, ArrowRight } from "lucide-react";
 import heroImg from "@/assets/hero-bg.jpg";
 import { useNavigate } from "react-router-dom";
 
@@ -24,23 +24,21 @@ const HeroSection = () => {
       <div className="container mx-auto px-4 text-center relative z-10">
         <div className="max-w-4xl mx-auto">
           {/* Badge */}
-          <div className="inline-flex items-center space-x-2 bg-card/50 backdrop-blur-sm border border-border rounded-full px-6 py-2 mb-8">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="text-sm text-muted-foreground">Powered by Advanced AI</span>
+          <div className="inline-flex items-center space-x-2 bg-card/50 backdrop-blur-sm border border-destructive/30 rounded-full px-6 py-2 mb-8">
+            <Shield className="h-4 w-4 text-destructive" />
+            <span className="text-sm text-foreground font-medium">Your AI Doesn't Spy On You</span>
             <div className="w-2 h-2 bg-success rounded-full pulse-dot"></div>
           </div>
 
           {/* Main Headline */}
           <h1 className="text-5xl md:text-8xl font-bold mb-6 leading-tight">
-            The World's Smartest{" "}
-            <span className="gradient-text">Offline+Online AI</span>{" "}
-            Chatbot for Creators, Coders & CEOs
+            <span className="gradient-text">Sovereign Intelligence</span>{" "}
+            for Creators, Coders & CEOs
           </h1>
 
           {/* Subtitle */}
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-4xl mx-auto">
-            Revolutionary AI assistant that works everywhere. Generate code, automate tasks,
-            and boost productivity with the most advanced offline-capable chatbot ever built.
+            The only AI that runs <strong className="text-foreground">100% on your device</strong>. No data harvesting. No cloud dependency. Cloud-quality AI without the cloud — at <strong className="text-foreground">75% less cost</strong>.
           </p>
 
           {/* CTA Buttons */}
