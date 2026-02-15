@@ -1268,7 +1268,8 @@ Remember: This information is private to the user. Use it to personalize and imp
       Array.isArray(m.content) && m.content.some((c: any) => c.type === 'image_url')
     );
 
-    const model = hasImageContent ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash";
+    // Use Gemini 2.5 Pro (1M token context) for all chats for maximum context
+    const model = "google/gemini-2.5-pro";
 
     console.log("[CHAT] Using model:", model, "hasImages:", hasImageContent, "hasContext:", !!userContext);
 

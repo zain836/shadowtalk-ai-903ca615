@@ -3,7 +3,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import { PageTransition } from "@/components/PageTransition";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/AuthProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -85,6 +87,51 @@ import { JourneyTracker } from "./components/JourneyTracker";
    </div>
  );
 
+const AnimatedRoutes = () => {
+  const location = useLocation();
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<PageTransition><Index /></PageTransition>} />
+          <Route path="/auth" element={<PageTransition><AuthPage /></PageTransition>} />
+          <Route path="/pricing" element={<PageTransition><PricingPage /></PageTransition>} />
+          <Route path="/chatbot" element={<PageTransition><ChatbotPage /></PageTransition>} />
+          <Route path="/admin" element={<PageTransition><AdminPage /></PageTransition>} />
+          <Route path="/docs" element={<PageTransition><DocsPage /></PageTransition>} />
+          <Route path="/changelog" element={<PageTransition><ChangelogPage /></PageTransition>} />
+          <Route path="/rooms" element={<PageTransition><ChatRoomsPage /></PageTransition>} />
+          <Route path="/rooms/:roomId" element={<PageTransition><CollaborativeRoom /></PageTransition>} />
+          <Route path="/profile" element={<PageTransition><ProfilePage /></PageTransition>} />
+          <Route path="/api" element={<PageTransition><APIPage /></PageTransition>} />
+          <Route path="/analytics" element={<PageTransition><AnalyticsPage /></PageTransition>} />
+          <Route path="/enterprise" element={<PageTransition><EnterpriseSettingsPage /></PageTransition>} />
+          <Route path="/about" element={<PageTransition><AboutPage /></PageTransition>} />
+          <Route path="/help" element={<PageTransition><HelpCenterPage /></PageTransition>} />
+          <Route path="/faq" element={<PageTransition><FAQPage /></PageTransition>} />
+          <Route path="/contact" element={<PageTransition><ContactPage /></PageTransition>} />
+          <Route path="/status" element={<PageTransition><StatusPage /></PageTransition>} />
+          <Route path="/blog" element={<PageTransition><BlogPage /></PageTransition>} />
+          <Route path="/careers" element={<PageTransition><CareersPage /></PageTransition>} />
+          <Route path="/press" element={<PageTransition><PressPage /></PageTransition>} />
+          <Route path="/privacy" element={<PageTransition><PrivacyPolicyPage /></PageTransition>} />
+          <Route path="/terms" element={<PageTransition><TermsOfServicePage /></PageTransition>} />
+          <Route path="/cookies" element={<PageTransition><CookiePolicyPage /></PageTransition>} />
+          <Route path="/gdpr" element={<PageTransition><GDPRPage /></PageTransition>} />
+          <Route path="/billing" element={<PageTransition><MonetizationPage /></PageTransition>} />
+          <Route path="/founder-access" element={<PageTransition><FounderAccessPage /></PageTransition>} />
+          <Route path="/lifetime-deal" element={<PageTransition><LifetimeDealPage /></PageTransition>} />
+          <Route path="/strategy" element={<PageTransition><StrategyAgentPage /></PageTransition>} />
+          <Route path="/workspace" element={<PageTransition><WorkspacePage /></PageTransition>} />
+          <Route path="/marketplace" element={<PageTransition><MarketplacePage /></PageTransition>} />
+          <Route path="/developers" element={<PageTransition><DevelopersPage /></PageTransition>} />
+          <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+        </Routes>
+      </AnimatePresence>
+    </Suspense>
+  );
+};
+
 const App = () => {
   const [showBootScreen, setShowBootScreen] = useState(true);
   const [hasBooted, setHasBooted] = useState(false);
@@ -115,49 +162,13 @@ const App = () => {
               )}
               <Toaster />
               <Sonner />
-              <BrowserRouter>
-                 <Suspense fallback={<PageLoader />}>
-                   <Routes>
-                     <Route path="/" element={<Index />} />
-                     <Route path="/auth" element={<AuthPage />} />
-                     <Route path="/pricing" element={<PricingPage />} />
-                     <Route path="/chatbot" element={<ChatbotPage />} />
-                     <Route path="/admin" element={<AdminPage />} />
-                     <Route path="/docs" element={<DocsPage />} />
-                     <Route path="/changelog" element={<ChangelogPage />} />
-                     <Route path="/rooms" element={<ChatRoomsPage />} />
-                     <Route path="/rooms/:roomId" element={<CollaborativeRoom />} />
-                     <Route path="/profile" element={<ProfilePage />} />
-                     <Route path="/api" element={<APIPage />} />
-                     <Route path="/analytics" element={<AnalyticsPage />} />
-                     <Route path="/enterprise" element={<EnterpriseSettingsPage />} />
-                     <Route path="/about" element={<AboutPage />} />
-                     <Route path="/help" element={<HelpCenterPage />} />
-                     <Route path="/faq" element={<FAQPage />} />
-                     <Route path="/contact" element={<ContactPage />} />
-                     <Route path="/status" element={<StatusPage />} />
-                     <Route path="/blog" element={<BlogPage />} />
-                     <Route path="/careers" element={<CareersPage />} />
-                     <Route path="/press" element={<PressPage />} />
-                     <Route path="/privacy" element={<PrivacyPolicyPage />} />
-                     <Route path="/terms" element={<TermsOfServicePage />} />
-                     <Route path="/cookies" element={<CookiePolicyPage />} />
-                     <Route path="/gdpr" element={<GDPRPage />} />
-                     <Route path="/billing" element={<MonetizationPage />} />
-                     <Route path="/founder-access" element={<FounderAccessPage />} />
-                     <Route path="/lifetime-deal" element={<LifetimeDealPage />} />
-                     <Route path="/strategy" element={<StrategyAgentPage />} />
-                      <Route path="/workspace" element={<WorkspacePage />} />
-                      <Route path="/marketplace" element={<MarketplacePage />} />
-                      <Route path="/developers" element={<DevelopersPage />} />
-                      <Route path="*" element={<NotFound />} />
-                   </Routes>
-                 </Suspense>
-                <JourneyTracker />
-                <PWABanner />
-                <CookieConsent />
-                <CustomerSupportWidget />
-              </BrowserRouter>
+               <BrowserRouter>
+                 <AnimatedRoutes />
+                 <JourneyTracker />
+                 <PWABanner />
+                 <CookieConsent />
+                 <CustomerSupportWidget />
+               </BrowserRouter>
             </AuthProvider>
           </TooltipProvider>
         </ThemeProvider>

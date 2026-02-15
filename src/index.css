@@ -221,6 +221,81 @@
   }
   .connectivity-pulse { animation: connectivity-pulse 2s ease-in-out infinite; }
 
+  /* ===== Premium Micro-Interactions ===== */
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .gradient-animate {
+    background-size: 200% 200%;
+    animation: gradient-shift 4s ease infinite;
+  }
+
+  @keyframes typing-cursor {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  .typing-cursor::after {
+    content: '▊';
+    animation: typing-cursor 0.8s step-end infinite;
+    color: hsl(var(--primary));
+    font-size: 0.85em;
+    margin-left: 1px;
+  }
+
+  @keyframes ripple-out {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    100% { transform: scale(2.5); opacity: 0; }
+  }
+  .ripple-effect {
+    position: relative;
+    overflow: hidden;
+  }
+  .ripple-effect::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle, hsl(var(--primary) / 0.15) 0%, transparent 70%);
+    animation: ripple-out 0.6s ease-out forwards;
+    pointer-events: none;
+  }
+
+  @keyframes text-glow-pulse {
+    0%, 100% { text-shadow: 0 0 8px hsl(var(--primary) / 0.3); }
+    50% { text-shadow: 0 0 20px hsl(var(--primary) / 0.6), 0 0 40px hsl(var(--primary) / 0.2); }
+  }
+  .text-glow-pulse { animation: text-glow-pulse 3s ease-in-out infinite; }
+
+  /* Smooth scroll for the entire page */
+  html { scroll-behavior: smooth; }
+
+  /* Focus ring enhancement */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--primary) / 0.5);
+    outline-offset: 2px;
+    border-radius: var(--radius);
+    transition: outline-offset 0.15s ease;
+  }
+
+  /* Hover lift utility */
+  .hover-lift {
+    transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-elevated);
+  }
+
+  /* Magnetic hover */
+  .magnetic-hover {
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .magnetic-hover:hover {
+    transform: scale(1.02) translateY(-2px);
+  }
+
   /* ===== Grid Background ===== */
   .bg-grid {
     background-image: 
