@@ -1,183 +1,224 @@
-import { Users, MessageSquare, Star, TrendingUp, Calendar } from "lucide-react";
+import { Users, MessageSquare, Star, TrendingUp, Calendar, ArrowUpRight, Zap, Globe } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { motion, useInView } from "framer-motion";
+import { useRef } from "react";
+
+const statVariants = {
+  hidden: { opacity: 0, scale: 0.8, y: 30 },
+  visible: (i: number) => ({
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.1,
+      duration: 0.5,
+      type: "spring" as const,
+      stiffness: 200,
+    },
+  }),
+};
 
 const CommunitySection = () => {
+  const sectionRef = useRef(null);
+  const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
+
   const communityStats = [
-    {
-      icon: Users,
-      value: "15,000+",
-      label: "Community Members",
-      color: "text-primary"
-    },
-    {
-      icon: MessageSquare,
-      value: "2,500+",
-      label: "Daily Discussions",
-      color: "text-secondary"
-    },
-    {
-      icon: Star,
-      value: "500+",
-      label: "Shared Templates",
-      color: "text-accent"
-    },
-    {
-      icon: TrendingUp,
-      value: "99%",
-      label: "Satisfaction Rate",
-      color: "text-success"
-    }
+    { icon: Users, value: "15,000+", label: "Community Members", gradient: "from-primary/20 to-primary/5" },
+    { icon: MessageSquare, value: "2,500+", label: "Daily Discussions", gradient: "from-secondary/20 to-secondary/5" },
+    { icon: Star, value: "500+", label: "Shared Templates", gradient: "from-accent/20 to-accent/5" },
+    { icon: TrendingUp, value: "99%", label: "Satisfaction Rate", gradient: "from-success/20 to-success/5" },
   ];
 
   const events = [
-    {
-      date: "Dec 15",
-      title: "AI Automation Workshop",
-      type: "Workshop",
-      participants: 200
-    },
-    {
-      date: "Dec 20",
-      title: "Developer Q&A Session",
-      type: "Live Q&A",
-      participants: 500
-    },
-    {
-      date: "Dec 25",
-      title: "Holiday Coding Challenge",
-      type: "Challenge",
-      participants: 1000
-    }
+    { date: "Feb 20", title: "AI Automation Workshop", type: "Workshop", participants: 200, live: true },
+    { date: "Feb 25", title: "Developer Q&A Session", type: "Live Q&A", participants: 500, live: false },
+    { date: "Mar 01", title: "Spring Coding Challenge", type: "Challenge", participants: 1000, live: false },
+  ];
+
+  const benefits = [
+    { icon: MessageSquare, title: "Share & Learn", desc: "Exchange ideas, get help, discover new AI use cases.", color: "text-primary", bg: "bg-primary/10" },
+    { icon: Zap, title: "Early Access", desc: "First access to new features, beta programs, and exclusive content.", color: "text-secondary", bg: "bg-secondary/10" },
+    { icon: Globe, title: "Career Growth", desc: "Network with professionals, find job opportunities, showcase projects.", color: "text-accent", bg: "bg-accent/10" },
   ];
 
   return (
-    <section id="community" className="py-24 bg-background">
-      <div className="container mx-auto px-4">
+    <section id="community" ref={sectionRef} className="py-28 bg-background relative overflow-hidden">
+      <div className="absolute inset-0 bg-grid-dense opacity-25" />
+      <motion.div
+        animate={isInView ? { scale: [1, 1.2, 1], opacity: [0.03, 0.07, 0.03] } : {}}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-1/4 right-1/4 w-[600px] h-[400px] bg-accent/5 rounded-full blur-[150px]"
+      />
+
+      <div className="container mx-auto px-4 relative z-10">
         {/* Header */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center space-x-2 bg-card/50 border border-border rounded-full px-4 py-2 mb-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ type: "spring", stiffness: 200 }}
+            className="inline-flex items-center space-x-2 glass-subtle rounded-full px-5 py-2 mb-8"
+          >
             <Users className="h-4 w-4 text-primary" />
-            <span className="text-sm text-muted-foreground">Join the Community</span>
-          </div>
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            <span className="text-sm text-muted-foreground font-medium">Join the Community</span>
+          </motion.div>
+          <motion.h2
+            initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
+            whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1, duration: 0.7 }}
+            className="text-4xl md:text-6xl font-bold mb-6 tracking-tight"
+          >
             Connect with{" "}
             <span className="gradient-text">Fellow Creators</span>
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Join thousands of developers, creators, and AI enthusiasts sharing knowledge and building amazing things together.
-          </p>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+            className="text-lg text-muted-foreground max-w-2xl mx-auto"
+          >
+            Join thousands of developers, creators, and AI enthusiasts building amazing things together.
+          </motion.p>
         </div>
 
-        {/* Community Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
-          {communityStats.map((stat, index) => (
-            <Card key={index} className="card-hover text-center">
-              <CardContent className="p-6">
-                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-primary mb-4`}>
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                </div>
-                <div className="text-2xl md:text-3xl font-bold gradient-text mb-2">
-                  {stat.value}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {stat.label}
-                </div>
-              </CardContent>
-            </Card>
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16 max-w-4xl mx-auto">
+          {communityStats.map((stat, i) => (
+            <motion.div
+              key={i}
+              custom={i}
+              variants={statVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              whileHover={{ y: -8, scale: 1.05, transition: { type: "spring", stiffness: 400 } }}
+            >
+              <Card className="border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-[0_10px_40px_-15px_hsl(var(--primary)/0.15)] group overflow-hidden relative">
+                <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                <CardContent className="p-5 text-center relative z-10">
+                  <motion.div
+                    whileHover={{ rotate: [0, -10, 10, 0] }}
+                    transition={{ duration: 0.4 }}
+                    className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-muted/60 group-hover:bg-muted mb-3 transition-colors"
+                  >
+                    <stat.icon className="h-5 w-5 text-primary" />
+                  </motion.div>
+                  <div className="text-2xl font-bold gradient-text mb-1">{stat.value}</div>
+                  <div className="text-xs text-muted-foreground">{stat.label}</div>
+                </CardContent>
+              </Card>
+            </motion.div>
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12 items-start">
-          {/* Community Benefits */}
+        {/* Two-column layout */}
+        <div className="grid lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {/* Benefits */}
           <div>
-            <h3 className="text-2xl font-bold mb-6">Why Join Our Community?</h3>
-            <div className="space-y-6">
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                  <MessageSquare className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Share & Learn</h4>
-                  <p className="text-muted-foreground">
-                    Exchange ideas, get help with coding challenges, and discover new AI use cases.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-secondary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                  <Star className="h-4 w-4 text-secondary" />
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Early Access</h4>
-                  <p className="text-muted-foreground">
-                    Get first access to new features, beta programs, and exclusive content.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-accent/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
-                  <TrendingUp className="h-4 w-4 text-accent" />
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-2">Career Growth</h4>
-                  <p className="text-muted-foreground">
-                    Network with professionals, find job opportunities, and showcase your projects.
-                  </p>
-                </div>
-              </div>
+            <motion.h3
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-2xl font-bold mb-6"
+            >
+              Why Join?
+            </motion.h3>
+            <div className="space-y-4 mb-8">
+              {benefits.map((b, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1, duration: 0.5 }}
+                  whileHover={{ x: 4, transition: { type: "spring", stiffness: 400 } }}
+                  className="flex items-start gap-4 glass-subtle rounded-xl p-4 group cursor-default"
+                >
+                  <div className={`w-10 h-10 ${b.bg} rounded-xl flex items-center justify-center shrink-0`}>
+                    <b.icon className={`h-5 w-5 ${b.color}`} />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">{b.title}</h4>
+                    <p className="text-xs text-muted-foreground">{b.desc}</p>
+                  </div>
+                  <ArrowUpRight className="h-4 w-4 text-muted-foreground/0 group-hover:text-muted-foreground shrink-0 transition-all mt-1" />
+                </motion.div>
+              ))}
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 mt-8">
-              <Button className="btn-glow" asChild>
-                <a href="https://discord.gg/shadowtalkai" target="_blank" rel="noopener noreferrer">
-                  Join Discord Community
-                </a>
-              </Button>
-              <Button variant="outline" asChild>
-                <a href="https://twitter.com/shadowtalkai" target="_blank" rel="noopener noreferrer">
-                  Follow on Twitter
-                </a>
-              </Button>
+            <div className="flex gap-3">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+                <Button className="btn-glow" asChild>
+                  <a href="https://discord.gg/shadowtalkai" target="_blank" rel="noopener noreferrer">
+                    Join Discord
+                  </a>
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+                <Button variant="outline" asChild>
+                  <a href="https://twitter.com/shadowtalkai" target="_blank" rel="noopener noreferrer">
+                    Follow on X
+                  </a>
+                </Button>
+              </motion.div>
             </div>
           </div>
 
-          {/* Upcoming Events */}
+          {/* Events */}
           <div>
-            <h3 className="text-2xl font-bold mb-6">Upcoming Events</h3>
-            <div className="space-y-4">
-              {events.map((event, index) => (
-                <Card key={index} className="card-hover">
-                  <CardContent className="p-6">
-                    <div className="flex items-start space-x-4">
-                      <div className="bg-primary/20 rounded-lg p-3 text-center min-w-[60px]">
-                        <div className="text-sm font-semibold text-primary">
-                          {event.date}
+            <motion.h3
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-2xl font-bold mb-6"
+            >
+              Upcoming Events
+            </motion.h3>
+            <div className="space-y-3">
+              {events.map((event, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1, duration: 0.5 }}
+                  whileHover={{ y: -4, scale: 1.02, transition: { type: "spring", stiffness: 400 } }}
+                >
+                  <Card className="border-border/50 hover:border-primary/20 transition-all duration-300 hover:shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.15)] group">
+                    <CardContent className="p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="glass-subtle rounded-xl p-3 text-center min-w-[60px]">
+                          <div className="text-xs font-bold text-primary">{event.date}</div>
                         </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <h4 className="font-semibold text-sm">{event.title}</h4>
+                            {event.live && (
+                              <span className="flex items-center gap-1 text-[10px] font-semibold text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">
+                                <span className="w-1.5 h-1.5 bg-destructive rounded-full animate-pulse" />
+                                LIVE
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              {event.participants}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {event.type}
+                            </span>
+                          </div>
+                        </div>
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground/0 group-hover:text-muted-foreground transition-all shrink-0" />
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <h4 className="font-semibold">{event.title}</h4>
-                          <span className="text-xs bg-muted px-2 py-1 rounded-full">
-                            {event.type}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                          <span className="flex items-center space-x-1">
-                            <Users className="h-4 w-4" />
-                            <span>{event.participants} attending</span>
-                          </span>
-                          <span className="flex items-center space-x-1">
-                            <Calendar className="h-4 w-4" />
-                            <span>Free to join</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ))}
             </div>
           </div>
