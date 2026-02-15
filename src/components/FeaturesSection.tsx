@@ -69,7 +69,7 @@ const FeaturesSection = () => {
             className="inline-flex items-center space-x-2 glass-subtle rounded-full px-5 py-2 mb-8"
           >
             <Zap className="h-4 w-4 text-primary" />
-            <span className="text-sm text-muted-foreground font-medium">Command Center</span>
+            <span className="text-sm text-muted-foreground font-medium">On-Device AI OS</span>
           </motion.div>
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
@@ -78,8 +78,8 @@ const FeaturesSection = () => {
             transition={{ delay: 0.1 }}
             className="text-4xl md:text-6xl font-bold mb-6 tracking-tight"
           >
-            Everything You Need in One{" "}
-            <span className="gradient-text">AI OS</span>
+            Sovereign Intelligence.{" "}
+            <span className="gradient-text">One Platform.</span>
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -88,7 +88,7 @@ const FeaturesSection = () => {
             transition={{ delay: 0.2 }}
             className="text-lg text-muted-foreground max-w-2xl mx-auto"
           >
-            From intelligent conversations to code generation — your sovereign intelligence layer.
+            From on-device inference to autonomous agents — zero cloud dependency, zero marginal cost, 100% yours.
           </motion.p>
         </div>
 

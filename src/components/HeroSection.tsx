@@ -33,7 +33,7 @@ const HeroSection = () => {
             className="inline-flex items-center space-x-2 glass-subtle rounded-full px-5 py-2.5 mb-10"
           >
             <Shield className="h-4 w-4 text-destructive" />
-            <span className="text-sm text-foreground/90 font-medium tracking-wide">Your AI Doesn't Spy On You</span>
+            <span className="text-sm text-foreground/90 font-medium tracking-wide">The Anti-Spyware AI — Your Data Never Leaves Your Device</span>
             <div className="w-2 h-2 bg-success rounded-full connectivity-pulse"></div>
           </motion.div>
 
@@ -44,9 +44,9 @@ const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-5xl md:text-8xl font-bold mb-8 leading-[1.05] tracking-tight"
           >
-            <span className="gradient-text">Sovereign Intelligence</span>{" "}
+            <span className="gradient-text">The On-Device AI</span>{" "}
             <br className="hidden md:block" />
-            for Creators, Coders & CEOs
+            Operating System
           </motion.h1>
 
           {/* Subtitle */}
@@ -56,7 +56,7 @@ const HeroSection = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg md:text-xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed"
           >
-            The only AI that runs <strong className="text-foreground font-medium">100% on your device</strong>. No data harvesting. No cloud dependency. Cloud-quality AI without the cloud — at <strong className="text-foreground font-medium">75% less cost</strong>.
+            Sovereign Intelligence for creators, coders & CEOs. Runs <strong className="text-foreground font-medium">100% on your device</strong> — no cloud dependency, no data harvesting. 50% more features at <strong className="text-foreground font-medium">75% less cost</strong> than ChatGPT.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -126,7 +126,7 @@ const HeroSection = () => {
             transition={{ duration: 0.5, delay: 0.7 }}
             className="mt-16 flex items-center justify-center gap-3"
           >
-            {["🔒 Privacy-First", "⚡ Offline Mode", "🚀 Product Hunt #1"].map((badge, i) => (
+            {["🛡️ Anti-Spyware AI", "⚡ Zero Cloud Dependency", "🧠 $102B Edge AI Market", "🚀 Product Hunt #1"].map((badge, i) => (
               <div key={i} className="glass-subtle rounded-lg px-4 py-2 text-xs font-medium text-muted-foreground">
                 {badge}
               </div>
