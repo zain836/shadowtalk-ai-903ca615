@@ -28,6 +28,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -318,8 +320,10 @@ const ReadingModeOverlay = ({ content, onClose }: { content: string; onClose: ()
     </div>
     <ScrollArea className="flex-1">
       <div className="max-w-2xl mx-auto px-8 py-12">
-        <div className="prose prose-sm dark:prose-invert max-w-none text-base leading-relaxed whitespace-pre-wrap">
-          {content || "Reading mode content will appear here after AI extraction..."}
+        <div className="prose prose-sm dark:prose-invert max-w-none text-base leading-relaxed">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {content || "Reading mode content will appear here after AI extraction..."}
+          </ReactMarkdown>
         </div>
       </div>
     </ScrollArea>
@@ -1162,7 +1166,9 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
                             {msg.type === "translation" && <div className="flex items-center gap-1.5 mb-1.5 text-blue-500"><Languages className="h-3.5 w-3.5" /><span className="text-[10px] font-semibold">Translation</span></div>}
                             {msg.type === "extraction" && <div className="flex items-center gap-1.5 mb-1.5 text-green-500"><Filter className="h-3.5 w-3.5" /><span className="text-[10px] font-semibold">Extracted Data</span></div>}
                             {msg.type === "error" && <div className="flex items-center gap-1.5 mb-1.5"><AlertTriangle className="h-3.5 w-3.5" /><span className="text-[10px] font-semibold">Error</span></div>}
-                            <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                            <div className="prose prose-xs dark:prose-invert max-w-none leading-relaxed [&_p]:my-1.5 [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_h4]:text-xs [&_h1]:font-bold [&_h2]:font-semibold [&_h3]:font-semibold [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_table]:text-[10px] [&_th]:px-2 [&_th]:py-1 [&_td]:px-2 [&_td]:py-1 [&_table]:border-border/50 [&_th]:border-border/50 [&_td]:border-border/50 [&_pre]:text-[10px] [&_code]:text-[10px]">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                            </div>
                             {msg.role === "ai" && msg.content && (
                               <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2 mt-2 -ml-1 hover:bg-background/50 rounded-lg" onClick={() => sendToChat(msg.content)}>
                                 <MessageSquare className="h-3 w-3 mr-1" /> Send to chat
