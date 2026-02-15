@@ -245,16 +245,21 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat, initialQuer
       initial={{ opacity: 0, x: 300 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 300 }}
-      className="fixed right-0 top-0 h-full w-full max-w-2xl bg-background border-l border-border shadow-xl z-50 flex flex-col"
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="fixed right-0 top-0 h-full w-full max-w-2xl bg-background/95 backdrop-blur-xl border-l border-border/50 shadow-2xl shadow-primary/5 z-50 flex flex-col"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <BookOpen className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold">Deep Research</h2>
-          <Badge variant="secondary" className="text-xs">Perplexity-style</Badge>
+      <div className="flex items-center justify-between p-4 border-b border-border/50 bg-gradient-to-r from-muted/30 via-transparent to-muted/30">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center">
+            <BookOpen className="h-4.5 w-4.5 text-primary" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-sm">Deep Research</h2>
+            <p className="text-xs text-muted-foreground">Multi-source synthesis engine</p>
+          </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={onClose}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -327,18 +332,28 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat, initialQuer
         </div>
       )}
 
-      {/* Progress */}
+      {/* Progress - Premium animated stages */}
       {isResearching && (
-        <div className="p-4 border-b border-border">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{stage}</span>
-              <span className="font-medium">{Math.round(progress)}%</span>
+        <div className="p-4 border-b border-border/50">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="relative h-8 w-8">
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-lg border-2 border-primary/30 border-t-primary" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <motion.span key={stage} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="text-sm font-medium">{stage}</motion.span>
+                  <span className="text-xs font-mono text-primary">{Math.round(progress)}%</span>
+                </div>
+                <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
+                  <motion.div animate={{ width: `${progress}%` }} transition={{ type: "spring", stiffness: 100 }} className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60" />
+                </div>
+              </div>
             </div>
-            <Progress value={progress} className="h-2" />
-            {retryCount > 0 && (
-              <p className="text-xs text-amber-500">Retry attempt {retryCount}/{MAX_RETRIES}</p>
-            )}
+            {retryCount > 0 && <p className="text-xs text-amber-500 ml-11">Retry attempt {retryCount}/{MAX_RETRIES}</p>}
           </div>
         </div>
       )}
@@ -578,27 +593,25 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat, initialQuer
           </div>
         )}
 
-        {/* Empty State */}
+        {/* Empty State - Premium */}
         {!result && !isResearching && (
           <div className="flex flex-col items-center justify-center h-[400px] text-center p-8">
-            <BookOpen className="h-16 w-16 text-muted-foreground/30 mb-4" />
-            <h3 className="font-medium mb-2">Deep Research Mode</h3>
-            <p className="text-sm text-muted-foreground max-w-sm">
-              Enter a topic or question above. I'll search multiple sources, cross-reference data, and generate a comprehensive research report with citations.
+            <motion.div
+              animate={{ y: [0, -5, 0] }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 flex items-center justify-center mb-6"
+            >
+              <BookOpen className="h-10 w-10 text-primary/40" />
+            </motion.div>
+            <h3 className="font-semibold mb-2">Deep Research Engine</h3>
+            <p className="text-sm text-muted-foreground max-w-sm mb-6">
+              Multi-source synthesis with cross-referencing, fact verification, and cited reports.
             </p>
-            <div className="mt-6 grid grid-cols-2 gap-2 w-full max-w-sm">
+            <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
               {["AI in healthcare 2026", "Climate change solutions", "Quantum computing advances", "Space exploration"].map((suggestion) => (
-                <Button
-                  key={suggestion}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => {
-                    setQuery(suggestion);
-                    handleResearch();
-                  }}
-                >
-                  {suggestion}
+                <Button key={suggestion} variant="outline" size="sm" className="text-xs rounded-lg hover:border-primary/50 hover:bg-primary/5 transition-all"
+                  onClick={() => { setQuery(suggestion); handleResearch(); }}>
+                  <Sparkles className="h-3 w-3 mr-1.5 text-primary" />{suggestion}
                 </Button>
               ))}
             </div>

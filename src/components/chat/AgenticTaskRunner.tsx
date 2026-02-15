@@ -305,25 +305,31 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete, initialGoal
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex flex-col"
+      className="fixed inset-0 bg-background/95 backdrop-blur-xl z-50 flex flex-col"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      {/* Header - Premium */}
+      <div className="flex items-center justify-between p-4 border-b border-border/50 bg-gradient-to-r from-muted/30 via-transparent to-muted/30">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Bot className="h-5 w-5 text-primary" />
+          <div className="relative">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center">
+              <Bot className="h-5 w-5 text-primary" />
+            </div>
+            {currentTask?.status === "executing" && (
+              <motion.div animate={{ scale: [1, 1.4, 1], opacity: [0.5, 0, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }}
+                className="absolute inset-0 rounded-xl border-2 border-primary/40" />
+            )}
           </div>
           <div>
             <h2 className="font-semibold flex items-center gap-2">
-              AI Agent
-              <Badge variant="secondary" className="text-xs">Agentic Mode</Badge>
+              Shadow Agent
+              <Badge variant="secondary" className="text-xs font-mono">AUTONOMOUS</Badge>
             </h2>
-            <p className="text-sm text-muted-foreground">
-              Autonomous task execution with multi-step reasoning
+            <p className="text-xs text-muted-foreground">
+              Multi-step reasoning with Cognitive Loop architecture
             </p>
           </div>
         </div>
-        <Button variant="ghost" onClick={onClose}>Close</Button>
+        <Button variant="ghost" size="sm" onClick={onClose} className="rounded-lg">Close</Button>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
@@ -412,29 +418,49 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete, initialGoal
                 <Progress value={progress} className="h-2" />
               </div>
 
-              {/* Steps */}
+              {/* Steps - Connected Timeline */}
               <div className="space-y-2">
-                <h3 className="text-sm font-medium">Execution Steps</h3>
-                <div className="space-y-2">
+                <h3 className="text-sm font-medium">Execution Pipeline</h3>
+                <div className="relative space-y-0">
+                  {/* Connecting line */}
+                  <div className="absolute left-[19px] top-4 bottom-4 w-px bg-border/50" />
                   {currentTask.steps.map((step, i) => (
                     <motion.div
                       key={step.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className={`flex items-center gap-3 p-3 rounded-lg border ${
-                        step.status === "running" ? "border-primary bg-primary/5" : "border-border"
-                      }`}
+                      transition={{ delay: i * 0.08, type: "spring", stiffness: 200 }}
+                      className="relative pl-12 py-2"
                     >
-                      <span className={getStatusColor(step.status)}>
-                        {getStatusIcon(step.status)}
-                      </span>
-                      <span className="flex-1 text-sm">{step.action}</span>
-                      {step.duration && (
-                        <span className="text-xs text-muted-foreground">
-                          {(step.duration / 1000).toFixed(1)}s
-                        </span>
-                      )}
+                      {/* Node */}
+                      <div className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center z-10 ${
+                        step.status === "running" ? "bg-primary/20 border-2 border-primary" :
+                        step.status === "completed" ? "bg-emerald-500/20 border border-emerald-500/50" :
+                        step.status === "failed" ? "bg-destructive/20 border border-destructive/50" :
+                        "bg-muted border border-border"
+                      }`}>
+                        <span className={getStatusColor(step.status)}>{getStatusIcon(step.status)}</span>
+                      </div>
+                      {/* Content */}
+                      <div className={`p-3 rounded-xl border transition-all ${
+                        step.status === "running" ? "border-primary/50 bg-primary/5 shadow-sm shadow-primary/10" : 
+                        step.status === "completed" ? "border-emerald-500/20 bg-emerald-500/5" :
+                        "border-border/50 bg-card/30"
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{step.action}</span>
+                          {step.duration && (
+                            <Badge variant="outline" className="text-xs font-mono">{(step.duration / 1000).toFixed(1)}s</Badge>
+                          )}
+                        </div>
+                        {step.status === "running" && (
+                          <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }}
+                            className="mt-1.5 h-1 rounded-full bg-primary/20 overflow-hidden">
+                            <motion.div animate={{ x: ["-100%", "200%"] }} transition={{ duration: 1, repeat: Infinity }}
+                              className="h-full w-1/3 rounded-full bg-primary" />
+                          </motion.div>
+                        )}
+                      </div>
                     </motion.div>
                   ))}
                 </div>
@@ -470,23 +496,29 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete, initialGoal
           )}
         </div>
 
-        {/* Logs Panel */}
-        <div className="w-96 border-l border-border flex flex-col">
-          <div className="flex items-center justify-between p-3 border-b border-border">
+        {/* Logs Panel - Premium */}
+        <div className="w-96 border-l border-border/50 flex flex-col bg-muted/10">
+          <div className="flex items-center justify-between p-3 border-b border-border/50">
             <span className="text-sm font-medium flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Agent Logs
+              <MessageSquare className="h-4 w-4 text-primary" />
+              Live Execution Log
             </span>
             <Switch checked={showLogs} onCheckedChange={setShowLogs} />
           </div>
           <ScrollArea className="flex-1 p-3">
-            <div className="space-y-1 font-mono text-xs">
+            <div className="space-y-0.5 font-mono text-[11px]">
               {logs.map((log, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={`px-2 py-1 rounded ${
+                    log.includes('Error') ? 'text-red-400 bg-red-500/5' :
+                    log.includes('completed') ? 'text-emerald-400 bg-emerald-500/5' :
+                    log.includes('Starting') ? 'text-primary bg-primary/5' :
+                    'text-muted-foreground hover:text-foreground'
+                  } transition-colors`}
                 >
                   {log}
                 </motion.div>
