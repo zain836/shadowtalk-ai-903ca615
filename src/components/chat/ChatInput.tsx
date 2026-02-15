@@ -52,38 +52,36 @@ export const ChatInput = ({
   };
 
   return (
-    <div className="border-t border-border/40 glass-strong">
-      <div className="max-w-4xl mx-auto px-2 py-2 md:px-4 md:py-4">
-        {/* Mode Selector */}
-        <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3 overflow-x-auto scrollbar-none">
+    <div className="border-t border-border/20 bg-gradient-to-t from-background via-background to-transparent">
+      <div className="max-w-3xl mx-auto px-3 py-3 md:px-4 md:py-4">
+        {/* Mode Bar */}
+        <div className="flex items-center gap-2 mb-2.5 overflow-x-auto scrollbar-none">
           <ModeSelector 
             mode={chatMode} 
             onModeChange={(mode) => {
               onModeChange(mode);
-              if (mode === 'image') {
-                onOpenImageGenerator();
-              }
+              if (mode === 'image') onOpenImageGenerator();
             }}
             disabled={isLoading}
           />
           {chatMode === 'research' && (
             <SearchHistory onSelectQuery={(query) => onMessageChange(query)} />
           )}
-          <div className="flex items-center gap-1 md:gap-1.5 text-[10px] md:text-xs text-muted-foreground shrink-0">
-            {chatMode === 'research' && <Search className="h-3 w-3 text-violet-500" />}
-            {chatMode === 'camera' && <Camera className="h-3 w-3 text-teal-500" />}
-            {chatMode === 'organize' && <Table className="h-3 w-3 text-amber-500" />}
-            {!['research', 'camera', 'organize'].includes(chatMode) && <Sparkles className="h-3 w-3" />}
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 shrink-0 font-mono">
+            {chatMode === 'research' && <Search className="h-3 w-3 text-violet-400" />}
+            {chatMode === 'camera' && <Camera className="h-3 w-3 text-teal-400" />}
+            {chatMode === 'organize' && <Table className="h-3 w-3 text-amber-400" />}
+            {!['research', 'camera', 'organize'].includes(chatMode) && <Sparkles className="h-3 w-3 text-primary/50" />}
             <span className="capitalize">{chatMode}</span>
-            <span className="text-border hidden sm:inline">•</span>
+            <span className="hidden sm:inline opacity-40">·</span>
             <span className="capitalize hidden sm:inline">{personality}</span>
           </div>
         </div>
 
-        {/* Input Area */}
-        <div className="relative flex items-end gap-1 md:gap-2 glass rounded-xl md:rounded-2xl p-1.5 md:p-2 shadow-sm focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
-          {/* Left Actions */}
-          <div className="flex items-center gap-0.5 md:gap-1 pb-0.5 md:pb-1 shrink-0">
+        {/* Input Container */}
+        <div className="relative flex items-end gap-1.5 bg-card/80 backdrop-blur-sm rounded-2xl border border-border/40 p-1.5 md:p-2 shadow-lg shadow-black/5 focus-within:border-primary/30 focus-within:shadow-[0_0_0_3px_hsl(var(--primary)/0.08)] transition-all duration-300">
+          {/* Left: File Upload */}
+          <div className="flex items-center pb-1 shrink-0">
             <FileUpload
               onFileSelect={onFileSelect}
               selectedFile={selectedFile}
@@ -97,16 +95,16 @@ export const ChatInput = ({
             value={message} 
             onChange={(e) => onMessageChange(e.target.value)} 
             onKeyDown={handleKeyDown}
-            placeholder={isListening ? "Listening..." : `Message ShadowTalk AI...`}
-            className={`flex-1 min-h-[40px] md:min-h-[44px] max-h-[120px] md:max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2 md:py-3 px-1.5 md:px-2 text-sm ${
-              isListening ? 'placeholder:text-primary' : ''
+            placeholder={isListening ? "Listening..." : "Ask anything..."}
+            className={`flex-1 min-h-[40px] md:min-h-[44px] max-h-[160px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2.5 px-2 text-sm placeholder:text-muted-foreground/40 ${
+              isListening ? 'placeholder:text-primary placeholder:animate-pulse' : ''
             }`}
             disabled={isLoading}
             rows={1}
           />
           
           {/* Right Actions */}
-          <div className="flex items-center gap-0.5 md:gap-1 pb-0.5 md:pb-1 shrink-0">
+          <div className="flex items-center gap-1 pb-1 shrink-0">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -114,17 +112,20 @@ export const ChatInput = ({
                     onClick={onToggleVoice} 
                     variant="ghost"
                     size="icon"
-                    className={`h-8 w-8 md:h-9 md:w-9 rounded-lg md:rounded-xl ${isListening ? 'bg-primary text-primary-foreground' : ''}`}
+                    className={`h-8 w-8 rounded-xl transition-all duration-200 ${
+                      isListening 
+                        ? 'bg-primary text-primary-foreground shadow-md shadow-primary/30' 
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
                     disabled={isLoading}
                   >
                     {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Voice input</TooltipContent>
+                <TooltipContent side="top" className="text-xs">Voice input</TooltipContent>
               </Tooltip>
             </TooltipProvider>
             
-            {/* Hide image button on mobile to save space */}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -132,41 +133,40 @@ export const ChatInput = ({
                     onClick={onOpenImageGenerator}
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 md:h-9 md:w-9 rounded-lg md:rounded-xl hidden sm:flex"
+                    className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hidden sm:flex"
                     disabled={isLoading}
                   >
                     <ImageIcon className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Generate image</TooltipContent>
+                <TooltipContent side="top" className="text-xs">Generate image</TooltipContent>
               </Tooltip>
             </TooltipProvider>
             
             {isLoading ? (
               <Button 
                 onClick={onStopGeneration} 
-                variant="destructive" 
                 size="icon" 
-                className="h-8 w-8 md:h-9 md:w-9 rounded-lg md:rounded-xl"
+                className="h-8 w-8 rounded-xl bg-destructive/90 hover:bg-destructive text-destructive-foreground shadow-md"
               >
-                <Square className="h-4 w-4" />
+                <Square className="h-3.5 w-3.5" />
               </Button>
             ) : (
               <Button 
                 onClick={onSend} 
                 size="icon"
-                className="h-8 w-8 md:h-9 md:w-9 rounded-lg md:rounded-xl bg-primary hover:bg-primary/90"
+                className="h-8 w-8 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 transition-all duration-200 disabled:opacity-30 disabled:shadow-none"
                 disabled={!message.trim() && !selectedFile}
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-3.5 w-3.5" />
               </Button>
             )}
           </div>
         </div>
 
-        {/* Helper text - hide on mobile */}
-        <p className="text-[10px] text-muted-foreground text-center mt-1.5 md:mt-2 hidden sm:block">
-          Press Enter to send, Shift+Enter for new line
+        {/* Footer hint */}
+        <p className="text-[10px] text-muted-foreground/40 text-center mt-2 hidden sm:block font-mono">
+          Enter to send · Shift+Enter for new line
         </p>
       </div>
     </div>

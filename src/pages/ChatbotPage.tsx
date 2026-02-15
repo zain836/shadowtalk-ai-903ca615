@@ -1168,12 +1168,12 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         {/* Mobile Sidebar Overlay */}
         {showSidebar && (
           <div 
-            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
             onClick={() => setShowSidebar(false)}
           />
         )}
         
-        {/* Sidebar - positioned absolutely on mobile, normal flow on desktop */}
+        {/* Sidebar */}
         {showSidebar && (
           <ConversationSidebar
             conversations={conversations}
@@ -1186,7 +1186,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         )}
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0 bg-gradient-to-b from-background to-muted/10">
+        <div className="flex-1 flex flex-col min-w-0">
           <AdBanner />
           
           <ChatHeader
