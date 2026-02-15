@@ -196,15 +196,16 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
         throw new Error(error.message || "Failed to get conversation token");
       }
       
-      if (!data?.signed_url) {
-        throw new Error(data?.error || "No signed URL received. Please configure ELEVENLABS_AGENT_ID.");
+      if (!data?.token) {
+        throw new Error(data?.error || "No token received. Please configure ELEVENLABS_AGENT_ID.");
       }
       
-      console.log("Starting ElevenLabs session with signed URL");
+      console.log("Starting ElevenLabs session with WebRTC token");
       
-      // Start the conversation session with signed URL (WebSocket)
+      // Start the conversation session with WebRTC (recommended, lower latency)
       await conversation.startSession({
-        signedUrl: data.signed_url,
+        conversationToken: data.token,
+        connectionType: "webrtc",
       });
       
     } catch (error) {
