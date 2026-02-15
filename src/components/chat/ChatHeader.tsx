@@ -113,22 +113,39 @@ const getPlanIcon = (plan: UserPlan) => {
 interface MenuItemProps {
   icon: React.ReactNode;
   label: string;
+  description?: string;
   onClick: () => void;
   disabled?: boolean;
   locked?: boolean;
+  badge?: string;
+  badgeColor?: string;
+  shortcut?: string;
 }
 
-const MenuItem = ({ icon, label, onClick, disabled, locked }: MenuItemProps) => (
+const MenuItem = ({ icon, label, description, onClick, disabled, locked, badge, badgeColor, shortcut }: MenuItemProps) => (
   <button
     onClick={onClick}
     disabled={disabled}
-    className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-colors ${
-      disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted active:bg-muted/80'
+    className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all duration-200 group ${
+      disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted hover:scale-[1.01] active:bg-muted/80 active:scale-[0.99]'
     }`}
   >
-    {icon}
-    <span className="flex-1">{label}</span>
-    {locked && <Lock className="h-4 w-4 text-muted-foreground" />}
+    <div className="shrink-0">{icon}</div>
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-2">
+        <span className="font-medium text-sm">{label}</span>
+        {badge && (
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${badgeColor || 'bg-primary/20 text-primary'}`}>
+            {badge}
+          </span>
+        )}
+      </div>
+      {description && (
+        <p className="text-[11px] text-muted-foreground leading-tight mt-0.5 truncate">{description}</p>
+      )}
+    </div>
+    {shortcut && <span className="text-[10px] text-muted-foreground font-mono opacity-60 shrink-0">{shortcut}</span>}
+    {locked && <Lock className="h-4 w-4 text-muted-foreground shrink-0" />}
   </button>
 );
 
@@ -231,42 +248,67 @@ export const ChatHeader = ({
 
       {/* Canvas */}
       <div className="px-2 mt-2">
-        <p className="text-xs text-muted-foreground px-2 py-1 font-medium">Canvas</p>
+        <p className="text-xs text-muted-foreground px-2 py-1 font-medium flex items-center gap-1.5">
+          <FileEdit className="h-3 w-3" /> Canvas Studio
+        </p>
         <MenuItem
-          icon={<FileEdit className="h-5 w-5" />}
-          label="New Document (D)"
+          icon={<FileEdit className="h-5 w-5 text-blue-400" />}
+          label="New Document"
+          description="Rich text editor with AI assist & formatting"
           onClick={() => handleMenuAction(() => onOpenCanvas("document"))}
+          shortcut="⇧D"
         />
         <MenuItem
-          icon={<PenLine className="h-5 w-5" />}
-          label="New Code (K)"
+          icon={<PenLine className="h-5 w-5 text-emerald-400" />}
+          label="New Code"
+          description="Multi-language IDE with live preview & execution"
           onClick={() => handleMenuAction(() => onOpenCanvas("code"))}
+          shortcut="⇧K"
+          badge="10+ langs"
+          badgeColor="bg-emerald-500/20 text-emerald-400"
         />
       </div>
 
       {/* Pro Features */}
       <div className="px-2 mt-2">
-        <p className="text-xs text-muted-foreground px-2 py-1 font-medium">Pro Features</p>
+        <p className="text-xs text-muted-foreground px-2 py-1 font-medium flex items-center gap-1.5">
+          <Crown className="h-3 w-3 text-primary" /> Pro Features
+        </p>
         <MenuItem
-          icon={<Users className="h-5 w-5" />}
+          icon={<Users className="h-5 w-5 text-violet-400" />}
           label="Collaborative Rooms"
+          description="Real-time co-editing, live cursors & @mentions"
           onClick={() => handleMenuAction(() => navigate('/rooms'))}
           disabled={!isProOrHigher}
           locked={!isProOrHigher}
+          badge="Live"
+          badgeColor="bg-violet-500/20 text-violet-400"
         />
         <MenuItem
-          icon={<Workflow className="h-5 w-5" />}
+          icon={<Workflow className="h-5 w-5 text-amber-400" />}
           label="Script Automation"
+          description="Automate AI workflows with custom triggers"
           onClick={() => handleMenuAction(onOpenScriptAutomation)}
           disabled={!isProOrHigher}
           locked={!isProOrHigher}
         />
         <MenuItem
-          icon={<Download className="h-5 w-5" />}
+          icon={<Download className="h-5 w-5 text-cyan-400" />}
           label="Export Chat"
+          description="Download as PDF, Markdown, or JSON"
           onClick={() => handleMenuAction(onExport)}
           disabled={!isProOrHigher}
           locked={!isProOrHigher}
+        />
+        <MenuItem
+          icon={<Share2 className="h-5 w-5 text-pink-400" />}
+          label="Share & Publish"
+          description="Share conversations via link or embed"
+          onClick={() => handleMenuAction(onExport)}
+          disabled={!isProOrHigher}
+          locked={!isProOrHigher}
+          badge="New"
+          badgeColor="bg-pink-500/20 text-pink-400"
         />
       </div>
 
@@ -492,41 +534,71 @@ export const ChatHeader = ({
 
               <DropdownMenuSeparator />
 
-              {/* Canvas */}
+              {/* Canvas Studio */}
               <div className="px-2 py-1.5">
-                <span className="text-xs text-muted-foreground font-medium">Canvas</span>
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  <FileEdit className="h-3 w-3" /> Canvas Studio
+                </span>
               </div>
-              <DropdownMenuItem onClick={() => onOpenCanvas("document")}>
-                <FileEdit className="h-4 w-4 mr-2" />
-                New Document
-                <span className="ml-auto text-xs text-muted-foreground">⇧D</span>
+              <DropdownMenuItem onClick={() => onOpenCanvas("document")} className="flex-col items-start py-2">
+                <div className="flex items-center w-full">
+                  <FileEdit className="h-4 w-4 mr-2 text-blue-400" />
+                  <span>New Document</span>
+                  <span className="ml-auto text-xs text-muted-foreground">⇧D</span>
+                </div>
+                <span className="text-[10px] text-muted-foreground ml-6">Rich text with AI-powered formatting</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onOpenCanvas("code")}>
-                <PenLine className="h-4 w-4 mr-2" />
-                New Code
-                <span className="ml-auto text-xs text-muted-foreground">⇧K</span>
+              <DropdownMenuItem onClick={() => onOpenCanvas("code")} className="flex-col items-start py-2">
+                <div className="flex items-center w-full">
+                  <PenLine className="h-4 w-4 mr-2 text-emerald-400" />
+                  <span>New Code</span>
+                  <Badge className="ml-1.5 text-[9px] px-1 py-0 bg-emerald-500/20 text-emerald-400 border-0">10+ langs</Badge>
+                  <span className="ml-auto text-xs text-muted-foreground">⇧K</span>
+                </div>
+                <span className="text-[10px] text-muted-foreground ml-6">Multi-language IDE with live preview</span>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 
               {/* Pro Features */}
               <div className="px-2 py-1.5">
-                <span className="text-xs text-muted-foreground font-medium">Pro Features</span>
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  <Crown className="h-3 w-3 text-primary" /> Pro Features
+                </span>
               </div>
-              <DropdownMenuItem onClick={() => navigate('/rooms')} disabled={!isProOrHigher}>
-                <Users className="h-4 w-4 mr-2" />
-                Collaborative Rooms
-                {!isProOrHigher && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
+              <DropdownMenuItem onClick={() => navigate('/rooms')} disabled={!isProOrHigher} className="flex-col items-start py-2">
+                <div className="flex items-center w-full">
+                  <Users className="h-4 w-4 mr-2 text-violet-400" />
+                  <span>Collaborative Rooms</span>
+                  <Badge className="ml-1.5 text-[9px] px-1 py-0 bg-violet-500/20 text-violet-400 border-0">Live</Badge>
+                  {!isProOrHigher && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
+                </div>
+                <span className="text-[10px] text-muted-foreground ml-6">Real-time co-editing & live cursors</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onOpenScriptAutomation} disabled={!isProOrHigher}>
-                <Workflow className="h-4 w-4 mr-2" />
-                Script Automation
-                {!isProOrHigher && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
+              <DropdownMenuItem onClick={onOpenScriptAutomation} disabled={!isProOrHigher} className="flex-col items-start py-2">
+                <div className="flex items-center w-full">
+                  <Workflow className="h-4 w-4 mr-2 text-amber-400" />
+                  <span>Script Automation</span>
+                  {!isProOrHigher && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
+                </div>
+                <span className="text-[10px] text-muted-foreground ml-6">Automate AI workflows with triggers</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onExport} disabled={!isProOrHigher}>
-                <Download className="h-4 w-4 mr-2" />
-                Export Chat
-                {!isProOrHigher && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
+              <DropdownMenuItem onClick={onExport} disabled={!isProOrHigher} className="flex-col items-start py-2">
+                <div className="flex items-center w-full">
+                  <Download className="h-4 w-4 mr-2 text-cyan-400" />
+                  <span>Export Chat</span>
+                  {!isProOrHigher && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
+                </div>
+                <span className="text-[10px] text-muted-foreground ml-6">Download as PDF, MD, or JSON</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onExport} disabled={!isProOrHigher} className="flex-col items-start py-2">
+                <div className="flex items-center w-full">
+                  <Share2 className="h-4 w-4 mr-2 text-pink-400" />
+                  <span>Share & Publish</span>
+                  <Badge className="ml-1.5 text-[9px] px-1 py-0 bg-pink-500/20 text-pink-400 border-0">New</Badge>
+                  {!isProOrHigher && <Lock className="h-3 w-3 ml-auto text-muted-foreground" />}
+                </div>
+                <span className="text-[10px] text-muted-foreground ml-6">Share via link or embed</span>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
