@@ -25,17 +25,16 @@ interface OfflineAIState {
 }
  
 // Model catalog - ordered by capability for offline use
-// Larger models are preferred for complex tasks (reasoning, code generation, math)
+// Llama 3.2 3B is the recommended model for best speed + quality balance
 const OFFLINE_MODELS = [
- { id: 'Phi-3.5-mini-instruct-q4f16_1-MLC', name: 'Phi 3.5 Mini', size: '3.8B', bytes: 2_200_000_000, tier: 'premium' as const, capabilities: ['reasoning', 'code', 'math', 'chat'] },
  { id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC', name: 'Llama 3.2 3B', size: '3B', bytes: 1_800_000_000, tier: 'premium' as const, capabilities: ['reasoning', 'code', 'math', 'chat'] },
+ { id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', name: 'Llama 3.2 1B', size: '1B', bytes: 700_000_000, tier: 'standard' as const, capabilities: ['reasoning', 'chat', 'math', 'code'] },
  { id: 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC', name: 'Qwen2.5 1.5B', size: '1.5B', bytes: 900_000_000, tier: 'standard' as const, capabilities: ['reasoning', 'chat', 'math'] },
- { id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', name: 'Llama 3.2 1B', size: '1B', bytes: 700_000_000, tier: 'standard' as const, capabilities: ['chat', 'math'] },
  { id: 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC', name: 'Qwen2.5 Mini', size: '0.5B', bytes: 350_000_000, tier: 'basic' as const, capabilities: ['chat'] },
 ];
 
 // The recommended model for full offline capabilities
-const RECOMMENDED_MODEL = OFFLINE_MODELS[0]; // Phi 3.5 Mini - best for complex reasoning, code, math
+const RECOMMENDED_MODEL = OFFLINE_MODELS[0]; // Llama 3.2 3B - fastest high-quality offline model
  
  const STORAGE_KEY = 'shadowtalk_robust_offline_model';
 
@@ -528,26 +527,27 @@ export const useRobustOfflineAI = () => {
        if (onChunk) onChunk('Ready!\n\n');
      }
  
-     try {
-       // Build system prompt
-       const systemPrompt = `You are ShadowTalk AI running locally on the user's device.
- You have full capabilities: reasoning, code, math, creative writing.
- Respond helpfully and concisely. Use markdown formatting.`;
- 
-       const formattedMessages = [
-         { role: 'system' as const, content: systemPrompt },
-         ...messages,
-       ];
- 
-       let fullResponse = '';
- 
-       // Generate with streaming
-       const response = await engineRef.current.chat.completions.create({
-         messages: formattedMessages,
-         stream: true,
-         max_tokens: 1024,
-         temperature: 0.7,
-       });
+      try {
+        // Optimized system prompt - minimal tokens for faster first-token latency
+        const systemPrompt = `You are ShadowTalk AI running locally. Be concise, accurate, use markdown. Full capabilities: reasoning, code, math, creative writing.`;
+  
+        const formattedMessages = [
+          { role: 'system' as const, content: systemPrompt },
+          ...messages.slice(-10), // Limit history for speed
+        ];
+  
+        let fullResponse = '';
+  
+        // Generate with streaming - optimized for speed
+        const response = await engineRef.current.chat.completions.create({
+          messages: formattedMessages,
+          stream: true,
+          max_tokens: 768,
+          temperature: 0.6,
+          top_p: 0.85,
+          frequency_penalty: 0.1,
+          presence_penalty: 0.1,
+        });
  
        for await (const chunk of response) {
          const content = chunk.choices?.[0]?.delta?.content || '';
