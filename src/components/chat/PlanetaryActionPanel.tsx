@@ -48,6 +48,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import EcoLeaderboard from './EcoLeaderboard';
 import { useFeatureGating } from '@/hooks/useFeatureGating';
+import ImpactDashboard from './eco/ImpactDashboard';
+import StreakSystem, { getStreakMultiplier } from './eco/StreakSystem';
+import ImpactComparison from './eco/ImpactComparison';
+import ShareableImpactCard from './eco/ShareableImpactCard';
+import AISuggestions from './eco/AISuggestions';
+import CommunityChallenges from './eco/CommunityChallenges';
 
 interface EcoAction {
   id: string;
@@ -81,16 +87,6 @@ interface Badge {
   tier?: 'bronze' | 'silver' | 'gold' | 'platinum';
 }
 
-interface Challenge {
-  id: string;
-  name: string;
-  description: string;
-  target: number;
-  progress: number;
-  reward: string;
-  endsAt: string;
-  participants: number;
-}
 
 interface PlanetaryActionPanelProps {
   onGetActions: (location: string) => Promise<EcoAction[]>;
@@ -126,10 +122,7 @@ const PlanetaryActionPanel: React.FC<PlanetaryActionPanelProps> = ({
     { id: '7', name: 'Community Leader', description: 'Share 10 achievements', icon: '👥', earned: false, progress: 0, requirement: 10, tier: 'gold' },
     { id: '8', name: 'Planet Protector', description: 'Save 100kg CO2', icon: '🌎', earned: false, progress: 0, requirement: 100, tier: 'platinum' },
   ]);
-  const [challenges, setChallenges] = useState<Challenge[]>([
-    { id: '1', name: 'Winter Energy Challenge', description: 'Reduce energy consumption by 20%', target: 100, progress: 45, reward: '500 XP + Gold Badge', endsAt: '2026-02-01', participants: 1234 },
-    { id: '2', name: 'No-Car Week', description: 'Use alternative transport for a week', target: 7, progress: 3, reward: '300 XP + Silver Badge', endsAt: '2026-01-21', participants: 567 },
-  ]);
+  const [recentCategories] = useState<string[]>([]);
   const [streak, setStreak] = useState(0);
   const [level, setLevel] = useState(1);
   const [xp, setXp] = useState(0);
@@ -338,10 +331,12 @@ const PlanetaryActionPanel: React.FC<PlanetaryActionPanelProps> = ({
       yearly: prev.yearly + actualImpact.co2Saved,
     }));
 
-    // Calculate XP with bonuses
+    // Calculate XP with bonuses + streak multiplier
+    const streakInfo = getStreakMultiplier(streak);
     let xpGained = action.eroi * 10;
     if (bonus > 1) xpGained = Math.floor(xpGained * bonus);
     if (action.difficulty === 'hard') xpGained += 20;
+    xpGained = Math.floor(xpGained * streakInfo.mult);
     
     setXp(prev => {
       const newXp = prev + xpGained;
@@ -545,95 +540,32 @@ const PlanetaryActionPanel: React.FC<PlanetaryActionPanelProps> = ({
         </Alert>
       )}
 
-      {/* Level & XP with Weather Context */}
-      <Card className="bg-gradient-to-r from-primary/20 to-accent/20 border-primary/30">
-        <CardContent className="pt-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-warning" />
-              <span className="font-bold">Level {level}</span>
-              <Badge variant="secondary">{streak} day streak 🔥</Badge>
-            </div>
-            <div className="flex items-center gap-3">
-              {weatherData && (
-                <div className="flex items-center gap-1 text-sm">
-                  {getWeatherIcon(weatherData.condition)}
-                  <span>{weatherData.temp}°C</span>
-                </div>
-              )}
-              {localGrid && (
-                <Badge variant={localGrid.renewable > 50 ? "default" : "secondary"} className="gap-1">
-                  <Lightning className="h-3 w-3" />
-                  {localGrid.renewable}% renewable
-                </Badge>
-              )}
-              <span className="text-sm text-muted-foreground">{xp}/{xpToNextLevel} XP</span>
-            </div>
-          </div>
-          <Progress value={(xp / xpToNextLevel) * 100} className="h-2" />
-          
-          {/* Weekly Goal */}
-          <div className="mt-3 flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Weekly Goal</span>
-            <div className="flex items-center gap-2">
-              <Progress value={(weeklyGoal.completed / weeklyGoal.target) * 100} className="w-24 h-1.5" />
-              <span className="font-medium">{weeklyGoal.completed}/{weeklyGoal.target}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Streak System with Multipliers */}
+      <StreakSystem streak={streak} level={level} xp={xp} xpToNextLevel={xpToNextLevel} />
 
-      {/* Impact Stats - Enhanced */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <Card className="bg-card/50">
-          <CardContent className="py-3">
-            <div className="flex items-center gap-2">
-              <Leaf className="h-4 w-4 text-green-500" />
-              <div>
-                <p className="text-xs text-muted-foreground">CO₂ Saved</p>
-                <p className="font-bold text-green-500">{totalImpact.co2Saved.toFixed(1)} kg</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/50">
-          <CardContent className="py-3">
-            <div className="flex items-center gap-2">
-              <Droplets className="h-4 w-4 text-blue-400" />
-              <div>
-                <p className="text-xs text-muted-foreground">Water Saved</p>
-                <p className="font-bold text-blue-400">{totalImpact.waterSaved.toFixed(0)} L</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/50">
-          <CardContent className="py-3">
-            <div className="flex items-center gap-2">
-              <TreePine className="h-4 w-4 text-green-600" />
-              <div>
-                <p className="text-xs text-muted-foreground">Trees Equivalent</p>
-                <p className="font-bold text-green-600">{totalImpact.treesEquivalent}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/50">
-          <CardContent className="py-3">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-xs text-muted-foreground">Money Saved</p>
-                <p className="font-bold text-primary">${totalImpact.moneySaved.toFixed(2)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Real-time Impact Dashboard */}
+      <ImpactDashboard impact={totalImpact} level={level} xp={xp} streak={streak} />
+
+      {/* AI-Powered Suggestions */}
+      <AISuggestions 
+        location={location || detectedLocation || ''} 
+        co2Saved={totalImpact.co2Saved}
+        actionsCompleted={totalImpact.actionsCompleted}
+        streak={streak}
+        recentCategories={actions.filter(a => a.completed).map(a => a.category)}
+      />
+
+      {/* Impact Comparison */}
+      <ImpactComparison 
+        co2Saved={totalImpact.co2Saved}
+        actionsCompleted={totalImpact.actionsCompleted}
+        streak={streak}
+        level={level}
+      />
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 h-9">
+        <TabsList className="grid w-full grid-cols-5 h-9">
           <TabsTrigger value="actions" className="text-xs gap-1">
             <Target className="h-3 w-3" /> Actions
           </TabsTrigger>
@@ -646,11 +578,13 @@ const PlanetaryActionPanel: React.FC<PlanetaryActionPanelProps> = ({
           <TabsTrigger value="leaderboard" className="text-xs gap-1">
             <Trophy className="h-3 w-3" /> Leaders
           </TabsTrigger>
+          <TabsTrigger value="share" className="text-xs gap-1">
+            <Share2 className="h-3 w-3" /> Share
+          </TabsTrigger>
         </TabsList>
 
         {/* Actions Tab */}
         <TabsContent value="actions" className="mt-4 space-y-4">
-          {/* Location Input */}
           <div className="flex gap-2">
             <div className="relative flex-1">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -667,101 +601,56 @@ const PlanetaryActionPanel: React.FC<PlanetaryActionPanelProps> = ({
             </Button>
           </div>
 
-          {/* Grid Status Alert */}
           {localGrid && !localGrid.peak && localGrid.renewable > 50 && (
             <div className="flex items-center gap-2 p-2 bg-green-500/10 border border-green-500/30 rounded-lg">
               <Lightbulb className="h-4 w-4 text-green-500" />
               <p className="text-xs text-green-600">
-                <span className="font-medium">Green Grid Alert:</span> Your local grid is {localGrid.renewable}% renewable right now - great time for energy-intensive tasks!
+                <span className="font-medium">Green Grid Alert:</span> Your local grid is {localGrid.renewable}% renewable right now!
               </p>
             </div>
           )}
 
-          {/* Action List */}
           <ScrollArea className="h-[400px]">
             {actions.length === 0 ? (
               <Card className="bg-card/30">
                 <CardContent className="py-8 text-center text-muted-foreground">
                   <Leaf className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>Enter your location to get personalized eco-actions</p>
-                  <p className="text-xs mt-1">Actions are tailored to your local weather, grid, and infrastructure</p>
                 </CardContent>
               </Card>
             ) : (
               <div className="space-y-2">
                 {actions.sort((a, b) => b.eroi - a.eroi).map(action => (
-                  <Card 
-                    key={action.id} 
-                    className={`transition-all ${action.completed ? 'opacity-60 border-green-500' : ''}`}
-                  >
+                  <Card key={action.id} className={`transition-all ${action.completed ? 'opacity-60 border-green-500' : ''}`}>
                     <CardContent className="py-3">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="outline" className="gap-1">
-                              {getCategoryIcon(action.category)}
-                              {action.category}
-                            </Badge>
-                            <Badge className={`${getEROIColor(action.eroi)} bg-transparent border`}>
-                              EROI: {action.eroi}/10
-                            </Badge>
-                            <Badge variant="secondary" className="gap-1 text-xs">
-                              <Clock className="h-3 w-3" />
-                              {action.timeRequired}
-                            </Badge>
+                            <Badge variant="outline" className="gap-1">{getCategoryIcon(action.category)} {action.category}</Badge>
+                            <Badge className={`${getEROIColor(action.eroi)} bg-transparent border`}>EROI: {action.eroi}/10</Badge>
+                            <Badge variant="secondary" className="gap-1 text-xs"><Clock className="h-3 w-3" />{action.timeRequired}</Badge>
                             {action.localBonus && action.localBonus > 1 && (
                               <Badge className="bg-green-500/20 text-green-500 border-green-500/30 gap-1">
-                                <Sparkles className="h-3 w-3" />
-                                +{Math.round((action.localBonus - 1) * 100)}% local bonus
-                              </Badge>
-                            )}
-                            {action.recurring && (
-                              <Badge variant="outline" className="gap-1 text-xs">
-                                <RefreshCw className="h-3 w-3" />
-                                {action.frequency}
+                                <Sparkles className="h-3 w-3" />+{Math.round((action.localBonus - 1) * 100)}% bonus
                               </Badge>
                             )}
                           </div>
-                          
-                          <p className={`text-sm font-medium ${action.completed ? 'line-through' : ''}`}>
-                            {action.title}
-                          </p>
-                          
-                          <p className="text-xs text-muted-foreground">
-                            {action.description}
-                          </p>
-
-                          {/* Tips */}
+                          <p className={`text-sm font-medium ${action.completed ? 'line-through' : ''}`}>{action.title}</p>
+                          <p className="text-xs text-muted-foreground">{action.description}</p>
                           {action.tips && action.tips.length > 0 && !action.completed && (
                             <div className="flex items-start gap-1 text-xs text-primary">
-                              <Lightbulb className="h-3 w-3 mt-0.5 shrink-0" />
-                              <span>{action.tips[0]}</span>
+                              <Lightbulb className="h-3 w-3 mt-0.5 shrink-0" /><span>{action.tips[0]}</span>
                             </div>
                           )}
-                          
                           <div className="flex gap-3 text-xs">
-                            <span className="text-green-500">🌱 {action.impact.co2Saved}kg CO₂</span>
+                            <span className="text-green-500">🌱 {action.impact.co2Saved}kg</span>
                             <span className="text-blue-400">💧 {action.impact.waterSaved}L</span>
                             <span className="text-yellow-400">⚡ {action.impact.energySaved}kWh</span>
                             <span className="text-primary">💰 ${action.impact.moneySaved}</span>
                           </div>
                         </div>
-                        
-                        <Button 
-                          variant={action.completed ? "ghost" : "default"}
-                          size="sm"
-                          onClick={() => completeAction(action.id)}
-                          disabled={action.completed}
-                          className="shrink-0"
-                        >
-                          {action.completed ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <>
-                              <Sparkles className="h-4 w-4 mr-1" />
-                              Complete
-                            </>
-                          )}
+                        <Button variant={action.completed ? "ghost" : "default"} size="sm" onClick={() => completeAction(action.id)} disabled={action.completed} className="shrink-0">
+                          {action.completed ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <><Sparkles className="h-4 w-4 mr-1" />Complete</>}
                         </Button>
                       </div>
                     </CardContent>
@@ -776,36 +665,25 @@ const PlanetaryActionPanel: React.FC<PlanetaryActionPanelProps> = ({
         <TabsContent value="badges" className="mt-4">
           <div className="grid grid-cols-2 gap-3">
             {badges.map(badge => (
-              <Card 
-                key={badge.id}
-                className={`transition-all ${badge.earned ? 'border-primary' : 'opacity-60 grayscale'}`}
-              >
+              <Card key={badge.id} className={`transition-all ${badge.earned ? 'border-primary' : 'opacity-60 grayscale'}`}>
                 <CardContent className="py-3">
                   <div className="flex items-center gap-3">
                     <span className="text-3xl">{badge.icon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
                         <p className="font-medium text-sm truncate">{badge.name}</p>
-                        {badge.tier && (
-                          <Star className={`h-3 w-3 ${getTierColor(badge.tier)}`} />
-                        )}
+                        {badge.tier && <Star className={`h-3 w-3 ${getTierColor(badge.tier)}`} />}
                       </div>
                       <p className="text-xs text-muted-foreground">{badge.description}</p>
                       {!badge.earned && (
                         <div className="mt-1">
                           <Progress value={(badge.progress / badge.requirement) * 100} className="h-1" />
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
-                            {badge.progress}/{badge.requirement}
-                          </p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{badge.progress}/{badge.requirement}</p>
                         </div>
                       )}
                     </div>
                     {badge.earned && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => shareAchievement('badge', badge)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => shareAchievement('badge', badge)}>
                         <Share2 className="h-4 w-4" />
                       </Button>
                     )}
@@ -816,59 +694,31 @@ const PlanetaryActionPanel: React.FC<PlanetaryActionPanelProps> = ({
           </div>
         </TabsContent>
 
-        {/* Challenges Tab */}
-        <TabsContent value="challenges" className="mt-4 space-y-3">
-          {challenges.map(challenge => (
-            <Card key={challenge.id} className="border-warning/30">
-              <CardContent className="py-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <Flame className="h-4 w-4 text-warning" />
-                      <p className="font-medium">{challenge.name}</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">{challenge.description}</p>
-                    <div className="mt-2">
-                      <Progress value={(challenge.progress / challenge.target) * 100} className="h-2" />
-                      <div className="flex justify-between text-xs mt-1">
-                        <span>{challenge.progress}/{challenge.target}</span>
-                        <span className="text-muted-foreground">Ends {new Date(challenge.endsAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <Badge variant="secondary" className="text-xs">
-                      <Gift className="h-3 w-3 mr-1" />
-                      {challenge.reward}
-                    </Badge>
-                    <p className="text-xs text-muted-foreground mt-1">{challenge.participants} joined</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Challenges Tab - Now with Community Challenges */}
+        <TabsContent value="challenges" className="mt-4">
+          <CommunityChallenges userProgress={{ actionsCompleted: totalImpact.actionsCompleted, co2Saved: totalImpact.co2Saved }} />
         </TabsContent>
 
         {/* Leaderboard Tab */}
         <TabsContent value="leaderboard" className="mt-4">
           <EcoLeaderboard currentUserId={user?.id} />
         </TabsContent>
+
+        {/* Share Tab - Shareable Impact Card */}
+        <TabsContent value="share" className="mt-4">
+          <ShareableImpactCard
+            co2Saved={totalImpact.co2Saved}
+            waterSaved={totalImpact.waterSaved}
+            energySaved={totalImpact.energySaved}
+            moneySaved={totalImpact.moneySaved}
+            actionsCompleted={totalImpact.actionsCompleted}
+            treesEquivalent={totalImpact.treesEquivalent}
+            streak={streak}
+            level={level}
+          />
+        </TabsContent>
       </Tabs>
 
-      {/* Share Overall Progress */}
-      {totalImpact.actionsCompleted > 0 && (
-        <Button 
-          variant="outline" 
-          className="w-full"
-          onClick={() => shareAchievement('milestone', { 
-            co2: totalImpact.co2Saved.toFixed(1), 
-            trees: totalImpact.treesEquivalent 
-          })}
-        >
-          <Share2 className="h-4 w-4 mr-2" />
-          Share My Impact
-        </Button>
-      )}
     </div>
   );
 };
