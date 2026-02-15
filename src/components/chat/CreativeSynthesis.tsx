@@ -636,23 +636,29 @@ export const CreativeSynthesis = ({ isOpen, onClose, onInsertToChat, initialProm
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex flex-col"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      {/* Header - Premium */}
+      <div className="flex items-center justify-between p-4 border-b border-border/50 bg-gradient-to-r from-pink-500/5 via-transparent to-purple-500/5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center">
-            <Sparkles className="h-5 w-5 text-white" />
+          <div className="relative">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center shadow-lg shadow-pink-500/20">
+              <Sparkles className="h-5 w-5 text-white" />
+            </div>
+            {isGenerating && (
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                className="absolute -inset-1 rounded-xl border-2 border-transparent border-t-pink-500 border-r-purple-500" />
+            )}
           </div>
           <div>
             <h2 className="font-semibold flex items-center gap-2">
               Creative Synthesis
-              <Badge variant="secondary" className="text-xs">Multi-Modal</Badge>
+              <Badge className="text-xs bg-gradient-to-r from-pink-500/20 to-purple-500/20 text-pink-500 border-pink-500/30">Multi-Modal</Badge>
             </h2>
-            <p className="text-sm text-muted-foreground">
-              Transform abstract thoughts into multiple creative forms
+            <p className="text-xs text-muted-foreground">
+              Transform thoughts into poetry, code art, visuals & compositions
             </p>
           </div>
         </div>
-        <Button variant="ghost" onClick={onClose}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -719,24 +725,34 @@ Example: 'The bittersweet feeling of watching the seasons change, knowing time m
             </div>
           </div>
 
-          {/* Generate Button */}
-          <Button 
-            onClick={generateCreativeOutputs}
-            disabled={!theme.trim() || selectedOutputs.length === 0 || isGenerating}
-            className="w-full mt-4 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Synthesizing... ({completedCount}/{selectedOutputs.length})
-              </>
-            ) : (
-              <>
-                <Wand2 className="h-4 w-4 mr-2" />
-                Generate Creative Works
-              </>
+          {/* Generate Button - Premium */}
+          <div className="mt-4 space-y-2">
+            <Button 
+              onClick={generateCreativeOutputs}
+              disabled={!theme.trim() || selectedOutputs.length === 0 || isGenerating}
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 bg-[length:200%_100%] hover:animate-[gradient-shift_2s_ease_infinite] text-white font-semibold shadow-lg shadow-pink-500/20"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Synthesizing... ({completedCount}/{selectedOutputs.length})
+                </>
+              ) : (
+                <>
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Generate Creative Works
+                </>
+              )}
+            </Button>
+            {isGenerating && (
+              <div className="h-1 rounded-full bg-muted overflow-hidden">
+                <motion.div 
+                  animate={{ width: `${(completedCount / selectedOutputs.length) * 100}%` }}
+                  className="h-full rounded-full bg-gradient-to-r from-pink-500 to-purple-500"
+                />
+              </div>
             )}
-          </Button>
+          </div>
         </div>
 
         {/* Right Panel - Outputs */}

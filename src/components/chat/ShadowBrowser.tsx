@@ -110,7 +110,7 @@ interface ShadowBrowserProps {
   initialUrl?: string;
 }
 
-const DEFAULT_HOME = "https://www.google.com";
+const DEFAULT_HOME = "https://duckduckgo.com";
 
 // Sites that block iframe embedding via X-Frame-Options or CSP
 const BLOCKED_DOMAINS = [
