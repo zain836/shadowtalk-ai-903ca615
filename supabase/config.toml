@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.sso-configure]
 verify_jwt = false
+
+[functions.send-broadcast]
+verify_jwt = false
