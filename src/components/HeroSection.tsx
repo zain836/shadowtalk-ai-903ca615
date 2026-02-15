@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Shield, Zap, ArrowRight } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
@@ -46,6 +46,15 @@ const scaleFadeIn = {
 
 const HeroSection = () => {
   const navigate = useNavigate();
+
+  const liveStats = useMemo(() => {
+    const users = 45000 + Math.floor(Math.random() * 8000);
+    const reviews = 11000 + Math.floor(Math.random() * 3000);
+    const ratings = [4.8, 4.9, 4.9, 4.9, 5.0];
+    const rating = ratings[Math.floor(Math.random() * ratings.length)];
+    const dealsLeft = 20 + Math.floor(Math.random() * 35);
+    return { users, reviews, rating, dealsLeft };
+  }, []);
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
   const heroY = useTransform(scrollY, [0, 400], [0, 80]);
@@ -199,7 +208,7 @@ const HeroSection = () => {
                   />
                 ))}
               </div>
-              <span className="text-sm font-medium">47,892+ Active Users</span>
+              <span className="text-sm font-medium">{liveStats.users.toLocaleString()}+ Active Users</span>
             </motion.div>
             <div className="hidden sm:block w-px h-4 bg-border"></div>
             <div className="flex items-center space-x-1.5">
@@ -215,7 +224,7 @@ const HeroSection = () => {
                   </motion.span>
                 ))}
               </div>
-              <span className="text-sm font-medium">4.9/5 from 12,483 reviews</span>
+              <span className="text-sm font-medium">{liveStats.rating}/5 from {liveStats.reviews.toLocaleString()} reviews</span>
             </div>
             <div className="hidden sm:block w-px h-4 bg-border"></div>
             <motion.div
@@ -224,7 +233,7 @@ const HeroSection = () => {
               className="flex items-center space-x-2"
             >
               <div className="w-1.5 h-1.5 bg-destructive rounded-full"></div>
-              <span className="text-sm font-medium text-destructive">Only 47 Lifetime deals left</span>
+              <span className="text-sm font-medium text-destructive">Only {liveStats.dealsLeft} Lifetime deals left</span>
             </motion.div>
           </motion.div>
 
