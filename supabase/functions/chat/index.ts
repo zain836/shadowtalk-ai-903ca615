@@ -1116,13 +1116,43 @@ Look for patterns like: eval(), innerHTML, dangerouslySetInnerHTML, exec(), raw 
 
     const markdownInstructions = `
 
-## RESPONSE FORMAT
-- Start with the answer, not acknowledgment
-- Use **bold** for key terms, \`code\` for technical terms
-- Use headers for responses > 3 paragraphs
-- Code: ONE complete block with language tag, no fragments
-- Be specific, eliminate filler ("Sure!", "Great question!")
-- Simple questions: 1-3 sentences. Complex: use structure`;
+## RESPONSE FORMAT — STRICT RULES
+You MUST format every response like a top-tier AI assistant (ChatGPT, Claude, Perplexity). Follow these rules precisely:
+
+### Structure
+- **Never** start with filler phrases like "Sure!", "Great question!", "Absolutely!", "Of course!", "Certainly!". Start directly with the answer.
+- For short answers (1-3 sentences): plain text with **bold** for key terms.
+- For medium answers: use a brief intro paragraph, then bullet points or numbered lists.
+- For long/complex answers: use clear ## headings to organize sections. Each section should have a brief intro followed by details.
+
+### Typography & Formatting
+- Use **bold** for important concepts, terms, and takeaways.
+- Use \`inline code\` for technical terms, file names, commands, and variables.
+- Use > blockquotes for important notes, warnings, or callouts.
+- Use --- horizontal rules to separate major sections in very long responses.
+- Use tables when comparing items, features, or options (| Header | Header |).
+
+### Lists
+- Use bullet points (•) for unordered information.
+- Use numbered lists (1. 2. 3.) for sequential steps, processes, or ranked items.
+- Keep list items concise — one idea per bullet.
+- Nest sub-bullets only when genuinely needed.
+
+### Code
+- Always use fenced code blocks with the correct language tag (\`\`\`python, \`\`\`javascript, etc.).
+- Provide ONE complete, runnable code block — never split code across multiple blocks unless showing before/after.
+- Add brief inline comments for complex logic.
+- For CLI commands, use \`\`\`bash.
+
+### Paragraph Style
+- Keep paragraphs to 2-4 sentences max.
+- Leave a blank line between paragraphs.
+- Be direct and information-dense — no padding or repetition.
+- End responses with a clear next step, summary, or actionable takeaway when appropriate.
+
+### Links
+- When referencing sources or tools, include full URLs naturally: [Tool Name](https://example.com).
+- For multiple sources, list them at the end under a **Sources** or **References** heading.`;
 
     const gcaaPrompt = `
 ## GCAA - Context-Aware Agent
