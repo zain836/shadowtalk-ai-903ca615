@@ -10,21 +10,17 @@ import {
   Maximize2,
   Minimize2,
   Star,
-  StarOff,
   ExternalLink,
   Sparkles,
-  BookOpen,
   FileText,
   Loader2,
   Home,
-  Settings,
   Trash2,
   PanelLeftClose,
   PanelLeft,
   MessageSquare,
   Bookmark,
   Clock,
-  ChevronDown,
   Users,
   Lightbulb,
   Send,
@@ -33,19 +29,18 @@ import {
   Link2,
   HelpCircle,
   TrendingUp,
+  WifiOff,
+  AlertTriangle,
+  RefreshCw,
+  ShieldAlert,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -57,6 +52,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+// ─── Types ─────────────────────────────────────────────────────
+
 interface BrowserTab {
   id: string;
   url: string;
@@ -66,9 +63,16 @@ interface BrowserTab {
   canGoBack: boolean;
   canGoForward: boolean;
   aiContext?: string;
+  error?: TabError | null;
 }
 
-interface Bookmark {
+interface TabError {
+  type: "blocked" | "network" | "timeout" | "cors" | "unknown";
+  message: string;
+  retryable: boolean;
+}
+
+interface BookmarkItem {
   id: string;
   url: string;
   title: string;
@@ -82,19 +86,12 @@ interface HistoryItem {
   visitedAt: Date;
 }
 
-interface SearchResult {
-  title: string;
-  url: string;
-  snippet: string;
-  domain: string;
-}
-
 interface BrowseTogetherMessage {
   id: string;
-  role: "user" | "ai" | "system";
+  role: "user" | "ai" | "system" | "error";
   content: string;
   timestamp: Date;
-  type?: "suggestion" | "summary" | "question" | "answer" | "insight";
+  type?: "suggestion" | "summary" | "question" | "answer" | "insight" | "error";
 }
 
 interface RelatedContent {
@@ -110,14 +107,259 @@ interface ShadowBrowserProps {
   initialUrl?: string;
 }
 
-const DEFAULT_HOME = "https://duckduckgo.com";
+// ─── Constants ─────────────────────────────────────────────────
 
-// Sites that block iframe embedding via X-Frame-Options or CSP
+const DEFAULT_HOME = "https://duckduckgo.com";
+const AI_REQUEST_TIMEOUT = 30000;
+const MAX_RETRIES = 2;
+
 const BLOCKED_DOMAINS = [
-  "google.com", "youtube.com", "github.com", "facebook.com", "twitter.com", 
+  "google.com", "youtube.com", "github.com", "facebook.com", "twitter.com",
   "x.com", "instagram.com", "linkedin.com", "netflix.com", "amazon.com",
-  "microsoft.com", "apple.com", "reddit.com", "twitch.tv", "discord.com"
+  "microsoft.com", "apple.com", "reddit.com", "twitch.tv", "discord.com",
 ];
+
+// ─── Helpers ───────────────────────────────────────────────────
+
+const isOnline = () => typeof navigator !== "undefined" ? navigator.onLine : true;
+
+const formatUrl = (input: string): string => {
+  let url = input.trim();
+  if (!url.includes(".") || url.includes(" ")) {
+    return `https://duckduckgo.com/?q=${encodeURIComponent(url)}`;
+  }
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    url = "https://" + url;
+  }
+  return url;
+};
+
+const isBlockedDomain = (url: string): boolean => {
+  try {
+    const domain = new URL(url).hostname.replace("www.", "");
+    return BLOCKED_DOMAINS.some((blocked) => domain.includes(blocked));
+  } catch {
+    return false;
+  }
+};
+
+const getDomainFromUrl = (url: string): string => {
+  try { return new URL(url).hostname; } catch { return url; }
+};
+
+/** Fetch AI with timeout, retry, and offline detection */
+const fetchAIWithRetry = async (
+  url: string,
+  options: RequestInit,
+  retries = MAX_RETRIES,
+  timeout = AI_REQUEST_TIMEOUT
+): Promise<Response> => {
+  if (!isOnline()) {
+    throw new AIError("You're offline. Please check your connection.", "offline", false);
+  }
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+
+      if (response.ok) return response;
+
+      const errorBody = await response.text().catch(() => "");
+      let errorMessage = `Request failed (${response.status})`;
+
+      try {
+        const parsed = JSON.parse(errorBody);
+        errorMessage = parsed.error || parsed.message || errorMessage;
+      } catch { /* not JSON */ }
+
+      // Don't retry 4xx except 429
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        throw new AIError(errorMessage, "api", false);
+      }
+
+      // Retry on 5xx or 429
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+        continue;
+      }
+
+      throw new AIError(errorMessage, "api", true);
+    } catch (err) {
+      clearTimeout(timer);
+      if (err instanceof AIError) throw err;
+      if ((err as Error).name === "AbortError") {
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, 1000));
+          continue;
+        }
+        throw new AIError("Request timed out. The AI service may be slow.", "timeout", true);
+      }
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+        continue;
+      }
+      throw new AIError("Network error. Please check your connection.", "network", true);
+    }
+  }
+  throw new AIError("Max retries exceeded.", "network", true);
+};
+
+class AIError extends Error {
+  type: "offline" | "timeout" | "api" | "network" | "parse";
+  retryable: boolean;
+  constructor(message: string, type: AIError["type"], retryable: boolean) {
+    super(message);
+    this.name = "AIError";
+    this.type = type;
+    this.retryable = retryable;
+  }
+}
+
+/** Parse streaming SSE response safely */
+const parseStreamingResponse = async (
+  response: Response,
+  onChunk: (content: string) => void
+): Promise<string> => {
+  const reader = response.body?.getReader();
+  if (!reader) throw new AIError("No response body", "api", false);
+
+  const decoder = new TextDecoder();
+  let fullContent = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      for (const line of chunk.split("\n")) {
+        if (!line.startsWith("data: ") || line === "data: [DONE]") continue;
+        try {
+          const data = JSON.parse(line.slice(6));
+          const content = data.choices?.[0]?.delta?.content;
+          if (content) {
+            fullContent += content;
+            onChunk(fullContent);
+          }
+        } catch { /* skip malformed SSE lines */ }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return fullContent;
+};
+
+// ─── Error Display Component ───────────────────────────────────
+
+const ErrorOverlay = ({
+  error,
+  url,
+  onRetry,
+  onOpenExternal,
+  onGoHome,
+}: {
+  error: TabError;
+  url: string;
+  onRetry: () => void;
+  onOpenExternal: () => void;
+  onGoHome: () => void;
+}) => {
+  const iconMap = {
+    blocked: <ShieldAlert className="h-10 w-10 text-amber-500" />,
+    network: <WifiOff className="h-10 w-10 text-destructive" />,
+    timeout: <Clock className="h-10 w-10 text-yellow-500" />,
+    cors: <ShieldAlert className="h-10 w-10 text-amber-500" />,
+    unknown: <AlertTriangle className="h-10 w-10 text-destructive" />,
+  };
+
+  const titleMap = {
+    blocked: "Site Blocks Embedding",
+    network: "Connection Failed",
+    timeout: "Page Load Timeout",
+    cors: "Security Restriction",
+    unknown: "Something Went Wrong",
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 bg-background/95 backdrop-blur-md flex items-center justify-center z-20"
+    >
+      <div className="text-center max-w-md px-6">
+        <div className="h-20 w-20 mx-auto rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/30 flex items-center justify-center mb-6 shadow-lg">
+          {iconMap[error.type]}
+        </div>
+        <h3 className="text-xl font-bold mb-2">{titleMap[error.type]}</h3>
+        <p className="text-sm text-muted-foreground mb-2">{error.message}</p>
+        <p className="text-xs text-muted-foreground/70 mb-6 font-mono truncate max-w-xs mx-auto">
+          {getDomainFromUrl(url)}
+        </p>
+        <div className="flex flex-col gap-3">
+          {error.retryable && (
+            <Button onClick={onRetry} className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Try Again
+            </Button>
+          )}
+          <Button onClick={onOpenExternal} variant={error.retryable ? "outline" : "default"} className="gap-2">
+            <ExternalLink className="h-4 w-4" />
+            Open in New Tab
+          </Button>
+          <Button variant="ghost" onClick={onGoHome} className="gap-2 text-muted-foreground">
+            <Home className="h-4 w-4" />
+            Go Home
+          </Button>
+        </div>
+        {error.type === "blocked" && (
+          <p className="text-xs text-muted-foreground mt-4">
+            Tip: DuckDuckGo and many sites allow embedding.
+          </p>
+        )}
+      </div>
+    </motion.div>
+  );
+};
+
+// ─── Connection Status ─────────────────────────────────────────
+
+const ConnectionStatus = () => {
+  const [online, setOnline] = useState(isOnline());
+
+  useEffect(() => {
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  if (online) return null;
+
+  return (
+    <motion.div
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      className="bg-destructive/10 border-b border-destructive/20 px-4 py-2 flex items-center gap-2"
+    >
+      <WifiOff className="h-4 w-4 text-destructive" />
+      <span className="text-xs text-destructive font-medium">You're offline — browsing and AI features are unavailable</span>
+    </motion.div>
+  );
+};
+
+// ─── Main Component ────────────────────────────────────────────
 
 export const ShadowBrowser = ({
   isOpen,
@@ -126,7 +368,7 @@ export const ShadowBrowser = ({
   initialUrl,
 }: ShadowBrowserProps) => {
   const { toast } = useToast();
-  
+
   // Core state
   const [tabs, setTabs] = useState<BrowserTab[]>([
     {
@@ -136,6 +378,7 @@ export const ShadowBrowser = ({
       isLoading: true,
       canGoBack: false,
       canGoForward: false,
+      error: null,
     },
   ]);
   const [activeTabId, setActiveTabId] = useState(tabs[0].id);
@@ -143,13 +386,12 @@ export const ShadowBrowser = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
   const [sidebarMode, setSidebarMode] = useState<"ai" | "bookmarks" | "history" | "together">("together");
-  
+
   // AI Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [aiSummary, setAiSummary] = useState("");
-  
+
   // Browse Together state
   const [browseTogetherEnabled, setBrowseTogetherEnabled] = useState(true);
   const [browseTogetherMessages, setBrowseTogetherMessages] = useState<BrowseTogetherMessage[]>([]);
@@ -159,95 +401,123 @@ export const ShadowBrowser = ({
   const [pageInsights, setPageInsights] = useState<string[]>([]);
   const [autoAnalyze, setAutoAnalyze] = useState(true);
   const lastAnalyzedUrl = useRef<string>("");
-  const [iframeBlocked, setIframeBlocked] = useState(false);
-  
+
   // Bookmarks & History
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>(() => {
-    const saved = localStorage.getItem("shadow-browser-bookmarks");
-    return saved ? JSON.parse(saved) : [];
+  const [bookmarks, setBookmarks] = useState<BookmarkItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("shadow-browser-bookmarks");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
   });
   const [history, setHistory] = useState<HistoryItem[]>(() => {
-    const saved = localStorage.getItem("shadow-browser-history");
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem("shadow-browser-history");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
   });
-  
+
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  
+  const iframeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Get active tab
   const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0];
-  
-  // Save bookmarks to localStorage
+
+  // Persist bookmarks & history
   useEffect(() => {
-    localStorage.setItem("shadow-browser-bookmarks", JSON.stringify(bookmarks));
+    try { localStorage.setItem("shadow-browser-bookmarks", JSON.stringify(bookmarks)); } catch { /* quota exceeded */ }
   }, [bookmarks]);
-  
-  // Save history to localStorage
   useEffect(() => {
-    localStorage.setItem("shadow-browser-history", JSON.stringify(history.slice(0, 100)));
+    try { localStorage.setItem("shadow-browser-history", JSON.stringify(history.slice(0, 100))); } catch { /* quota exceeded */ }
   }, [history]);
-  
+
   // Update URL input when active tab changes
   useEffect(() => {
-    if (activeTab) {
-      setUrlInput(activeTab.url);
-    }
+    if (activeTab) setUrlInput(activeTab.url);
   }, [activeTabId, activeTab?.url]);
-  
-  // Format URL for navigation
-  const formatUrl = (input: string): string => {
-    let url = input.trim();
-    
-    // Check if it's a search query
-    if (!url.includes(".") || url.includes(" ")) {
-      return `https://www.google.com/search?q=${encodeURIComponent(url)}`;
-    }
-    
-    // Add protocol if missing
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      url = "https://" + url;
-    }
-    
-    return url;
-  };
-  
-  // Navigate to URL
+
+  // ─── Auth helper ───────────────────────────────────────────
+
+  const getAuthHeaders = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    };
+  }, []);
+
+  // ─── Navigation ────────────────────────────────────────────
+
   const navigateTo = useCallback((url: string) => {
     const formattedUrl = formatUrl(url);
-    setIframeBlocked(false);
-    
+
+    // Check blocked before loading
+    if (isBlockedDomain(formattedUrl)) {
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === activeTabId
+            ? {
+                ...tab,
+                url: formattedUrl,
+                isLoading: false,
+                title: getDomainFromUrl(formattedUrl),
+                error: {
+                  type: "blocked" as const,
+                  message: `${getDomainFromUrl(formattedUrl)} has security restrictions that prevent embedding. This is a common browser security feature.`,
+                  retryable: false,
+                },
+              }
+            : tab
+        )
+      );
+      setUrlInput(formattedUrl);
+      setHistory((prev) => [
+        { url: formattedUrl, title: getDomainFromUrl(formattedUrl), visitedAt: new Date() },
+        ...prev.filter((h) => h.url !== formattedUrl),
+      ]);
+      return;
+    }
+
     setTabs((prev) =>
       prev.map((tab) =>
         tab.id === activeTabId
-          ? { ...tab, url: formattedUrl, isLoading: true, title: "Loading..." }
+          ? { ...tab, url: formattedUrl, isLoading: true, title: "Loading...", error: null }
           : tab
       )
     );
     setUrlInput(formattedUrl);
-    
-    // Add to history
     setHistory((prev) => [
       { url: formattedUrl, title: formattedUrl, visitedAt: new Date() },
       ...prev.filter((h) => h.url !== formattedUrl),
     ]);
+
+    // Set a timeout for slow loading pages
+    if (iframeTimeoutRef.current) clearTimeout(iframeTimeoutRef.current);
+    iframeTimeoutRef.current = setTimeout(() => {
+      setTabs((prev) =>
+        prev.map((tab) =>
+          tab.id === activeTabId && tab.isLoading
+            ? {
+                ...tab,
+                isLoading: false,
+                error: {
+                  type: "timeout" as const,
+                  message: "Page took too long to load. The site may be down or blocking embedded access.",
+                  retryable: true,
+                },
+              }
+            : tab
+        )
+      );
+    }, 15000);
   }, [activeTabId]);
 
-  // Check if domain blocks embedding
-  const isBlockedDomain = useCallback((url: string) => {
-    try {
-      const domain = new URL(url).hostname.replace("www.", "");
-      return BLOCKED_DOMAINS.some(blocked => domain.includes(blocked));
-    } catch {
-      return false;
-    }
-  }, []);
-  
-  // Handle URL submission
   const handleUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     navigateTo(urlInput);
   };
-  
-  // Tab management
+
+  // ─── Tab Management ────────────────────────────────────────
+
   const addNewTab = () => {
     const newTab: BrowserTab = {
       id: crypto.randomUUID(),
@@ -256,303 +526,164 @@ export const ShadowBrowser = ({
       isLoading: true,
       canGoBack: false,
       canGoForward: false,
+      error: null,
     };
     setTabs((prev) => [...prev, newTab]);
     setActiveTabId(newTab.id);
     setUrlInput(DEFAULT_HOME);
   };
-  
+
   const closeTab = (tabId: string) => {
     if (tabs.length === 1) {
-      // Don't close the last tab, just reset it
-      setTabs([
-        {
-          id: crypto.randomUUID(),
-          url: DEFAULT_HOME,
-          title: "New Tab",
-          isLoading: true,
-          canGoBack: false,
-          canGoForward: false,
-        },
-      ]);
-      setActiveTabId(tabs[0].id);
+      const newId = crypto.randomUUID();
+      setTabs([{ id: newId, url: DEFAULT_HOME, title: "New Tab", isLoading: true, canGoBack: false, canGoForward: false, error: null }]);
+      setActiveTabId(newId);
       return;
     }
-    
     const tabIndex = tabs.findIndex((t) => t.id === tabId);
     const newTabs = tabs.filter((t) => t.id !== tabId);
     setTabs(newTabs);
-    
-    // If closing active tab, switch to adjacent tab
     if (tabId === activeTabId) {
-      const newActiveIndex = Math.min(tabIndex, newTabs.length - 1);
-      setActiveTabId(newTabs[newActiveIndex].id);
+      setActiveTabId(newTabs[Math.min(tabIndex, newTabs.length - 1)].id);
     }
   };
-  
-  // Handle iframe load
+
+  // ─── Iframe Load Handler ───────────────────────────────────
+
   const handleIframeLoad = () => {
+    if (iframeTimeoutRef.current) clearTimeout(iframeTimeoutRef.current);
+
     setTabs((prev) =>
       prev.map((tab) =>
-        tab.id === activeTabId
-          ? { ...tab, isLoading: false }
-          : tab
+        tab.id === activeTabId ? { ...tab, isLoading: false, error: null } : tab
       )
     );
-    
-    // Check if iframe is blocked
-    setTimeout(() => {
-      const isBlocked = isBlockedDomain(activeTab.url);
-      setIframeBlocked(isBlocked);
-    }, 500);
-    
-    // Try to get page title (may fail due to CORS)
+
+    // Try to get page title
     try {
       const iframe = iframeRef.current;
       if (iframe?.contentDocument?.title) {
         setTabs((prev) =>
           prev.map((tab) =>
             tab.id === activeTabId
-              ? { ...tab, title: iframe.contentDocument?.title || tab.url }
+              ? { ...tab, title: iframe.contentDocument?.title || getDomainFromUrl(tab.url) }
               : tab
           )
         );
       }
-    } catch (e) {
-      // CORS restriction - use URL as title
-      const domain = new URL(activeTab.url).hostname;
+    } catch {
       setTabs((prev) =>
         prev.map((tab) =>
-          tab.id === activeTabId
-            ? { ...tab, title: domain }
-            : tab
+          tab.id === activeTabId ? { ...tab, title: getDomainFromUrl(tab.url) } : tab
         )
       );
     }
   };
-  
-  // Bookmark management
+
+  const handleIframeError = () => {
+    if (iframeTimeoutRef.current) clearTimeout(iframeTimeoutRef.current);
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === activeTabId
+          ? {
+              ...tab,
+              isLoading: false,
+              error: {
+                type: "network" as const,
+                message: "Failed to load this page. The site may be down or unreachable.",
+                retryable: true,
+              },
+            }
+          : tab
+      )
+    );
+  };
+
+  // ─── Bookmarks ─────────────────────────────────────────────
+
   const isBookmarked = bookmarks.some((b) => b.url === activeTab?.url);
-  
+
   const toggleBookmark = () => {
     if (isBookmarked) {
       setBookmarks((prev) => prev.filter((b) => b.url !== activeTab.url));
       toast({ title: "Bookmark removed" });
     } else {
       setBookmarks((prev) => [
-        {
-          id: crypto.randomUUID(),
-          url: activeTab.url,
-          title: activeTab.title,
-          createdAt: new Date(),
-        },
+        { id: crypto.randomUUID(), url: activeTab.url, title: activeTab.title, createdAt: new Date() },
         ...prev,
       ]);
       toast({ title: "Bookmark added" });
     }
   };
-  
-  // AI-powered web search
+
+  // ─── AI Search ─────────────────────────────────────────────
+
   const performAISearch = async () => {
     if (!searchQuery.trim()) return;
-    
     setIsSearching(true);
-    setSearchResults([]);
     setAiSummary("");
-    
+
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // Call chat function with web search mode
-      const response = await fetch(
+      const headers = await getAuthHeaders();
+      const response = await fetchAIWithRetry(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
+          headers,
           body: JSON.stringify({
             messages: [{ role: "user", content: searchQuery }],
             personality: "professional",
-            webSearch: true,
-            searchQuery: searchQuery,
           }),
         }
       );
-      
-      if (!response.ok) throw new Error("Search failed");
-      
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = "";
-      
-      while (reader) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-        
-        for (const line of lines) {
-          if (line.startsWith("data: ") && line !== "data: [DONE]") {
-            try {
-              const data = JSON.parse(line.slice(6));
-              const content = data.choices?.[0]?.delta?.content;
-              if (content) {
-                fullContent += content;
-                setAiSummary(fullContent);
-              }
-            } catch {}
-          }
-        }
-      }
-      
-      // Extract URLs from the response for quick navigation
-      const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
-      const urls = fullContent.match(urlRegex) || [];
-      const results: SearchResult[] = urls.slice(0, 5).map((url) => {
-        let domain = "";
-        try {
-          domain = new URL(url).hostname;
-        } catch {
-          domain = url.slice(0, 30);
-        }
-        return {
-          title: domain,
-          url: url.replace(/[.,;:!?)]+$/, ""),
-          snippet: "Found in AI response",
-          domain,
-        };
-      });
-      
-      setSearchResults(results);
-      
+
+      await parseStreamingResponse(response, (content) => setAiSummary(content));
     } catch (error) {
-      console.error("AI search error:", error);
-      toast({
-        title: "Search failed",
-        description: "Please try again.",
-        variant: "destructive",
-      });
+      const msg = error instanceof AIError ? error.message : "Search failed. Please try again.";
+      toast({ title: "Search Error", description: msg, variant: "destructive" });
+      setAiSummary(`❌ ${msg}`);
     } finally {
       setIsSearching(false);
     }
   };
-  
-  // Get AI context for current page
-  const getPageContext = async () => {
-    toast({
-      title: "Analyzing page...",
-      description: "AI is reading this webpage.",
-    });
-    
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            messages: [
-              {
-                role: "user",
-                content: `Summarize this webpage: ${activeTab.url}. Provide key points and main content.`,
-              },
-            ],
-            personality: "professional",
-          }),
-        }
-      );
-      
-      if (!response.ok) throw new Error("Analysis failed");
-      
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let context = "";
-      
-      while (reader) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-        
-        for (const line of lines) {
-          if (line.startsWith("data: ") && line !== "data: [DONE]") {
-            try {
-              const data = JSON.parse(line.slice(6));
-              const content = data.choices?.[0]?.delta?.content;
-              if (content) context += content;
-            } catch {}
-          }
-        }
-      }
-      
-      setTabs((prev) =>
-        prev.map((tab) =>
-          tab.id === activeTabId ? { ...tab, aiContext: context } : tab
-        )
-      );
-      
-      setAiSummary(context);
-      setSidebarMode("ai");
-      
-      toast({ title: "Page analyzed", description: "AI summary ready!" });
-      
-    } catch (error) {
-      console.error("Page context error:", error);
-      toast({
-        title: "Analysis failed",
-        description: "Could not analyze this page.",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  // Browse Together: Auto-analyze page when URL changes
+
+  // ─── Browse Together ───────────────────────────────────────
+
   useEffect(() => {
-    if (browseTogetherEnabled && autoAnalyze && activeTab?.url && activeTab.url !== lastAnalyzedUrl.current) {
+    if (browseTogetherEnabled && autoAnalyze && activeTab?.url && activeTab.url !== lastAnalyzedUrl.current && !activeTab.error) {
       const timer = setTimeout(() => {
-        if (activeTab.url !== DEFAULT_HOME && !activeTab.url.includes("google.com/search")) {
+        if (activeTab.url !== DEFAULT_HOME && !activeTab.url.includes("duckduckgo.com/?q=")) {
           analyzePageForBrowseTogether();
           lastAnalyzedUrl.current = activeTab.url;
         }
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [activeTab?.url, browseTogetherEnabled, autoAnalyze]);
-  
-  // Browse Together: Analyze current page
+  }, [activeTab?.url, browseTogetherEnabled, autoAnalyze, activeTab?.error]);
+
+  const addBrowseMessage = (msg: Omit<BrowseTogetherMessage, "id" | "timestamp">) => {
+    setBrowseTogetherMessages((prev) => [
+      ...prev,
+      { ...msg, id: crypto.randomUUID(), timestamp: new Date() },
+    ]);
+  };
+
   const analyzePageForBrowseTogether = async () => {
     if (!activeTab?.url || activeTab.url === DEFAULT_HOME) return;
-    
     setIsAIThinking(true);
-    
+
+    addBrowseMessage({
+      role: "system",
+      content: `📍 Now viewing: ${activeTab.title || getDomainFromUrl(activeTab.url)}`,
+    });
+
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const systemMessage: BrowseTogetherMessage = {
-        id: crypto.randomUUID(),
-        role: "system",
-        content: `📍 Now viewing: ${activeTab.title || new URL(activeTab.url).hostname}`,
-        timestamp: new Date(),
-      };
-      setBrowseTogetherMessages(prev => [...prev, systemMessage]);
-      
-      const response = await fetch(
+      const headers = await getAuthHeaders();
+      const response = await fetchAIWithRetry(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
+          headers,
           body: JSON.stringify({
             messages: [
               {
@@ -574,213 +705,127 @@ Be concise and helpful.`,
           }),
         }
       );
-      
-      if (!response.ok) throw new Error("Analysis failed");
-      
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = "";
-      
-      while (reader) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-        
-        for (const line of lines) {
-          if (line.startsWith("data: ") && line !== "data: [DONE]") {
-            try {
-              const data = JSON.parse(line.slice(6));
-              const content = data.choices?.[0]?.delta?.content;
-              if (content) fullContent += content;
-            } catch {}
-          }
-        }
-      }
-      
-      // Parse the AI response
+
+      const fullContent = await parseStreamingResponse(response, () => {});
+
+      // Parse AI response
       try {
-        // Extract JSON from the response
         const jsonMatch = fullContent.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
-          
-          // Add summary message
+
           if (parsed.summary) {
-            const summaryMessage: BrowseTogetherMessage = {
-              id: crypto.randomUUID(),
-              role: "ai",
-              content: parsed.summary,
-              timestamp: new Date(),
-              type: "summary",
-            };
-            setBrowseTogetherMessages(prev => [...prev, summaryMessage]);
+            addBrowseMessage({ role: "ai", content: parsed.summary, type: "summary" });
           }
-          
-          // Set insights
-          if (parsed.insights) {
-            setPageInsights(parsed.insights);
-          }
-          
-          // Set related content
+          if (parsed.insights) setPageInsights(parsed.insights);
           if (parsed.relatedTopics) {
-            setRelatedContent(parsed.relatedTopics.map((t: any) => ({
-              title: t.title,
-              url: `https://www.google.com/search?q=${encodeURIComponent(t.searchQuery)}`,
-              relevance: "Related topic",
-            })));
+            setRelatedContent(
+              parsed.relatedTopics.map((t: { title: string; searchQuery: string }) => ({
+                title: t.title,
+                url: `https://duckduckgo.com/?q=${encodeURIComponent(t.searchQuery)}`,
+                relevance: "Related topic",
+              }))
+            );
           }
-          
-          // Add suggested question
           if (parsed.suggestedQuestions?.[0]) {
-            const suggestionMessage: BrowseTogetherMessage = {
-              id: crypto.randomUUID(),
-              role: "ai",
-              content: parsed.suggestedQuestions[0],
-              timestamp: new Date(),
-              type: "suggestion",
-            };
-            setBrowseTogetherMessages(prev => [...prev, suggestionMessage]);
+            addBrowseMessage({ role: "ai", content: parsed.suggestedQuestions[0], type: "suggestion" });
           }
+        } else {
+          addBrowseMessage({ role: "ai", content: fullContent.slice(0, 500), type: "summary" });
         }
       } catch {
-        // If parsing fails, just add the raw summary
-        const aiMessage: BrowseTogetherMessage = {
-          id: crypto.randomUUID(),
-          role: "ai",
-          content: fullContent.slice(0, 500),
-          timestamp: new Date(),
-          type: "summary",
-        };
-        setBrowseTogetherMessages(prev => [...prev, aiMessage]);
+        addBrowseMessage({ role: "ai", content: fullContent.slice(0, 500), type: "summary" });
       }
-      
     } catch (error) {
-      console.error("Browse Together analysis error:", error);
+      const msg = error instanceof AIError ? error.message : "Could not analyze this page.";
+      addBrowseMessage({ role: "error", content: `⚠️ ${msg}`, type: "error" });
     } finally {
       setIsAIThinking(false);
     }
   };
-  
-  // Browse Together: Ask question about current page
-  const askBrowseTogetherQuestion = async () => {
-    if (!browseTogetherInput.trim()) return;
-    
-    const userMessage: BrowseTogetherMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: browseTogetherInput,
-      timestamp: new Date(),
-      type: "question",
-    };
-    setBrowseTogetherMessages(prev => [...prev, userMessage]);
-    setBrowseTogetherInput("");
+
+  // Fixed: directly pass the question text instead of relying on stale state
+  const askQuestion = async (question: string) => {
+    if (!question.trim()) return;
     setIsAIThinking(true);
-    
+
+    addBrowseMessage({ role: "user", content: question, type: "question" });
+
+    const aiMsgId = crypto.randomUUID();
+    setBrowseTogetherMessages((prev) => [
+      ...prev,
+      { id: aiMsgId, role: "ai", content: "", timestamp: new Date(), type: "answer" },
+    ]);
+
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const response = await fetch(
+      const headers = await getAuthHeaders();
+      const response = await fetchAIWithRetry(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
+          headers,
           body: JSON.stringify({
             messages: [
               {
                 role: "system",
                 content: `You are a helpful AI browsing assistant. The user is currently viewing: ${activeTab?.url}. Answer their question about this page or help them browse. Be concise and helpful.`,
               },
-              {
-                role: "user",
-                content: browseTogetherInput,
-              },
+              { role: "user", content: question },
             ],
             personality: "professional",
           }),
         }
       );
-      
-      if (!response.ok) throw new Error("Question failed");
-      
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = "";
-      
-      const aiMessage: BrowseTogetherMessage = {
-        id: crypto.randomUUID(),
-        role: "ai",
-        content: "",
-        timestamp: new Date(),
-        type: "answer",
-      };
-      setBrowseTogetherMessages(prev => [...prev, aiMessage]);
-      
-      while (reader) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-        
-        for (const line of lines) {
-          if (line.startsWith("data: ") && line !== "data: [DONE]") {
-            try {
-              const data = JSON.parse(line.slice(6));
-              const content = data.choices?.[0]?.delta?.content;
-              if (content) {
-                fullContent += content;
-                setBrowseTogetherMessages(prev => 
-                  prev.map(m => m.id === aiMessage.id ? { ...m, content: fullContent } : m)
-                );
-              }
-            } catch {}
-          }
-        }
-      }
-      
-    } catch (error) {
-      console.error("Browse Together question error:", error);
-      toast({
-        title: "Couldn't get an answer",
-        description: "Please try again.",
-        variant: "destructive",
+
+      await parseStreamingResponse(response, (content) => {
+        setBrowseTogetherMessages((prev) =>
+          prev.map((m) => (m.id === aiMsgId ? { ...m, content } : m))
+        );
       });
+    } catch (error) {
+      const msg = error instanceof AIError ? error.message : "Couldn't get an answer.";
+      setBrowseTogetherMessages((prev) =>
+        prev.map((m) => (m.id === aiMsgId ? { ...m, role: "error", content: `⚠️ ${msg}`, type: "error" } : m))
+      );
     } finally {
       setIsAIThinking(false);
     }
   };
-  
-  // Browse Together: Quick actions
-  const browseTogetherQuickAction = async (action: string) => {
-    setBrowseTogetherInput(action);
-    setTimeout(() => {
-      askBrowseTogetherQuestion();
-    }, 100);
+
+  const handleAskFromInput = () => {
+    const q = browseTogetherInput.trim();
+    if (!q) return;
+    setBrowseTogetherInput("");
+    askQuestion(q);
   };
-  
-  // Send to chat
+
+  const browseTogetherQuickAction = (action: string) => {
+    askQuestion(action);
+  };
+
   const sendToChat = (content: string) => {
     if (onInsertToChat) {
       onInsertToChat(content);
       toast({ title: "Sent to chat" });
     }
   };
-  
-  // Clear Browse Together conversation
+
   const clearBrowseTogetherChat = () => {
     setBrowseTogetherMessages([]);
     setPageInsights([]);
     setRelatedContent([]);
     lastAnalyzedUrl.current = "";
   };
-  
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (iframeTimeoutRef.current) clearTimeout(iframeTimeoutRef.current);
+    };
+  }, []);
+
   if (!isOpen) return null;
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -793,9 +838,11 @@ Be concise and helpful.`,
           : "right-4 top-4 bottom-4 w-[85vw] max-w-6xl rounded-2xl"
       }`}
     >
-      {/* Browser Header - Glassmorphism Tab Bar */}
+      {/* Connection Status Banner */}
+      <ConnectionStatus />
+
+      {/* Tab Bar */}
       <div className="flex items-center gap-2 p-2 border-b border-border/50 bg-gradient-to-r from-muted/50 via-muted/30 to-muted/50 backdrop-blur-xl">
-        {/* Tab Bar */}
         <ScrollArea className="flex-1">
           <div className="flex items-center gap-1.5">
             {tabs.map((tab) => (
@@ -812,6 +859,8 @@ Be concise and helpful.`,
               >
                 {tab.isLoading ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />
+                ) : tab.error ? (
+                  <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
                 ) : (
                   <div className="h-4 w-4 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center shrink-0">
                     <Globe className="h-2.5 w-2.5 text-primary" />
@@ -819,10 +868,7 @@ Be concise and helpful.`,
                 )}
                 <span className="text-xs font-medium truncate flex-1">{tab.title}</span>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeTab(tab.id);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
                   className="opacity-0 group-hover:opacity-100 hover:bg-destructive/20 rounded-full p-1 transition-all"
                 >
                   <X className="h-3 w-3" />
@@ -831,12 +877,7 @@ Be concise and helpful.`,
             ))}
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors"
-                  onClick={addNewTab}
-                >
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-xl hover:bg-primary/10 hover:text-primary" onClick={addNewTab}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -844,34 +885,19 @@ Be concise and helpful.`,
             </Tooltip>
           </div>
         </ScrollArea>
-        
-        {/* Window controls */}
+
         <div className="flex items-center gap-1 pl-2 border-l border-border/50">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 rounded-lg hover:bg-muted transition-colors"
-                onClick={() => setIsFullscreen(!isFullscreen)}
-              >
-                {isFullscreen ? (
-                  <Minimize2 className="h-4 w-4" />
-                ) : (
-                  <Maximize2 className="h-4 w-4" />
-                )}
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg" onClick={() => setIsFullscreen(!isFullscreen)}>
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </Button>
             </TooltipTrigger>
             <TooltipContent>{isFullscreen ? "Exit fullscreen" : "Fullscreen"}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 w-8 p-0 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors" 
-                onClick={onClose}
-              >
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-destructive/10 hover:text-destructive" onClick={onClose}>
                 <X className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -879,73 +905,54 @@ Be concise and helpful.`,
           </Tooltip>
         </div>
       </div>
-      
-      {/* Navigation Bar - Premium Design */}
+
+      {/* Navigation Bar */}
       <div className="flex items-center gap-3 px-3 py-2.5 border-b border-border/50 bg-gradient-to-r from-background via-muted/20 to-background">
-        {/* Navigation buttons */}
         <div className="flex items-center gap-0.5 p-1 rounded-xl bg-muted/50">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 rounded-lg disabled:opacity-30"
-                disabled={!activeTab.canGoBack}
-              >
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg disabled:opacity-30" disabled>
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Back</TooltipContent>
           </Tooltip>
-          
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 rounded-lg disabled:opacity-30"
-                disabled={!activeTab.canGoForward}
-              >
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg disabled:opacity-30" disabled>
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Forward</TooltipContent>
           </Tooltip>
-          
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 rounded-lg"
-                onClick={() => navigateTo(activeTab.url)}
-              >
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg" onClick={() => navigateTo(activeTab.url)}>
                 <RotateCw className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Reload</TooltipContent>
           </Tooltip>
-          
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 rounded-lg"
-                onClick={() => navigateTo(DEFAULT_HOME)}
-              >
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg" onClick={() => navigateTo(DEFAULT_HOME)}>
                 <Home className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Home</TooltipContent>
           </Tooltip>
         </div>
-        
-        {/* URL Bar - Premium Style */}
+
         <form onSubmit={handleUrlSubmit} className="flex-1 flex items-center">
           <div className="relative flex-1 group">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center">
-              <Globe className="h-3 w-3 text-primary" />
+              {activeTab.error ? (
+                <AlertTriangle className="h-3 w-3 text-destructive" />
+              ) : activeTab.isLoading ? (
+                <Loader2 className="h-3 w-3 text-primary animate-spin" />
+              ) : (
+                <Globe className="h-3 w-3 text-primary" />
+              )}
             </div>
             <Input
               value={urlInput}
@@ -956,13 +963,7 @@ Be concise and helpful.`,
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 rounded-lg hover:bg-yellow-500/10"
-                    onClick={toggleBookmark}
-                  >
+                  <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg hover:bg-yellow-500/10" onClick={toggleBookmark}>
                     {isBookmarked ? (
                       <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
                     ) : (
@@ -975,52 +976,27 @@ Be concise and helpful.`,
             </div>
           </div>
         </form>
-        
-        {/* Action buttons - Premium */}
+
         <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/50">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-2 px-3 rounded-lg hover:bg-primary/10 group"
-                onClick={getPageContext}
-              >
-                <Sparkles className="h-4 w-4 text-primary group-hover:animate-pulse" />
-                <span className="text-xs font-medium hidden sm:inline">AI Analyze</span>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg" onClick={() => setSidebarMode("ai")}>
+                <Sparkles className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Get AI summary of this page</TooltipContent>
+            <TooltipContent>AI Search</TooltipContent>
           </Tooltip>
-          
-          <div className="w-px h-5 bg-border/50" />
-          
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 rounded-lg"
-                onClick={() => setShowSidebar(!showSidebar)}
-              >
-                {showSidebar ? (
-                  <PanelLeftClose className="h-4 w-4" />
-                ) : (
-                  <PanelLeft className="h-4 w-4" />
-                )}
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg" onClick={() => setShowSidebar(!showSidebar)}>
+                {showSidebar ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
               </Button>
             </TooltipTrigger>
             <TooltipContent>{showSidebar ? "Hide sidebar" : "Show sidebar"}</TooltipContent>
           </Tooltip>
-          
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 rounded-lg"
-                onClick={() => window.open(activeTab.url, "_blank")}
-              >
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg" onClick={() => window.open(activeTab.url, "_blank")}>
                 <ExternalLink className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -1028,10 +1004,10 @@ Be concise and helpful.`,
           </Tooltip>
         </div>
       </div>
-      
+
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* AI Sidebar - Premium Glassmorphism */}
+        {/* Sidebar */}
         <AnimatePresence>
           {showSidebar && (
             <motion.div
@@ -1041,7 +1017,7 @@ Be concise and helpful.`,
               transition={{ duration: 0.2 }}
               className="border-r border-border/50 flex flex-col bg-gradient-to-b from-muted/30 via-background to-muted/20 overflow-hidden"
             >
-              {/* Browse Together Header - Premium */}
+              {/* Browse Together Header */}
               <div className="p-3 border-b border-border/50 bg-gradient-to-r from-primary/5 via-transparent to-primary/5">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2.5">
@@ -1058,95 +1034,63 @@ Be concise and helpful.`,
                       )}
                     </div>
                   </div>
-                  <Switch
-                    checked={browseTogetherEnabled}
-                    onCheckedChange={setBrowseTogetherEnabled}
-                    className="data-[state=checked]:bg-primary"
-                  />
+                  <Switch checked={browseTogetherEnabled} onCheckedChange={setBrowseTogetherEnabled} className="data-[state=checked]:bg-primary" />
                 </div>
                 {browseTogetherEnabled && (
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-2 p-2 rounded-lg bg-muted/50">
                     <Eye className="h-3.5 w-3.5 text-primary" />
                     <span>AI is watching and helping</span>
                     <label className="flex items-center gap-1.5 ml-auto cursor-pointer hover:text-foreground transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={autoAnalyze}
-                        onChange={(e) => setAutoAnalyze(e.target.checked)}
-                        className="h-3.5 w-3.5 rounded border-primary/50 text-primary focus:ring-primary/50"
-                      />
+                      <input type="checkbox" checked={autoAnalyze} onChange={(e) => setAutoAnalyze(e.target.checked)} className="h-3.5 w-3.5 rounded border-primary/50" />
                       Auto-analyze
                     </label>
                   </div>
                 )}
               </div>
-              
-              {/* Sidebar Tabs - Premium */}
+
+              {/* Sidebar Tabs */}
               <Tabs value={sidebarMode} onValueChange={(v) => setSidebarMode(v as typeof sidebarMode)}>
-                <TabsList className="w-full grid grid-cols-4 mx-3 mt-3 mb-2 bg-muted/50 p-1 rounded-xl" style={{ width: 'calc(100% - 24px)' }}>
+                <TabsList className="w-full grid grid-cols-4 mx-3 mt-3 mb-2 bg-muted/50 p-1 rounded-xl" style={{ width: "calc(100% - 24px)" }}>
                   <TabsTrigger value="together" className="text-xs gap-1.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                    <Users className="h-3.5 w-3.5" />
-                    Chat
+                    <Users className="h-3.5 w-3.5" /> Chat
                   </TabsTrigger>
                   <TabsTrigger value="ai" className="text-xs gap-1.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Search
+                    <Sparkles className="h-3.5 w-3.5" /> Search
                   </TabsTrigger>
                   <TabsTrigger value="bookmarks" className="text-xs gap-1.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                    <Bookmark className="h-3.5 w-3.5" />
-                    Saved
+                    <Bookmark className="h-3.5 w-3.5" /> Saved
                   </TabsTrigger>
                   <TabsTrigger value="history" className="text-xs gap-1.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                    <Clock className="h-3.5 w-3.5" />
-                    History
+                    <Clock className="h-3.5 w-3.5" /> History
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
-              
+
               <ScrollArea className="flex-1">
-                {/* Browse Together Mode - Premium */}
+                {/* Browse Together Chat */}
                 {sidebarMode === "together" && browseTogetherEnabled && (
                   <div className="flex flex-col h-full">
-                    {/* Messages */}
                     <div className="flex-1 p-4 space-y-3 min-h-0 overflow-y-auto">
                       {browseTogetherMessages.length === 0 && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="text-center py-8 space-y-4"
-                        >
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center py-8 space-y-4">
                           <div className="h-16 w-16 mx-auto rounded-2xl bg-gradient-to-br from-primary/10 to-primary/30 flex items-center justify-center shadow-lg shadow-primary/10">
                             <Users className="h-8 w-8 text-primary" />
                           </div>
                           <div>
                             <p className="text-sm font-semibold">Browse Together Mode</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              AI will analyze pages and answer your questions
-                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">AI will analyze pages and answer your questions</p>
                           </div>
                           <div className="grid grid-cols-2 gap-2 pt-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-10 text-xs rounded-xl border-primary/20 hover:bg-primary/10 hover:border-primary/40 transition-all"
-                              onClick={() => analyzePageForBrowseTogether()}
-                            >
-                              <Zap className="h-3.5 w-3.5 mr-1.5 text-primary" />
-                              Analyze Page
+                            <Button variant="outline" size="sm" className="h-10 text-xs rounded-xl border-primary/20 hover:bg-primary/10" onClick={() => analyzePageForBrowseTogether()}>
+                              <Zap className="h-3.5 w-3.5 mr-1.5 text-primary" /> Analyze Page
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-10 text-xs rounded-xl border-primary/20 hover:bg-primary/10 hover:border-primary/40 transition-all"
-                              onClick={() => browseTogetherQuickAction("What is this page about?")}
-                            >
-                              <HelpCircle className="h-3.5 w-3.5 mr-1.5 text-primary" />
-                              What's this?
+                            <Button variant="outline" size="sm" className="h-10 text-xs rounded-xl border-primary/20 hover:bg-primary/10" onClick={() => browseTogetherQuickAction("What is this page about?")}>
+                              <HelpCircle className="h-3.5 w-3.5 mr-1.5 text-primary" /> What's this?
                             </Button>
                           </div>
                         </motion.div>
                       )}
-                      
+
                       {browseTogetherMessages.map((msg, i) => (
                         <motion.div
                           key={msg.id}
@@ -1161,6 +1105,8 @@ Be concise and helpful.`,
                                 ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20"
                                 : msg.role === "system"
                                 ? "bg-muted/50 text-muted-foreground italic w-full text-center rounded-xl py-2"
+                                : msg.role === "error"
+                                ? "bg-destructive/10 border border-destructive/20 text-destructive"
                                 : "bg-muted/70 border border-border/50 shadow-sm"
                             }`}
                           >
@@ -1176,22 +1122,27 @@ Be concise and helpful.`,
                                 <span className="text-[10px] font-semibold">Summary</span>
                               </div>
                             )}
+                            {msg.type === "error" && (
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <AlertTriangle className="h-3.5 w-3.5" />
+                                <span className="text-[10px] font-semibold">Error</span>
+                              </div>
+                            )}
                             <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                             {msg.role === "ai" && msg.content && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 text-[10px] px-2 mt-2 -ml-1 hover:bg-background/50 rounded-lg"
-                                onClick={() => sendToChat(msg.content)}
-                              >
-                                <MessageSquare className="h-3 w-3 mr-1" />
-                                Send to main chat
+                              <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2 mt-2 -ml-1 hover:bg-background/50 rounded-lg" onClick={() => sendToChat(msg.content)}>
+                                <MessageSquare className="h-3 w-3 mr-1" /> Send to main chat
+                              </Button>
+                            )}
+                            {msg.role === "error" && (
+                              <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2 mt-2 -ml-1 text-destructive hover:bg-destructive/10 rounded-lg" onClick={() => analyzePageForBrowseTogether()}>
+                                <RefreshCw className="h-3 w-3 mr-1" /> Retry
                               </Button>
                             )}
                           </div>
                         </motion.div>
                       ))}
-                      
+
                       {isAIThinking && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground p-3 rounded-xl bg-muted/30">
                           <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -1199,8 +1150,8 @@ Be concise and helpful.`,
                         </div>
                       )}
                     </div>
-                    
-                    {/* Page Insights - Premium */}
+
+                    {/* Page Insights */}
                     {pageInsights.length > 0 && (
                       <div className="p-4 border-t border-border/50 space-y-3 bg-gradient-to-b from-transparent to-yellow-500/5">
                         <h4 className="text-xs font-semibold flex items-center gap-2">
@@ -1219,8 +1170,8 @@ Be concise and helpful.`,
                         </div>
                       </div>
                     )}
-                    
-                    {/* Related Content - Premium */}
+
+                    {/* Related Content */}
                     {relatedContent.length > 0 && (
                       <div className="p-4 border-t border-border/50 space-y-3">
                         <h4 className="text-xs font-semibold flex items-center gap-2">
@@ -1231,59 +1182,31 @@ Be concise and helpful.`,
                         </h4>
                         <div className="flex flex-wrap gap-2">
                           {relatedContent.slice(0, 4).map((content, i) => (
-                            <Button
-                              key={i}
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-[10px] px-3 rounded-full border-primary/20 hover:bg-primary/10 hover:border-primary/40 transition-all"
-                              onClick={() => navigateTo(content.url)}
-                            >
-                              <Link2 className="h-3 w-3 mr-1 text-primary" />
-                              {content.title}
+                            <Button key={i} variant="outline" size="sm" className="h-7 text-[10px] px-3 rounded-full border-primary/20 hover:bg-primary/10" onClick={() => navigateTo(content.url)}>
+                              <Link2 className="h-3 w-3 mr-1 text-primary" /> {content.title}
                             </Button>
                           ))}
                         </div>
                       </div>
                     )}
-                    
-                    {/* Quick Actions & Input - Premium */}
+
+                    {/* Quick Actions & Input */}
                     <div className="p-4 border-t border-border/50 bg-gradient-to-t from-muted/30 to-transparent">
                       <div className="flex flex-wrap gap-1.5 mb-3">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-[10px] px-3 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
-                          onClick={() => browseTogetherQuickAction("Summarize this page in bullet points")}
-                        >
+                        <Button variant="ghost" size="sm" className="h-7 text-[10px] px-3 rounded-full hover:bg-primary/10 hover:text-primary" onClick={() => browseTogetherQuickAction("Summarize this page in bullet points")}>
                           Summarize
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-[10px] px-3 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
-                          onClick={() => browseTogetherQuickAction("What are the key takeaways from this page?")}
-                        >
+                        <Button variant="ghost" size="sm" className="h-7 text-[10px] px-3 rounded-full hover:bg-primary/10 hover:text-primary" onClick={() => browseTogetherQuickAction("What are the key takeaways from this page?")}>
                           Key Points
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-[10px] px-3 rounded-full hover:bg-primary/10 hover:text-primary transition-all"
-                          onClick={() => browseTogetherQuickAction("Find similar websites or content")}
-                        >
+                        <Button variant="ghost" size="sm" className="h-7 text-[10px] px-3 rounded-full hover:bg-primary/10 hover:text-primary" onClick={() => browseTogetherQuickAction("Find similar websites or content")}>
                           Find Similar
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 rounded-full hover:bg-destructive/10 hover:text-destructive transition-all ml-auto"
-                          onClick={clearBrowseTogetherChat}
-                        >
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full hover:bg-destructive/10 hover:text-destructive ml-auto" onClick={clearBrowseTogetherChat}>
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
-                      
-                      {/* Input - Premium */}
+
                       <div className="flex gap-2">
                         <Textarea
                           value={browseTogetherInput}
@@ -1293,14 +1216,14 @@ Be concise and helpful.`,
                           onKeyDown={(e) => {
                             if (e.key === "Enter" && !e.shiftKey) {
                               e.preventDefault();
-                              askBrowseTogetherQuestion();
+                              handleAskFromInput();
                             }
                           }}
                         />
                         <Button
                           size="sm"
-                          className="h-auto px-4 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 transition-all"
-                          onClick={askBrowseTogetherQuestion}
+                          className="h-auto px-4 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20"
+                          onClick={handleAskFromInput}
                           disabled={isAIThinking || !browseTogetherInput.trim()}
                         >
                           <Send className="h-4 w-4" />
@@ -1309,224 +1232,72 @@ Be concise and helpful.`,
                     </div>
                   </div>
                 )}
-                
+
                 {sidebarMode === "together" && !browseTogetherEnabled && (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center h-full p-6 text-center"
-                  >
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center h-full p-6 text-center">
                     <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-muted/50 to-muted flex items-center justify-center mb-6">
                       <Users className="h-10 w-10 text-muted-foreground/50" />
                     </div>
                     <h3 className="text-sm font-semibold mb-2">Browse Together is Off</h3>
-                    <p className="text-xs text-muted-foreground mb-6 max-w-[200px]">
-                      Enable it to get AI assistance while browsing
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-xl border-primary/20 hover:bg-primary/10 hover:border-primary/40"
-                      onClick={() => setBrowseTogetherEnabled(true)}
-                    >
-                      <Eye className="h-4 w-4 mr-2 text-primary" />
-                      Enable Browse Together
+                    <p className="text-xs text-muted-foreground mb-6 max-w-[200px]">Enable it to get AI assistance while browsing</p>
+                    <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setBrowseTogetherEnabled(true)}>
+                      <Zap className="h-4 w-4 mr-2" /> Enable
                     </Button>
                   </motion.div>
                 )}
-                
-                {/* AI Search Mode - Premium */}
+
+                {/* AI Search */}
                 {sidebarMode === "ai" && (
-                  <div className="space-y-5 p-4">
-                    {/* AI Search - Premium */}
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-semibold flex items-center gap-2">
-                        <div className="h-6 w-6 rounded-lg bg-primary/20 flex items-center justify-center">
-                          <Search className="h-3.5 w-3.5 text-primary" />
-                        </div>
-                        AI Web Search
-                      </h3>
-                      <div className="flex gap-2">
-                        <Input
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          placeholder="Ask anything..."
-                          className="h-10 text-sm rounded-xl bg-muted/50 border-border/50 focus:border-primary/50"
-                          onKeyDown={(e) => e.key === "Enter" && performAISearch()}
-                        />
-                        <Button
-                          size="sm"
-                          className="h-10 w-10 p-0 rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20"
-                          onClick={performAISearch}
-                          disabled={isSearching}
-                        >
-                          {isSearching ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Search className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
+                  <div className="p-4 space-y-4">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Ask AI anything..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && performAISearch()}
+                        className="rounded-xl"
+                      />
+                      <Button onClick={performAISearch} disabled={isSearching} size="sm" className="rounded-xl px-4">
+                        {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                      </Button>
                     </div>
-                    
-                    {/* AI Summary - Premium */}
                     {aiSummary && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-3"
-                      >
-                        <h3 className="text-sm font-semibold flex items-center gap-2">
-                          <div className="h-6 w-6 rounded-lg bg-primary/20 flex items-center justify-center">
-                            <FileText className="h-3.5 w-3.5 text-primary" />
-                          </div>
-                          AI Summary
-                        </h3>
-                        <div className="p-4 bg-gradient-to-br from-muted/50 to-muted/30 rounded-2xl border border-border/50">
-                          <p className="text-xs text-muted-foreground whitespace-pre-wrap line-clamp-[20] leading-relaxed">
-                            {aiSummary}
-                          </p>
-                          <div className="flex gap-2 mt-4 pt-3 border-t border-border/50">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs rounded-lg border-primary/20 hover:bg-primary/10"
-                              onClick={() => sendToChat(aiSummary)}
-                            >
-                              <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-                              Send to Chat
-                            </Button>
-                          </div>
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                        <div className="p-4 rounded-xl bg-muted/50 border border-border/50 text-sm whitespace-pre-wrap leading-relaxed">
+                          {aiSummary}
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          <Button variant="ghost" size="sm" className="text-xs" onClick={() => sendToChat(aiSummary)}>
+                            <MessageSquare className="h-3 w-3 mr-1" /> Send to Chat
+                          </Button>
                         </div>
                       </motion.div>
                     )}
-                    
-                    {/* Search Results - Premium */}
-                    {searchResults.length > 0 && (
-                      <div className="space-y-3">
-                        <h3 className="text-sm font-semibold">Quick Links</h3>
-                        <div className="space-y-2">
-                          {searchResults.map((result, i) => (
-                            <motion.button
-                              key={i}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: i * 0.05 }}
-                              onClick={() => navigateTo(result.url)}
-                              className="w-full text-left p-3 rounded-xl border border-border/50 hover:border-primary/40 hover:bg-primary/5 transition-all group"
-                            >
-                              <div className="text-xs font-medium truncate group-hover:text-primary transition-colors">
-                                {result.title}
-                              </div>
-                              <div className="text-[10px] text-muted-foreground truncate mt-0.5">
-                                {result.url}
-                              </div>
-                            </motion.button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Quick Actions - Premium */}
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-semibold">Quick Actions</h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-auto py-3 flex-col gap-1.5 rounded-xl border-border/50 hover:border-primary/40 hover:bg-primary/5 transition-all"
-                          onClick={() => {
-                            setSearchQuery("Latest news today");
-                            setTimeout(performAISearch, 100);
-                          }}
-                        >
-                          <FileText className="h-4 w-4 text-primary" />
-                          <span className="text-[10px]">News</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-auto py-3 flex-col gap-1.5 rounded-xl border-border/50 hover:border-primary/40 hover:bg-primary/5 transition-all"
-                          onClick={() => {
-                            setSearchQuery("Weather forecast");
-                            setTimeout(performAISearch, 100);
-                          }}
-                        >
-                          <Globe className="h-4 w-4 text-primary" />
-                          <span className="text-[10px]">Weather</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-auto py-3 flex-col gap-1.5 rounded-xl border-border/50 hover:border-primary/40 hover:bg-primary/5 transition-all"
-                          onClick={() => {
-                            setSearchQuery("Trending topics");
-                            setTimeout(performAISearch, 100);
-                          }}
-                        >
-                          <Sparkles className="h-4 w-4 text-primary" />
-                          <span className="text-[10px]">Trending</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-auto py-3 flex-col gap-1.5 rounded-xl border-border/50 hover:border-primary/40 hover:bg-primary/5 transition-all"
-                          onClick={getPageContext}
-                        >
-                          <BookOpen className="h-4 w-4 text-primary" />
-                          <span className="text-[10px]">Analyze</span>
-                        </Button>
-                      </div>
-                    </div>
                   </div>
                 )}
-                
-                {/* Bookmarks Mode - Premium */}
+
+                {/* Bookmarks */}
                 {sidebarMode === "bookmarks" && (
-                  <div className="p-4 space-y-2">
+                  <div className="p-4 space-y-3">
                     {bookmarks.length === 0 ? (
-                      <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-center py-12"
-                      >
-                        <div className="h-16 w-16 mx-auto rounded-2xl bg-gradient-to-br from-yellow-500/10 to-yellow-500/30 flex items-center justify-center mb-4">
-                          <Star className="h-8 w-8 text-yellow-500/50" />
+                      <div className="text-center py-12">
+                        <div className="h-16 w-16 mx-auto rounded-2xl bg-gradient-to-br from-muted/50 to-muted flex items-center justify-center mb-4">
+                          <Star className="h-8 w-8 text-muted-foreground/50" />
                         </div>
                         <p className="text-sm font-medium mb-1">No bookmarks yet</p>
-                        <p className="text-xs text-muted-foreground">
-                          Star pages to save them here
-                        </p>
-                      </motion.div>
+                        <p className="text-xs text-muted-foreground">Click the star icon to save pages</p>
+                      </div>
                     ) : (
                       bookmarks.map((bookmark, i) => (
-                        <motion.div
-                          key={bookmark.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: i * 0.03 }}
-                          className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 group border border-transparent hover:border-border/50 transition-all"
-                        >
+                        <motion.div key={bookmark.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 group border border-transparent hover:border-border/50 transition-all">
                           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-yellow-500/20 to-yellow-500/40 flex items-center justify-center shrink-0">
                             <Star className="h-4 w-4 text-yellow-500" />
                           </div>
-                          <button
-                            onClick={() => navigateTo(bookmark.url)}
-                            className="flex-1 text-left min-w-0"
-                          >
+                          <button onClick={() => navigateTo(bookmark.url)} className="flex-1 text-left min-w-0">
                             <div className="text-sm font-medium truncate">{bookmark.title}</div>
-                            <div className="text-[10px] text-muted-foreground truncate">
-                              {bookmark.url}
-                            </div>
+                            <div className="text-[10px] text-muted-foreground truncate">{bookmark.url}</div>
                           </button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-all"
-                            onClick={() =>
-                              setBookmarks((prev) => prev.filter((b) => b.id !== bookmark.id))
-                            }
-                          >
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 rounded-lg hover:bg-destructive/10 hover:text-destructive" onClick={() => setBookmarks((prev) => prev.filter((b) => b.id !== bookmark.id))}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </motion.div>
@@ -1534,49 +1305,28 @@ Be concise and helpful.`,
                     )}
                   </div>
                 )}
-                
-                {/* History Mode - Premium */}
+
+                {/* History */}
                 {sidebarMode === "history" && (
                   <div className="p-4 space-y-3">
                     {history.length === 0 ? (
-                      <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-center py-12"
-                      >
+                      <div className="text-center py-12">
                         <div className="h-16 w-16 mx-auto rounded-2xl bg-gradient-to-br from-muted/50 to-muted flex items-center justify-center mb-4">
                           <Clock className="h-8 w-8 text-muted-foreground/50" />
                         </div>
                         <p className="text-sm font-medium mb-1">No history yet</p>
-                        <p className="text-xs text-muted-foreground">
-                          Your browsing history will appear here
-                        </p>
-                      </motion.div>
+                        <p className="text-xs text-muted-foreground">Your browsing history will appear here</p>
+                      </div>
                     ) : (
                       <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full text-xs rounded-xl border-destructive/20 hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive transition-all"
-                          onClick={() => setHistory([])}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                          Clear History
+                        <Button variant="outline" size="sm" className="w-full text-xs rounded-xl border-destructive/20 hover:bg-destructive/10 hover:text-destructive" onClick={() => setHistory([])}>
+                          <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Clear History
                         </Button>
                         <div className="space-y-1">
                           {history.slice(0, 50).map((item, i) => (
-                            <motion.button
-                              key={i}
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ delay: i * 0.02 }}
-                              onClick={() => navigateTo(item.url)}
-                              className="w-full text-left p-3 rounded-xl hover:bg-muted/50 border border-transparent hover:border-border/50 transition-all"
-                            >
+                            <motion.button key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }} onClick={() => navigateTo(item.url)} className="w-full text-left p-3 rounded-xl hover:bg-muted/50 border border-transparent hover:border-border/50 transition-all">
                               <div className="text-sm font-medium truncate">{item.title}</div>
-                              <div className="text-[10px] text-muted-foreground truncate">
-                                {item.url}
-                              </div>
+                              <div className="text-[10px] text-muted-foreground truncate">{item.url}</div>
                             </motion.button>
                           ))}
                         </div>
@@ -1588,15 +1338,11 @@ Be concise and helpful.`,
             </motion.div>
           )}
         </AnimatePresence>
-        
-        {/* Browser Content - Premium */}
+
+        {/* Browser Content */}
         <div className="flex-1 bg-white dark:bg-zinc-900 relative">
-          {activeTab.isLoading && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="absolute inset-0 bg-background/90 backdrop-blur-sm flex items-center justify-center z-10"
-            >
+          {activeTab.isLoading && !activeTab.error && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-background/90 backdrop-blur-sm flex items-center justify-center z-10">
               <div className="flex flex-col items-center gap-4">
                 <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center shadow-lg shadow-primary/20">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1605,82 +1351,32 @@ Be concise and helpful.`,
               </div>
             </motion.div>
           )}
-          
-          {/* Iframe for browsing */}
-          <iframe
-            ref={iframeRef}
-            src={activeTab.url}
-            className="w-full h-full border-0"
-            onLoad={handleIframeLoad}
-            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-            title="Browser"
-          />
-          
-          {/* Blocked site overlay */}
+
+          {/* Iframe */}
+          {!activeTab.error && (
+            <iframe
+              ref={iframeRef}
+              src={activeTab.url}
+              className="w-full h-full border-0"
+              onLoad={handleIframeLoad}
+              onError={handleIframeError}
+              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+              title="Browser"
+            />
+          )}
+
+          {/* Error Overlay */}
           <AnimatePresence>
-            {iframeBlocked && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-background/95 backdrop-blur-md flex items-center justify-center z-20"
-              >
-                <div className="text-center max-w-md px-6">
-                  <div className="h-20 w-20 mx-auto rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/30 flex items-center justify-center mb-6 shadow-lg">
-                    <Globe className="h-10 w-10 text-amber-500" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-2">Site Blocks Embedding</h3>
-                  <p className="text-sm text-muted-foreground mb-6">
-                    <span className="font-medium text-foreground">{(() => { try { return new URL(activeTab.url).hostname; } catch { return activeTab.url; } })()}</span> has security restrictions that prevent embedding. This is a common browser security feature.
-                  </p>
-                  <div className="flex flex-col gap-3">
-                    <Button
-                      onClick={() => window.open(activeTab.url, "_blank")}
-                      className="gap-2"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Open in New Tab
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => navigateTo("https://duckduckgo.com")}
-                      className="gap-2"
-                    >
-                      <Search className="h-4 w-4" />
-                      Use DuckDuckGo Instead
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-4">
-                    Tip: DuckDuckGo and many other sites allow embedding.
-                  </p>
-                </div>
-              </motion.div>
+            {activeTab.error && (
+              <ErrorOverlay
+                error={activeTab.error}
+                url={activeTab.url}
+                onRetry={() => navigateTo(activeTab.url)}
+                onOpenExternal={() => window.open(activeTab.url, "_blank")}
+                onGoHome={() => navigateTo(DEFAULT_HOME)}
+              />
             )}
           </AnimatePresence>
-          
-          {/* Subtle fallback hint for non-blocked sites */}
-          {!iframeBlocked && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none max-w-md w-full px-4">
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 2 }}
-                className="bg-background/95 backdrop-blur-lg border border-border/50 rounded-2xl px-4 py-3 text-center pointer-events-auto shadow-xl"
-              >
-                <p className="text-xs text-muted-foreground">
-                  Some websites block embedding. 
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="h-auto p-0 text-xs ml-1 text-primary hover:text-primary/80"
-                    onClick={() => window.open(activeTab.url, "_blank")}
-                  >
-                    Open in new tab <ExternalLink className="h-3 w-3 ml-1" />
-                  </Button>
-                </p>
-              </motion.div>
-            </div>
-          )}
         </div>
       </div>
     </motion.div>
