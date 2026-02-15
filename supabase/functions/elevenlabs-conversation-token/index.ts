@@ -42,9 +42,9 @@ serve(async (req) => {
 
     console.log("Requesting signed URL for agent:", targetAgentId);
 
-    // Get SIGNED URL for WebSocket connection (more reliable than WebRTC token)
+    // Get conversation token for WebRTC connection (recommended, lower latency)
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${targetAgentId}`,
+      `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${targetAgentId}`,
       {
         headers: {
           "xi-api-key": ELEVENLABS_API_KEY,
@@ -56,15 +56,15 @@ serve(async (req) => {
       const errorText = await response.text();
       console.error("ElevenLabs API error:", response.status, errorText);
       return new Response(
-        JSON.stringify({ error: `Failed to get signed URL: ${response.status}` }),
+        JSON.stringify({ error: `Failed to get token: ${response.status}` }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const data = await response.json();
-    console.log("Successfully obtained signed URL");
+    console.log("Successfully obtained conversation token");
 
-    return new Response(JSON.stringify({ signed_url: data.signed_url }), {
+    return new Response(JSON.stringify({ token: data.token }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
