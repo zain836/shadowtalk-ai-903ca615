@@ -52,7 +52,7 @@ export const ChatInput = ({
   };
 
   return (
-    <div className="border-t border-border/50 bg-gradient-to-t from-background to-transparent">
+    <div className="border-t border-border/40 glass-strong">
       <div className="max-w-4xl mx-auto px-2 py-2 md:px-4 md:py-4">
         {/* Mode Selector */}
         <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3 overflow-x-auto scrollbar-none">
@@ -81,7 +81,7 @@ export const ChatInput = ({
         </div>
 
         {/* Input Area */}
-        <div className="relative flex items-end gap-1 md:gap-2 bg-card border border-border/50 rounded-xl md:rounded-2xl p-1.5 md:p-2 shadow-sm focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+        <div className="relative flex items-end gap-1 md:gap-2 glass rounded-xl md:rounded-2xl p-1.5 md:p-2 shadow-sm focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
           {/* Left Actions */}
           <div className="flex items-center gap-0.5 md:gap-1 pb-0.5 md:pb-1 shrink-0">
             <FileUpload

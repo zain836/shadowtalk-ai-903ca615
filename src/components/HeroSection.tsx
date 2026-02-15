@@ -1,6 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Shield, Zap, ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
 import heroImg from "@/assets/hero-bg.jpg";
 import { useNavigate } from "react-router-dom";
 
@@ -8,101 +9,129 @@ const HeroSection = () => {
   const navigate = useNavigate();
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center bg-grid overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-hero opacity-20"></div>
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Layered background */}
+      <div className="absolute inset-0 bg-background"></div>
+      <div className="absolute inset-0 bg-grid opacity-30"></div>
       <div
-        className="absolute inset-0 bg-cover bg-center opacity-10"
+        className="absolute inset-0 bg-cover bg-center opacity-[0.06]"
         style={{ backgroundImage: `url(${heroImg})` }}
       ></div>
+      
+      {/* Ambient gradient orbs */}
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/8 rounded-full blur-[150px]"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-secondary/8 rounded-full blur-[150px]"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-accent/5 rounded-full blur-[150px]"></div>
 
-      {/* Floating elements */}
-      <div className="absolute top-20 left-10 w-20 h-20 bg-primary/20 rounded-full blur-xl float"></div>
-      <div className="absolute top-40 right-20 w-32 h-32 bg-secondary/20 rounded-full blur-xl float" style={{ animationDelay: '2s' }}></div>
-      <div className="absolute bottom-20 left-1/4 w-16 h-16 bg-accent/20 rounded-full blur-xl float" style={{ animationDelay: '4s' }}></div>
-
-      <div className="container mx-auto px-4 text-center relative z-10">
+      <div className="container mx-auto px-4 text-center relative z-10 pt-20">
         <div className="max-w-4xl mx-auto">
           {/* Badge */}
-          <div className="inline-flex items-center space-x-2 bg-card/50 backdrop-blur-sm border border-destructive/30 rounded-full px-6 py-2 mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center space-x-2 glass-subtle rounded-full px-5 py-2.5 mb-10"
+          >
             <Shield className="h-4 w-4 text-destructive" />
-            <span className="text-sm text-foreground font-medium">Your AI Doesn't Spy On You</span>
-            <div className="w-2 h-2 bg-success rounded-full pulse-dot"></div>
-          </div>
+            <span className="text-sm text-foreground/90 font-medium tracking-wide">Your AI Doesn't Spy On You</span>
+            <div className="w-2 h-2 bg-success rounded-full connectivity-pulse"></div>
+          </motion.div>
 
           {/* Main Headline */}
-          <h1 className="text-5xl md:text-8xl font-bold mb-6 leading-tight">
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-5xl md:text-8xl font-bold mb-8 leading-[1.05] tracking-tight"
+          >
             <span className="gradient-text">Sovereign Intelligence</span>{" "}
+            <br className="hidden md:block" />
             for Creators, Coders & CEOs
-          </h1>
+          </motion.h1>
 
           {/* Subtitle */}
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-4xl mx-auto">
-            The only AI that runs <strong className="text-foreground">100% on your device</strong>. No data harvesting. No cloud dependency. Cloud-quality AI without the cloud — at <strong className="text-foreground">75% less cost</strong>.
-          </p>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-lg md:text-xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed"
+          >
+            The only AI that runs <strong className="text-foreground font-medium">100% on your device</strong>. No data harvesting. No cloud dependency. Cloud-quality AI without the cloud — at <strong className="text-foreground font-medium">75% less cost</strong>.
+          </motion.p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14"
+          >
             <Button
               size="lg"
-              className="btn-glow text-lg px-8 py-6 group"
+              className="btn-glow text-lg px-8 py-6 group rounded-xl"
               onClick={() => navigate('/chatbot')}
             >
-              <MessageCircle className="mr-3 h-6 w-6" />
-              Chat Now - Free
+              <MessageCircle className="mr-3 h-5 w-5" />
+              Chat Now — Free
               <ArrowRight className="ml-3 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
             <Button
               variant="outline"
               size="lg"
-              className="text-lg px-8 py-6"
+              className="text-lg px-8 py-6 border-border/60 hover:border-primary/30 hover:bg-muted/20 rounded-xl transition-all duration-300"
               onClick={() => {
                 document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
               }}
             >
-              <Zap className="mr-3 h-6 w-6" />
+              <Zap className="mr-3 h-5 w-5" />
               View Features
             </Button>
-          </div>
+          </motion.div>
 
-          {/* Real-time Social Proof with Psychology */}
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-8 text-muted-foreground">
-            <div className="flex items-center space-x-2 status-online">
-              <div className="flex -space-x-2">
-                <div className="w-8 h-8 bg-primary rounded-full border-2 border-background neon-glow"></div>
-                <div className="w-8 h-8 bg-secondary rounded-full border-2 border-background neon-glow"></div>
-                <div className="w-8 h-8 bg-accent rounded-full border-2 border-background neon-glow"></div>
-              </div>
-              <span className="text-sm counter-glow">47,892+ Active Users Online</span>
-            </div>
+          {/* Social Proof */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-6 text-muted-foreground"
+          >
             <div className="flex items-center space-x-2">
-              <div className="flex text-yellow-400">
+              <div className="flex -space-x-1.5">
+                <div className="w-7 h-7 bg-primary/80 rounded-full border-2 border-background"></div>
+                <div className="w-7 h-7 bg-secondary/80 rounded-full border-2 border-background"></div>
+                <div className="w-7 h-7 bg-accent/80 rounded-full border-2 border-background"></div>
+              </div>
+              <span className="text-sm font-medium">47,892+ Active Users</span>
+            </div>
+            <div className="hidden sm:block w-px h-4 bg-border"></div>
+            <div className="flex items-center space-x-1.5">
+              <div className="flex text-warning text-sm">
                 {[...Array(5)].map((_, i) => (
-                  <span key={i} className="drop-shadow-lg">⭐</span>
+                  <span key={i}>★</span>
                 ))}
               </div>
-              <span className="text-sm counter-glow">4.9/5 from 12,483 reviews</span>
+              <span className="text-sm font-medium">4.9/5 from 12,483 reviews</span>
             </div>
+            <div className="hidden sm:block w-px h-4 bg-border"></div>
             <div className="flex items-center space-x-2 urgency-blink">
-              <div className="w-2 h-2 bg-destructive rounded-full"></div>
-              <span className="text-sm font-medium text-destructive">Only 47 Lifetime deals left!</span>
+              <div className="w-1.5 h-1.5 bg-destructive rounded-full"></div>
+              <span className="text-sm font-medium text-destructive">Only 47 Lifetime deals left</span>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Trust Signals */}
-          <div className="mt-12 pt-8 border-t border-border/30">
-            <div className="flex items-center justify-center space-x-8 opacity-60">
-              <div className="trust-badge px-4 py-2 bg-card/30 rounded-lg border border-border/50">
-                <span className="text-xs font-medium">🔒 Privacy-First</span>
+          {/* Trust Badges */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.7 }}
+            className="mt-16 flex items-center justify-center gap-3"
+          >
+            {["🔒 Privacy-First", "⚡ Offline Mode", "🚀 Product Hunt #1"].map((badge, i) => (
+              <div key={i} className="glass-subtle rounded-lg px-4 py-2 text-xs font-medium text-muted-foreground">
+                {badge}
               </div>
-              <div className="trust-badge px-4 py-2 bg-card/30 rounded-lg border border-border/50">
-                <span className="text-xs font-medium">⚡ Offline Mode</span>
-              </div>
-              <div className="trust-badge px-4 py-2 bg-card/30 rounded-lg border border-border/50">
-                <span className="text-xs font-medium">🚀 Product Hunt #1</span>
-              </div>
-            </div>
-          </div>
+            ))}
+          </motion.div>
         </div>
       </div>
     </section>

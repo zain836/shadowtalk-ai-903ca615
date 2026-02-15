@@ -1,130 +1,161 @@
-import { Code, Wifi, Brain, Shield, Zap, Download } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Code, Wifi, Brain, Shield, Zap, Download, ArrowUpRight } from "lucide-react";
+import { motion } from "framer-motion";
 
 const FeaturesSection = () => {
   const features = [
     {
       icon: Brain,
       title: "Smart Conversations",
-      description: "Advanced AI that understands context and provides intelligent responses to any question or request.",
-      color: "text-primary"
+      description: "Advanced AI that understands context and provides intelligent responses to any question.",
+      gradient: "from-primary/20 to-primary/5",
+      iconColor: "text-primary",
+      span: "md:col-span-2",
     },
     {
       icon: Code,
       title: "Code Generator",
-      description: "Generate, debug, and optimize code in any programming language with intelligent suggestions.",
-      color: "text-secondary"
+      description: "Generate, debug, and optimize code in any programming language.",
+      gradient: "from-secondary/20 to-secondary/5",
+      iconColor: "text-secondary",
+      span: "",
     },
     {
       icon: Zap,
       title: "Smart Scripts",
-      description: "Automate repetitive tasks with AI-powered script generation for productivity and efficiency.",
-      color: "text-accent"
+      description: "Automate repetitive tasks with AI-powered script generation.",
+      gradient: "from-accent/20 to-accent/5",
+      iconColor: "text-accent",
+      span: "",
     },
     {
       icon: Wifi,
       title: "Offline Mode",
-      description: "Continue working without internet connection. Your AI assistant is always available.",
-      color: "text-warning"
+      description: "Continue working without internet. Your AI assistant is always available, anywhere.",
+      gradient: "from-warning/20 to-warning/5",
+      iconColor: "text-warning",
+      span: "md:col-span-2",
     },
     {
       icon: Shield,
       title: "Privacy First",
-      description: "Your conversations are encrypted and secure. We never store or share your personal data.",
-      color: "text-success"
+      description: "Conversations are encrypted end-to-end. Zero data harvesting.",
+      gradient: "from-success/20 to-success/5",
+      iconColor: "text-success",
+      span: "",
     },
     {
       icon: Download,
       title: "Export Everything",
-      description: "Download your chats, generated code, and scripts in multiple formats for easy sharing.",
-      color: "text-destructive"
-    }
+      description: "Download chats, code, and scripts in multiple formats.",
+      gradient: "from-destructive/20 to-destructive/5",
+      iconColor: "text-destructive",
+      span: "",
+    },
   ];
 
   return (
-    <section id="features" className="py-24 bg-background">
-      <div className="container mx-auto px-4">
+    <section id="features" className="py-28 bg-background relative overflow-hidden">
+      {/* Ambient background */}
+      <div className="absolute inset-0 bg-grid-dense opacity-40"></div>
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px]"></div>
+
+      <div className="container mx-auto px-4 relative z-10">
         {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center space-x-2 bg-card/50 border border-border rounded-full px-4 py-2 mb-6">
+        <div className="text-center mb-20">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="inline-flex items-center space-x-2 glass-subtle rounded-full px-5 py-2 mb-8"
+          >
             <Zap className="h-4 w-4 text-primary" />
-            <span className="text-sm text-muted-foreground">Powerful Features</span>
-          </div>
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            <span className="text-sm text-muted-foreground font-medium">Command Center</span>
+          </motion.div>
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="text-4xl md:text-6xl font-bold mb-6 tracking-tight"
+          >
             Everything You Need in One{" "}
-            <span className="gradient-text">AI Assistant</span>
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            From intelligent conversations to code generation, our AI assistant is designed
-            to boost your productivity and creativity.
-          </p>
+            <span className="gradient-text">AI OS</span>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="text-lg text-muted-foreground max-w-2xl mx-auto"
+          >
+            From intelligent conversations to code generation — your sovereign intelligence layer.
+          </motion.p>
         </div>
 
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Bento Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
           {features.map((feature, index) => (
-            <Card
+            <motion.div
               key={index}
-              className="card-hover group cursor-pointer"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.08 }}
+              className={`bento-item group cursor-pointer ${feature.span}`}
             >
-              <CardContent className="p-8">
-                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-primary mb-6 group-hover:scale-110 transition-transform`}>
-                  <feature.icon className={`h-6 w-6 ${feature.color}`} />
+              <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl`}></div>
+              
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-5">
+                  <div className={`inline-flex items-center justify-center w-11 h-11 rounded-xl bg-muted/60 group-hover:bg-muted transition-colors`}>
+                    <feature.icon className={`h-5 w-5 ${feature.iconColor}`} />
+                  </div>
+                  <ArrowUpRight className="h-4 w-4 text-muted-foreground/0 group-hover:text-muted-foreground transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </div>
-                <h3 className="text-xl font-semibold mb-4 group-hover:text-primary transition-colors">
+                <h3 className="text-lg font-semibold mb-2 group-hover:text-foreground transition-colors tracking-tight">
                   {feature.title}
                 </h3>
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   {feature.description}
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </motion.div>
           ))}
         </div>
 
-        {/* Real-time Stats with Psychology */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-16 pt-16 border-t border-border/30">
-          <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold gradient-text counter-glow mb-2">47.8K+</div>
-            <div className="text-muted-foreground">Active Users Online</div>
-            <div className="text-xs text-success mt-1">+892 this hour</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold gradient-text counter-glow mb-2">2.4M+</div>
-            <div className="text-muted-foreground">AI Tasks Completed</div>
-            <div className="text-xs text-primary mt-1">Real-time processing</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold gradient-text counter-glow mb-2">99.97%</div>
-            <div className="text-muted-foreground">Uptime Guarantee</div>
-            <div className="text-xs text-accent mt-1">Enterprise grade</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold gradient-text counter-glow mb-2">&lt;2s</div>
-            <div className="text-muted-foreground">Response Time</div>
-            <div className="text-xs text-warning mt-1">Lightning fast</div>
-          </div>
-        </div>
+        {/* Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20 max-w-4xl mx-auto"
+        >
+          {[
+            { value: "47.8K+", label: "Active Users", sub: "+892 this hour", subColor: "text-success" },
+            { value: "2.4M+", label: "AI Tasks Done", sub: "Real-time processing", subColor: "text-primary" },
+            { value: "99.97%", label: "Uptime", sub: "Enterprise grade", subColor: "text-accent" },
+            { value: "<2s", label: "Response Time", sub: "Lightning fast", subColor: "text-warning" },
+          ].map((stat, i) => (
+            <div key={i} className="text-center glass-subtle rounded-xl p-5">
+              <div className="text-2xl md:text-3xl font-bold gradient-text mb-1">{stat.value}</div>
+              <div className="text-sm text-muted-foreground">{stat.label}</div>
+              <div className={`text-xs ${stat.subColor} mt-1 font-medium`}>{stat.sub}</div>
+            </div>
+          ))}
+        </motion.div>
 
         {/* Trust Indicators */}
-        <div className="mt-12 pt-8 border-t border-border/30">
-          <div className="text-center mb-8">
-            <p className="text-sm text-muted-foreground mb-4">Trusted by developers and companies worldwide</p>
-            <div className="flex items-center justify-center space-x-8 opacity-60">
-              <div className="trust-badge">
-                <span className="text-sm font-medium">🏆 Product Hunt #1</span>
-              </div>
-              <div className="trust-badge">
-                <span className="text-sm font-medium">⭐ GitHub 15K+ Stars</span>
-              </div>
-              <div className="trust-badge">
-                <span className="text-sm font-medium">🔒 SOC 2 Certified</span>
-              </div>
-              <div className="trust-badge">
-                <span className="text-sm font-medium">💎 Y Combinator</span>
-              </div>
+        <div className="mt-16 flex items-center justify-center gap-4 flex-wrap">
+          {[
+            "🏆 Product Hunt #1",
+            "⭐ GitHub 15K+ Stars",
+            "🔒 SOC 2 Certified",
+            "💎 Y Combinator",
+          ].map((badge, i) => (
+            <div key={i} className="glass-subtle rounded-lg px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors trust-badge">
+              {badge}
             </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>
