@@ -77,7 +77,7 @@ const Navigation = () => {
               <button
                 key={item.name}
                 onClick={() => handleNavClick(item)}
-                className="flex items-center space-x-1.5 px-3.5 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-lg transition-all duration-200 text-sm font-medium"
+                className="flex items-center space-x-1.5 px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-lg transition-all duration-200 text-sm font-medium whitespace-nowrap"
               >
                 <item.icon className="h-4 w-4" />
                 <span>{item.name}</span>
