@@ -126,7 +126,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           {isUser ? (
             <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{typeof message.content === 'string' ? message.content : String(message.content || '')}</p>
           ) : (
-            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-3 prose-headings:mt-4 prose-headings:mb-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 [&_.katex]:text-foreground [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto overflow-hidden">
+            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2.5 prose-headings:mt-5 prose-headings:mb-2 prose-headings:first:mt-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-hr:my-4 prose-hr:border-border/40 [&_.katex]:text-foreground [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto overflow-hidden">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
@@ -138,20 +138,28 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                       return <CodeBlock code={codeString} language={match[1]} onOpenCanvas={onOpenCodeCanvas} />;
                     }
                     return inline ? (
-                      <code className="bg-muted/60 px-1.5 py-0.5 rounded-md text-[13px] font-mono text-primary" {...props}>
+                      <code className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-md text-[13px] font-mono font-medium" {...props}>
                         {children}
                       </code>
                     ) : (
                       <CodeBlock code={codeString} language="text" onOpenCanvas={onOpenCodeCanvas} />
                     );
                   },
-                  ul({ children }) { return <ul className="list-disc pl-4 space-y-0.5 my-1.5">{children}</ul>; },
-                  ol({ children }) { return <ol className="list-decimal pl-4 space-y-0.5 my-1.5">{children}</ol>; },
-                  li({ children }) { return <li className="text-sm leading-relaxed">{children}</li>; },
-                  h1({ children }) { return <h1 className="text-base font-bold">{children}</h1>; },
-                  h2({ children }) { return <h2 className="text-sm font-bold">{children}</h2>; },
-                  h3({ children }) { return <h3 className="text-sm font-semibold">{children}</h3>; },
-                  p({ children }) { return <p className="text-sm leading-relaxed mb-3 last:mb-0">{children}</p>; },
+                  ul({ children }) { return <ul className="list-disc pl-5 space-y-1 my-2.5">{children}</ul>; },
+                  ol({ children }) { return <ol className="list-decimal pl-5 space-y-1 my-2.5">{children}</ol>; },
+                  li({ children }) { 
+                    return (
+                      <li className="text-sm leading-relaxed pl-1 marker:text-muted-foreground/60">{children}</li>
+                    ); 
+                  },
+                  h1({ children }) { return <h1 className="text-lg font-bold tracking-tight border-b border-border/30 pb-2 mb-3">{children}</h1>; },
+                  h2({ children }) { return <h2 className="text-[15px] font-bold tracking-tight mt-5 first:mt-0">{children}</h2>; },
+                  h3({ children }) { return <h3 className="text-sm font-semibold mt-4 first:mt-0">{children}</h3>; },
+                  h4({ children }) { return <h4 className="text-sm font-medium text-muted-foreground mt-3">{children}</h4>; },
+                  p({ children }) { return <p className="text-sm leading-[1.75] mb-2.5 last:mb-0">{children}</p>; },
+                  strong({ children }) { return <strong className="font-semibold text-foreground">{children}</strong>; },
+                  em({ children }) { return <em className="italic text-muted-foreground">{children}</em>; },
+                  hr() { return <hr className="my-4 border-border/40" />; },
                   a({ children, href }) { 
                     return (
                       <a 
@@ -159,36 +167,42 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                         target="_blank" 
                         rel="noopener noreferrer" 
                         onClick={(e) => { e.preventDefault(); if (href) openInBrowser(href); }}
-                        className="text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary cursor-pointer inline-flex items-center gap-0.5 transition-colors"
+                        className="text-primary font-medium underline underline-offset-2 decoration-primary/30 hover:decoration-primary cursor-pointer inline-flex items-center gap-0.5 transition-colors"
                       >
                         {children}
-                        <ExternalLink className="h-3 w-3 inline-block ml-0.5 opacity-50" />
+                        <ExternalLink className="h-3 w-3 inline-block ml-0.5 opacity-40" />
                       </a>
                     ); 
                   },
                   blockquote({ children }) { 
                     return (
-                      <blockquote className="border-l-2 border-primary/30 pl-3 italic text-muted-foreground my-2">
+                      <blockquote className="border-l-[3px] border-primary/40 pl-4 py-1 my-3 bg-primary/5 rounded-r-lg text-muted-foreground not-italic [&_p]:mb-1 [&_p]:last:mb-0">
                         {children}
                       </blockquote>
                     ); 
                   },
                   table({ children }) { 
                     return (
-                      <div className="overflow-x-auto my-2 rounded-lg border border-border/30">
-                        <table className="min-w-full">{children}</table>
+                      <div className="overflow-x-auto my-3 rounded-lg border border-border/40 shadow-sm">
+                        <table className="min-w-full divide-y divide-border/30">{children}</table>
                       </div>
                     ); 
                   },
+                  thead({ children }) {
+                    return <thead className="bg-muted/40">{children}</thead>;
+                  },
                   th({ children }) { 
                     return (
-                      <th className="border-b border-border/30 px-3 py-2 bg-muted/30 text-left text-xs font-semibold uppercase tracking-wider">
+                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                         {children}
                       </th>
                     ); 
                   },
                   td({ children }) { 
-                    return <td className="border-b border-border/20 px-3 py-2 text-sm">{children}</td>; 
+                    return <td className="border-t border-border/20 px-3 py-2 text-sm">{children}</td>; 
+                  },
+                  tr({ children }) {
+                    return <tr className="hover:bg-muted/20 transition-colors">{children}</tr>;
                   },
                 }}
               >
