@@ -239,11 +239,6 @@ export const ChatHeader = ({
           label="ShadowBrowser (B)"
           onClick={() => handleMenuAction(onOpenBrowser)}
         />
-        <MenuItem
-          icon={<Flag className="h-5 w-5 text-green-500" />}
-          label="🇵🇰 Pakistan Protocol (in Agent)"
-          onClick={() => handleMenuAction(onOpenAgenticRunner)}
-        />
       </div>
 
       {/* Canvas */}
@@ -525,11 +520,6 @@ export const ChatHeader = ({
                 <Compass className="h-4 w-4 mr-2 text-sky-500" />
                 ShadowBrowser
                 <span className="ml-auto text-xs text-muted-foreground">⇧B</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onOpenAgenticRunner}>
-                <Flag className="h-4 w-4 mr-2 text-green-500" />
-                🇵🇰 Pakistan Protocol
-                <span className="ml-auto text-xs text-muted-foreground">Agent</span>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />

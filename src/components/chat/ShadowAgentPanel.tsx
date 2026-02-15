@@ -968,8 +968,8 @@
                   <Flag className="h-5 w-5 text-white" />
                  </div>
                 <div>
-                  <p className="text-sm font-medium">🇵🇰 Pakistan Protocol</p>
-                  <p className="text-xs text-muted-foreground">FBR • SECP • Audit</p>
+                   <p className="text-sm font-medium">🏛️ Compliance Engine</p>
+                   <p className="text-xs text-muted-foreground">Tax • Regulatory • Audit</p>
                 </div>
               </button>
 
