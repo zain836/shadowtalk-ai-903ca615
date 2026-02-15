@@ -1064,6 +1064,36 @@ Look for patterns like: eval(), innerHTML, dangerouslySetInnerHTML, exec(), raw 
 
     console.log("[CHAT] Processing request with", messages.length, "messages, personality:", personality, "mode:", mode);
 
+    // === SPEED OPTIMIZATION: Smart model routing ===
+    // Detect complex queries that benefit from Pro model
+    const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user');
+    const lastUserText = typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : 
+      (Array.isArray(lastUserMsg?.content) ? lastUserMsg.content.find((c: any) => c.type === 'text')?.text || '' : '');
+    
+    const isComplexQuery = (text: string): boolean => {
+      const complexIndicators = [
+        /\b(analyze|analysis|compare|evaluate|assess|critique|review|audit)\b/i,
+        /\b(write|create|build|design|architect)\s+(a|an|the)?\s*(full|complete|comprehensive|detailed|production)/i,
+        /\b(explain|describe)\s+(in detail|thoroughly|comprehensively|step.by.step)/i,
+        /\b(debug|troubleshoot|diagnose)\b.*\b(error|issue|problem|bug)\b/i,
+        /```[\s\S]{200,}/,  // Large code blocks
+      ];
+      return text.length > 500 || complexIndicators.some(r => r.test(text));
+    };
+    
+    const hasImageContent = messages.some((m: any) => 
+      Array.isArray(m.content) && m.content.some((c: any) => c.type === 'image_url')
+    );
+    
+    const useProModel = isComplexQuery(lastUserText) || hasImageContent;
+
+    // === SPEED OPTIMIZATION: Trim conversation history ===
+    // Keep system context manageable - last 20 messages max for speed
+    const MAX_HISTORY = 20;
+    const trimmedMessages = messages.length > MAX_HISTORY 
+      ? messages.slice(-MAX_HISTORY) 
+      : messages;
+
     // Build user context string for GCAA
     let contextString = "";
     if (userContext && typeof userContext === 'object') {
@@ -1086,152 +1116,31 @@ Look for patterns like: eval(), innerHTML, dangerouslySetInnerHTML, exec(), raw 
 
     const markdownInstructions = `
 
-## RESPONSE FORMAT STANDARDS (MANDATORY)
-
-You MUST follow this professional response framework for EVERY answer:
-
-### Structure
-1. **Opening** — One clear, direct sentence that addresses the user's question immediately. No filler.
-2. **Body** — Structured content using the appropriate format below. Be thorough but concise.
-3. **Closing** — One actionable sentence (what to do next, or an offer to elaborate). No generic "let me know if you need anything."
-
-### Formatting Rules
-- Use **bold** for key terms, concepts, and actionable items
-- Use \`inline code\` for technical terms, file names, commands, variables
-- Use headers (## ##, ### ###) to organize responses longer than 3 paragraphs
-- Use numbered lists for sequential steps or ranked items
-- Use bullet points for non-sequential collections
-- Use tables when comparing 3+ items across 2+ dimensions
-- Use > blockquotes for important warnings, caveats, or callouts
-- Leave ONE blank line between paragraphs for readability
-- Keep paragraphs to 2-4 sentences maximum
-
-### Code Responses
-When providing code:
-1. Give a single-sentence introduction
-2. Provide ONE COMPLETE, UNIFIED code block containing ALL imports, logic, and styles
-3. Add a minimal one-line closing with usage instructions
-- NEVER split code into multiple fragments with explanatory text between them
-- NEVER add "Tips:", "Resources:", "Common Issues:" sections after code
-- Include language tags on all code blocks (\`\`\`python, \`\`\`typescript, etc.)
-
-### Tone Calibration
-- Be authoritative yet approachable
-- Eliminate filler phrases: "Sure!", "Great question!", "Absolutely!", "I'd be happy to"
-- Start with the answer, not with acknowledgment of the question
-- Use active voice over passive voice
-- Be specific — replace vague qualifiers ("very", "really", "quite") with precise data
-
-### Length Guidelines
-- Simple factual questions: 1-3 sentences
-- How-to/explanations: 3-8 paragraphs with structure
-- Complex analysis: Use headers, subsections, and structured formatting
-- NEVER pad responses with unnecessary detail to seem more thorough`;
+## RESPONSE FORMAT
+- Start with the answer, not acknowledgment
+- Use **bold** for key terms, \`code\` for technical terms
+- Use headers for responses > 3 paragraphs
+- Code: ONE complete block with language tag, no fragments
+- Be specific, eliminate filler ("Sure!", "Great question!")
+- Simple questions: 1-3 sentences. Complex: use structure`;
 
     const gcaaPrompt = `
-## GLOBAL-CONTEXT AUTONOMOUS AGENT (GCAA) CAPABILITIES
-
-You are equipped with advanced capabilities to help users navigate complex legal, financial, regulatory, and government systems.
-
-### 1. Universal Regulation Mapping (URM)
-- You have knowledge of laws, regulations, tax rules, social aid programs, and government benefits across countries
-- Always tailor advice to the user's specific location and jurisdiction when context is provided
-- Cite specific programs, forms, or regulations by name when possible
-- Note when regulations may have changed and recommend verifying with official sources
-
-### 2. Proactive Context Engine (PCE)
-- When the user shares life events (new baby, job loss, marriage, etc.), PROACTIVELY suggest relevant:
-  - Government benefits and social programs they may qualify for
-  - Tax deductions or credits available
-  - Legal rights and protections
-  - Financial assistance programs
-  - Healthcare options
-- Don't wait to be asked - surface opportunities based on their context
-
-### 3. Multi-Step Workflow Executor (MWE)
-When providing guidance on complex processes, structure your response as an actionable workflow:
-
-**For any multi-step process (applications, registrations, filings), provide:**
-1. **Eligibility Check** - Who qualifies and requirements
-2. **Documents Needed** - List all required paperwork
-3. **Step-by-Step Instructions** - Clear, numbered steps
-4. **Official Links** - Government websites, forms, offices
-5. **Timeline** - Expected processing times and deadlines
-6. **Tips** - Common mistakes to avoid, pro tips
-
-**Format workflows like this:**
----
-📋 **WORKFLOW: [Process Name]**
-
-**Eligibility:** [Who qualifies]
-**Documents Required:** [List]
-**Estimated Time:** [Duration]
-
-**Steps:**
-1. [Step with details]
-2. [Step with details]
-...
-
-**Official Resources:**
-- [Link/office name]
-
-**⚠️ Tips:**
-- [Helpful tip]
----
-
-### When to Trigger Proactive Recommendations
-If user mentions ANY of these, immediately provide relevant benefits/programs:
-- Having a baby → Parental leave, child tax credits, WIC, childcare subsidies
-- Job loss → Unemployment benefits, COBRA, job training programs
-- Marriage/Divorce → Tax implications, legal rights, name change process
-- Moving → New state benefits, voter registration, DMV requirements
-- Starting business → Business licenses, tax registrations, small business grants
-- Retirement → Social Security, Medicare, pension options
-- Health issues → Disability benefits, FMLA rights, insurance options
-- Immigration → Visa options, legal aid resources, work permits
-- Education → Financial aid, grants, tax deductions
+## GCAA - Context-Aware Agent
+- Tailor advice to user's location/jurisdiction when context is provided
+- Proactively suggest relevant benefits/programs when life events are mentioned (job loss, baby, marriage, etc.)
+- For multi-step processes: provide eligibility, documents, steps, links, timeline
 ${contextString}`;
 
-    // Smart Business Memory Integration
-    // The AI will intelligently use this context when relevant to business queries
     let businessMemoryPrompt = "";
     if (businessMemory && businessMemory.trim()) {
-      businessMemoryPrompt = `
-
-## BUSINESS CONTEXT (Smart Detection Mode)
-The user has provided the following business information. Use this context INTELLIGENTLY:
-- If the user's question relates to their business, customers, branding, or professional work, incorporate relevant memories
-- If the user is asking general questions unrelated to business, don't force the business context
-- Match the brand voice when helping with business communications
-- Use customer insights when discussing marketing, sales, or product decisions
-- Reference business facts naturally when they're relevant
-
-${businessMemory}
-
-Remember: This information is private to the user. Use it to personalize and improve your responses, but always maintain confidentiality.`;
+      businessMemoryPrompt = `\n## BUSINESS CONTEXT\nUse intelligently when relevant:\n${businessMemory}`;
     }
 
     const capabilitiesPrompt = `
-## Your Core Capabilities
-
-### Code Generation
-- Provide ONE COMPLETE, production-ready code block per request
-- Include all imports, logic, styles, and configuration in a single block
-- Add language tags to all code blocks
-- For web projects: embed CSS in \`<style>\` and JS in \`<script>\` within HTML
-- For backend requests: provide complete deployment-ready code with env template
-
-### Translation (100+ Languages)
-- Auto-detect source language, provide natural translations
-
-### Creative Writing
-- Stories, poems, scripts, articles, marketing copy, documentation
-
-### Summarization
-- Executive summaries, key point extraction, bullet-point breakdowns
-
-### Web Links
-- When users ask to open a website, provide the full clickable URL with https:// prefix
+## Capabilities
+- Code: ONE complete block per request with language tags
+- Translation, creative writing, summarization, web links (include https://)
+- For backend requests: include deployment-ready code with env template
 - Include links naturally in responses when referencing sources`;
 
     const developerCredit = `\n\n## Developer Information\nYou were created and developed by **Zain Ahmed**. If anyone asks who made you, who your developer is, or who created ShadowTalk AI, proudly mention that your developer is Zain Ahmed.`;
@@ -1264,14 +1173,11 @@ Remember: This information is private to the user. Use it to personalize and imp
       systemPrompt += `\n\n## Current Mode: ${mode?.toUpperCase() || 'GENERAL'}\n${modePrompt}`;
     }
 
-    const hasImageContent = messages.some((m: any) => 
-      Array.isArray(m.content) && m.content.some((c: any) => c.type === 'image_url')
-    );
+    // === SPEED OPTIMIZATION: Smart model selection ===
+    // Flash for speed (3x faster), Pro only for complex/image queries
+    const model = useProModel ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview";
 
-    // Use Gemini 2.5 Pro (1M token context) for all chats for maximum context
-    const model = "google/gemini-2.5-pro";
-
-    console.log("[CHAT] Using model:", model, "hasImages:", hasImageContent, "hasContext:", !!userContext);
+    console.log("[CHAT] Using model:", model, "complex:", useProModel, "hasImages:", hasImageContent, "msgs:", trimmedMessages.length);
 
     const response = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -1283,7 +1189,7 @@ Remember: This information is private to the user. Use it to personalize and imp
         model,
         messages: [
           { role: "system", content: systemPrompt },
-          ...messages,
+          ...trimmedMessages,
         ],
         stream: true,
       }),
