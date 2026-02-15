@@ -42,8 +42,9 @@ import {
   Globe,
   Route,
   Bell,
-  Download,
-  CreditCard
+   Download,
+    CreditCard,
+    Send
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -60,6 +61,7 @@ import { UserJourneyTracker } from '@/components/admin/UserJourneyTracker';
 import { AdminAlerts } from '@/components/admin/AdminAlerts';
 import { AnalyticsExport } from '@/components/admin/AnalyticsExport';
 import { ManualPaymentsManager } from '@/components/admin/ManualPaymentsManager';
+import { BroadcastManager } from '@/components/admin/BroadcastManager';
 
 interface UserData {
   id: string;
@@ -469,6 +471,10 @@ const AdminPage = () => {
                 <Megaphone className="h-4 w-4" />
                 Announcements
               </TabsTrigger>
+              <TabsTrigger value="broadcast" className="gap-2">
+                <Send className="h-4 w-4" />
+                Broadcast
+              </TabsTrigger>
             </TabsList>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
@@ -706,6 +712,10 @@ const AdminPage = () => {
 
           <TabsContent value="announcements">
             <AnnouncementManager />
+          </TabsContent>
+
+          <TabsContent value="broadcast">
+            <BroadcastManager />
           </TabsContent>
         </Tabs>
       </main>
