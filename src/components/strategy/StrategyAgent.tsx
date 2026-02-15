@@ -40,6 +40,9 @@ import { StrategyCharts } from "./StrategyCharts";
 import { StrategyPDFGenerator } from "./StrategyPDFGenerator";
 import { ResearchPanel } from "./ResearchPanel";
 import { SWOTAnalysis } from "./SWOTAnalysis";
+import { BusinessSimulator } from "./BusinessSimulator";
+import { ProactiveInsights } from "./ProactiveInsights";
+import { AutonomousReferralEngine } from "./AutonomousReferralEngine";
 
 export interface BusinessIdea {
   name: string;
@@ -413,7 +416,7 @@ Be realistic and specific to ${businessIdea.industry} in ${businessIdea.location
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-2 md:grid-cols-6 gap-2 h-auto p-2 bg-muted/50">
+          <TabsList className="grid grid-cols-3 md:grid-cols-9 gap-2 h-auto p-2 bg-muted/50">
             <TabsTrigger value="input" className="gap-2">
               <Brain className="h-4 w-4" />
               <span className="hidden sm:inline">Input</span>
@@ -437,6 +440,18 @@ Be realistic and specific to ${businessIdea.industry} in ${businessIdea.location
             <TabsTrigger value="export" disabled={!result} className="gap-2">
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">Export</span>
+            </TabsTrigger>
+            <TabsTrigger value="simulator" className="gap-2">
+              <Zap className="h-4 w-4" />
+              <span className="hidden sm:inline">Simulator</span>
+            </TabsTrigger>
+            <TabsTrigger value="hype" className="gap-2">
+              <Sparkles className="h-4 w-4" />
+              <span className="hidden sm:inline">Hype Engine</span>
+            </TabsTrigger>
+            <TabsTrigger value="referrals" className="gap-2">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Referrals</span>
             </TabsTrigger>
           </TabsList>
 
@@ -743,6 +758,21 @@ Be realistic and specific to ${businessIdea.industry} in ${businessIdea.location
                 chartsRef={chartsRef}
               />
             )}
+          </TabsContent>
+
+          {/* Simulator Tab */}
+          <TabsContent value="simulator">
+            <BusinessSimulator />
+          </TabsContent>
+
+          {/* Hype Engine Tab */}
+          <TabsContent value="hype">
+            <ProactiveInsights />
+          </TabsContent>
+
+          {/* Referrals Tab */}
+          <TabsContent value="referrals">
+            <AutonomousReferralEngine />
           </TabsContent>
         </Tabs>
       </div>
