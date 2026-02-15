@@ -328,7 +328,7 @@ export const ChatHeader = ({
   );
 
   return (
-    <div className="flex items-center justify-between px-2 py-2 md:px-4 md:py-3 border-b border-border/50 bg-card/50 backdrop-blur-sm">
+    <div className="flex items-center justify-between px-2 py-2 md:px-4 md:py-3 border-b border-border/40 glass-strong">
       {/* Left Section */}
       <div className="flex items-center gap-1.5 md:gap-3">
         <TooltipProvider>
