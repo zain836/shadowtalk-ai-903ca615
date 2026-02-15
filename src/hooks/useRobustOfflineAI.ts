@@ -12,16 +12,17 @@
  // - Auto-recovery from failures
  // =============================================================================
  
- interface OfflineAIState {
-   isReady: boolean;
-   isLoading: boolean;
-   loadProgress: number;
-   loadStage: string;
-   activeModel: string | null;
-   error: string | null;
-   hasWebGPU: boolean;
-   hasCachedModel: boolean;
- }
+interface OfflineAIState {
+  isReady: boolean;
+  isLoading: boolean;
+  loadProgress: number;
+  loadStage: string;
+  activeModel: string | null;
+  error: string | null;
+  hasWebGPU: boolean;
+  hasCachedModel: boolean;
+  storageEstimate: { used: number; quota: number } | null;
+}
  
 // Model catalog - ordered by capability for offline use
 // Larger models are preferred for complex tasks (reasoning, code generation, math)
@@ -38,6 +39,13 @@ const RECOMMENDED_MODEL = OFFLINE_MODELS[0]; // Phi 3.5 Mini - best for complex 
  
  const STORAGE_KEY = 'shadowtalk_robust_offline_model';
 
+// Format bytes to human-readable
+const formatBytes = (bytes: number): string => {
+  if (bytes >= 1_000_000_000) return `${(bytes / 1_000_000_000).toFixed(1)} GB`;
+  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(0)} MB`;
+  return `${(bytes / 1_000).toFixed(0)} KB`;
+};
+
 // Clear invalid cached model on startup
 const clearInvalidCache = () => {
   const cached = localStorage.getItem(STORAGE_KEY);
@@ -53,13 +61,13 @@ const clearInvalidCache = () => {
 // Run on module load
 clearInvalidCache();
  
- // Simple fallback responses when AI is unavailable
- const FALLBACK_RESPONSES: Record<string, string> = {
-   greeting: "👋 Hi! I'm in basic offline mode. How can I help?",
-   help: "I'm running in limited offline mode. I can help with:\n• Basic questions\n• Simple calculations\n• Time and date\n\nFor full AI capabilities, please ensure you have a model downloaded or connect to the internet.",
-   math: "I can do basic math! Try: 2+2, 10*5, 100/4",
-   default: "I'm currently in basic offline mode with limited capabilities. For full AI responses, please download an offline model or connect to the internet.",
- };
+// Simple fallback responses when AI is unavailable
+const FALLBACK_RESPONSES: Record<string, string> = {
+  greeting: "👋 Hi! I'm in basic offline mode. How can I help?",
+  help: "I'm running in limited offline mode. I can help with:\n• Basic questions & simple calculations\n• Time, date, and unit conversions\n• Cached conversation access\n\nFor full AI capabilities, download an offline model or connect to the internet.",
+  math: "I can do basic math! Try: 2+2, 10*5, 100/4",
+  default: "I'm currently in basic offline mode with limited capabilities. For full AI responses, please download an offline model or connect to the internet.",
+};
  
 export const useRobustOfflineAI = () => {
   const [state, setState] = useState<OfflineAIState>({
@@ -71,49 +79,90 @@ export const useRobustOfflineAI = () => {
     error: null,
     hasWebGPU: false,
     hasCachedModel: false,
+    storageEstimate: null,
   });
   
   const [isBackgroundDownloading, setIsBackgroundDownloading] = useState(false);
   const [backgroundProgress, setBackgroundProgress] = useState(0);
+  const [downloadSpeed, setDownloadSpeed] = useState<string | null>(null);
   const backgroundDownloadAttemptedRef = useRef(false);
+
+  const engineRef = useRef<any>(null);
+  const loadingRef = useRef<Promise<boolean> | null>(null);
+  const mountedRef = useRef(true);
+  const lastProgressTimeRef = useRef<number>(0);
+  const lastProgressBytesRef = useRef<number>(0);
+
+  // Check WebGPU & storage availability
+  useEffect(() => {
+    const checkCapabilities = async () => {
+      // WebGPU check
+      if ('gpu' in navigator) {
+        try {
+          const adapter = await (navigator as any).gpu?.requestAdapter();
+          if (adapter && mountedRef.current) {
+            setState(prev => ({ ...prev, hasWebGPU: true }));
+            console.log('[RobustOfflineAI] ✓ WebGPU available');
+          }
+        } catch {
+          console.log('[RobustOfflineAI] WebGPU check failed, will use CPU');
+        }
+      }
+
+      // Storage estimate
+      if ('storage' in navigator && 'estimate' in navigator.storage) {
+        try {
+          const estimate = await navigator.storage.estimate();
+          if (mountedRef.current) {
+            setState(prev => ({
+              ...prev,
+              storageEstimate: {
+                used: estimate.usage || 0,
+                quota: estimate.quota || 0,
+              },
+            }));
+          }
+        } catch {}
+      }
+    };
+
+    checkCapabilities();
+    return () => { mountedRef.current = false; };
+  }, []);
  
-   const engineRef = useRef<any>(null);
-   const loadingRef = useRef<Promise<boolean> | null>(null);
-   const mountedRef = useRef(true);
- 
-   // Check WebGPU availability
-   useEffect(() => {
-     const checkWebGPU = async () => {
-       if ('gpu' in navigator) {
-         try {
-           const adapter = await (navigator as any).gpu?.requestAdapter();
-           if (adapter && mountedRef.current) {
-             setState(prev => ({ ...prev, hasWebGPU: true }));
-             console.log('[RobustOfflineAI] ✓ WebGPU available');
-           }
-         } catch {
-           console.log('[RobustOfflineAI] WebGPU check failed, will use CPU');
-         }
-       }
-     };
- 
-     checkWebGPU();
-     return () => { mountedRef.current = false; };
-   }, []);
- 
-  // Background download of the recommended premium model
+  // Background download with speed estimation and storage checks
   const triggerBackgroundDownload = useCallback(async () => {
     if (backgroundDownloadAttemptedRef.current || !navigator.onLine) return;
     backgroundDownloadAttemptedRef.current = true;
     
+    // Check storage availability first
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+      try {
+        const est = await navigator.storage.estimate();
+        const available = (est.quota || 0) - (est.usage || 0);
+        if (available < RECOMMENDED_MODEL.bytes * 1.2) {
+          console.warn('[RobustOfflineAI] Insufficient storage for', RECOMMENDED_MODEL.name, 
+            `(need ${formatBytes(RECOMMENDED_MODEL.bytes)}, have ${formatBytes(available)})`);
+          // Try a smaller model instead
+          const smallerModel = OFFLINE_MODELS.find(m => m.bytes * 1.2 < available);
+          if (!smallerModel) {
+            console.warn('[RobustOfflineAI] No model fits available storage');
+            return;
+          }
+        }
+      } catch {}
+    }
+
     console.log('[RobustOfflineAI] 🚀 Starting background download of', RECOMMENDED_MODEL.name);
     setIsBackgroundDownloading(true);
     setBackgroundProgress(0);
+    setDownloadSpeed(null);
+    lastProgressTimeRef.current = Date.now();
+    lastProgressBytesRef.current = 0;
     
     try {
       const webllm = await import('@mlc-ai/web-llm');
       
-      // Check if recommended model is already cached
       const inCache = await webllm.hasModelInCache(RECOMMENDED_MODEL.id);
       if (inCache) {
         console.log('[RobustOfflineAI] ✓ Recommended model already cached');
@@ -124,17 +173,28 @@ export const useRobustOfflineAI = () => {
         return;
       }
       
-      // Use requestIdleCallback if available for non-blocking download
       const startDownload = async () => {
         try {
           const engine = await webllm.CreateMLCEngine(RECOMMENDED_MODEL.id, {
             initProgressCallback: (progress: any) => {
               const percent = Math.round((progress.progress || 0) * 100);
               setBackgroundProgress(percent);
+              
+              // Calculate download speed
+              const now = Date.now();
+              const elapsed = (now - lastProgressTimeRef.current) / 1000;
+              if (elapsed >= 2) {
+                const currentBytes = (progress.progress || 0) * RECOMMENDED_MODEL.bytes;
+                const bytesPerSec = (currentBytes - lastProgressBytesRef.current) / elapsed;
+                if (bytesPerSec > 0) {
+                  setDownloadSpeed(`${formatBytes(bytesPerSec)}/s`);
+                }
+                lastProgressTimeRef.current = now;
+                lastProgressBytesRef.current = currentBytes;
+              }
             },
           });
           
-          // Unload after download - we just wanted to cache it
           await engine.unload();
           
           localStorage.setItem(STORAGE_KEY, RECOMMENDED_MODEL.id);
@@ -142,15 +202,18 @@ export const useRobustOfflineAI = () => {
             setState(prev => ({ ...prev, hasCachedModel: true }));
           }
           setIsBackgroundDownloading(false);
+          setDownloadSpeed(null);
           
           console.log('[RobustOfflineAI] ✅ Background download complete:', RECOMMENDED_MODEL.name);
         } catch (e: any) {
           console.warn('[RobustOfflineAI] Background download failed:', e.message);
           setIsBackgroundDownloading(false);
+          setDownloadSpeed(null);
+          // Allow retry on next visit
+          backgroundDownloadAttemptedRef.current = false;
         }
       };
       
-      // Delay start to not interfere with page load
       if ('requestIdleCallback' in window) {
         (window as any).requestIdleCallback(() => startDownload(), { timeout: 60000 });
       } else {
@@ -159,6 +222,7 @@ export const useRobustOfflineAI = () => {
     } catch (e: any) {
       console.warn('[RobustOfflineAI] Background download setup failed:', e.message);
       setIsBackgroundDownloading(false);
+      backgroundDownloadAttemptedRef.current = false;
     }
   }, []);
 
@@ -573,11 +637,13 @@ export const useRobustOfflineAI = () => {
     recommendedModel: RECOMMENDED_MODEL,
     isBackgroundDownloading,
     backgroundProgress,
+    downloadSpeed,
     loadModel,
     downloadModel,
     generateResponse,
     unloadModel,
     getBasicFallback,
     triggerBackgroundDownload,
+    formatBytes,
   };
 };
