@@ -42,7 +42,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { feedbackId, category, rating, message, userEmail }: FeedbackNotificationRequest = await req.json();
     console.log("[FEEDBACK-NOTIFICATION] Received feedback:", { feedbackId, category, rating });
 
-    const adminEmail = "shadowtalk68@gmail.com";
+    const adminEmail = "h23059476@gmail.com";
 
     const emailHtml = `
       <!DOCTYPE html>
