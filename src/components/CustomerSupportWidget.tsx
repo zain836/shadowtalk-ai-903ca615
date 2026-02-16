@@ -44,6 +44,16 @@ const TYPE_LABELS: Record<string, { label: string; icon: React.ReactNode }> = {
   'cursor-orbit': { label: "Watching you", icon: <Brain className="h-3.5 w-3.5" /> },
   'déjà-vu': { label: "Pattern found", icon: <Zap className="h-3.5 w-3.5" /> },
   'micro-gesture': { label: "Reading intent", icon: <Brain className="h-3.5 w-3.5" /> },
+  breathing: { label: "Biometric sense", icon: <Brain className="h-3.5 w-3.5" /> },
+  'touch-pressure': { label: "Feeling you", icon: <Brain className="h-3.5 w-3.5" /> },
+  chronobio: { label: "Your rhythm", icon: <Zap className="h-3.5 w-3.5" /> },
+  'decision-fatigue': { label: "Brain overload", icon: <Brain className="h-3.5 w-3.5" /> },
+  'visual-attention': { label: "Eye tracking", icon: <Brain className="h-3.5 w-3.5" /> },
+  'digital-twin': { label: "Predicting you", icon: <Zap className="h-3.5 w-3.5" /> },
+  subconscious: { label: "Subconscious", icon: <Brain className="h-3.5 w-3.5" /> },
+  'cognitive-load': { label: "Brain capacity", icon: <Brain className="h-3.5 w-3.5" /> },
+  linguistic: { label: "Language match", icon: <Sparkles className="h-3.5 w-3.5" /> },
+  fomo: { label: "FOMO detected", icon: <Zap className="h-3.5 w-3.5" /> },
 };
 
 const CustomerSupportWidget = () => {
