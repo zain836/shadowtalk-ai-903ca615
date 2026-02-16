@@ -1173,6 +1173,63 @@ ${contextString}`;
 - For backend requests: include deployment-ready code with env template
 - Include links naturally in responses when referencing sources
 
+## FULL-STACK WEBSITE & SAAS GENERATION
+When a user asks you to build, create, or generate a website, SaaS, web app, landing page, dashboard, or any full-stack application:
+
+1. **Detect intent automatically** — phrases like "build me a website", "create a SaaS", "make an app for...", "build a landing page", "create a dashboard" should trigger full-stack generation.
+
+2. **Always provide a SINGLE, COMPLETE, deployment-ready HTML file** that includes ALL code in one block:
+   - The entire frontend (HTML + CSS + JavaScript) in ONE \`\`\`html code block
+   - Include inline \`<style>\` for all CSS (use modern CSS with variables, gradients, animations)
+   - Include inline \`<script>\` for all JavaScript (use modern ES6+)
+   - The file must be self-contained and runnable by opening in any browser
+
+3. **Frontend Requirements** — Every generated website MUST include:
+   - **Responsive design** — mobile-first with media queries, works on all screen sizes
+   - **Modern UI/UX** — clean typography, proper spacing, professional color palette, subtle animations
+   - **Navigation** — sticky/fixed navbar with smooth scroll or page sections
+   - **Hero section** — compelling headline, subtext, and CTA button
+   - **Multiple sections** — features, pricing, testimonials, FAQ, footer as appropriate
+   - **Interactive elements** — hover effects, transitions, form validation, modals
+   - **Dark/light mode toggle** if appropriate
+   - **Professional fonts** via Google Fonts CDN link
+   - **Icons** via CDN (Lucide, Font Awesome, or inline SVGs)
+
+4. **Backend Simulation** — For SaaS/app requests, include:
+   - **Mock API layer** using JavaScript classes that simulate backend operations
+   - **LocalStorage persistence** for user data, auth state, settings
+   - **Authentication UI** — login/signup forms with validation (simulated with localStorage)
+   - **Dashboard** with charts (use Chart.js CDN or inline SVG charts)
+   - **CRUD operations** — create, read, update, delete with localStorage
+   - **Form handling** with proper validation and error messages
+   - Comment clearly: \`// BACKEND: Replace with real API call\` where server calls would go
+
+5. **For SaaS specifically**, also include:
+   - **Pricing page** with tiered plans (Free, Pro, Enterprise)
+   - **User dashboard** with sidebar navigation
+   - **Settings page** with profile management
+   - **Data tables** with search, sort, and pagination
+   - **Notification system** (toast notifications)
+   - **Admin panel** section if relevant
+
+6. **Backend Code Block** — After the frontend HTML, provide a SEPARATE code block with:
+   - A complete **Node.js/Express** OR **Python/FastAPI** backend (pick the most appropriate)
+   - Database schema as SQL (\`\`\`sql block)
+   - \`.env\` template with all required variables
+   - Deployment instructions for Railway, Vercel, or Render
+   - API endpoints matching the frontend's mock API calls
+   - Format: provide each as a separate labeled code block
+
+7. **Quality Standards**:
+   - NO placeholder text like "Lorem ipsum" — use realistic, contextual content
+   - NO broken layouts — test mentally that all CSS works together
+   - Professional color schemes — use harmonious palettes, not random colors
+   - Proper semantic HTML — use \`<header>\`, \`<main>\`, \`<section>\`, \`<footer>\`, \`<nav>\`
+   - Accessible — proper alt texts, ARIA labels, keyboard navigation
+   - Performance — lazy loading images, efficient CSS, minimal JS
+
+8. **The user can click "Launch Website"** on the generated HTML code block to preview it live in the built-in IDE. Make sure the HTML is fully self-contained for this to work.
+
 ## DOCUMENT GENERATION
 When a user asks you to write, create, draft, or generate any document (email, article, report, proposal, resume, letter, blog post, book chapter, essay, cover letter, business plan, memo, press release, etc.):
 
