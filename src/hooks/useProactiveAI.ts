@@ -106,7 +106,7 @@ const MOOD_RESPONSES: Record<UserMood, { content: string; icon: string }[]> = {
   neutral: [],
 };
 
-// Navigation pattern predictions
+// Navigation pattern predictions — expanded for ultra-proactive coverage
 const PREDICTION_PATTERNS: { pattern: string[]; prediction: string; icon: string }[] = [
   { pattern: ['/pricing', '/about'], prediction: "💡 Visited pricing then came here? You're evaluating if we're legit. We are — but ask me anything to verify.", icon: "💡" },
   { pattern: ['/pricing', '/faq'], prediction: "🤝 Checking pricing and FAQs? You're close to deciding. Want me to address your biggest hesitation?", icon: "🤝" },
@@ -114,29 +114,54 @@ const PREDICTION_PATTERNS: { pattern: string[]; prediction: string; icon: string
   { pattern: ['/pricing', '/pricing'], prediction: "🔄 You keep returning to pricing. Something not clear? I can build a custom comparison for your use case.", icon: "🔄" },
   { pattern: ['/docs', '/chatbot'], prediction: "📚 Read the docs, now trying it live — smart approach. Need me to walk you through any feature?", icon: "📚" },
   { pattern: ['/about', '/pricing'], prediction: "🎯 Liked what you saw about us? The Founder's Vault plan is our best value — want details?", icon: "🎯" },
+  { pattern: ['/', '/pricing'], prediction: "💸 Checking pricing already? You're moving fast. Want me to calculate ROI for your specific use case?", icon: "💸" },
+  { pattern: ['/', '/about'], prediction: "🔍 Curious about who built this? Smart move. The origin story explains why this AI is different from everything else.", icon: "🔍" },
+  { pattern: ['/chatbot', '/pricing'], prediction: "🤑 Tried the chatbot and now checking pricing? You've seen the power — I can show you the plan that matches your usage.", icon: "🤑" },
+  { pattern: ['/chatbot', '/strategy'], prediction: "🧠 From chatbot to strategy agent — you're unlocking the serious tools. This is where ShadowTalk becomes your AI co-founder.", icon: "🧠" },
+  { pattern: ['/strategy', '/chatbot'], prediction: "📊 Generated a strategy and back to chat? I can help you execute every recommendation from that report right here.", icon: "📊" },
+  { pattern: ['/', '/'], prediction: "🏠 Refreshed the homepage? Looking for something specific? Tell me — I'll find it before you scroll.", icon: "🏠" },
 ];
 
-// Ambient narration per page section
+// Ambient narration per page section — significantly expanded
 const PAGE_NARRATIONS: Record<string, { threshold: number; content: string; icon: string }[]> = {
   '/about': [
-    { threshold: 15, content: "👀 Reading about the architect? Zain built this entire platform solo at 17. The AI you're using right now? He designed it.", icon: "👀" },
-    { threshold: 40, content: "📊 You're exploring the tech stack section. Fun fact: ShadowTalk runs 30+ AI tools orchestrated by a single cognitive loop.", icon: "📊" },
+    { threshold: 10, content: "👀 Reading about the architect? Zain built this entire platform solo at 17. The AI you're using right now? He designed it.", icon: "👀" },
+    { threshold: 30, content: "📊 You're exploring the tech stack section. Fun fact: ShadowTalk runs 30+ AI tools orchestrated by a single cognitive loop.", icon: "📊" },
+    { threshold: 50, content: "💡 The vision section explains why this isn't just another chatbot — it's an autonomous business operating system.", icon: "💡" },
     { threshold: 70, content: "🤝 Seeing the forms section? You can skip those — just tell me what you need right here.", icon: "🤝" },
+    { threshold: 90, content: "🏁 You've read the entire about page. You know us now. Ready to experience the tech firsthand?", icon: "🏁" },
   ],
   '/pricing': [
-    { threshold: 20, content: "💰 Pro tip: The free tier includes agentic tasks that competitors charge $20/mo for.", icon: "💰" },
+    { threshold: 10, content: "💰 Pro tip: The free tier includes agentic tasks that competitors charge $20/mo for.", icon: "💰" },
+    { threshold: 35, content: "📊 Comparing plans? The Elite tier unlocks 30+ AI tools, autonomous agents, and unlimited strategy reports.", icon: "📊" },
     { threshold: 60, content: "🏆 The Lifetime Deal at the bottom? Only 50 spots. Most users don't scroll this far.", icon: "🏆" },
+    { threshold: 85, content: "⚡ You've seen every plan. Still deciding? Tell me your budget and use case — I'll pick the perfect plan in 5 seconds.", icon: "⚡" },
   ],
   '/': [
-    { threshold: 25, content: "🎬 You're past the hero section. The features below are what make us incomparable — keep scrolling.", icon: "🎬" },
-    { threshold: 50, content: "📈 Halfway through the homepage. Most visitors who reach this point end up signing up. Just saying.", icon: "📈" },
+    { threshold: 10, content: "🎬 Welcome to ShadowTalk. Keep scrolling — every section reveals a capability that doesn't exist anywhere else.", icon: "🎬" },
+    { threshold: 25, content: "⚡ You're past the hero section. The features below are what make us incomparable — keep going.", icon: "⚡" },
+    { threshold: 40, content: "🔥 See these AI capabilities? Every single one works right now — no waitlists, no beta. Try them live.", icon: "🔥" },
+    { threshold: 55, content: "📈 Halfway through. Most visitors who reach this point end up signing up. Just saying.", icon: "📈" },
+    { threshold: 70, content: "🧠 The tools section you're approaching — these are autonomous agents that work while you sleep.", icon: "🧠" },
     { threshold: 85, content: "🏁 You've seen almost everything. The chatbot is where the real magic happens — want to try it?", icon: "🏁" },
   ],
   '/chatbot': [
-    { threshold: 10, content: "🧠 You're in the AI cockpit. Try: 'analyze my business', 'security audit', or 'creative synthesis' for power features.", icon: "🧠" },
+    { threshold: 5, content: "🧠 You're in the AI cockpit. Try: 'analyze my business', 'security audit', or 'creative synthesis' for power features.", icon: "🧠" },
+    { threshold: 30, content: "⚡ Pro tip: Press Ctrl+Shift+A to launch the autonomous agent — it executes multi-step plans independently.", icon: "⚡" },
+    { threshold: 60, content: "🔮 Try typing 'launch mission' for background autonomous execution, or 'open strategy' for CEO-grade business analysis.", icon: "🔮" },
   ],
   '/strategy': [
-    { threshold: 20, content: "📊 The Strategy Agent can generate investor-grade reports. Most users don't realize it's free for the first report.", icon: "📊" },
+    { threshold: 10, content: "📊 The Strategy Agent can generate investor-grade reports. Most users don't realize it's free for the first report.", icon: "📊" },
+    { threshold: 40, content: "💼 The CEO Suite below gives you encrypted strategic workflows — competitor analysis, pivot playbooks, and funding strategies.", icon: "💼" },
+    { threshold: 70, content: "🚀 Scroll down for the Hype Engine — it proactively monitors market shifts and alerts you before competitors react.", icon: "🚀" },
+  ],
+  '/faq': [
+    { threshold: 15, content: "❓ Reading FAQs? Most questions are answered faster by just asking me. Try it — I have instant access to everything.", icon: "❓" },
+    { threshold: 50, content: "📖 Still browsing FAQs? I can answer ANY question about ShadowTalk in real-time. No searching required.", icon: "📖" },
+  ],
+  '/docs': [
+    { threshold: 10, content: "📚 Documentation explorer! I can summarize any section, explain code examples, or guide you step-by-step. Just ask.", icon: "📚" },
+    { threshold: 40, content: "🛠️ Deep in the docs — you're serious about integration. Want me to generate starter code for your specific use case?", icon: "🛠️" },
   ],
 };
 
@@ -241,16 +266,18 @@ export function useProactiveAI(isChatOpen: boolean) {
       setTimeout(() => {
         setCurrentMessage(null);
         isShowingRef.current = false;
-        setTimeout(() => processQueue(), 5000);
-      }, 500);
-    }, 12000);
+        // Ultra-fast re-engagement: only 1.5s gap between messages
+        setTimeout(() => processQueue(), 1500);
+      }, 400);
+    }, 8000); // Show each message for 8s instead of 12s
   }, [isChatOpen]);
 
   const enqueueMessage = useCallback((msg: Omit<ProactiveMessage, 'id'>) => {
     if (isChatOpen) return;
     const session = sessionRef.current;
     const typeCount = session.shownMessages.filter(m => m.startsWith(msg.type)).length;
-    if (typeCount >= 2) return;
+    // Allow up to 5 messages per type for ultra-proactive behavior
+    if (typeCount >= 5) return;
     const id = `${msg.type}-${Date.now()}`;
     session.shownMessages.push(id);
     saveSessionState(session);
@@ -263,8 +290,9 @@ export function useProactiveAI(isChatOpen: boolean) {
     setTimeout(() => {
       setCurrentMessage(null);
       isShowingRef.current = false;
-      setTimeout(() => processQueue(), 3000);
-    }, 500);
+      // Quick re-engage after dismiss
+      setTimeout(() => processQueue(), 1000);
+    }, 300);
   }, [processQueue]);
 
   const recordInteraction = useCallback((topic?: string) => {
@@ -297,7 +325,7 @@ export function useProactiveAI(isChatOpen: boolean) {
     const session = sessionRef.current;
     if (session.shownMessages.some(m => m.startsWith('greeting') || m.startsWith('returning') || m.startsWith('temporal'))) return;
     const memory = memoryRef.current;
-    const delay = memory.visitCount <= 1 ? 2500 : 1500;
+    const delay = memory.visitCount <= 1 ? 1200 : 800;
     const timer = setTimeout(() => {
       if (memory.visitCount <= 1) {
         const temporal = getTemporalGreeting();
@@ -403,7 +431,7 @@ export function useProactiveAI(isChatOpen: boolean) {
         }
       }
       if (now % 10000 < 3000) rapidClickRef.current = 0;
-    }, 3000);
+    }, 1500); // Check mood every 1.5s for faster reaction
     return () => clearInterval(interval);
   }, [detectedMood, enqueueMessage]);
 
@@ -462,8 +490,13 @@ export function useProactiveAI(isChatOpen: boolean) {
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (e.clientY <= 0 && Date.now() - pageEntryRef.current > 10000) {
-        enqueueMessage({ content: "🚪 Leaving? If ShadowTalk didn't answer something, tell me now — I'm faster than any FAQ.", type: 'exit-intent', priority: 8, dismissable: true, icon: "🚪" });
+      if (e.clientY <= 0 && Date.now() - pageEntryRef.current > 3000) {
+        const exitMessages = [
+          "🚪 Wait! Before you leave — what's the ONE thing that would make you stay? I'll make it happen in 10 seconds.",
+          "⚡ Leaving already? Most people discover their favorite feature on their second minute. Give me 30 seconds to impress you.",
+          "🎯 I noticed you're about to leave. Quick: tell me what you were looking for and I'll find it instantly.",
+        ];
+        enqueueMessage({ content: exitMessages[Math.floor(Math.random() * exitMessages.length)], type: 'exit-intent', priority: 9, dismissable: true, icon: "🚪" });
       }
     };
     document.addEventListener('mouseleave', handler);
@@ -473,11 +506,19 @@ export function useProactiveAI(isChatOpen: boolean) {
   // ─── 7. Idle Nudge ──────────────────────────────────
 
   useEffect(() => {
+    const nudges = [
+      "💭 You've been quiet. I'm still here — thinking of ways to help. Just say the word.",
+      "🧠 While you're thinking, I'm analyzing your session. Want me to share what I've learned about your interests?",
+      "✨ Still here! Did you know I can generate code, write strategies, audit security, and create images — all from a single chat?",
+      "🔮 I've been studying your browsing pattern. I have 3 personalized recommendations ready. Want to hear them?",
+    ];
+    let nudgeIdx = 0;
     const timer = setInterval(() => {
-      if (mouseIdleRef.current > 30000 && !isChatOpen) {
-        enqueueMessage({ content: "💭 You've been quiet. I'm still here — thinking of ways to help. Just say the word.", type: 'nudge', priority: 3, dismissable: true, icon: "💭" });
+      if (mouseIdleRef.current > 12000 && !isChatOpen) {
+        enqueueMessage({ content: nudges[nudgeIdx % nudges.length], type: 'nudge', priority: 4, dismissable: true, icon: "💭" });
+        nudgeIdx++;
       }
-    }, 35000);
+    }, 15000); // Nudge every 15s if idle for 12s
     return () => clearInterval(timer);
   }, [isChatOpen, enqueueMessage]);
 
@@ -714,8 +755,8 @@ export function useProactiveAI(isChatOpen: boolean) {
           pauseStart = Date.now();
         } else {
           const pauseDuration = Date.now() - pauseStart;
-          // If they've been staring at one spot for 8+ seconds
-          if (pauseDuration > 8000 && pauseDuration < 12000) {
+          // If they've been staring at one spot for 5+ seconds
+          if (pauseDuration > 5000 && pauseDuration < 10000) {
             // Find what element they're looking at
             const centerEl = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
             const text = centerEl?.textContent?.trim()?.slice(0, 60);
@@ -751,7 +792,7 @@ export function useProactiveAI(isChatOpen: boolean) {
     const isUltrawide = width > 2000;
     const isTouchDevice = 'ontouchstart' in window;
 
-    const timer = setTimeout(() => {
+    const timer = setTimeout(() => { // Trigger device detection faster
       if (isMobile && isTouchDevice) {
         enqueueMessage({
           content: "📱 Mobile detected. I'll be extra concise — swipe-friendly answers, zero scrolling walls. Tap me anytime.",
@@ -769,7 +810,7 @@ export function useProactiveAI(isChatOpen: boolean) {
           icon: "🖥️",
         });
       }
-    }, 8000);
+    }, 3000); // Faster device detection
 
     return () => clearTimeout(timer);
   }, [enqueueMessage]);
@@ -844,7 +885,7 @@ export function useProactiveAI(isChatOpen: boolean) {
         });
         keystrokeIntervalsRef.current = []; // Reset after trigger
       }
-    }, 15000);
+    }, 8000); // Faster confidence detection
 
     return () => clearInterval(interval);
   }, [enqueueMessage]);
@@ -897,7 +938,7 @@ export function useProactiveAI(isChatOpen: boolean) {
           cursorPositionsRef.current = []; // Reset
         }
       }
-    }, 4000);
+    }, 2500); // Faster cursor orbit detection
 
     return () => clearInterval(interval);
   }, [enqueueMessage]);
@@ -1018,7 +1059,7 @@ export function useProactiveAI(isChatOpen: boolean) {
         });
         samples = [];
       }
-    }, 20000);
+    }, 12000); // Faster breathing analysis
 
     return () => {
       window.removeEventListener('devicemotion', handler);
@@ -1067,7 +1108,7 @@ export function useProactiveAI(isChatOpen: boolean) {
         });
         pressures.length = 0;
       }
-    }, 15000);
+    }, 8000); // Faster touch pressure sensing
 
     return () => {
       window.removeEventListener('touchstart', handler);
@@ -1117,7 +1158,7 @@ export function useProactiveAI(isChatOpen: boolean) {
             icon: "🧬",
           });
         }
-      }, 15000);
+      }, 6000); // Faster chronobio trigger
 
       return () => clearTimeout(timer);
     }
@@ -1182,7 +1223,7 @@ export function useProactiveAI(isChatOpen: boolean) {
       const entries = Array.from(attentionZones.entries());
       const hotspot = entries.sort((a, b) => b[1] - a[1])[0];
 
-      if (hotspot && hotspot[1] > 20000 && hotspot[1] < 25000) {
+      if (hotspot && hotspot[1] > 12000 && hotspot[1] < 18000) {
         // 20s+ staring at one zone
         const zoneY = Number(hotspot[0].split('-').pop()) * 200;
         const el = document.elementFromPoint(window.innerWidth / 2, zoneY - window.scrollY + 100);
@@ -1247,7 +1288,7 @@ export function useProactiveAI(isChatOpen: boolean) {
           icon: "🪞",
         });
       }
-    }, 10000);
+    }, 5000); // Faster digital twin prediction
 
     return () => clearTimeout(timer);
   }, [location.pathname, enqueueMessage]);
@@ -1274,7 +1315,7 @@ export function useProactiveAI(isChatOpen: boolean) {
     window.addEventListener('mousemove', handler, { passive: true });
 
     const interval = setInterval(() => {
-      const entries = Array.from(hoverMap.entries()).filter(([, count]) => count > 50);
+      const entries = Array.from(hoverMap.entries()).filter(([, count]) => count > 30); // Lower threshold
       if (entries.length === 0) return;
 
       const topAttraction = entries.sort((a, b) => b[1] - a[1])[0];
@@ -1288,7 +1329,7 @@ export function useProactiveAI(isChatOpen: boolean) {
       });
 
       hoverMap.clear();
-    }, 25000);
+    }, 12000); // Faster subconscious detection
 
     return () => {
       window.removeEventListener('mousemove', handler);
@@ -1325,7 +1366,7 @@ export function useProactiveAI(isChatOpen: boolean) {
           icon: "📊",
         });
       }
-    }, 20000);
+    }, 10000); // Faster cognitive load detection
 
     return () => clearInterval(interval);
   }, [enqueueMessage]);
@@ -1390,7 +1431,7 @@ export function useProactiveAI(isChatOpen: boolean) {
           });
         }
       }
-    }, 20000);
+    }, 10000); // Faster linguistic fingerprinting
 
     return () => {
       window.removeEventListener('keydown', handler);
@@ -1413,7 +1454,7 @@ export function useProactiveAI(isChatOpen: boolean) {
 
     const recentSwitches = memory.featureSwitchTimestamps.length;
 
-    if (recentSwitches >= 6) {
+    if (recentSwitches >= 4) { // Lower threshold for FOMO
       const timer = setTimeout(() => {
         enqueueMessage({
           content: `😱 FOMO detected: You've explored ${recentSwitches} pages in 2 minutes — you want everything! Good news: the all-access plan covers every feature you've looked at. Want a personalized bundle?`,
