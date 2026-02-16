@@ -9,7 +9,10 @@ export type ProactiveMessageType =
   | 'mood' | 'prediction' | 'narration' | 'temporal'
   | 'phantom' | 'copy' | 'battery' | 'connection'
   | 'tab-rivalry' | 'hesitation' | 'device' | 'ambient-light'
-  | 'confidence' | 'cursor-orbit' | 'déjà-vu' | 'micro-gesture';
+  | 'confidence' | 'cursor-orbit' | 'déjà-vu' | 'micro-gesture'
+  | 'breathing' | 'touch-pressure' | 'chronobio' | 'decision-fatigue'
+  | 'visual-attention' | 'digital-twin' | 'subconscious' | 'cognitive-load'
+  | 'linguistic' | 'fomo';
 
 export interface ProactiveMessage {
   id: string;
@@ -33,6 +36,11 @@ interface VisitorMemory {
   moodHistory: { mood: UserMood; timestamp: number }[];
   copiedTexts: string[];
   phantomTypeCount: number;
+  // Beyond-human memory
+  activityByHour: Record<number, number>; // hour → activity score across visits
+  decisionCount: number;
+  vocabularyLevel: 'simple' | 'moderate' | 'advanced' | 'unknown';
+  featureSwitchTimestamps: number[];
 }
 
 interface BehaviorSignals {
@@ -143,6 +151,8 @@ function getVisitorMemory(): VisitorMemory {
     visitCount: 0, lastVisit: 0, pagesVisited: [], navigationHistory: [],
     hasInteracted: false, totalTimeSpent: 0, moodHistory: [],
     copiedTexts: [], phantomTypeCount: 0,
+    activityByHour: {}, decisionCount: 0, vocabularyLevel: 'unknown',
+    featureSwitchTimestamps: [],
   };
 }
 
@@ -950,6 +960,475 @@ export function useProactiveAI(isChatOpen: boolean) {
       if (selectionTimer) clearTimeout(selectionTimer);
     };
   }, [enqueueMessage]);
+
+  // ════════════════════════════════════════════════════
+  // ═══ BEYOND-HUMAN LEVEL DETECTIONS ═════════════════
+  // ════════════════════════════════════════════════════
+
+  // ─── 20. BREATHING PATTERN DETECTION ───────────────
+  // Uses DeviceMotion API to detect micro-tremors from breathing.
+  // On mobile, holding the phone transmits chest movement.
+
+  useEffect(() => {
+    let samples: number[] = [];
+    let lastMagnitude = 0;
+
+    const handler = (e: DeviceMotionEvent) => {
+      const acc = e.accelerationIncludingGravity;
+      if (!acc || acc.x === null || acc.y === null || acc.z === null) return;
+
+      const magnitude = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
+      const delta = Math.abs(magnitude - lastMagnitude);
+      lastMagnitude = magnitude;
+
+      samples.push(delta);
+      if (samples.length > 100) samples = samples.slice(-60);
+    };
+
+    // Check for permission and add listener
+    if (typeof DeviceMotionEvent !== 'undefined') {
+      window.addEventListener('devicemotion', handler);
+    }
+
+    // Analysis loop
+    const interval = setInterval(() => {
+      if (samples.length < 30) return;
+
+      const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+      const peaks = samples.filter(s => s > avg * 1.5).length;
+
+      // High frequency micro-movements = fast breathing = stress
+      if (peaks > 15) {
+        enqueueMessage({
+          content: "🫁 I'm sensing rapid micro-movements from your device — your breathing might be elevated. Take a slow breath. I can simplify whatever's stressing you.",
+          type: 'breathing',
+          priority: 8,
+          dismissable: true,
+          icon: "🫁",
+        });
+        samples = [];
+      } else if (peaks < 5 && samples.length > 50) {
+        // Very still = deep calm or sleeping
+        enqueueMessage({
+          content: "🧘 You're incredibly still right now — deep focus or deep thought? Either way, I'll match your calm. Ask when ready.",
+          type: 'breathing',
+          priority: 3,
+          dismissable: true,
+          icon: "🧘",
+        });
+        samples = [];
+      }
+    }, 20000);
+
+    return () => {
+      window.removeEventListener('devicemotion', handler);
+      clearInterval(interval);
+    };
+  }, [enqueueMessage]);
+
+  // ─── 21. TOUCH PRESSURE SENSING ────────────────────
+  // Uses Touch.force property (0-1) to measure tap intensity.
+
+  useEffect(() => {
+    const pressures: number[] = [];
+
+    const handler = (e: TouchEvent) => {
+      for (let i = 0; i < e.touches.length; i++) {
+        const force = e.touches[i].force;
+        if (force > 0) pressures.push(force);
+      }
+      if (pressures.length > 50) pressures.splice(0, pressures.length - 30);
+    };
+
+    window.addEventListener('touchstart', handler, { passive: true });
+    window.addEventListener('touchmove', handler, { passive: true });
+
+    const interval = setInterval(() => {
+      if (pressures.length < 10) return;
+
+      const avg = pressures.reduce((a, b) => a + b, 0) / pressures.length;
+
+      if (avg > 0.7) {
+        enqueueMessage({
+          content: "👆 You're pressing the screen quite hard — I can feel the tension through the glass. Let me help resolve whatever's causing that friction.",
+          type: 'touch-pressure',
+          priority: 7,
+          dismissable: true,
+          icon: "👆",
+        });
+        pressures.length = 0;
+      } else if (avg < 0.15 && avg > 0) {
+        enqueueMessage({
+          content: "🪶 Feather-light touches — you're browsing gently, taking it all in. I'll keep my suggestions soft and exploratory.",
+          type: 'touch-pressure',
+          priority: 3,
+          dismissable: true,
+          icon: "🪶",
+        });
+        pressures.length = 0;
+      }
+    }, 15000);
+
+    return () => {
+      window.removeEventListener('touchstart', handler);
+      window.removeEventListener('touchmove', handler);
+      clearInterval(interval);
+    };
+  }, [enqueueMessage]);
+
+  // ─── 22. CHRONOBIOLOGICAL SYNC ─────────────────────
+  // Learns your personal rhythm across visits to predict peak hours.
+
+  useEffect(() => {
+    const memory = memoryRef.current;
+    if (!memory.activityByHour) memory.activityByHour = {};
+
+    const hour = new Date().getHours();
+    memory.activityByHour[hour] = (memory.activityByHour[hour] || 0) + 1;
+    saveVisitorMemory(memory);
+
+    // Only trigger after 3+ visits (enough data)
+    if (memory.visitCount < 3) return;
+
+    const entries = Object.entries(memory.activityByHour).map(([h, s]) => ({ hour: Number(h), score: s as number }));
+    entries.sort((a, b) => b.score - a.score);
+    const peakHour = entries[0];
+
+    if (peakHour && peakHour.score >= 3) {
+      const currentHour = new Date().getHours();
+      const isPeak = currentHour === peakHour.hour;
+
+      const timer = setTimeout(() => {
+        if (isPeak) {
+          enqueueMessage({
+            content: `🧬 Chronobio-sync: You're most active at ${peakHour.hour > 12 ? peakHour.hour - 12 + 'pm' : peakHour.hour + 'am'}. Right now is YOUR peak hour — best time for deep work or big decisions.`,
+            type: 'chronobio',
+            priority: 6,
+            dismissable: true,
+            icon: "🧬",
+          });
+        } else {
+          const peakLabel = peakHour.hour > 12 ? `${peakHour.hour - 12}pm` : `${peakHour.hour}am`;
+          enqueueMessage({
+            content: `🧬 Your personal data says you're sharpest at ${peakLabel}. Right now might not be your peak — want me to keep things light, or push through?`,
+            type: 'chronobio',
+            priority: 4,
+            dismissable: true,
+            icon: "🧬",
+          });
+        }
+      }, 15000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [enqueueMessage]);
+
+  // ─── 23. DECISION FATIGUE METER ────────────────────
+  // Counts every click/selection/navigation as a micro-decision.
+
+  useEffect(() => {
+    const memory = memoryRef.current;
+    if (!memory.decisionCount) memory.decisionCount = 0;
+
+    const clickHandler = () => {
+      memory.decisionCount += 1;
+      saveVisitorMemory(memory);
+
+      if (memory.decisionCount === 35) {
+        enqueueMessage({
+          content: "🧠 Decision fatigue alert: You've made 35+ micro-decisions this session. Your brain is getting tired of choosing. Want me to just recommend the best option?",
+          type: 'decision-fatigue',
+          priority: 8,
+          dismissable: true,
+          icon: "🧠",
+        });
+      } else if (memory.decisionCount === 60) {
+        enqueueMessage({
+          content: "⚠️ 60+ decisions in one session — that's beyond the cognitive limit. I'm switching to binary mode: I'll give you ONE recommendation. Yes or no. That's it.",
+          type: 'decision-fatigue',
+          priority: 9,
+          dismissable: true,
+          icon: "⚠️",
+        });
+      }
+    };
+
+    window.addEventListener('click', clickHandler, { passive: true });
+    return () => window.removeEventListener('click', clickHandler);
+  }, [enqueueMessage]);
+
+  // ─── 24. VISUAL ATTENTION CARTOGRAPHY ──────────────
+  // Builds estimated eye-position from scroll + cursor proximity.
+
+  useEffect(() => {
+    const attentionZones: Map<string, number> = new Map();
+    let lastCheck = Date.now();
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const dt = now - lastCheck;
+      lastCheck = now;
+
+      if (scrollVelocityRef.current > 2) return; // Skipping while scrolling fast
+
+      // Estimate gaze position: center of viewport
+      const gazeY = window.scrollY + window.innerHeight * 0.4;
+      const zone = Math.floor(gazeY / 200); // 200px zones
+      const zoneKey = `${location.pathname}-${zone}`;
+
+      attentionZones.set(zoneKey, (attentionZones.get(zoneKey) || 0) + dt);
+
+      // Find hotspot — most gazed zone
+      const entries = Array.from(attentionZones.entries());
+      const hotspot = entries.sort((a, b) => b[1] - a[1])[0];
+
+      if (hotspot && hotspot[1] > 20000 && hotspot[1] < 25000) {
+        // 20s+ staring at one zone
+        const zoneY = Number(hotspot[0].split('-').pop()) * 200;
+        const el = document.elementFromPoint(window.innerWidth / 2, zoneY - window.scrollY + 100);
+        const heading = el?.closest('section, article')?.querySelector('h1, h2, h3');
+        const label = heading?.textContent?.trim() || 'this section';
+
+        enqueueMessage({
+          content: `👁️ Visual attention mapped: You've spent 20+ seconds focused on "${label}". Your gaze keeps returning here — this is clearly important to you. Want to go deeper?`,
+          type: 'visual-attention',
+          priority: 6,
+          dismissable: true,
+          icon: "👁️",
+        });
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [enqueueMessage, location.pathname]);
+
+  // ─── 25. DIGITAL TWIN PREDICTION ───────────────────
+  // Predicts your NEXT action based on behavioral patterns.
+
+  useEffect(() => {
+    const memory = memoryRef.current;
+    if (memory.navigationHistory.length < 4) return;
+
+    const timer = setTimeout(() => {
+      const history = memory.navigationHistory;
+      const lastTwo = history.slice(-2).map(h => h.path);
+      const currentPath = location.pathname;
+
+      // Build transition probability map
+      const transitions: Record<string, Record<string, number>> = {};
+      for (let i = 0; i < history.length - 1; i++) {
+        const from = history[i].path;
+        const to = history[i + 1].path;
+        if (!transitions[from]) transitions[from] = {};
+        transitions[from][to] = (transitions[from][to] || 0) + 1;
+      }
+
+      const nextPredictions = transitions[currentPath];
+      if (!nextPredictions) return;
+
+      const sorted = Object.entries(nextPredictions).sort((a, b) => b[1] - a[1]);
+      if (sorted.length > 0 && sorted[0][1] >= 2) {
+        const predictedPath = sorted[0][0];
+        const confidence = Math.round((sorted[0][1] / Object.values(nextPredictions).reduce((a, b) => a + b, 0)) * 100);
+
+        const pathNames: Record<string, string> = {
+          '/': 'the homepage', '/pricing': 'pricing', '/about': 'about us',
+          '/chatbot': 'the chatbot', '/strategy': 'strategy agent',
+          '/docs': 'documentation', '/faq': 'FAQs',
+        };
+
+        const label = pathNames[predictedPath] || predictedPath;
+
+        enqueueMessage({
+          content: `🪞 Digital Twin prediction (${confidence}% confidence): Based on your behavioral pattern, you're about to visit ${label}. I've already pre-analyzed that page for you — want the summary now?`,
+          type: 'digital-twin',
+          priority: 7,
+          dismissable: true,
+          icon: "🪞",
+        });
+      }
+    }, 10000);
+
+    return () => clearTimeout(timer);
+  }, [location.pathname, enqueueMessage]);
+
+  // ─── 26. SUBCONSCIOUS ELEMENT ATTRACTION ───────────
+  // Tracks which elements the cursor hovers near most without clicking.
+
+  useEffect(() => {
+    const hoverMap: Map<string, number> = new Map();
+
+    const handler = (e: MouseEvent) => {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (!el) return;
+
+      const interactive = el.closest('button, a, [role="button"], input, .card');
+      if (!interactive) return;
+
+      const label = interactive.textContent?.trim()?.slice(0, 40) || interactive.getAttribute('aria-label') || 'element';
+      const key = label.toLowerCase();
+
+      hoverMap.set(key, (hoverMap.get(key) || 0) + 1);
+    };
+
+    window.addEventListener('mousemove', handler, { passive: true });
+
+    const interval = setInterval(() => {
+      const entries = Array.from(hoverMap.entries()).filter(([, count]) => count > 50);
+      if (entries.length === 0) return;
+
+      const topAttraction = entries.sort((a, b) => b[1] - a[1])[0];
+
+      enqueueMessage({
+        content: `🧲 Subconscious signal: Your cursor has gravitated toward "${topAttraction[0]}" ${topAttraction[1]} times without clicking. Something's pulling you there — explore it?`,
+        type: 'subconscious',
+        priority: 7,
+        dismissable: true,
+        icon: "🧲",
+      });
+
+      hoverMap.clear();
+    }, 25000);
+
+    return () => {
+      window.removeEventListener('mousemove', handler);
+      clearInterval(interval);
+    };
+  }, [enqueueMessage]);
+
+  // ─── 27. COGNITIVE LOAD ESTIMATION ─────────────────
+  // Measures page complexity × erratic behavior to detect overload.
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Count visible text elements
+      const textElements = document.querySelectorAll('p, h1, h2, h3, h4, li, span, td');
+      const visibleCount = Array.from(textElements).filter(el => {
+        const rect = el.getBoundingClientRect();
+        return rect.top >= 0 && rect.top <= window.innerHeight;
+      }).length;
+
+      // High element count + erratic scroll + frequent focus loss = overloaded
+      const erraticScore = (
+        (visibleCount > 20 ? 3 : visibleCount > 10 ? 1 : 0) +
+        (scrollVelocityRef.current > 4 ? 2 : 0) +
+        (focusLostRef.current > 2 ? 2 : 0) +
+        (backtrackRef.current > 1 ? 1 : 0)
+      );
+
+      if (erraticScore >= 5) {
+        enqueueMessage({
+          content: `📊 Cognitive load critical: ${visibleCount}+ elements competing for your attention, erratic scrolling, and tab switching. Your brain is overloaded. Tell me your ONE goal — I'll filter everything else out.`,
+          type: 'cognitive-load',
+          priority: 8,
+          dismissable: true,
+          icon: "📊",
+        });
+      }
+    }, 20000);
+
+    return () => clearInterval(interval);
+  }, [enqueueMessage]);
+
+  // ─── 28. LINGUISTIC FINGERPRINTING ─────────────────
+  // Analyzes typed words to detect vocabulary level and match it.
+
+  useEffect(() => {
+    const words: string[] = [];
+    let currentWord = '';
+
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        if (currentWord.length > 2) {
+          words.push(currentWord.toLowerCase());
+          if (words.length > 50) words.splice(0, words.length - 30);
+        }
+        currentWord = '';
+      } else if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+        currentWord += e.key;
+      }
+    };
+
+    window.addEventListener('keydown', handler, { passive: true });
+
+    const interval = setInterval(() => {
+      if (words.length < 8) return;
+
+      // Simple vocabulary analysis
+      const avgWordLen = words.reduce((s, w) => s + w.length, 0) / words.length;
+      const complexWords = words.filter(w => w.length > 8).length;
+      const ratio = complexWords / words.length;
+
+      const memory = memoryRef.current;
+      let level: 'simple' | 'moderate' | 'advanced' = 'moderate';
+
+      if (ratio > 0.3 || avgWordLen > 7) {
+        level = 'advanced';
+      } else if (ratio < 0.1 && avgWordLen < 5) {
+        level = 'simple';
+      }
+
+      if (memory.vocabularyLevel !== level && level !== 'moderate') {
+        memory.vocabularyLevel = level;
+        saveVisitorMemory(memory);
+
+        if (level === 'advanced') {
+          enqueueMessage({
+            content: "🔮 Linguistic analysis: Your vocabulary suggests expertise. I'm upgrading my response depth — no hand-holding, straight to advanced concepts. Specify your domain and I'll match your level.",
+            type: 'linguistic',
+            priority: 5,
+            dismissable: true,
+            icon: "🔮",
+          });
+        } else if (level === 'simple') {
+          enqueueMessage({
+            content: "🔮 I'm tuning my language to be clearer and more direct. No jargon, no fluff — just answers you can act on immediately.",
+            type: 'linguistic',
+            priority: 5,
+            dismissable: true,
+            icon: "🔮",
+          });
+        }
+      }
+    }, 20000);
+
+    return () => {
+      window.removeEventListener('keydown', handler);
+      clearInterval(interval);
+    };
+  }, [enqueueMessage]);
+
+  // ─── 29. FOMO CASCADE DETECTION ────────────────────
+  // Rapid page switching between features = wants everything.
+
+  useEffect(() => {
+    const memory = memoryRef.current;
+    if (!memory.featureSwitchTimestamps) memory.featureSwitchTimestamps = [];
+
+    const now = Date.now();
+    memory.featureSwitchTimestamps.push(now);
+    // Keep last 2 minutes
+    memory.featureSwitchTimestamps = memory.featureSwitchTimestamps.filter(t => now - t < 120000);
+    saveVisitorMemory(memory);
+
+    const recentSwitches = memory.featureSwitchTimestamps.length;
+
+    if (recentSwitches >= 6) {
+      const timer = setTimeout(() => {
+        enqueueMessage({
+          content: `😱 FOMO detected: You've explored ${recentSwitches} pages in 2 minutes — you want everything! Good news: the all-access plan covers every feature you've looked at. Want a personalized bundle?`,
+          type: 'fomo',
+          priority: 8,
+          dismissable: true,
+          icon: "😱",
+        });
+        memory.featureSwitchTimestamps = [];
+        saveVisitorMemory(memory);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [location.pathname, enqueueMessage]);
 
   return {
     currentMessage,
