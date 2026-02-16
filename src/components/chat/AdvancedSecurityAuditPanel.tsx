@@ -91,12 +91,20 @@ interface Vulnerability {
   complianceMappings?: ComplianceMapping[];
   isSecret?: boolean;
   isDependency?: boolean;
+  attackVector?: string;
+  remediationEffort?: string;
 }
 
 interface ComplianceMapping {
   framework: string;
   requirement: string;
   status: 'pass' | 'fail' | 'warning';
+}
+
+interface ThreatModel {
+  attackSurface: string[];
+  highValueTargets: string[];
+  likelyAttackPaths: string[];
 }
 
 interface ProjectFile {
@@ -159,7 +167,7 @@ interface AdvancedSecurityAuditPanelProps {
   isAnalyzing: boolean;
 }
 
-// Secret detection patterns
+// Secret detection patterns (expanded)
 const SECRET_PATTERNS: SecretPattern[] = [
   { name: 'AWS Access Key', pattern: /AKIA[0-9A-Z]{16}/g, severity: 'critical' },
   { name: 'AWS Secret Key', pattern: /[A-Za-z0-9/+=]{40}/g, severity: 'critical' },
@@ -181,6 +189,88 @@ const SECRET_PATTERNS: SecretPattern[] = [
   { name: 'Firebase Config', pattern: /apiKey:\s*['\"][A-Za-z0-9-_]+['\"]/g, severity: 'high' },
   { name: 'OpenAI Key', pattern: /sk-[A-Za-z0-9]{48}/g, severity: 'critical' },
   { name: 'Anthropic Key', pattern: /sk-ant-[A-Za-z0-9-_]{40,}/g, severity: 'critical' },
+  { name: 'Azure Key', pattern: /[a-f0-9]{32}/g, severity: 'medium' },
+  { name: 'Twilio Token', pattern: /SK[a-f0-9]{32}/g, severity: 'high' },
+  { name: 'SendGrid Key', pattern: /SG\.[A-Za-z0-9-_]{22}\.[A-Za-z0-9-_]{43}/g, severity: 'critical' },
+  { name: 'Mailchimp Key', pattern: /[a-f0-9]{32}-us\d{1,2}/g, severity: 'high' },
+  { name: 'Heroku Key', pattern: /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/g, severity: 'medium' },
+];
+
+// Expanded SAST patterns for local detection
+interface SASTPattern {
+  pattern: RegExp;
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  title: string;
+  category: string;
+  cweId: string;
+  description: string;
+  remediation: string;
+}
+
+const SAST_PATTERNS: SASTPattern[] = [
+  // Injection
+  { pattern: /eval\s*\(/g, severity: 'critical', title: 'eval() Code Injection', category: 'Injection', cweId: 'CWE-94', description: 'Use of eval() can execute arbitrary code', remediation: 'Replace eval() with safer alternatives like JSON.parse() or Function constructors with validated input' },
+  { pattern: /new\s+Function\s*\(/g, severity: 'high', title: 'Dynamic Function Creation', category: 'Injection', cweId: 'CWE-94', description: 'Dynamic function creation from strings', remediation: 'Avoid creating functions from strings. Use predefined functions instead.' },
+  { pattern: /child_process|exec\s*\(|execSync|spawn\s*\(/g, severity: 'critical', title: 'Command Injection Risk', category: 'Injection', cweId: 'CWE-78', description: 'Shell command execution detected', remediation: 'Use parameterized commands. Validate and sanitize all inputs before shell execution.' },
+  { pattern: /\$\{.*\}.*(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE)/gi, severity: 'critical', title: 'SQL Injection', category: 'SQL Injection', cweId: 'CWE-89', description: 'String interpolation in SQL query', remediation: 'Use parameterized queries or prepared statements.' },
+  
+  // XSS
+  { pattern: /dangerouslySetInnerHTML/g, severity: 'high', title: 'XSS via dangerouslySetInnerHTML', category: 'XSS', cweId: 'CWE-79', description: 'Renders raw HTML without sanitization', remediation: 'Use DOMPurify to sanitize HTML before rendering.' },
+  { pattern: /\.innerHTML\s*=/g, severity: 'high', title: 'XSS via innerHTML', category: 'XSS', cweId: 'CWE-79', description: 'Direct innerHTML assignment', remediation: 'Use textContent or a sanitization library.' },
+  { pattern: /document\.write\s*\(/g, severity: 'high', title: 'XSS via document.write', category: 'XSS', cweId: 'CWE-79', description: 'document.write can inject arbitrary HTML', remediation: 'Use DOM manipulation methods instead.' },
+  
+  // SSRF
+  { pattern: /fetch\s*\(\s*(?:req\.|request\.|params\.|query\.|body\.)/g, severity: 'high', title: 'Potential SSRF', category: 'SSRF', cweId: 'CWE-918', description: 'User-controlled URL in fetch request', remediation: 'Validate URLs against an allowlist. Block internal/private IP ranges.' },
+  { pattern: /axios\s*\.\s*(?:get|post|put)\s*\(\s*(?:req\.|request\.|params\.|query\.)/g, severity: 'high', title: 'SSRF via Axios', category: 'SSRF', cweId: 'CWE-918', description: 'User-controlled URL in Axios request', remediation: 'Validate and sanitize URLs. Use URL allowlists.' },
+  { pattern: /http\.request\s*\(\s*(?:req\.|options)/g, severity: 'high', title: 'SSRF via http.request', category: 'SSRF', cweId: 'CWE-918', description: 'User input flows into HTTP request', remediation: 'Validate target URLs and block internal addresses.' },
+  
+  // CSRF
+  { pattern: /SameSite\s*[:=]\s*['"]?None['"]?/gi, severity: 'medium', title: 'CSRF - SameSite None Cookie', category: 'CSRF', cweId: 'CWE-352', description: 'Cookie with SameSite=None allows cross-origin requests', remediation: 'Set SameSite=Strict or Lax unless cross-origin is required.' },
+  { pattern: /csrf|xsrf/gi, severity: 'info', title: 'CSRF Token Reference', category: 'CSRF', cweId: 'CWE-352', description: 'CSRF token usage detected - verify proper implementation', remediation: 'Ensure CSRF tokens are validated on all state-changing operations.' },
+  
+  // Deserialization
+  { pattern: /JSON\.parse\s*\(\s*(?:req\.|request\.|body|params|query)/g, severity: 'medium', title: 'Insecure Deserialization', category: 'Deserialization', cweId: 'CWE-502', description: 'Parsing user-controlled JSON without validation', remediation: 'Validate JSON structure with a schema validator like Zod before processing.' },
+  { pattern: /pickle\.loads|yaml\.load\s*\(/g, severity: 'critical', title: 'Unsafe Deserialization', category: 'Deserialization', cweId: 'CWE-502', description: 'Unsafe deserialization can lead to RCE', remediation: 'Use safe loaders (yaml.safe_load) and avoid pickle with untrusted data.' },
+  { pattern: /unserialize|__wakeup|__destruct/g, severity: 'critical', title: 'PHP Object Injection', category: 'Deserialization', cweId: 'CWE-502', description: 'PHP deserialization vulnerability', remediation: 'Avoid unserialize() with user input. Use JSON instead.' },
+  
+  // IDOR / Access Control
+  { pattern: /params\.id|req\.params\.id|query\.id/g, severity: 'medium', title: 'Potential IDOR', category: 'IDOR', cweId: 'CWE-639', description: 'Direct object reference via user-controlled ID', remediation: 'Verify object ownership before returning data. Check auth.uid() matches resource owner.' },
+  
+  // Path Traversal
+  { pattern: /\.\.\/|\.\.\\|path\.join\([^)]*req\./g, severity: 'high', title: 'Path Traversal', category: 'Path Traversal', cweId: 'CWE-22', description: 'User input in file path operations', remediation: 'Use path.basename() and validate against allowed directories.' },
+  
+  // Cryptography
+  { pattern: /MD5|SHA1(?!\d)|createHash\s*\(\s*['"]md5|['"]sha1/gi, severity: 'medium', title: 'Weak Cryptographic Hash', category: 'Cryptography', cweId: 'CWE-328', description: 'Using deprecated hash algorithm', remediation: 'Use SHA-256 or bcrypt for passwords.' },
+  { pattern: /Math\.random\s*\(/g, severity: 'medium', title: 'Insecure Random', category: 'Cryptography', cweId: 'CWE-330', description: 'Math.random() is not cryptographically secure', remediation: 'Use crypto.getRandomValues() for security-sensitive operations.' },
+  { pattern: /ECB|DES(?!C)|RC4/gi, severity: 'high', title: 'Weak Cipher', category: 'Cryptography', cweId: 'CWE-327', description: 'Using weak or deprecated cipher', remediation: 'Use AES-256-GCM or ChaCha20-Poly1305.' },
+  
+  // Auth
+  { pattern: /verify_jwt\s*=\s*false/g, severity: 'high', title: 'JWT Verification Disabled', category: 'Authentication', cweId: 'CWE-287', description: 'JWT verification is disabled', remediation: 'Enable JWT verification or validate tokens in code.' },
+  { pattern: /algorithm\s*[:=]\s*['"]none['"]|alg.*none/gi, severity: 'critical', title: 'JWT None Algorithm', category: 'Authentication', cweId: 'CWE-347', description: 'JWT accepts "none" algorithm', remediation: 'Explicitly set allowed algorithms. Reject "none".' },
+  
+  // Prototype Pollution
+  { pattern: /Object\.assign\s*\([^,]+,\s*(?:req\.body|req\.query|req\.params)/g, severity: 'high', title: 'Prototype Pollution', category: 'Prototype Pollution', cweId: 'CWE-1321', description: 'Merging user input into objects', remediation: 'Validate object keys. Use Object.create(null) for dictionaries.' },
+  { pattern: /\[['"]__proto__['"]\]|\.__proto__/g, severity: 'critical', title: 'Direct __proto__ Access', category: 'Prototype Pollution', cweId: 'CWE-1321', description: 'Direct prototype chain manipulation', remediation: 'Block __proto__, constructor, and prototype keys in user input.' },
+  
+  // Open Redirect
+  { pattern: /redirect\s*\(\s*(?:req\.|request\.|query\.|params\.)/g, severity: 'medium', title: 'Open Redirect', category: 'Open Redirect', cweId: 'CWE-601', description: 'User-controlled redirect destination', remediation: 'Validate redirect URLs against an allowlist of trusted domains.' },
+  { pattern: /window\.location\s*=\s*(?!['"])/g, severity: 'medium', title: 'Client-Side Open Redirect', category: 'Open Redirect', cweId: 'CWE-601', description: 'Dynamic window.location assignment', remediation: 'Validate URLs before redirecting.' },
+  
+  // File Upload
+  { pattern: /multer|formidable|busboy/g, severity: 'info', title: 'File Upload Handler', category: 'File Upload', cweId: 'CWE-434', description: 'File upload middleware detected', remediation: 'Validate file types, sizes, and scan for malware.' },
+  
+  // Container/Docker
+  { pattern: /FROM\s+.*:latest/g, severity: 'medium', title: 'Unpinned Docker Image', category: 'Container', cweId: 'CWE-1104', description: 'Using :latest tag in Dockerfile', remediation: 'Pin Docker images to specific version digests.' },
+  { pattern: /USER\s+root|--privileged/g, severity: 'high', title: 'Container Running as Root', category: 'Container', cweId: 'CWE-250', description: 'Container runs with root privileges', remediation: 'Use a non-root user in Dockerfile.' },
+  
+  // Security Headers
+  { pattern: /Access-Control-Allow-Origin.*\*/g, severity: 'medium', title: 'Permissive CORS', category: 'Configuration', cweId: 'CWE-942', description: 'CORS allows all origins', remediation: 'Restrict CORS to specific trusted domains.' },
+  
+  // Logging
+  { pattern: /console\.log\s*\(.*(?:password|secret|token|key|auth)/gi, severity: 'medium', title: 'Sensitive Data in Logs', category: 'Data Exposure', cweId: 'CWE-532', description: 'Logging potentially sensitive information', remediation: 'Remove sensitive data from log statements.' },
+  
+  // Race Conditions
+  { pattern: /async.*\bdelete\b.*\binsert\b|check.*then.*update/gi, severity: 'medium', title: 'Potential Race Condition', category: 'Race Condition', cweId: 'CWE-367', description: 'Non-atomic check-then-act pattern', remediation: 'Use database transactions or atomic operations.' },
 ];
 
 // Compliance frameworks
@@ -221,6 +311,9 @@ const AdvancedSecurityAuditPanel: React.FC<AdvancedSecurityAuditPanelProps> = ({
   const [historicalAudits, setHistoricalAudits] = useState<HistoricalAudit[]>([]);
   const [complianceScores, setComplianceScores] = useState<Record<string, number>>({});
   const [attackChainDiagram, setAttackChainDiagram] = useState<string>('');
+  const [threatModel, setThreatModel] = useState<ThreatModel | null>(null);
+  const [localSASTVulns, setLocalSASTVulns] = useState<Vulnerability[]>([]);
+  const [isLiveMonitoring, setIsLiveMonitoring] = useState(false);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch historical audits
@@ -324,7 +417,64 @@ const AdvancedSecurityAuditPanel: React.FC<AdvancedSecurityAuditPanelProps> = ({
     return foundSecrets;
   };
 
-  // Parse dependencies from package files
+  // SAST local pattern scanner (30+ patterns)
+  const runLocalSAST = (files: ProjectFile[]): Vulnerability[] => {
+    const vulns: Vulnerability[] = [];
+    
+    files.forEach(file => {
+      SAST_PATTERNS.forEach(({ pattern, severity, title, category, cweId, description, remediation }) => {
+        pattern.lastIndex = 0;
+        const matches = file.content.match(pattern);
+        if (matches) {
+          matches.forEach((match, idx) => {
+            const matchIndex = file.content.indexOf(match);
+            const lineNumber = (file.content.substring(0, matchIndex).match(/\n/g) || []).length + 1;
+            const vulnId = `sast-${file.path}-${cweId}-${lineNumber}-${idx}`;
+            
+            if (!vulns.find(v => v.id === vulnId)) {
+              vulns.push({
+                id: vulnId,
+                severity,
+                title,
+                description: `${description}. Found: "${match.substring(0, 60)}${match.length > 60 ? '...' : ''}"`,
+                location: `${file.path}:${lineNumber}`,
+                category,
+                cweId,
+                cvssScore: severity === 'critical' ? 9.0 : severity === 'high' ? 7.0 : severity === 'medium' ? 5.0 : 3.0,
+                remediation,
+                affectedFiles: [file.path],
+                complianceMappings: getComplianceMappingsForCategory(category),
+              });
+            }
+          });
+        }
+      });
+    });
+    
+    return vulns;
+  };
+
+  const getComplianceMappingsForCategory = (category: string): ComplianceMapping[] => {
+    const mappings: Record<string, ComplianceMapping[]> = {
+      'Injection': [{ framework: 'OWASP', requirement: 'A03:2021 - Injection', status: 'fail' }],
+      'SQL Injection': [{ framework: 'OWASP', requirement: 'A03:2021 - Injection', status: 'fail' }, { framework: 'PCI-DSS', requirement: '6.5.1', status: 'fail' }],
+      'XSS': [{ framework: 'OWASP', requirement: 'A03:2021 - Injection', status: 'fail' }],
+      'SSRF': [{ framework: 'OWASP', requirement: 'A10:2021 - SSRF', status: 'fail' }],
+      'CSRF': [{ framework: 'OWASP', requirement: 'A01:2021 - Broken Access Control', status: 'fail' }],
+      'IDOR': [{ framework: 'OWASP', requirement: 'A01:2021 - Broken Access Control', status: 'fail' }],
+      'Deserialization': [{ framework: 'OWASP', requirement: 'A08:2021 - Insecure Deserialization', status: 'fail' }],
+      'Authentication': [{ framework: 'OWASP', requirement: 'A07:2021 - Auth Failures', status: 'fail' }, { framework: 'SOC 2', requirement: 'CC6.1', status: 'fail' }],
+      'Cryptography': [{ framework: 'OWASP', requirement: 'A02:2021 - Cryptographic Failures', status: 'fail' }],
+      'Path Traversal': [{ framework: 'OWASP', requirement: 'A01:2021 - Broken Access Control', status: 'fail' }],
+      'Prototype Pollution': [{ framework: 'OWASP', requirement: 'A03:2021 - Injection', status: 'fail' }],
+      'Open Redirect': [{ framework: 'OWASP', requirement: 'A01:2021 - Broken Access Control', status: 'fail' }],
+      'Container': [{ framework: 'SOC 2', requirement: 'CC6.1 - Logical Access', status: 'fail' }],
+      'Configuration': [{ framework: 'OWASP', requirement: 'A05:2021 - Security Misconfiguration', status: 'fail' }],
+      'Data Exposure': [{ framework: 'GDPR', requirement: 'Art. 32 - Security of processing', status: 'fail' }, { framework: 'HIPAA', requirement: '164.312(a) - Access Control', status: 'fail' }],
+      'Race Condition': [{ framework: 'OWASP', requirement: 'A04:2021 - Insecure Design', status: 'fail' }],
+    };
+    return mappings[category] || [{ framework: 'OWASP', requirement: 'A05:2021 - Security Misconfiguration', status: 'fail' }];
+  };
   const parseDependencies = (files: ProjectFile[]): DependencyVuln[] => {
     const vulnDeps: DependencyVuln[] = [];
     
@@ -578,6 +728,10 @@ const AdvancedSecurityAuditPanel: React.FC<AdvancedSecurityAuditPanelProps> = ({
       const detectedSecrets = detectSecrets(filesToAnalyze);
       setSecrets(detectedSecrets);
 
+      // Run SAST local pattern scan (30+ patterns)
+      const sastVulns = runLocalSAST(filesToAnalyze);
+      setLocalSASTVulns(sastVulns);
+
       // Run dependency analysis
       const vulnDeps = parseDependencies(filesToAnalyze);
       setDependencies(vulnDeps);
@@ -590,6 +744,7 @@ const AdvancedSecurityAuditPanel: React.FC<AdvancedSecurityAuditPanelProps> = ({
           progress: Math.round(((i + 1) / phases.length) * 100),
           currentFile: filesToAnalyze[Math.min(i, filesToAnalyze.length - 1)]?.name,
           filesScanned: Math.min(i + 1, filesToAnalyze.length),
+          vulnerabilitiesFound: detectedSecrets.length + sastVulns.length,
         }));
         await new Promise(resolve => setTimeout(resolve, phase.duration));
       }
@@ -600,9 +755,16 @@ const AdvancedSecurityAuditPanel: React.FC<AdvancedSecurityAuditPanelProps> = ({
 
       const result = await onAnalyze(combinedCode);
       
-      // Combine all vulnerabilities
+      // Extract threat model if present
+      const aiResult = result as any;
+      if (aiResult.threatModel) {
+        setThreatModel(aiResult.threatModel);
+      }
+      
+      // Combine all vulnerabilities (AI + local SAST + secrets + deps)
       const allVulns = [
         ...result.vulnerabilities,
+        ...sastVulns,
         ...detectedSecrets,
         ...vulnDeps.map(dep => ({
           id: `dep-${dep.package}-${dep.cveId}`,
@@ -622,36 +784,45 @@ const AdvancedSecurityAuditPanel: React.FC<AdvancedSecurityAuditPanelProps> = ({
         }))
       ];
 
-      setVulnerabilities(allVulns);
+      // Deduplicate by title+location
+      const seen = new Set<string>();
+      const dedupedVulns = allVulns.filter(v => {
+        const key = `${v.title}-${v.location}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      setVulnerabilities(dedupedVulns);
       setSummary(result.summary);
       setRiskScore(result.riskScore);
       
       // Calculate compliance scores
-      const compScores = calculateComplianceScores(allVulns);
+      const compScores = calculateComplianceScores(dedupedVulns);
       setComplianceScores(compScores);
       
       // Generate attack chain diagram
-      const diagram = generateAttackChainDiagram(allVulns);
+      const diagram = generateAttackChainDiagram(dedupedVulns);
       setAttackChainDiagram(diagram);
 
-      if (allVulns.length > 0) {
-        setSelectedVuln(allVulns[0]);
+      if (dedupedVulns.length > 0) {
+        setSelectedVuln(dedupedVulns[0]);
       }
 
       setScanProgress(prev => ({
         ...prev!,
         phase: 'Complete',
         progress: 100,
-        vulnerabilitiesFound: allVulns.length
+        vulnerabilitiesFound: dedupedVulns.length
       }));
 
       // Save to database if user is authenticated
       if (user) {
-        await saveAuditToDatabase(allVulns, result.riskScore, compScores);
+        await saveAuditToDatabase(dedupedVulns, result.riskScore, compScores);
       }
 
       toast.success(`Security audit complete`, {
-        description: `Found ${allVulns.length} issues (${detectedSecrets.length} secrets, ${vulnDeps.length} vulnerable deps)`
+        description: `Found ${dedupedVulns.length} issues (${sastVulns.length} SAST, ${detectedSecrets.length} secrets, ${vulnDeps.length} deps)`
       });
 
     } catch (error) {
@@ -1024,17 +1195,21 @@ const AdvancedSecurityAuditPanel: React.FC<AdvancedSecurityAuditPanelProps> = ({
 
       <div className="space-y-4 p-4">
         {/* Header */}
-        <Card className="bg-gradient-to-r from-destructive/10 to-primary/10 border-destructive/30">
-          <CardContent className="pt-4">
+        <Card className="bg-gradient-to-r from-destructive/10 via-primary/5 to-destructive/10 border-destructive/30 overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-destructive/5 to-transparent animate-pulse" style={{ animationDuration: '3s' }} />
+          <CardContent className="pt-4 relative">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-destructive/20">
-                  <Shield className="h-6 w-6 text-destructive" />
+                <div className="p-2.5 rounded-xl bg-destructive/20 ring-2 ring-destructive/30">
+                  <Shield className="h-7 w-7 text-destructive" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-lg">Advanced Security Auditor</h2>
+                  <h2 className="font-bold text-lg flex items-center gap-2">
+                    HSCA v2.0
+                    <Badge variant="outline" className="text-[10px] border-destructive/50 text-destructive">AI-Powered</Badge>
+                  </h2>
                   <p className="text-xs text-muted-foreground">
-                    {projectName ? `Analyzing: ${projectName}` : 'Secrets • Dependencies • SAST • Compliance'}
+                    {projectName ? `Analyzing: ${projectName}` : '30+ CWEs • SAST • Secrets • Dependencies • Compliance • Threat Modeling'}
                   </p>
                 </div>
               </div>
