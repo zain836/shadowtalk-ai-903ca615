@@ -890,7 +890,7 @@ export const PersonalIDE = ({ initialCode, language, onClose }: PersonalIDEProps
                         srcDoc={previewHtml}
                         className="h-full bg-white border-0 transition-all duration-300"
                         style={{ width: viewport.width, maxWidth: "100%" }}
-                        sandbox="allow-scripts allow-modals allow-forms"
+                        sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups"
                         title="Preview"
                       />
                     </div>
