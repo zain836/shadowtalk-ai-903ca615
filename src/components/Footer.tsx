@@ -47,7 +47,7 @@ const Footer = () => {
     { icon: Twitter, href: "https://twitter.com/shadowtalkai", label: "Twitter" },
     { icon: Github, href: "https://github.com/shadowtalkai", label: "GitHub" },
     { icon: Linkedin, href: "https://linkedin.com/company/shadowtalkai", label: "LinkedIn" },
-    { icon: Mail, href: "mailto:support@shadowtalkai.com", label: "Email" },
+    { icon: Mail, href: "mailto:shadowtalk68@gmail.com", label: "Email" },
   ];
 
   return (

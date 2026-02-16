@@ -160,7 +160,7 @@ const GDPRPage = () => {
                 </p>
                 <div className="flex items-center gap-2 text-primary">
                   <Mail className="h-4 w-4" />
-                  <a href="mailto:dpo@shadowtalk.ai" className="hover:underline">dpo@shadowtalk.ai</a>
+                  <a href="mailto:shadowtalk68@gmail.com" className="hover:underline">shadowtalk68@gmail.com</a>
                 </div>
               </div>
 
@@ -256,9 +256,9 @@ const GDPRPage = () => {
               </p>
               <p className="text-muted-foreground leading-relaxed">
                 We encourage you to contact us first at{" "}
-                <a href="mailto:dpo@shadowtalk.ai" className="text-primary hover:underline">
-                  dpo@shadowtalk.ai
-                </a>{" "}
+                 <a href="mailto:shadowtalk68@gmail.com" className="text-primary hover:underline">
+                   shadowtalk68@gmail.com
+                 </a>{" "}
                 so we can address your concerns directly.
               </p>
             </CardContent>

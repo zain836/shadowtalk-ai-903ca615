@@ -21,10 +21,12 @@ import {
   Send,
   Twitter,
   Linkedin,
-  Github
+  Github,
+  Loader2
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -37,21 +39,32 @@ const ContactPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
     setIsSubmitting(true);
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast.success("Message sent successfully! We'll get back to you soon.");
-    setFormData({ name: "", email: "", subject: "", message: "" });
-    setIsSubmitting(false);
+    try {
+      const { error } = await supabase.functions.invoke("send-contact-email", {
+        body: { ...formData, source: "Contact Page" },
+      });
+      if (error) throw error;
+      toast.success("Message sent successfully! We'll get back to you soon.");
+      setFormData({ name: "", email: "", subject: "", message: "" });
+    } catch (error) {
+      console.error("Contact form error:", error);
+      toast.error("Failed to send message. Please try again or email us directly at shadowtalk68@gmail.com");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const contactMethods = [
     {
       icon: Mail,
       title: "Email Support",
-      description: "support@shadowtalk.ai",
+      description: "shadowtalk68@gmail.com",
       detail: "We respond within 24 hours"
     },
     {
@@ -118,7 +131,6 @@ const ContactPage = () => {
       <section className="py-16 px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="grid lg:grid-cols-2 gap-12">
-            {/* Form */}
             <Card>
               <CardHeader>
                 <CardTitle>Send us a message</CardTitle>
@@ -127,75 +139,45 @@ const ContactPage = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Name</Label>
-                      <Input
-                        id="name"
-                        placeholder="Your name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        required
-                      />
+                      <Label htmlFor="name">Name *</Label>
+                      <Input id="name" placeholder="Your name" value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })} required maxLength={100} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="your@email.com"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        required
-                      />
+                      <Label htmlFor="email">Email *</Label>
+                      <Input id="email" type="email" placeholder="your@email.com" value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })} required maxLength={255} />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="subject">Subject</Label>
-                    <Select
-                      value={formData.subject}
-                      onValueChange={(value) => setFormData({ ...formData, subject: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a topic" />
-                      </SelectTrigger>
+                    <Select value={formData.subject} onValueChange={(value) => setFormData({ ...formData, subject: value })}>
+                      <SelectTrigger><SelectValue placeholder="Select a topic" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="general">General Inquiry</SelectItem>
-                        <SelectItem value="support">Technical Support</SelectItem>
-                        <SelectItem value="billing">Billing Question</SelectItem>
-                        <SelectItem value="enterprise">Enterprise Sales</SelectItem>
-                        <SelectItem value="partnership">Partnership</SelectItem>
-                        <SelectItem value="press">Press & Media</SelectItem>
+                        <SelectItem value="General Inquiry">General Inquiry</SelectItem>
+                        <SelectItem value="Technical Support">Technical Support</SelectItem>
+                        <SelectItem value="Billing Question">Billing Question</SelectItem>
+                        <SelectItem value="Enterprise Sales">Enterprise Sales</SelectItem>
+                        <SelectItem value="Partnership">Partnership</SelectItem>
+                        <SelectItem value="Press & Media">Press & Media</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="message">Message</Label>
-                    <Textarea
-                      id="message"
-                      placeholder="How can we help you?"
-                      rows={5}
-                      value={formData.message}
-                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      required
-                    />
+                    <Label htmlFor="message">Message *</Label>
+                    <Textarea id="message" placeholder="How can we help you?" rows={5} value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })} required maxLength={2000} />
                   </div>
 
                   <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      "Sending..."
-                    ) : (
-                      <>
-                        <Send className="h-4 w-4 mr-2" />
-                        Send Message
-                      </>
-                    )}
+                    {isSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending...</> : <><Send className="h-4 w-4 mr-2" /> Send Message</>}
                   </Button>
                 </form>
               </CardContent>
             </Card>
 
-            {/* Info Section */}
             <div className="space-y-8">
               <div>
                 <h2 className="text-2xl font-bold mb-4">Let's Connect</h2>
@@ -208,30 +190,12 @@ const ContactPage = () => {
               <div>
                 <h3 className="font-bold mb-4">Follow Us</h3>
                 <div className="flex gap-4">
-                  <a 
-                    href="https://twitter.com/shadowtalkai" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="p-3 bg-muted rounded-lg hover:bg-primary/10 transition-colors"
-                  >
-                    <Twitter className="h-5 w-5" />
-                  </a>
-                  <a 
-                    href="https://linkedin.com/company/shadowtalkai" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="p-3 bg-muted rounded-lg hover:bg-primary/10 transition-colors"
-                  >
-                    <Linkedin className="h-5 w-5" />
-                  </a>
-                  <a 
-                    href="https://github.com/shadowtalkai" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="p-3 bg-muted rounded-lg hover:bg-primary/10 transition-colors"
-                  >
-                    <Github className="h-5 w-5" />
-                  </a>
+                  <a href="https://twitter.com/shadowtalkai" target="_blank" rel="noopener noreferrer"
+                    className="p-3 bg-muted rounded-lg hover:bg-primary/10 transition-colors"><Twitter className="h-5 w-5" /></a>
+                  <a href="https://linkedin.com/company/shadowtalkai" target="_blank" rel="noopener noreferrer"
+                    className="p-3 bg-muted rounded-lg hover:bg-primary/10 transition-colors"><Linkedin className="h-5 w-5" /></a>
+                  <a href="https://github.com/shadowtalkai" target="_blank" rel="noopener noreferrer"
+                    className="p-3 bg-muted rounded-lg hover:bg-primary/10 transition-colors"><Github className="h-5 w-5" /></a>
                 </div>
               </div>
 
@@ -242,7 +206,9 @@ const ContactPage = () => {
                     Need dedicated support for your organization? Our enterprise team offers 
                     priority support, custom integrations, and dedicated account management.
                   </p>
-                  <Button variant="outline">Contact Sales</Button>
+                  <Button variant="outline" asChild>
+                    <a href="mailto:shadowtalk68@gmail.com?subject=Enterprise Support Inquiry">Contact Sales</a>
+                  </Button>
                 </CardContent>
               </Card>
             </div>
