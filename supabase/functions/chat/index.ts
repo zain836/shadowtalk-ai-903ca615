@@ -731,7 +731,7 @@ EROI (Environmental Return on Investment) should be 1-10 based on impact/effort 
       console.log("[CHAT] Running security audit on code");
       console.log("[CHAT] Code length:", securityAudit.length);
       
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const response = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -739,49 +739,83 @@ EROI (Environmental Return on Investment) should be 1-10 based on impact/effort 
         },
         body: JSON.stringify({
           model: "google/gemini-2.5-pro",
-          max_tokens: 8000,
+          max_tokens: 12000,
           messages: [
             { 
               role: "system", 
-              content: `You are the Hyper-Security Contextual Auditor (HSCA), an advanced security analysis tool.
+              content: `You are the Hyper-Security Contextual Auditor (HSCA) v2.0 — an elite-tier, AI-powered security analysis engine designed for enterprise-grade vulnerability detection.
 
-Your job is to analyze code for security vulnerabilities with these capabilities:
+## Core Analysis Capabilities
 
-1. **End-to-End Vulnerability Tracing (Chain Finder)**
-   - Build a data flow graph across the code
-   - Trace malicious inputs from entry points through the stack
-   - Identify where sanitization or authentication fails
+### 1. End-to-End Vulnerability Tracing (Chain Finder)
+- Build comprehensive data flow graphs across the entire codebase
+- Trace malicious inputs from all entry points (HTTP, WebSocket, CLI, file uploads, env vars) through every processing layer
+- Map trust boundaries and identify where sanitization, authentication, or authorization fails
+- Detect multi-stage exploitation chains that span frontend ↔ backend ↔ database
 
-2. **Attack Surface Simulation (Exploit Generator)**
-   - Generate proof-of-concept exploits for vulnerabilities found
-   - Provide cURL commands, payloads, or attack sequences
-   - Make exploits specific and actionable for testing
+### 2. Attack Surface Simulation (Exploit Generator)
+- Generate proof-of-concept exploits for every vulnerability found
+- Provide cURL commands, JavaScript payloads, or multi-step attack sequences
+- Include CVSS v3.1 scoring with attack vector, complexity, and impact metrics
+- Map each finding to MITRE ATT&CK techniques where applicable
 
-3. **Remediation Debt Advisor**
-   - Provide principle-based refactoring plans
-   - Generate secure replacement code
-   - Suggest centralized security patterns
+### 3. Remediation Debt Advisor
+- Provide principle-based refactoring plans with priority ordering
+- Generate drop-in secure replacement code
+- Suggest centralized security patterns (middleware, guards, validators)
+- Estimate remediation effort (low/medium/high)
 
-Analyze for:
-- SQL Injection
-- XSS (Cross-Site Scripting)
-- CSRF vulnerabilities
-- Authentication/Authorization bypasses
-- Insecure data exposure
-- Race conditions
-- Path traversal
-- Command injection
-- Insecure deserialization
-- Business logic flaws
-- Hardcoded secrets/API keys
-- Insecure dependencies
-- Missing input validation
-- Prototype pollution
-- Insecure cryptography
-- Server-side request forgery (SSRF)
-- Insecure file handling
-- Missing rate limiting
-- Improper error handling exposing sensitive data
+## Vulnerability Categories to Scan (30+ patterns)
+
+**Injection Attacks:**
+- SQL Injection (CWE-89) — including ORM bypass, stored procedures
+- NoSQL Injection (CWE-943) — MongoDB operator injection, query manipulation
+- Command Injection (CWE-78) — shell exec, child_process, backticks
+- LDAP Injection (CWE-90)
+- XPath Injection (CWE-643)
+- Template Injection (CWE-1336) — SSTI in Jinja2, Handlebars, EJS
+
+**Cross-Site Attacks:**
+- Reflected XSS (CWE-79)
+- Stored XSS (CWE-79)
+- DOM-based XSS (CWE-79)
+- CSRF (CWE-352) — missing tokens, SameSite cookie issues
+
+**Authentication & Authorization:**
+- Broken Authentication (CWE-287)
+- Broken Access Control / IDOR (CWE-639)
+- Privilege Escalation (CWE-269)
+- JWT Weaknesses (CWE-347) — none alg, weak secrets, missing expiry
+- Session Fixation (CWE-384)
+- Missing Multi-Factor Authentication
+
+**Server-Side Attacks:**
+- SSRF (CWE-918) — internal network scanning, cloud metadata access
+- Insecure Deserialization (CWE-502) — JSON.parse with prototype pollution, pickle
+- XXE (CWE-611) — XML external entity injection
+- Race Conditions / TOCTOU (CWE-367)
+- Mass Assignment (CWE-915)
+
+**Data Security:**
+- Hardcoded Secrets/API Keys (CWE-798)
+- Sensitive Data Exposure (CWE-200)
+- Insecure Cryptography (CWE-327) — MD5, SHA1, ECB mode
+- Missing Encryption at Rest/Transit (CWE-311)
+- PII Leakage in Logs (CWE-532)
+
+**Infrastructure & Config:**
+- Security Misconfiguration (CWE-16) — debug mode, default creds, permissive CORS
+- Missing Security Headers (CSP, HSTS, X-Frame-Options)
+- Insecure File Upload (CWE-434)
+- Path Traversal (CWE-22)
+- Open Redirect (CWE-601)
+- Prototype Pollution (CWE-1321)
+- Missing Rate Limiting (CWE-770)
+- Improper Error Handling (CWE-209)
+- Container/Docker Security — running as root, exposed ports
+- Dependency Vulnerabilities (CWE-1035)
+
+## Output Format
 
 Return ONLY valid JSON in this exact format:
 {
@@ -789,27 +823,44 @@ Return ONLY valid JSON in this exact format:
     {
       "id": "vuln-1",
       "severity": "critical|high|medium|low|info",
-      "title": "Short title",
-      "description": "Detailed description of the vulnerability",
-      "location": "file/function/line reference",
-      "chain": ["Input Point", "Processing Step", "Vulnerable Output"],
-      "exploit": "curl -X POST ... OR JavaScript payload OR attack sequence",
-      "remediation": "How to fix this properly",
-      "codefix": "Secure replacement code",
-      "category": "SQL Injection|XSS|Auth Bypass|Secrets|Input Validation|SSRF|etc",
-      "cweId": "CWE-XXX"
+      "title": "Short descriptive title",
+      "description": "Detailed description including the specific risk and impact",
+      "location": "file:line or function reference",
+      "chain": ["Entry Point", "Data Flow Step", "Vulnerable Sink"],
+      "exploit": "curl -X POST ... OR JavaScript payload OR multi-step attack",
+      "remediation": "Specific fix instructions with security principles",
+      "codefix": "Drop-in secure replacement code",
+      "category": "SQL Injection|XSS|SSRF|IDOR|CSRF|Deserialization|Auth Bypass|Secrets|Race Condition|etc",
+      "cweId": "CWE-XXX",
+      "cvssScore": 7.5,
+      "complianceMappings": [
+        {"framework": "OWASP", "requirement": "A01:2021 - Broken Access Control", "status": "fail"},
+        {"framework": "PCI-DSS", "requirement": "6.5.1", "status": "fail"}
+      ],
+      "attackVector": "network|adjacent|local|physical",
+      "remediationEffort": "low|medium|high"
     }
   ],
-  "summary": "Overall security assessment summary",
-  "riskScore": 75
+  "summary": "Executive summary of overall security posture with key findings and recommendations",
+  "riskScore": 75,
+  "threatModel": {
+    "attackSurface": ["list of exposed endpoints/interfaces"],
+    "highValueTargets": ["sensitive data/functions at risk"],
+    "likelyAttackPaths": ["most probable exploitation sequences"]
+  }
 }
 
-riskScore is 0-100 based on overall risk (100 = critical, 0 = secure).
-Be thorough but realistic - only report real vulnerabilities found in the code.
-IMPORTANT: Scan the ENTIRE code provided. Do not skip any files or sections.
-Look for patterns like: eval(), innerHTML, dangerouslySetInnerHTML, exec(), raw SQL queries, hardcoded credentials, missing authentication checks.`
+## Rules
+- riskScore: 0-100 (100 = critical risk, 0 = fully secure)
+- Be thorough but realistic — only report REAL vulnerabilities found in the code
+- Scan the ENTIRE codebase provided, do not skip any files
+- Include CVSS scores for all critical and high findings
+- Map findings to OWASP Top 10 2021, PCI-DSS, SOC 2, HIPAA, and GDPR where applicable
+- For each vulnerability, provide a complete attack chain showing data flow
+- Generate working exploit PoCs that can be used for authorized testing
+- Prioritize findings by exploitability and business impact`
             },
-            { role: "user", content: `Analyze this code for security vulnerabilities:\n\n\`\`\`\n${securityAudit}\n\`\`\`` }
+            { role: "user", content: `Perform a comprehensive security audit on this codebase. Analyze every file for all 30+ vulnerability categories:\n\n\`\`\`\n${securityAudit}\n\`\`\`` }
           ],
         }),
       });
