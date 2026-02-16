@@ -75,7 +75,7 @@ const PressPage = () => {
             News, press releases, and media resources for ShadowTalk AI
           </p>
           <Button asChild>
-            <a href="mailto:press@shadowtalk.ai">
+            <a href="mailto:shadowtalk68@gmail.com">
               <Mail className="mr-2 h-4 w-4" />
               Contact Press Team
             </a>

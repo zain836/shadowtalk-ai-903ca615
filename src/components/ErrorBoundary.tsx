@@ -117,7 +117,7 @@
                  Go Home
                </Button>
                <Button
-                 onClick={() => window.open(`mailto:support@shadowtalk.app?subject=Error Report: ${this.state.errorId}`)}
+                 onClick={() => window.open(`mailto:shadowtalk68@gmail.com?subject=Error Report: ${this.state.errorId}`)}
                  variant="ghost"
                  size="sm"
                >

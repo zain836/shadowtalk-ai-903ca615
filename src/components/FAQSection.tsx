@@ -136,7 +136,7 @@ const FAQSection = () => {
               </p>
               <div className="flex flex-col gap-2">
                 <Button size="sm" className="btn-glow justify-start gap-2" asChild>
-                  <a href="mailto:support@shadowtalkai.com">
+                  <a href="mailto:shadowtalk68@gmail.com">
                     <Mail className="h-4 w-4" />
                     Email Support
                   </a>

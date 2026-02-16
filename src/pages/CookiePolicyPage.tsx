@@ -203,8 +203,8 @@ const CookiePolicyPage = () => {
           <h2 className="text-2xl font-bold mb-4">Contact Us</h2>
           <p className="text-muted-foreground leading-relaxed">
             If you have questions about our use of cookies, please contact us at{" "}
-            <a href="mailto:privacy@shadowtalk.ai" className="text-primary hover:underline">
-              privacy@shadowtalk.ai
+            <a href="mailto:shadowtalk68@gmail.com" className="text-primary hover:underline">
+              shadowtalk68@gmail.com
             </a>
           </p>
         </div>
