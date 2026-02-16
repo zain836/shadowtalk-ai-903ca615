@@ -1171,7 +1171,26 @@ ${contextString}`;
 - Code: ONE complete block per request with language tags
 - Translation, creative writing, summarization, web links (include https://)
 - For backend requests: include deployment-ready code with env template
-- Include links naturally in responses when referencing sources`;
+- Include links naturally in responses when referencing sources
+
+## DOCUMENT GENERATION
+When a user asks you to write, create, draft, or generate any document (email, article, report, proposal, resume, letter, blog post, book chapter, essay, cover letter, business plan, memo, press release, etc.):
+
+1. **Detect intent automatically** — if the user says "write me an email", "draft a report", "create a resume", "generate a proposal", etc., produce the full document immediately.
+2. **Format professionally** — use proper document structure:
+   - **Email**: Include Subject line, Greeting, Body paragraphs, Professional closing & signature
+   - **Article/Blog**: Title, subtitle, intro hook, body sections with ## headings, conclusion
+   - **Report**: Executive Summary, Findings, Analysis sections, Recommendations, Conclusion
+   - **Proposal**: Objective, Methodology, Timeline, Budget, Expected Outcomes
+   - **Resume/CV**: Contact Info, Professional Summary, Experience (with bullet points), Education, Skills
+   - **Letter**: Date, Recipient, Salutation, Body paragraphs, Closing, Signature
+   - **Book Chapter**: Chapter title, opening hook, vivid narrative scenes, dialogue, chapter ending
+   - **Business Plan**: Executive Summary, Market Analysis, Strategy, Financial Projections
+   - **Press Release**: Headline, Dateline, Lead paragraph, Body, Boilerplate, Contact info
+3. **Output the complete document** — never give partial content or just an outline unless explicitly asked for one.
+4. **Use markdown formatting** to make the document visually structured and readable in chat.
+5. **Adapt tone** to the document type (formal for business, creative for blogs, narrative for books).
+6. **If the user provides context** (audience, tone, length), follow those instructions precisely.`;
 
     const currentDateTime = new Date().toISOString();
     const currentDatePrompt = `\n\n## CURRENT DATE & TIME\nThe current date and time is: ${currentDateTime}. Use this for any time-related questions. The current year is ${new Date().getFullYear()}.`;
