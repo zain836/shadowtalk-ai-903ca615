@@ -83,7 +83,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: "ShadowTalk AI Careers <onboarding@resend.dev>",
-        to: ["shadowtalk68@gmail.com"],
+        to: ["h23059476@gmail.com"],
         subject: `📋 Job Application: ${position} — ${name}`,
         html: emailHtml,
         reply_to: email,
