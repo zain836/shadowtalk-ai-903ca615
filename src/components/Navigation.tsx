@@ -50,10 +50,11 @@ const Navigation = () => {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') setIsInstalled(true);
       setDeferredPrompt(null);
-    } else if (isIOS || isMac) {
+    } else {
+      // Show install guide for all platforms when native prompt isn't available
       setShowIOSGuide(true);
     }
-  }, [deferredPrompt, isIOS, isMac]);
+  }, [deferredPrompt]);
 
   const primaryNavItems = [
     { name: t("nav.pricing"), href: "/pricing", icon: Shield, isLink: true },
@@ -280,6 +281,18 @@ const Navigation = () => {
                 <div className="flex items-start gap-3 bg-muted/30 rounded-lg p-3">
                   <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
                   <p>Tap <strong>"Add"</strong> to install</p>
+                </div>
+              </>
+            ) : /Android/i.test(navigator.userAgent) ? (
+              <>
+                <p className="font-medium text-foreground">On Android:</p>
+                <div className="flex items-start gap-3 bg-muted/30 rounded-lg p-3">
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                  <p>Tap the <strong>⋮ menu</strong> (three dots) in Chrome</p>
+                </div>
+                <div className="flex items-start gap-3 bg-muted/30 rounded-lg p-3">
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                  <p>Tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong></p>
                 </div>
               </>
             ) : (
