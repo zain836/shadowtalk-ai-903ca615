@@ -32,6 +32,18 @@ const TYPE_LABELS: Record<string, { label: string; icon: React.ReactNode }> = {
   greeting: { label: "Welcome", icon: <Sparkles className="h-3.5 w-3.5" /> },
   nudge: { label: "Checking in", icon: <Sparkles className="h-3.5 w-3.5" /> },
   'exit-intent': { label: "Wait!", icon: <Zap className="h-3.5 w-3.5" /> },
+  phantom: { label: "Reading your mind", icon: <Brain className="h-3.5 w-3.5" /> },
+  copy: { label: "Noticed that", icon: <Sparkles className="h-3.5 w-3.5" /> },
+  battery: { label: "Device aware", icon: <Zap className="h-3.5 w-3.5" /> },
+  connection: { label: "Network aware", icon: <Zap className="h-3.5 w-3.5" /> },
+  'tab-rivalry': { label: "Welcome back", icon: <Brain className="h-3.5 w-3.5" /> },
+  hesitation: { label: "Deep interest", icon: <Sparkles className="h-3.5 w-3.5" /> },
+  device: { label: "Device tuned", icon: <Zap className="h-3.5 w-3.5" /> },
+  'ambient-light': { label: "Environment", icon: <Sparkles className="h-3.5 w-3.5" /> },
+  confidence: { label: "Sensing doubt", icon: <Brain className="h-3.5 w-3.5" /> },
+  'cursor-orbit': { label: "Watching you", icon: <Brain className="h-3.5 w-3.5" /> },
+  'déjà-vu': { label: "Pattern found", icon: <Zap className="h-3.5 w-3.5" /> },
+  'micro-gesture': { label: "Reading intent", icon: <Brain className="h-3.5 w-3.5" /> },
 };
 
 const CustomerSupportWidget = () => {
