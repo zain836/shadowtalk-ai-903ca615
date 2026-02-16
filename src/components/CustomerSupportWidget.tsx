@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Loader2, Bot, User } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Bot, User, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { useProactiveAI } from "@/hooks/useProactiveAI";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
   role: "user" | "assistant";
@@ -21,6 +22,8 @@ const CustomerSupportWidget = () => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  
+  const { currentMessage, isVisible, dismiss, recordInteraction } = useProactiveAI(isOpen);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -29,6 +32,19 @@ const CustomerSupportWidget = () => {
     }
   }, [messages]);
 
+  // When user opens chat from a proactive message, inject it as context
+  const openFromProactive = useCallback(() => {
+    if (currentMessage) {
+      setMessages(prev => [
+        ...prev,
+        { role: "assistant", content: currentMessage.content }
+      ]);
+      dismiss();
+      recordInteraction(currentMessage.content.slice(0, 50));
+    }
+    setIsOpen(true);
+  }, [currentMessage, dismiss, recordInteraction]);
+
   const sendMessage = useCallback(async () => {
     if (!input.trim() || isLoading) return;
 
@@ -36,6 +52,7 @@ const CustomerSupportWidget = () => {
     setInput("");
     setMessages(prev => [...prev, { role: "user", content: userMessage }]);
     setIsLoading(true);
+    recordInteraction(userMessage.slice(0, 50));
 
     try {
       const response = await fetch(
@@ -71,7 +88,6 @@ const CustomerSupportWidget = () => {
       const decoder = new TextDecoder();
       let assistantContent = "";
 
-      // Add empty assistant message that we'll update
       setMessages(prev => [...prev, { role: "assistant", content: "" }]);
 
       while (true) {
@@ -115,7 +131,7 @@ const CustomerSupportWidget = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, toast]);
+  }, [input, isLoading, messages, toast, recordInteraction]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -126,17 +142,69 @@ const CustomerSupportWidget = () => {
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-40 hidden sm:block">
+      <div className="fixed bottom-6 right-6 z-40 hidden sm:flex flex-col items-end gap-3">
+        {/* Proactive Message Bubble */}
+        <AnimatePresence>
+          {currentMessage && isVisible && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="max-w-xs cursor-pointer group"
+              onClick={openFromProactive}
+            >
+              <div className="relative bg-card/95 backdrop-blur-xl border border-border rounded-2xl rounded-br-md p-4 shadow-2xl">
+                {/* Dismiss button */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); dismiss(); }}
+                  className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-muted border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-3 w-3 text-muted-foreground" />
+                </button>
+                
+                {/* Sparkle indicator */}
+                <div className="flex items-start gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-foreground leading-relaxed">{currentMessage.content}</p>
+                    <p className="text-xs text-primary mt-2 font-medium group-hover:underline">
+                      Click to chat →
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Animated border glow */}
+                <div className="absolute inset-0 rounded-2xl rounded-br-md border border-primary/20 animate-pulse pointer-events-none" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        {/* Chat Button */}
         <Button
           onClick={() => setIsOpen(true)}
           size="lg"
-          className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 transition-all hover:scale-105"
+          className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 transition-all hover:scale-105 relative"
           style={{
-            boxShadow: '0 0 20px rgba(59, 130, 246, 0.5), 0 4px 15px rgba(0, 0, 0, 0.3)'
+            boxShadow: '0 0 20px hsl(var(--primary) / 0.4), 0 4px 15px hsl(0 0% 0% / 0.3)'
           }}
         >
           <MessageCircle className="h-6 w-6" />
           <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+          
+          {/* Notification dot when proactive message is active */}
+          {currentMessage && isVisible && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -top-1 -left-1 w-5 h-5 bg-accent rounded-full flex items-center justify-center"
+            >
+              <Sparkles className="h-3 w-3 text-accent-foreground" />
+            </motion.div>
+          )}
         </Button>
       </div>
     );
@@ -155,8 +223,10 @@ const CustomerSupportWidget = () => {
               <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-green-500" />
             </div>
             <div>
-              <h3 className="font-semibold text-sm">24/7 AI Support</h3>
-              <p className="text-xs text-muted-foreground">Always here to help</p>
+              <h3 className="font-semibold text-sm">AI Assistant</h3>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Sparkles className="h-3 w-3 text-primary" /> Proactive • Always thinking
+              </p>
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
@@ -226,7 +296,7 @@ const CustomerSupportWidget = () => {
             </Button>
           </div>
           <p className="text-xs text-center text-muted-foreground mt-2">
-            Powered by AI • Available 24/7
+            Powered by AI • Proactive • 24/7
           </p>
         </div>
       </Card>
