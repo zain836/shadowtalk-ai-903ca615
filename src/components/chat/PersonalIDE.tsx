@@ -10,7 +10,7 @@ import {
   ExternalLink, Split, ArrowRight, Wand2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// Tabs removed - using conditional rendering for full-height panels
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -847,44 +847,44 @@ export const PersonalIDE = ({ initialCode, language, onClose }: PersonalIDEProps
 
           {/* ─── Output / Preview Panel ──────────────────────────────────── */}
           <ResizablePanel defaultSize={showExplorer ? 45 : 50} minSize={20}>
-            <div className="h-full flex flex-col">
-              <Tabs value={outputPanel} onValueChange={v => setOutputPanel(v as "console" | "preview" | "terminal")} className="h-full flex flex-col">
-                <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-muted/30">
-                  <TabsList className="h-7">
-                    <TabsTrigger value="preview" className="text-xs gap-1 h-6 px-2">
-                      <Eye className="h-3 w-3" /> Preview
-                    </TabsTrigger>
-                    <TabsTrigger value="console" className="text-xs gap-1 h-6 px-2">
-                      <Bug className="h-3 w-3" /> Console
-                      {consoleLogs.length > 0 && (
-                        <Badge variant="secondary" className="h-4 px-1 text-[10px] ml-1">{consoleLogs.length}</Badge>
-                      )}
-                    </TabsTrigger>
-                    <TabsTrigger value="terminal" className="text-xs gap-1 h-6 px-2">
-                      <Terminal className="h-3 w-3" /> Terminal
-                    </TabsTrigger>
-                  </TabsList>
-                  <div className="flex items-center gap-1">
-                    {outputPanel === "preview" && previewHtml && (
-                      <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => {
-                        const w = window.open("", "_blank");
-                        if (w) { w.document.write(previewHtml); w.document.close(); }
-                      }}>
-                        <ExternalLink className="h-3 w-3" />
-                      </Button>
+            <div className="h-full flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-muted/30 shrink-0">
+                <div className="flex items-center gap-1">
+                  <Button variant={outputPanel === "preview" ? "secondary" : "ghost"} size="sm" onClick={() => setOutputPanel("preview")} className="text-xs gap-1 h-6 px-2">
+                    <Eye className="h-3 w-3" /> Preview
+                  </Button>
+                  <Button variant={outputPanel === "console" ? "secondary" : "ghost"} size="sm" onClick={() => setOutputPanel("console")} className="text-xs gap-1 h-6 px-2">
+                    <Bug className="h-3 w-3" /> Console
+                    {consoleLogs.length > 0 && (
+                      <Badge variant="secondary" className="h-4 px-1 text-[10px] ml-1">{consoleLogs.length}</Badge>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => { clearConsole(); setPreviewHtml(""); setTerminalHistory([]); }} className="h-6 px-2">
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={handleRun} className="h-6 px-2">
-                      <RefreshCw className="h-3 w-3" />
-                    </Button>
-                  </div>
+                  </Button>
+                  <Button variant={outputPanel === "terminal" ? "secondary" : "ghost"} size="sm" onClick={() => setOutputPanel("terminal")} className="text-xs gap-1 h-6 px-2">
+                    <Terminal className="h-3 w-3" /> Terminal
+                  </Button>
                 </div>
+                <div className="flex items-center gap-1">
+                  {outputPanel === "preview" && previewHtml && (
+                    <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => {
+                      const w = window.open("", "_blank");
+                      if (w) { w.document.write(previewHtml); w.document.close(); }
+                    }}>
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="sm" onClick={() => { clearConsole(); setPreviewHtml(""); setTerminalHistory([]); }} className="h-6 px-2">
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleRun} className="h-6 px-2">
+                    <RefreshCw className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
 
-                <TabsContent value="preview" className="flex-1 m-0 overflow-hidden bg-white">
-                  {previewHtml ? (
-                    <div className="h-full flex items-stretch justify-center bg-zinc-800 overflow-auto p-0">
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {outputPanel === "preview" && (
+                  <div className="h-full w-full overflow-hidden">
+                    {previewHtml ? (
                       <iframe
                         ref={iframeRef}
                         srcDoc={previewHtml}
@@ -893,17 +893,17 @@ export const PersonalIDE = ({ initialCode, language, onClose }: PersonalIDEProps
                         sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups"
                         title="Preview"
                       />
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground bg-background">
-                      <Monitor className="h-12 w-12 mb-3 opacity-30" />
-                      <p className="text-sm font-medium">No preview available</p>
-                      <p className="text-xs mt-1 opacity-70">Click <strong>Run</strong> or press <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Ctrl+S</kbd> to build</p>
-                    </div>
-                  )}
-                </TabsContent>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-muted-foreground bg-background">
+                        <Monitor className="h-12 w-12 mb-3 opacity-30" />
+                        <p className="text-sm font-medium">No preview available</p>
+                        <p className="text-xs mt-1 opacity-70">Click <strong>Run</strong> or press <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Ctrl+S</kbd> to build</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                <TabsContent value="console" className="flex-1 m-0 overflow-hidden">
+                {outputPanel === "console" && (
                   <ScrollArea className="h-full bg-zinc-950">
                     <div className="p-3 font-mono text-xs space-y-0.5">
                       {consoleLogs.length === 0 ? (
@@ -921,38 +921,40 @@ export const PersonalIDE = ({ initialCode, language, onClose }: PersonalIDEProps
                       ))}
                     </div>
                   </ScrollArea>
-                </TabsContent>
+                )}
 
-                <TabsContent value="terminal" className="flex-1 m-0 overflow-hidden flex flex-col">
-                  <ScrollArea className="flex-1 bg-zinc-950">
-                    <div className="p-3 font-mono text-xs space-y-0.5">
-                      <div className="text-emerald-400 mb-2">ShadowTalk Terminal v1.0 — Type 'help' for commands</div>
-                      {terminalHistory.map((line, i) => (
-                        <div key={i} className={cn("px-1", line.startsWith("$") ? "text-sky-400" : "text-foreground/80")}>
-                          {line}
-                        </div>
-                      ))}
+                {outputPanel === "terminal" && (
+                  <div className="h-full flex flex-col">
+                    <ScrollArea className="flex-1 bg-zinc-950">
+                      <div className="p-3 font-mono text-xs space-y-0.5">
+                        <div className="text-emerald-400 mb-2">ShadowTalk Terminal v1.0 — Type 'help' for commands</div>
+                        {terminalHistory.map((line, i) => (
+                          <div key={i} className={cn("px-1", line.startsWith("$") ? "text-sky-400" : "text-foreground/80")}>
+                            {line}
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                    <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-zinc-950 font-mono text-xs">
+                      <span className="text-emerald-400 shrink-0">$</span>
+                      <input
+                        ref={terminalInputRef}
+                        value={terminalInput}
+                        onChange={e => setTerminalInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") {
+                            handleTerminalCommand(terminalInput);
+                            setTerminalInput("");
+                          }
+                        }}
+                        placeholder="Type a command..."
+                        className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
+                        autoComplete="off"
+                      />
                     </div>
-                  </ScrollArea>
-                  <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-zinc-950 font-mono text-xs">
-                    <span className="text-emerald-400 shrink-0">$</span>
-                    <input
-                      ref={terminalInputRef}
-                      value={terminalInput}
-                      onChange={e => setTerminalInput(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === "Enter") {
-                          handleTerminalCommand(terminalInput);
-                          setTerminalInput("");
-                        }
-                      }}
-                      placeholder="Type a command..."
-                      className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
-                      autoComplete="off"
-                    />
                   </div>
-                </TabsContent>
-              </Tabs>
+                )}
+              </div>
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
