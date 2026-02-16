@@ -31,7 +31,20 @@ export type ToolType =
   | 'security_audit'
   | 'eco_actions'
   | 'vision_agent'
-  | 'command_palette';
+  | 'command_palette'
+  | 'knowledge_vault'
+  | 'memory_panel'
+  | 'mission_control'
+  | 'custom_instructions'
+  | 'conversation_branching'
+  | 'bunker_mode'
+  | 'strategy_agent'
+  | 'cognitive_loop'
+  | 'canvas_document'
+  | 'referral'
+  | 'workspace'
+  | 'marketplace'
+  | 'privacy_score';
 
 interface ToolDetectionResult {
   tool: ToolType | null;
@@ -494,6 +507,175 @@ const TOOL_PATTERNS: Array<{
       /\b(manage|view|check)\s+(?:my\s+)?api\s+keys?/i,
       /\bdeveloper\s+(?:portal|tools|dashboard)/i,
       /\bopen\s+(?:the\s+)?(?:api\s+)?marketplace/i,
+    ],
+    priority: 4,
+    autoExecute: false,
+  },
+
+  // ========== FULL FEATURE ACCESS ==========
+
+  // Knowledge Vault
+  {
+    tool: 'knowledge_vault',
+    patterns: [
+      /\bknowledge\s+(?:vault|base|graph)/i,
+      /\b(open|show|manage)\s+(?:my\s+)?knowledge/i,
+      /\bsave\s+(?:this\s+)?(?:to\s+)?knowledge/i,
+      /\brag\s+(?:search|query)/i,
+    ],
+    priority: 5,
+    autoExecute: false,
+  },
+
+  // Memory Panel
+  {
+    tool: 'memory_panel',
+    patterns: [
+      /\b(open|show|manage)\s+(?:my\s+)?(?:ai\s+)?memory/i,
+      /\bmemory\s+(?:panel|vault|manager)/i,
+      /\bwhat\s+do\s+you\s+(?:remember|know)\s+about\s+me/i,
+      /\bbusiness\s+(?:memory|context|profile)/i,
+      /\bremember\s+(?:this|that|my)/i,
+    ],
+    priority: 5,
+    autoExecute: false,
+  },
+
+  // Mission Control (S.E.E.)
+  {
+    tool: 'mission_control',
+    patterns: [
+      /\bmission\s+(?:control|dashboard|center)/i,
+      /\b(create|start|launch|run)\s+(?:a\s+)?mission/i,
+      /\bs\.?e\.?e\.?\s+(?:engine|missions?)/i,
+      /\bbackground\s+(?:task|agent|mission)/i,
+      /\bautonomous\s+(?:task|mission|execution)/i,
+    ],
+    priority: 6,
+    autoExecute: false,
+  },
+
+  // Custom Instructions
+  {
+    tool: 'custom_instructions',
+    patterns: [
+      /\bcustom\s+instructions?/i,
+      /\bset\s+(?:my\s+)?(?:ai\s+)?(?:instructions?|rules?|preferences?)/i,
+      /\bsystem\s+prompt/i,
+      /\bhow\s+should\s+(?:you|ai)\s+(?:behave|respond|act)/i,
+    ],
+    priority: 5,
+    autoExecute: false,
+  },
+
+  // Conversation Branching
+  {
+    tool: 'conversation_branching',
+    patterns: [
+      /\b(branch|fork|split)\s+(?:this\s+)?conversation/i,
+      /\bconversation\s+(?:branch|tree|fork)/i,
+      /\b(create|make)\s+(?:a\s+)?(?:conversation\s+)?branch/i,
+    ],
+    priority: 4,
+    autoExecute: false,
+  },
+
+  // Bunker Mode
+  {
+    tool: 'bunker_mode',
+    patterns: [
+      /\bbunker\s+mode/i,
+      /\bgo\s+(?:completely\s+)?offline/i,
+      /\bair[- ]?gap(?:ped)?\s+(?:mode|ai)/i,
+      /\b(enable|activate|start)\s+(?:full\s+)?(?:bunker|offline|sovereign)\s+mode/i,
+    ],
+    priority: 7,
+    autoExecute: false,
+  },
+
+  // Strategy Agent
+  {
+    tool: 'strategy_agent',
+    patterns: [
+      /\bstrategy\s+(?:agent|advisor|consultant)/i,
+      /\bbusiness\s+(?:strategy|plan|analysis)/i,
+      /\bswot\s+analysis/i,
+      /\b(open|launch)\s+(?:the\s+)?strategy/i,
+      /\bcompetitive\s+(?:analysis|intelligence)/i,
+    ],
+    priority: 6,
+    autoExecute: false,
+  },
+
+  // Cognitive Loop
+  {
+    tool: 'cognitive_loop',
+    patterns: [
+      /\bcognitive\s+loop/i,
+      /\bmulti[- ]?agent\s+(?:debate|reasoning|consensus)/i,
+      /\b(enable|activate)\s+(?:the\s+)?cognitive/i,
+      /\bdebate\s+mode/i,
+    ],
+    priority: 5,
+    autoExecute: false,
+  },
+
+  // Canvas Document
+  {
+    tool: 'canvas_document',
+    patterns: [
+      /\bopen\s+(?:the\s+)?(?:document\s+)?canvas/i,
+      /\b(create|new)\s+(?:a\s+)?(?:document|canvas)/i,
+      /\bdocument\s+editor/i,
+    ],
+    priority: 4,
+    autoExecute: false,
+  },
+
+  // Referral
+  {
+    tool: 'referral',
+    patterns: [
+      /\breferral\s+(?:program|code|link)/i,
+      /\binvite\s+(?:a\s+)?friend/i,
+      /\b(share|get)\s+(?:my\s+)?referral/i,
+      /\bearn\s+(?:rewards?|credits?)/i,
+    ],
+    priority: 3,
+    autoExecute: false,
+  },
+
+  // Workspace
+  {
+    tool: 'workspace',
+    patterns: [
+      /\b(open|go\s+to|show)\s+(?:my\s+)?workspace/i,
+      /\bai\s+workspace/i,
+      /\bpersistent\s+(?:workspace|context)/i,
+    ],
+    priority: 4,
+    autoExecute: false,
+  },
+
+  // Marketplace
+  {
+    tool: 'marketplace',
+    patterns: [
+      /\b(open|browse|show)\s+(?:the\s+)?marketplace/i,
+      /\bplugins?\s+(?:store|marketplace|manager)/i,
+      /\b(install|browse)\s+(?:plugins?|extensions?)/i,
+    ],
+    priority: 4,
+    autoExecute: false,
+  },
+
+  // Privacy Score
+  {
+    tool: 'privacy_score',
+    patterns: [
+      /\bprivacy\s+(?:score|rating|check)/i,
+      /\b(check|show|view)\s+(?:my\s+)?privacy/i,
+      /\bdigital\s+(?:privacy|footprint)/i,
     ],
     priority: 4,
     autoExecute: false,
