@@ -884,11 +884,11 @@ export const PersonalIDE = ({ initialCode, language, onClose }: PersonalIDEProps
 
                 <TabsContent value="preview" className="flex-1 m-0 overflow-hidden bg-white">
                   {previewHtml ? (
-                    <div className="h-full flex items-start justify-center bg-zinc-800 overflow-auto p-0">
+                    <div className="h-full flex items-stretch justify-center bg-zinc-800 overflow-auto p-0">
                       <iframe
                         ref={iframeRef}
                         srcDoc={previewHtml}
-                        className="h-full bg-white border-0 transition-all duration-300"
+                        className="w-full h-full bg-white border-0"
                         style={{ width: viewport.width, maxWidth: "100%" }}
                         sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups"
                         title="Preview"
