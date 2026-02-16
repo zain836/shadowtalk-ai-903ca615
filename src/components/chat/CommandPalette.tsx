@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useFeatureGating } from "@/hooks/useFeatureGating";
 import {
   CommandDialog,
   CommandEmpty,
@@ -13,7 +14,11 @@ import {
   Search, Image, FileText, Brain, Mic, Code, Shield, 
   Sparkles, Globe, Bot, Zap, Camera, Calendar, GamepadIcon,
   Eye, Folder, MessageSquare, Settings, Moon, Sun, LogOut,
-  Users, Keyboard, ArrowRight, Star, Clock, Flame
+  Users, Keyboard, ArrowRight, Star, Clock, Flame, Compass,
+  BarChart3, Palette, Key, Activity, BookOpen, Database,
+  GitBranch, Sliders, Lock, Target, Leaf, Navigation, Wand2,
+  Rocket, Cpu, PenTool, LayoutDashboard, UserPlus, Mail,
+  HardDrive, Layers, BrainCircuit, Cog, FileCode
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
@@ -40,6 +45,7 @@ interface CommandAction {
 export const CommandPalette = ({ open, onOpenChange, onAction }: CommandPaletteProps) => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { canAccess } = useFeatureGating();
   const [search, setSearch] = useState("");
   const [recentCommands, setRecentCommands] = useState<string[]>([]);
 
@@ -318,6 +324,266 @@ export const CommandPalette = ({ open, onOpenChange, onAction }: CommandPaletteP
       category: "Fun",
       action: () => onAction("wordle"),
       keywords: ["wordle", "game", "play", "fun"],
+    },
+    
+    // === MISSING FEATURES ADDED BELOW ===
+    
+    // Shadow Browser
+    {
+      id: "shadow-browser",
+      label: "Shadow Browser",
+      description: "Built-in AI-powered web browser",
+      icon: <Compass className="h-4 w-4" />,
+      shortcut: "⌘⇧B",
+      category: "AI Tools",
+      action: () => onAction("browser"),
+      keywords: ["browser", "browse", "web", "scrape", "navigate"],
+      badge: "Unique",
+      badgeVariant: "secondary" as const,
+    },
+    
+    // Script Automation
+    {
+      id: "script-automation",
+      label: "Script Automation",
+      description: "Create trigger-based automation scripts",
+      icon: <FileCode className="h-4 w-4" />,
+      category: "Productivity",
+      action: () => onAction("script-automation"),
+      keywords: ["script", "automation", "automate", "trigger", "cron"],
+    },
+    
+    // Agent Workflows
+    {
+      id: "agent-workflows",
+      label: "AI Agent Workflows",
+      description: "Build multi-step AI workflow pipelines",
+      icon: <Layers className="h-4 w-4" />,
+      category: "AI Tools",
+      action: () => onAction("agent-workflows"),
+      keywords: ["workflow", "pipeline", "agent", "orchestrate"],
+    },
+    
+    // Model Fine-Tuning
+    {
+      id: "model-fine-tuning",
+      label: "Model Fine-Tuning",
+      description: "Train custom AI models on your data",
+      icon: <BrainCircuit className="h-4 w-4" />,
+      category: "AI Tools",
+      action: () => onAction("fine-tuning"),
+      keywords: ["fine-tune", "train", "custom", "model"],
+      badge: "Elite",
+      badgeVariant: "secondary" as const,
+    },
+    
+    // White-Label Branding
+    {
+      id: "white-label",
+      label: "White-Label Branding",
+      description: "Customize logos, colors, and themes",
+      icon: <Palette className="h-4 w-4" />,
+      category: "Productivity",
+      action: () => onAction("white-label"),
+      keywords: ["brand", "white-label", "logo", "theme", "customize"],
+      badge: "Elite",
+      badgeVariant: "secondary" as const,
+    },
+    
+    // Gemini / API Key Analytics
+    {
+      id: "gemini-analytics",
+      label: "API Key Analytics",
+      description: "Monitor API key usage and health",
+      icon: <Key className="h-4 w-4" />,
+      category: "Productivity",
+      action: () => onAction("gemini-analytics"),
+      keywords: ["gemini", "api", "key", "analytics", "usage", "health"],
+    },
+    
+    // Analytics Dashboard
+    {
+      id: "analytics-dashboard",
+      label: "Analytics Dashboard",
+      description: "View chat and usage statistics",
+      icon: <BarChart3 className="h-4 w-4" />,
+      category: "Productivity",
+      action: () => onAction("analytics"),
+      keywords: ["analytics", "stats", "statistics", "usage", "metrics"],
+    },
+    
+    // Eco / Planetary Actions
+    {
+      id: "eco-actions",
+      label: "Planetary Actions",
+      description: "Track eco impact and sustainability",
+      icon: <Leaf className="h-4 w-4" />,
+      category: "AI Tools",
+      action: () => onAction("eco"),
+      keywords: ["eco", "green", "carbon", "sustainability", "planet", "environment"],
+    },
+    
+    // Strategy Agent
+    {
+      id: "strategy-agent",
+      label: "Strategy Agent",
+      description: "AI-powered business strategy advisor",
+      icon: <Target className="h-4 w-4" />,
+      category: "AI Tools",
+      action: () => navigate("/strategy-agent"),
+      keywords: ["strategy", "business", "swot", "analysis", "advisor"],
+      badge: "Pro",
+      badgeVariant: "default" as const,
+    },
+    
+    // Knowledge Vault
+    {
+      id: "knowledge-vault",
+      label: "Knowledge Vault",
+      description: "Persistent knowledge base for AI",
+      icon: <BookOpen className="h-4 w-4" />,
+      category: "AI Tools",
+      action: () => onAction("knowledge-vault"),
+      keywords: ["knowledge", "vault", "memory", "facts", "database"],
+    },
+    
+    // Memory Panel
+    {
+      id: "memory-panel",
+      label: "Memory & Context",
+      description: "Manage AI memory and business context",
+      icon: <Database className="h-4 w-4" />,
+      category: "AI Tools",
+      action: () => onAction("memory"),
+      keywords: ["memory", "context", "remember", "business", "preferences"],
+    },
+    
+    // Mission Control (S.E.E.)
+    {
+      id: "mission-control",
+      label: "Mission Control",
+      description: "S.E.E. autonomous background tasks",
+      icon: <Rocket className="h-4 w-4" />,
+      category: "AI Tools",
+      action: () => onAction("missions"),
+      keywords: ["mission", "see", "autonomous", "background", "task"],
+      badge: "Unique",
+      badgeVariant: "secondary" as const,
+    },
+    
+    // Custom Instructions
+    {
+      id: "custom-instructions",
+      label: "Custom Instructions",
+      description: "Set persistent AI behavior rules",
+      icon: <Sliders className="h-4 w-4" />,
+      category: "Productivity",
+      action: () => onAction("custom-instructions"),
+      keywords: ["custom", "instructions", "rules", "system", "prompt"],
+    },
+    
+    // Conversation Branching
+    {
+      id: "conversation-branching",
+      label: "Conversation Branching",
+      description: "Fork conversations into branches",
+      icon: <GitBranch className="h-4 w-4" />,
+      category: "Productivity",
+      action: () => onAction("branching"),
+      keywords: ["branch", "fork", "split", "conversation", "tree"],
+    },
+    
+    // Bunker Mode (Sovereign AI)
+    {
+      id: "bunker-mode",
+      label: "Bunker Mode",
+      description: "100% offline sovereign AI mode",
+      icon: <HardDrive className="h-4 w-4" />,
+      category: "Privacy",
+      action: () => onAction("bunker"),
+      keywords: ["bunker", "offline", "sovereign", "local", "private", "air-gap"],
+      badge: "Elite",
+      badgeVariant: "secondary" as const,
+    },
+    
+    // Image Decoder
+    {
+      id: "image-decoder",
+      label: "Image Decoder",
+      description: "Analyze and extract data from images",
+      icon: <Wand2 className="h-4 w-4" />,
+      category: "AI Tools",
+      action: () => onAction("image-decoder"),
+      keywords: ["decode", "image", "analyze", "extract", "ocr"],
+    },
+    
+    // Referral Program
+    {
+      id: "referral",
+      label: "Referral Program",
+      description: "Invite friends, earn rewards",
+      icon: <UserPlus className="h-4 w-4" />,
+      category: "Account",
+      action: () => navigate("/profile"),
+      keywords: ["referral", "invite", "earn", "rewards", "share"],
+    },
+    
+    // Workspace
+    {
+      id: "workspace",
+      label: "AI Workspace",
+      description: "Persistent workspace with memory",
+      icon: <LayoutDashboard className="h-4 w-4" />,
+      category: "Productivity",
+      action: () => navigate("/workspace"),
+      keywords: ["workspace", "persistent", "memory", "context"],
+    },
+    
+    // Collaboration Rooms (already exists but adding Chat Rooms link)
+    {
+      id: "marketplace",
+      label: "Marketplace",
+      description: "Browse plugins and extensions",
+      icon: <Cog className="h-4 w-4" />,
+      category: "Integrations",
+      action: () => navigate("/marketplace"),
+      keywords: ["marketplace", "plugins", "extensions", "apps"],
+    },
+    
+    // Cognitive Loop
+    {
+      id: "cognitive-loop",
+      label: "Cognitive Loop",
+      description: "Multi-agent debate reasoning engine",
+      icon: <Cpu className="h-4 w-4" />,
+      category: "AI Tools",
+      action: () => onAction("cognitive-loop"),
+      keywords: ["cognitive", "loop", "debate", "multi-agent", "reasoning"],
+      badge: "Advanced",
+      badgeVariant: "default" as const,
+    },
+    
+    // Deep Canvas (document editor)
+    {
+      id: "canvas-document",
+      label: "Document Canvas",
+      description: "Rich document editor with AI assist",
+      icon: <PenTool className="h-4 w-4" />,
+      shortcut: "⌘⇧D",
+      category: "Productivity",
+      action: () => onAction("canvas-document"),
+      keywords: ["canvas", "document", "editor", "write"],
+    },
+    
+    // Privacy Score
+    {
+      id: "privacy-score",
+      label: "Privacy Score",
+      description: "Check your digital privacy rating",
+      icon: <Activity className="h-4 w-4" />,
+      category: "Privacy",
+      action: () => navigate("/privacy-score"),
+      keywords: ["privacy", "score", "rating", "digital", "footprint"],
     },
   ], [onAction, navigate, signOut]);
 

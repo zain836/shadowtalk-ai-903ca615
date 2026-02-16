@@ -45,6 +45,14 @@ import { DailyPlanner } from "@/components/chat/DailyPlanner";
 import { WordleGame } from "@/components/chat/WordleGame";
 import { VisionAgent } from "@/components/chat/VisionAgent";
 import { CommandPalette } from "@/components/chat/CommandPalette";
+import { KnowledgeVault } from "@/components/chat/KnowledgeVault";
+import { MemoryPanel } from "@/components/chat/MemoryPanel";
+import { MissionControl } from "@/components/chat/MissionControl";
+import { CustomInstructions } from "@/components/chat/CustomInstructions";
+import { ConversationBranching } from "@/components/chat/ConversationBranching";
+import { BunkerModeToggle } from "@/components/chat/BunkerModeToggle";
+import { CognitiveLoopPanel } from "@/components/chat/CognitiveLoopPanel";
+import { PluginsManager } from "@/components/chat/PluginsManager";
 import { ChatGPTBeaterIndicator } from "@/components/chat/ChatGPTBeaterIndicator";
 import { ClaudeBeaterIndicator } from "@/components/chat/ClaudeBeaterIndicator";
 import { GeminiBeaterIndicator } from "@/components/chat/GeminiBeaterIndicator";
@@ -165,6 +173,14 @@ const ChatbotPage = () => {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showGoogleIntegration, setShowGoogleIntegration] = useState(false);
   const [showSovereignModels, setShowSovereignModels] = useState(false);
+  const [showKnowledgeVault, setShowKnowledgeVault] = useState(false);
+  const [showMemoryPanel, setShowMemoryPanel] = useState(false);
+  const [showMissionControl, setShowMissionControl] = useState(false);
+  const [showCustomInstructions, setShowCustomInstructions] = useState(false);
+  const [showConversationBranching, setShowConversationBranching] = useState(false);
+  const [showBunkerMode, setShowBunkerMode] = useState(false);
+  const [showCognitiveLoop, setShowCognitiveLoop] = useState(false);
+  const [showPluginsManager, setShowPluginsManager] = useState(false);
   
   // Tool params for auto-execution
   const [imageGeneratorPrompt, setImageGeneratorPrompt] = useState<string | undefined>(undefined);
@@ -910,6 +926,82 @@ const ChatbotPage = () => {
 
         case 'command_palette':
           setShowCommandPalette(true);
+          setMessage("");
+          return;
+
+        case 'knowledge_vault':
+          setShowKnowledgeVault(true);
+          toast({ title: "📚 Knowledge Vault", description: "Opening knowledge base..." });
+          setMessage("");
+          return;
+
+        case 'memory_panel':
+          setShowMemoryPanel(true);
+          toast({ title: "🧠 Memory Panel", description: "Opening AI memory..." });
+          setMessage("");
+          return;
+
+        case 'mission_control':
+          setShowMissionControl(true);
+          toast({ title: "🚀 Mission Control", description: "Opening S.E.E. dashboard..." });
+          setMessage("");
+          return;
+
+        case 'custom_instructions':
+          setShowCustomInstructions(true);
+          toast({ title: "⚙️ Custom Instructions", description: "Opening instruction editor..." });
+          setMessage("");
+          return;
+
+        case 'conversation_branching':
+          setShowConversationBranching(true);
+          toast({ title: "🌿 Branching", description: "Opening conversation branches..." });
+          setMessage("");
+          return;
+
+        case 'bunker_mode':
+          setShowBunkerMode(true);
+          robustOfflineAI.loadModel();
+          toast({ title: "🏰 Bunker Mode", description: "Activating sovereign AI..." });
+          setMessage("");
+          return;
+
+        case 'strategy_agent':
+          navigate('/strategy-agent');
+          setMessage("");
+          return;
+
+        case 'cognitive_loop':
+          setShowCognitiveLoop(true);
+          toast({ title: "🔄 Cognitive Loop", description: "Activating multi-agent reasoning..." });
+          setMessage("");
+          return;
+
+        case 'canvas_document':
+          setCanvasState({ content: "", type: "document", language: "javascript" });
+          toast({ title: "📝 Document Canvas", description: "Opening document editor..." });
+          setMessage("");
+          return;
+
+        case 'referral':
+          navigate('/profile');
+          toast({ title: "🎁 Referral Program", description: "Opening referral dashboard..." });
+          setMessage("");
+          return;
+
+        case 'workspace':
+          navigate('/workspace');
+          setMessage("");
+          return;
+
+        case 'marketplace':
+          setShowPluginsManager(true);
+          toast({ title: "🛍️ Marketplace", description: "Opening plugins marketplace..." });
+          setMessage("");
+          return;
+
+        case 'privacy_score':
+          navigate('/privacy-score');
           setMessage("");
           return;
       }
@@ -1830,6 +1922,58 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             case 'sovereign':
               setShowSovereignModels(true);
               break;
+            case 'browser':
+              setShowShadowBrowser(true);
+              break;
+            case 'script-automation':
+              setShowScriptAutomation(true);
+              break;
+            case 'agent-workflows':
+              setShowAgentWorkflows(true);
+              break;
+            case 'fine-tuning':
+              setShowModelFineTuning(true);
+              break;
+            case 'white-label':
+              setShowWhiteLabelBranding(true);
+              break;
+            case 'gemini-analytics':
+              setShowGeminiAnalytics(true);
+              break;
+            case 'analytics':
+              setShowAnalytics(true);
+              break;
+            case 'eco':
+              setChatMode('ppag');
+              break;
+            case 'knowledge-vault':
+              setShowKnowledgeVault(true);
+              break;
+            case 'memory':
+              setShowMemoryPanel(true);
+              break;
+            case 'missions':
+              setShowMissionControl(true);
+              break;
+            case 'custom-instructions':
+              setShowCustomInstructions(true);
+              break;
+            case 'branching':
+              setShowConversationBranching(true);
+              break;
+            case 'bunker':
+              setShowBunkerMode(true);
+              robustOfflineAI.loadModel();
+              break;
+            case 'image-decoder':
+              setShowImageDecoder(true);
+              break;
+            case 'cognitive-loop':
+              setShowCognitiveLoop(true);
+              break;
+            case 'canvas-document':
+              setCanvasState({ content: "", type: "document", language: "javascript" });
+              break;
           }
         }}
       />
@@ -1847,6 +1991,110 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
           }]);
         }}
       />
+
+      {/* Knowledge Vault */}
+      {showKnowledgeVault && (
+        <KnowledgeVault
+          isOpen={showKnowledgeVault}
+          onClose={() => setShowKnowledgeVault(false)}
+        />
+      )}
+
+      {/* Memory Panel - wrapped in sheet */}
+      {showMemoryPanel && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center" onClick={() => setShowMemoryPanel(false)}>
+          <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto m-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">🧠 AI Memory</h2>
+              <button onClick={() => setShowMemoryPanel(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+            <MemoryPanel />
+          </div>
+        </div>
+      )}
+
+      {/* Mission Control */}
+      {showMissionControl && (
+        <MissionControl
+          isOpen={showMissionControl}
+          onClose={() => setShowMissionControl(false)}
+        />
+      )}
+
+      {/* Custom Instructions - wrapped */}
+      {showCustomInstructions && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center" onClick={() => setShowCustomInstructions(false)}>
+          <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto m-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">⚙️ Custom Instructions</h2>
+              <button onClick={() => setShowCustomInstructions(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+            <CustomInstructions onInstructionsChange={() => {}} />
+          </div>
+        </div>
+      )}
+
+      {/* Conversation Branching - wrapped */}
+      {showConversationBranching && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center" onClick={() => setShowConversationBranching(false)}>
+          <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto m-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">🌿 Conversation Branches</h2>
+              <button onClick={() => setShowConversationBranching(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+            <ConversationBranching
+              branches={[]}
+              currentBranchId={null}
+              onCreateBranch={() => {}}
+              onSwitchBranch={() => {}}
+              onDeleteBranch={() => {}}
+              messages={messages.map(m => ({ id: m.id, content: m.content, type: m.type, timestamp: m.timestamp }))}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Bunker Mode - wrapped */}
+      {showBunkerMode && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center" onClick={() => setShowBunkerMode(false)}>
+          <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto m-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">🏰 Bunker Mode</h2>
+              <button onClick={() => setShowBunkerMode(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+            <BunkerModeToggle />
+          </div>
+        </div>
+      )}
+
+      {/* Cognitive Loop */}
+      {showCognitiveLoop && (
+        <CognitiveLoopPanel
+          isOpen={showCognitiveLoop}
+          onClose={() => setShowCognitiveLoop(false)}
+          onResult={(result) => {
+            setMessages(prev => [...prev, {
+              id: crypto.randomUUID(),
+              type: 'ai',
+              content: result,
+              timestamp: new Date()
+            }]);
+          }}
+        />
+      )}
+
+      {/* Plugins Marketplace - wrapped */}
+      {showPluginsManager && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center" onClick={() => setShowPluginsManager(false)}>
+          <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto m-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">🛍️ Plugins Marketplace</h2>
+              <button onClick={() => setShowPluginsManager(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+            <PluginsManager enabledPlugins={[]} onPluginsChange={() => {}} />
+          </div>
+        </div>
+      )}
      </div>
   );
 };
