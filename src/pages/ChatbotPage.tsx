@@ -847,6 +847,71 @@ const ChatbotPage = () => {
           toast({ title: "🟩 Wordle Bot", description: "Starting offline word game..." });
           setMessage("");
           return;
+
+        case 'script_automation':
+          setShowScriptAutomation(true);
+          toast({ title: "⚙️ Script Automation", description: "Opening automation editor..." });
+          setMessage("");
+          return;
+
+        case 'agent_workflows':
+          setShowAgentWorkflows(true);
+          toast({ title: "🤖 Agent Workflows", description: "Opening AI workflow builder..." });
+          setMessage("");
+          return;
+
+        case 'model_fine_tuning':
+          setShowModelFineTuning(true);
+          toast({ title: "🧬 Model Fine-Tuning", description: "Opening model trainer..." });
+          setMessage("");
+          return;
+
+        case 'white_label':
+          setShowWhiteLabelBranding(true);
+          toast({ title: "🎨 Branding", description: "Opening white-label customizer..." });
+          setMessage("");
+          return;
+
+        case 'gemini_analytics':
+          setShowGeminiAnalytics(true);
+          toast({ title: "📊 API Analytics", description: "Opening key analytics..." });
+          setMessage("");
+          return;
+
+        case 'google_integration':
+          setShowGoogleIntegration(true);
+          toast({ title: "🔗 Google Integration", description: "Opening Google panel..." });
+          setMessage("");
+          return;
+
+        case 'sovereign_models':
+          setShowSovereignModels(true);
+          toast({ title: "🏠 Sovereign AI", description: "Opening local model manager..." });
+          setMessage("");
+          return;
+
+        case 'security_audit':
+          setChatMode('hsca');
+          toast({ title: "🔒 Security Audit", description: "Switching to security audit mode..." });
+          setMessage("");
+          return;
+
+        case 'eco_actions':
+          setChatMode('ppag');
+          toast({ title: "🌍 Eco Actions", description: "Switching to planetary action mode..." });
+          setMessage("");
+          return;
+
+        case 'vision_agent':
+          setShowVisionAgent(true);
+          toast({ title: "👁️ Vision Agent", description: "Activating real-time vision AI..." });
+          setMessage("");
+          return;
+
+        case 'command_palette':
+          setShowCommandPalette(true);
+          setMessage("");
+          return;
       }
     }
     

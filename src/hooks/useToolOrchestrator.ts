@@ -1,44 +1,55 @@
- import { useCallback } from 'react';
- 
- export type ToolType = 
-   | 'image_generator'
+import { useCallback } from 'react';
+
+export type ToolType = 
+  | 'image_generator'
   | 'image_decoder'
-   | 'deep_research'
-   | 'agentic_runner'
-   | 'visual_reasoning'
-   | 'creative_synthesis'
-   | 'shadow_browser'
-   | 'shadow_live'
-   | 'multi_model'
-   | 'api_marketplace'
-   | 'code_canvas'
-   | 'analytics'
-   | 'stealth_vault'
-   | 'data_organizer'
-   | 'camera_capture'
-   | 'calculator'
-   | 'web_search'
-   | 'document_generator'
+  | 'deep_research'
+  | 'agentic_runner'
+  | 'visual_reasoning'
+  | 'creative_synthesis'
+  | 'shadow_browser'
+  | 'shadow_live'
+  | 'multi_model'
+  | 'api_marketplace'
+  | 'code_canvas'
+  | 'analytics'
+  | 'stealth_vault'
+  | 'data_organizer'
+  | 'camera_capture'
+  | 'calculator'
+  | 'web_search'
+  | 'document_generator'
   | 'daily_planner'
-  | 'wordle_game';
- 
- interface ToolDetectionResult {
-   tool: ToolType | null;
-   confidence: number;
-   action?: string;
-   params?: Record<string, string>;
+  | 'wordle_game'
+  | 'script_automation'
+  | 'agent_workflows'
+  | 'model_fine_tuning'
+  | 'white_label'
+  | 'gemini_analytics'
+  | 'google_integration'
+  | 'sovereign_models'
+  | 'security_audit'
+  | 'eco_actions'
+  | 'vision_agent'
+  | 'command_palette';
+
+interface ToolDetectionResult {
+  tool: ToolType | null;
+  confidence: number;
+  action?: string;
+  params?: Record<string, string>;
   autoExecute?: boolean;
   originalMessage?: string;
- }
- 
- // Tool detection patterns with priority
- const TOOL_PATTERNS: Array<{
-   tool: ToolType;
-   patterns: RegExp[];
-   priority: number;
+}
+
+// Tool detection patterns with priority
+const TOOL_PATTERNS: Array<{
+  tool: ToolType;
+  patterns: RegExp[];
+  priority: number;
   autoExecute?: boolean;
-   extractParams?: (message: string) => Record<string, string>;
- }> = [
+  extractParams?: (message: string) => Record<string, string>;
+}> = [
   // Image Decoder - Hidden built-in tool (high priority)
   {
     tool: 'image_decoder',
@@ -54,96 +65,97 @@
     autoExecute: true,
     extractParams: (msg) => ({ query: msg }),
   },
-   {
-     tool: 'image_generator',
-     patterns: [
-       /\b(generate|create|make|draw|design|imagine)\s+(an?\s+)?(image|picture|illustration|artwork|logo|icon|banner|poster)/i,
-       /\/imagine\s+/i,
-       /\b(visualize|render|sketch)\s+/i,
-       /\bshow\s+me\s+(an?\s+)?(image|picture|visual)\s+of/i,
-       /\b(create|generate)\s+.*\s+(logo|banner|poster|artwork)/i,
-     ],
-     priority: 10,
+  {
+    tool: 'image_generator',
+    patterns: [
+      /\b(generate|create|make|draw|design|imagine)\s+(an?\s+)?(image|picture|illustration|artwork|logo|icon|banner|poster)/i,
+      /\/imagine\s+/i,
+      /\b(visualize|render|sketch)\s+/i,
+      /\bshow\s+me\s+(an?\s+)?(image|picture|visual)\s+of/i,
+      /\b(create|generate)\s+.*\s+(logo|banner|poster|artwork)/i,
+    ],
+    priority: 10,
     autoExecute: true,
-     extractParams: (msg) => {
-      // Remove the command prefix to get the actual prompt
+    extractParams: (msg) => {
       const cleaned = msg
         .replace(/^(generate|create|make|draw|design|imagine|visualize|render|show me)\s+(an?\s+)?(image|picture|illustration|artwork|logo|icon|banner|poster)\s*(of|for|about|showing)?\s*/i, '')
         .trim();
       return { prompt: cleaned || msg };
-     }
-   },
-   {
-     tool: 'deep_research',
-     patterns: [
-       /\b(research|investigate|deep\s*dive|analyze|study|explore)\s+(about|on|into|the)?\s*.{5,}/i,
-       /\bwhat\s+(?:is|are)\s+the\s+latest\s+.{5,}/i,
-       /\b(find|search|look\s+up)\s+(?:detailed|comprehensive|in-?depth)\s+information/i,
-       /\bgive\s+me\s+(?:a\s+)?(?:detailed|comprehensive|full)\s+(?:report|analysis|overview)/i,
-       /\bmarket\s+(?:research|analysis)/i,
-       /\bcompetitor\s+analysis/i,
-       /\btrend\s+analysis/i,
-     ],
-     priority: 9,
+    }
+  },
+  {
+    tool: 'deep_research',
+    patterns: [
+      /\b(research|investigate|deep\s*dive|analyze|study|explore)\s+(about|on|into|the)?\s*.{5,}/i,
+      /\bwhat\s+(?:is|are)\s+the\s+latest\s+.{5,}/i,
+      /\b(find|search|look\s+up)\s+(?:detailed|comprehensive|in-?depth)\s+information/i,
+      /\bgive\s+me\s+(?:a\s+)?(?:detailed|comprehensive|full)\s+(?:report|analysis|overview)/i,
+      /\bmarket\s+(?:research|analysis)/i,
+      /\bcompetitor\s+analysis/i,
+      /\btrend\s+analysis/i,
+    ],
+    priority: 9,
     autoExecute: true,
-     extractParams: (msg) => {
+    extractParams: (msg) => {
       const cleaned = msg
         .replace(/^(research|investigate|deep\s*dive|analyze|study|explore|find|search|look\s+up|give\s+me)\s+(about|on|into|the|a|an|detailed|comprehensive|in-?depth|information)?\s*/gi, '')
         .replace(/^(market|competitor|trend)\s+(research|analysis)\s*(on|about|of|for)?\s*/i, '')
         .trim();
       return { query: cleaned || msg };
-     }
-   },
-   {
-     tool: 'agentic_runner',
-     patterns: [
-       /\b(automate|run\s+agent|execute\s+workflow|multi-?step|autonomous)/i,
-       /\b(send\s+(?:an?\s+)?(?:email|whatsapp|message)\s+to)/i,
-       /\b(schedule|book|create)\s+(?:a\s+)?(?:meeting|appointment|event)/i,
-       /\b(check|read|fetch)\s+(?:my\s+)?(?:emails?|calendar|contacts)/i,
-       /\b(search|browse)\s+(?:google\s+)?drive/i,
-       /\bopen\s+(?:the\s+)?(?:app|application)/i,
-     ],
-     priority: 8,
+    }
+  },
+  {
+    tool: 'agentic_runner',
+    patterns: [
+      /\b(automate|run\s+agent|execute\s+workflow|multi-?step|autonomous)/i,
+      /\b(send\s+(?:an?\s+)?(?:email|whatsapp|message)\s+to)/i,
+      /\b(schedule|book|create)\s+(?:a\s+)?(?:meeting|appointment|event)/i,
+      /\b(check|read|fetch)\s+(?:my\s+)?(?:emails?|calendar|contacts)/i,
+      /\b(search|browse)\s+(?:google\s+)?drive/i,
+      /\bopen\s+(?:the\s+)?(?:app|application)/i,
+    ],
+    priority: 8,
     autoExecute: true,
     extractParams: (msg) => {
       return { goal: msg };
     }
-   },
-   {
-     tool: 'shadow_browser',
-     patterns: [
-       /\b(browse|open|visit|go\s+to|navigate\s+to)\s+(?:the\s+)?(?:website|webpage|page|site|url)/i,
-       /\b(browse|open|visit)\s+(https?:\/\/|www\.)/i,
-       /\b(scrape|extract|crawl)\s+(?:data\s+from|the)\s+(?:website|webpage|page)/i,
-       /\bopen\s+(?:this\s+)?url/i,
-     ],
-     priority: 7,
+  },
+  {
+    tool: 'shadow_browser',
+    patterns: [
+      /\b(browse|open|visit|go\s+to|navigate\s+to)\s+(?:the\s+)?(?:website|webpage|page|site|url)/i,
+      /\b(browse|open|visit)\s+(https?:\/\/|www\.)/i,
+      /\b(scrape|extract|crawl)\s+(?:data\s+from|the)\s+(?:website|webpage|page)/i,
+      /\bopen\s+(?:this\s+)?url/i,
+    ],
+    priority: 7,
     autoExecute: false,
-     extractParams: (msg) => {
-       const urlMatch = msg.match(/(https?:\/\/[^\s]+)/i);
-       return { url: urlMatch?.[1] || '' };
-     }
-   },
-   {
-     tool: 'visual_reasoning',
-     patterns: [
-       /\b(analyze|explain|describe|understand)\s+(?:this\s+)?(?:image|picture|photo|screenshot|diagram|chart)/i,
-       /\bwhat(?:'s| is)\s+(?:in\s+)?(?:this\s+)?(?:image|picture|photo)/i,
-       /\b(read|extract|ocr)\s+(?:text\s+from|the)\s+(?:this\s+)?(?:image|picture|screenshot)/i,
-     ],
-     priority: 6,
+    extractParams: (msg) => {
+      const urlMatch = msg.match(/(https?:\/\/[^\s]+)/i);
+      return { url: urlMatch?.[1] || '' };
+    }
+  },
+  {
+    tool: 'visual_reasoning',
+    patterns: [
+      /\b(analyze|explain|describe|understand)\s+(?:this\s+)?(?:image|picture|photo|screenshot|diagram|chart)/i,
+      /\bwhat(?:'s| is)\s+(?:in\s+)?(?:this\s+)?(?:image|picture|photo)/i,
+      /\b(read|extract|ocr)\s+(?:text\s+from|the)\s+(?:this\s+)?(?:image|picture|screenshot)/i,
+    ],
+    priority: 6,
     autoExecute: false,
-   },
-   {
-     tool: 'creative_synthesis',
-     patterns: [
-       /\b(brainstorm|ideate|creative|generate\s+ideas)/i,
-       /\b(write|compose|draft)\s+(?:a\s+)?(?:story|poem|song|script|essay|article|blog)/i,
-       /\bcreative\s+writing/i,
-       /\bstoryboard/i,
-     ],
-     priority: 5,
+  },
+  {
+    tool: 'creative_synthesis',
+    patterns: [
+      /\b(brainstorm|ideate|creative|generate\s+ideas)/i,
+      /\b(write|compose|draft)\s+(?:a\s+)?(?:story|poem|song|script|essay|article|blog)/i,
+      /\bcreative\s+writing/i,
+      /\bstoryboard/i,
+      /\b(repurpose|fusion|stakeholder)\s+(content|data|strategy)/i,
+      /\b(transform|convert)\s+(?:this\s+)?(?:into|to)\s+(?:multiple|different)\s+formats/i,
+    ],
+    priority: 5,
     autoExecute: true,
     extractParams: (msg) => {
       const cleaned = msg
@@ -151,84 +163,87 @@
         .trim();
       return { prompt: cleaned || msg };
     }
-   },
-   {
-     tool: 'code_canvas',
-     patterns: [
-       /\b(write|create|generate|build)\s+(?:some\s+)?(?:code|program|script|function|app|application)/i,
-       /\b(code|program|develop|implement)\s+(?:a\s+|an\s+)?(?:\w+\s+)?(?:in\s+)?(?:python|javascript|typescript|react|java|c\+\+)/i,
-       /\b(fix|debug|refactor)\s+(?:this\s+)?code/i,
-       /\bopen\s+(?:the\s+)?code\s+(?:editor|canvas|workspace)/i,
-     ],
-     priority: 5,
+  },
+  {
+    tool: 'code_canvas',
+    patterns: [
+      /\b(write|create|generate|build)\s+(?:some\s+)?(?:code|program|script|function|app|application)/i,
+      /\b(code|program|develop|implement)\s+(?:a\s+|an\s+)?(?:\w+\s+)?(?:in\s+)?(?:python|javascript|typescript|react|java|c\+\+)/i,
+      /\b(fix|debug|refactor)\s+(?:this\s+)?code/i,
+      /\bopen\s+(?:the\s+)?code\s+(?:editor|canvas|workspace)/i,
+    ],
+    priority: 5,
     autoExecute: false,
-   },
-   {
-     tool: 'shadow_live',
-     patterns: [
-       /\b(voice\s+chat|talk\s+to\s+ai|live\s+conversation|speak\s+with)/i,
-       /\bstart\s+(?:a\s+)?(?:voice|live)\s+(?:call|chat|session)/i,
-     ],
-     priority: 4,
+  },
+  {
+    tool: 'shadow_live',
+    patterns: [
+      /\b(voice\s+chat|talk\s+to\s+ai|live\s+conversation|speak\s+with)/i,
+      /\bstart\s+(?:a\s+)?(?:voice|live)\s+(?:call|chat|session)/i,
+      /\bvoice\s+mode/i,
+    ],
+    priority: 4,
     autoExecute: false,
-   },
-   {
-     tool: 'data_organizer',
-     patterns: [
-       /\b(organize|sort|manage|structure)\s+(?:my\s+)?(?:data|files|documents|notes)/i,
-       /\b(create|make)\s+(?:a\s+)?(?:table|spreadsheet|database)/i,
-     ],
-     priority: 4,
+  },
+  {
+    tool: 'data_organizer',
+    patterns: [
+      /\b(organize|sort|manage|structure)\s+(?:my\s+)?(?:data|files|documents|notes)/i,
+      /\b(create|make)\s+(?:a\s+)?(?:table|spreadsheet|database)/i,
+      /\b(convert|transform)\s+(?:this\s+)?(?:data|text)\s+(?:into|to)\s+(?:a\s+)?(?:table|json|csv)/i,
+    ],
+    priority: 4,
     autoExecute: false,
-   },
-   {
-     tool: 'camera_capture',
-     patterns: [
-       /\b(take|capture|snap)\s+(?:a\s+)?(?:photo|picture|screenshot)/i,
-       /\bopen\s+(?:the\s+)?camera/i,
-       /\buse\s+(?:my\s+)?camera/i,
-     ],
-     priority: 4,
+  },
+  {
+    tool: 'camera_capture',
+    patterns: [
+      /\b(take|capture|snap)\s+(?:a\s+)?(?:photo|picture|screenshot)/i,
+      /\bopen\s+(?:the\s+)?camera/i,
+      /\buse\s+(?:my\s+)?camera/i,
+    ],
+    priority: 4,
     autoExecute: false,
-   },
-   {
-     tool: 'stealth_vault',
-     patterns: [
-       /\b(encrypt|secure|protect|hide)\s+(?:my\s+)?(?:data|notes|secrets|passwords)/i,
-       /\bopen\s+(?:the\s+)?(?:stealth\s+)?vault/i,
-       /\bsave\s+(?:to\s+)?(?:stealth\s+)?vault/i,
-     ],
-     priority: 3,
+  },
+  {
+    tool: 'stealth_vault',
+    patterns: [
+      /\b(encrypt|secure|protect|hide)\s+(?:my\s+)?(?:data|notes|secrets|passwords)/i,
+      /\bopen\s+(?:the\s+)?(?:stealth\s+)?vault/i,
+      /\bsave\s+(?:to\s+)?(?:stealth\s+)?vault/i,
+      /\bprivacy\s+vault/i,
+    ],
+    priority: 3,
     autoExecute: false,
-   },
-   {
-     tool: 'calculator',
-     patterns: [
-       /^[\d\s+\-*/().^%=]+$/,
-       /\b(calculate|compute|solve|what\s+is)\s+[\d\s+\-*/().^%]+/i,
-       /\bmath\s+(?:problem|equation|calculation)/i,
-     ],
-     priority: 3,
+  },
+  {
+    tool: 'calculator',
+    patterns: [
+      /^[\d\s+\-*/().^%=]+$/,
+      /\b(calculate|compute|solve|what\s+is)\s+[\d\s+\-*/().^%]+/i,
+      /\bmath\s+(?:problem|equation|calculation)/i,
+    ],
+    priority: 3,
     autoExecute: true,
-     extractParams: (msg) => {
-       const expr = msg.replace(/^(calculate|compute|solve|what\s+is)\s*/i, '');
-       return { expression: expr.trim() };
-     }
-   },
-   {
-     tool: 'web_search',
-     patterns: [
-       /\b(search|google|look\s+up|find)\s+(?:for\s+)?(?:information\s+(?:about|on))?\s*.{3,}/i,
-       /\bwhat(?:'s| is)\s+(?:the\s+)?(?:latest|current|recent)\s+(?:news|update)/i,
-     ],
-     priority: 2,
+    extractParams: (msg) => {
+      const expr = msg.replace(/^(calculate|compute|solve|what\s+is)\s*/i, '');
+      return { expression: expr.trim() };
+    }
+  },
+  {
+    tool: 'web_search',
+    patterns: [
+      /\b(search|google|look\s+up|find)\s+(?:for\s+)?(?:information\s+(?:about|on))?\s*.{3,}/i,
+      /\bwhat(?:'s| is)\s+(?:the\s+)?(?:latest|current|recent)\s+(?:news|update)/i,
+    ],
+    priority: 2,
     autoExecute: true,
-     extractParams: (msg) => {
-       const cleaned = msg.replace(/^(search|google|look\s+up|find)\s+(?:for\s+)?(?:information\s+(?:about|on))?\s*/i, '');
-       return { query: cleaned.trim() };
-     }
-   },
-  // Document Generator - for creating docs, articles, emails, PDFs
+    extractParams: (msg) => {
+      const cleaned = msg.replace(/^(search|google|look\s+up|find)\s+(?:for\s+)?(?:information\s+(?:about|on))?\s*/i, '');
+      return { query: cleaned.trim() };
+    }
+  },
+  // Document Generator
   {
     tool: 'document_generator',
     patterns: [
@@ -244,7 +259,6 @@
     priority: 8,
     autoExecute: true,
     extractParams: (msg) => {
-      // Check if it's a book-related request
       const isBookRequest = /\b(book|chapter|excerpt|novel|story|fiction|narrative)/i.test(msg);
       const cleaned = msg
         .replace(/^(write|create|generate|draft|compose|make)\s+(me\s+)?(a\s+|an\s+)?(professional\s+)?(document|doc|article|email|letter|report|proposal|blog\s*post|resume|cv|book|book\s*extract|book\s*chapter|chapter|excerpt|novel\s*excerpt|story|fiction|narrative)\s*(about|for|on)?\s*/i, '')
@@ -252,7 +266,7 @@
       return { topic: cleaned || msg, docType: isBookRequest ? 'book_extract' : undefined };
     }
   },
-  // Daily Planner - for planning day, schedule, tasks
+  // Daily Planner
   {
     tool: 'daily_planner',
     patterns: [
@@ -269,7 +283,7 @@
       return { prompt: msg };
     }
   },
-  // Wordle Game - offline word puzzle
+  // Wordle Game
   {
     tool: 'wordle_game',
     patterns: [
@@ -283,56 +297,257 @@
     autoExecute: true,
     extractParams: () => ({})
   },
- ];
- 
- export const useToolOrchestrator = () => {
-   // Detect which tool should be triggered based on user message
-   const detectTool = useCallback((message: string): ToolDetectionResult => {
-     const normalizedMessage = message.trim().toLowerCase();
-     
-     if (!normalizedMessage || normalizedMessage.length < 3) {
-       return { tool: null, confidence: 0 };
-     }
- 
-     let bestMatch: ToolDetectionResult = { tool: null, confidence: 0 };
- 
-     for (const toolDef of TOOL_PATTERNS) {
-       for (const pattern of toolDef.patterns) {
-         if (pattern.test(message)) {
-           const confidence = toolDef.priority * 10;
-           if (confidence > bestMatch.confidence) {
-             bestMatch = {
-               tool: toolDef.tool,
-               confidence,
-               params: toolDef.extractParams?.(message),
-                autoExecute: toolDef.autoExecute ?? false,
-                originalMessage: message,
-             };
-           }
-           break; // Found match for this tool, check next tool
-         }
-       }
-     }
- 
-     return bestMatch;
-   }, []);
- 
-   // Execute calculator inline
-   const executeCalculator = useCallback((expression: string): string => {
-     try {
-       const sanitized = expression.replace(/[^0-9+\-*/().^% ]/g, '');
-       // eslint-disable-next-line no-eval
-       const result = eval(sanitized);
-       return `**Result:** ${result}`;
-     } catch {
-       return 'Could not calculate. Please check the expression.';
-     }
-   }, []);
- 
-   return {
-     detectTool,
-     executeCalculator,
-   };
- };
- 
- export default useToolOrchestrator;
+
+  // ========== NEW TOOLS ==========
+
+  // Script Automation
+  {
+    tool: 'script_automation',
+    patterns: [
+      /\b(create|build|write|make)\s+(?:a\s+)?(?:automation|automated)\s+(?:script|workflow|task)/i,
+      /\bscript\s+automation/i,
+      /\b(automate|automation)\s+(?:my\s+)?(?:tasks?|workflows?|processes?)/i,
+      /\bopen\s+(?:the\s+)?(?:script|automation)\s+(?:editor|manager|panel)/i,
+      /\b(create|run|manage)\s+(?:custom\s+)?scripts?/i,
+      /\btrigger-?based\s+(?:automation|scripts?)/i,
+    ],
+    priority: 6,
+    autoExecute: false,
+  },
+
+  // Agent Workflows
+  {
+    tool: 'agent_workflows',
+    patterns: [
+      /\bai\s+(?:agent\s+)?workflows?/i,
+      /\b(create|build|design)\s+(?:an?\s+)?(?:ai\s+)?workflow/i,
+      /\bworkflow\s+(?:builder|designer|editor|automation)/i,
+      /\bopen\s+(?:the\s+)?(?:agent\s+)?workflows?/i,
+      /\borchestrate\s+(?:ai\s+)?(?:agents?|tasks?)/i,
+    ],
+    priority: 6,
+    autoExecute: false,
+  },
+
+  // Model Fine-Tuning
+  {
+    tool: 'model_fine_tuning',
+    patterns: [
+      /\b(fine[- ]?tune|train|customize)\s+(?:a\s+|the\s+)?(?:ai\s+)?model/i,
+      /\bmodel\s+(?:fine[- ]?tuning|training|customization)/i,
+      /\b(create|build)\s+(?:a\s+)?custom\s+(?:ai\s+)?model/i,
+      /\btrain\s+(?:my\s+)?(?:own\s+)?(?:ai|model)/i,
+      /\bopen\s+(?:the\s+)?(?:model\s+)?(?:fine[- ]?tun|train)/i,
+    ],
+    priority: 6,
+    autoExecute: false,
+  },
+
+  // White-Label Branding
+  {
+    tool: 'white_label',
+    patterns: [
+      /\bwhite[- ]?label/i,
+      /\b(custom|change|update)\s+(?:the\s+)?branding/i,
+      /\bbrand\s+(?:customization|settings|manager)/i,
+      /\b(customize|change)\s+(?:the\s+)?(?:logo|theme|colors?|appearance)/i,
+      /\bopen\s+(?:the\s+)?branding/i,
+    ],
+    priority: 5,
+    autoExecute: false,
+  },
+
+  // Gemini Analytics
+  {
+    tool: 'gemini_analytics',
+    patterns: [
+      /\b(gemini|api)\s+(?:key\s+)?analytics/i,
+      /\bapi\s+(?:key\s+)?(?:usage|stats|statistics|metrics)/i,
+      /\b(show|view|check)\s+(?:my\s+)?(?:gemini|api)\s+(?:key\s+)?(?:usage|analytics)/i,
+      /\bkey\s+(?:rotation|health|performance)/i,
+    ],
+    priority: 5,
+    autoExecute: false,
+  },
+
+  // Google Integration
+  {
+    tool: 'google_integration',
+    patterns: [
+      /\bgoogle\s+(?:integration|connect|workspace|drive|calendar|docs|sheets)/i,
+      /\bconnect\s+(?:to\s+)?google/i,
+      /\b(sync|link|connect)\s+(?:my\s+)?(?:google\s+)?(?:drive|calendar|docs|gmail|sheets)/i,
+      /\bopen\s+(?:the\s+)?google\s+(?:integration|panel)/i,
+    ],
+    priority: 6,
+    autoExecute: false,
+  },
+
+  // Sovereign Models
+  {
+    tool: 'sovereign_models',
+    patterns: [
+      /\bsovereign\s+(?:model|ai|mode)/i,
+      /\blocal\s+(?:ai|model|inference)/i,
+      /\boffline\s+(?:ai|model|inference)/i,
+      /\b(download|install|manage)\s+(?:local\s+)?(?:ai\s+)?models?/i,
+      /\bon[- ]?device\s+(?:ai|model|inference)/i,
+      /\brun\s+(?:ai\s+)?(?:locally|offline)/i,
+    ],
+    priority: 6,
+    autoExecute: false,
+  },
+
+  // Security Audit
+  {
+    tool: 'security_audit',
+    patterns: [
+      /\bsecurity\s+(?:audit|scan|check|analysis|review)/i,
+      /\b(scan|audit|check|analyze)\s+(?:for\s+)?(?:security\s+)?(?:vulnerabilities|threats|risks|issues)/i,
+      /\bvulnerability\s+(?:scan|check|assessment)/i,
+      /\bpenetration\s+test/i,
+      /\bpen[- ]?test/i,
+      /\bfind\s+(?:security\s+)?(?:vulnerabilities|bugs|flaws)/i,
+      /\bsecurity\s+(?:report|assessment)/i,
+      /\bhsca/i,
+    ],
+    priority: 7,
+    autoExecute: false,
+    extractParams: (msg) => ({ query: msg }),
+  },
+
+  // Eco / Planetary Actions
+  {
+    tool: 'eco_actions',
+    patterns: [
+      /\b(eco|green|carbon|sustainability|environmental|climate)\s+(actions?|impact|footprint|tracker)/i,
+      /\b(track|log|record)\s+(?:my\s+)?(?:eco|carbon|green|environmental)\s+(?:actions?|impact)/i,
+      /\bcarbon\s+(?:footprint|offset|tracker|savings?)/i,
+      /\bplanetary\s+(?:action|impact|dashboard)/i,
+      /\bsustainability\s+(?:dashboard|tracker|report)/i,
+      /\beco\s+(?:leaderboard|stats|dashboard)/i,
+    ],
+    priority: 5,
+    autoExecute: false,
+  },
+
+  // Vision Agent (real-time camera AI)
+  {
+    tool: 'vision_agent',
+    patterns: [
+      /\bvision\s+agent/i,
+      /\b(start|open|launch|enable)\s+(?:the\s+)?vision\s+(?:agent|mode)/i,
+      /\breal[- ]?time\s+(?:camera|video|vision)\s+(?:analysis|ai|mode)/i,
+      /\b(analyze|watch|observe)\s+(?:me|my\s+face|my\s+room)\s+(?:in\s+)?real[- ]?time/i,
+      /\blive\s+(?:camera|vision|video)\s+(?:ai|analysis|mode)/i,
+    ],
+    priority: 7,
+    autoExecute: false,
+  },
+
+  // Command Palette
+  {
+    tool: 'command_palette',
+    patterns: [
+      /\bcommand\s+palette/i,
+      /\bopen\s+(?:the\s+)?command\s+(?:palette|menu)/i,
+      /\bshow\s+(?:me\s+)?(?:all\s+)?(?:commands?|shortcuts?|features?|tools?)/i,
+      /\bwhat\s+(?:can\s+you|tools?\s+(?:do\s+you|are))/i,
+      /\blist\s+(?:all\s+)?(?:available\s+)?(?:tools?|features?|commands?)/i,
+    ],
+    priority: 4,
+    autoExecute: false,
+  },
+
+  // Analytics Dashboard
+  {
+    tool: 'analytics',
+    patterns: [
+      /\b(show|view|open|check)\s+(?:my\s+)?(?:usage\s+)?analytics/i,
+      /\banalytics\s+(?:dashboard|panel|report)/i,
+      /\b(show|view)\s+(?:my\s+)?(?:usage|stats|statistics|metrics)/i,
+      /\bhow\s+(?:much\s+)?(?:have\s+)?i\s+(?:used|chatted)/i,
+    ],
+    priority: 4,
+    autoExecute: false,
+  },
+
+  // Multi-Model Orchestrator
+  {
+    tool: 'multi_model',
+    patterns: [
+      /\bmulti[- ]?model/i,
+      /\b(compare|use)\s+(?:multiple\s+)?(?:ai\s+)?models/i,
+      /\bmodel\s+(?:comparison|consensus|orchestrat)/i,
+      /\bask\s+(?:multiple|all|several)\s+(?:ai|models?)/i,
+      /\bconsensus\s+mode/i,
+    ],
+    priority: 5,
+    autoExecute: false,
+  },
+
+  // API Marketplace
+  {
+    tool: 'api_marketplace',
+    patterns: [
+      /\bapi\s+marketplace/i,
+      /\b(manage|view|check)\s+(?:my\s+)?api\s+keys?/i,
+      /\bdeveloper\s+(?:portal|tools|dashboard)/i,
+      /\bopen\s+(?:the\s+)?(?:api\s+)?marketplace/i,
+    ],
+    priority: 4,
+    autoExecute: false,
+  },
+];
+
+export const useToolOrchestrator = () => {
+  // Detect which tool should be triggered based on user message
+  const detectTool = useCallback((message: string): ToolDetectionResult => {
+    const normalizedMessage = message.trim().toLowerCase();
+    
+    if (!normalizedMessage || normalizedMessage.length < 3) {
+      return { tool: null, confidence: 0 };
+    }
+
+    let bestMatch: ToolDetectionResult = { tool: null, confidence: 0 };
+
+    for (const toolDef of TOOL_PATTERNS) {
+      for (const pattern of toolDef.patterns) {
+        if (pattern.test(message)) {
+          const confidence = toolDef.priority * 10;
+          if (confidence > bestMatch.confidence) {
+            bestMatch = {
+              tool: toolDef.tool,
+              confidence,
+              params: toolDef.extractParams?.(message),
+              autoExecute: toolDef.autoExecute ?? false,
+              originalMessage: message,
+            };
+          }
+          break;
+        }
+      }
+    }
+
+    return bestMatch;
+  }, []);
+
+  // Execute calculator inline
+  const executeCalculator = useCallback((expression: string): string => {
+    try {
+      const sanitized = expression.replace(/[^0-9+\-*/().^% ]/g, '');
+      // eslint-disable-next-line no-eval
+      const result = eval(sanitized);
+      return `**Result:** ${result}`;
+    } catch {
+      return 'Could not calculate. Please check the expression.';
+    }
+  }, []);
+
+  return {
+    detectTool,
+    executeCalculator,
+  };
+};
+
+export default useToolOrchestrator;
