@@ -136,16 +136,21 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   code({ node, inline, className, children, ...props }: any) {
                     const match = /language-(\w+)/.exec(className || '');
                     const codeString = String(children).replace(/\n$/, '');
+                    
+                    // Treat as inline if: explicitly inline, or no language AND single line with < 80 chars
+                    const isShortSnippet = !match && !codeString.includes('\n') && codeString.length < 80;
+                    
                     if (!inline && match) {
                       return <CodeBlock code={codeString} language={match[1]} onOpenCanvas={onOpenCodeCanvas} onLaunchWebsite={onLaunchWebsite} />;
                     }
-                    return inline ? (
-                      <code className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-md text-[13px] font-mono font-medium" {...props}>
-                        {children}
-                      </code>
-                    ) : (
-                      <CodeBlock code={codeString} language="text" onOpenCanvas={onOpenCodeCanvas} onLaunchWebsite={onLaunchWebsite} />
-                    );
+                    if (inline || isShortSnippet) {
+                      return (
+                        <code className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-md text-[13px] font-mono font-medium" {...props}>
+                          {children}
+                        </code>
+                      );
+                    }
+                    return <CodeBlock code={codeString} language="text" onOpenCanvas={onOpenCodeCanvas} onLaunchWebsite={onLaunchWebsite} />;
                   },
                   ul({ children }) { return <ul className="list-disc pl-5 space-y-1 my-2.5">{children}</ul>; },
                   ol({ children }) { return <ol className="list-decimal pl-5 space-y-1 my-2.5">{children}</ol>; },
