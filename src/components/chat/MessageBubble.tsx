@@ -40,6 +40,7 @@ interface MessageBubbleProps {
   onRegenerate: (index: number) => void;
   onTextToSpeech: (text: string, messageId: string) => void;
   onOpenCodeCanvas: (code: string, language: string) => void;
+  onOpenIDE?: (code: string, language: string) => void;
   onLaunchWebsite?: (code: string, language: string) => void;
   onOpenInBrowser?: (url: string) => void;
 }
@@ -55,6 +56,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onRegenerate,
   onTextToSpeech,
   onOpenCodeCanvas,
+  onOpenIDE,
   onLaunchWebsite,
   onOpenInBrowser,
 }) => {
@@ -141,7 +143,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     const isShortSnippet = !match && !codeString.includes('\n') && codeString.length < 80;
                     
                     if (!inline && match) {
-                      return <CodeBlock code={codeString} language={match[1]} onOpenCanvas={onOpenCodeCanvas} onLaunchWebsite={onLaunchWebsite} />;
+                      return <CodeBlock code={codeString} language={match[1]} onOpenCanvas={onOpenCodeCanvas} onOpenIDE={onOpenIDE} onLaunchWebsite={onLaunchWebsite} />;
                     }
                     if (inline || isShortSnippet) {
                       return (
@@ -150,7 +152,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                         </code>
                       );
                     }
-                    return <CodeBlock code={codeString} language="text" onOpenCanvas={onOpenCodeCanvas} onLaunchWebsite={onLaunchWebsite} />;
+                    return <CodeBlock code={codeString} language="text" onOpenCanvas={onOpenCodeCanvas} onOpenIDE={onOpenIDE} onLaunchWebsite={onLaunchWebsite} />;
                   },
                   ul({ children }) { return <ul className="list-disc pl-5 space-y-1 my-2.5">{children}</ul>; },
                   ol({ children }) { return <ol className="list-decimal pl-5 space-y-1 my-2.5">{children}</ol>; },
