@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Menu, X, Bot, Shield, BookOpen, Users, History, User, Code, BarChart3, Building2, Settings, UserCircle, Brain, Sparkles, ChevronDown, MoreHorizontal } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Menu, X, Bot, Shield, BookOpen, Users, History, User, Code, BarChart3, Building2, Settings, UserCircle, Brain, Sparkles, ChevronDown, MoreHorizontal, Download, Share, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { FeedbackForm } from "@/components/FeedbackForm";
@@ -18,9 +18,42 @@ import {
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user } = useAuth();
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isMac = /Macintosh/.test(navigator.userAgent);
+
+  useEffect(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
+    if (isStandalone) {
+      setIsInstalled(true);
+      return;
+    }
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', () => setIsInstalled(true));
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = useCallback(async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') setIsInstalled(true);
+      setDeferredPrompt(null);
+    } else if (isIOS || isMac) {
+      setShowIOSGuide(true);
+    }
+  }, [deferredPrompt, isIOS, isMac]);
 
   const primaryNavItems = [
     { name: t("nav.pricing"), href: "/pricing", icon: Shield, isLink: true },
@@ -51,6 +84,7 @@ const Navigation = () => {
   };
 
   return (
+    <>
     <nav className="fixed top-0 left-0 right-0 z-50 glass-strong border-b border-border/50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
@@ -111,6 +145,17 @@ const Navigation = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-2">
+            {!isInstalled && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleInstallClick}
+                className="border-primary/40 text-primary hover:bg-primary/10 transition-all duration-200 gap-1.5"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Install App
+              </Button>
+            )}
             <NotificationBell />
             <LanguageSwitcher />
             <FeedbackForm />
@@ -164,6 +209,20 @@ const Navigation = () => {
                 </button>
               ))}
               <div className="flex flex-col space-y-2 pt-3 mt-3 border-t border-border/50">
+                {!isInstalled && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mx-3 border-primary/40 text-primary hover:bg-primary/10 gap-1.5"
+                    onClick={() => {
+                      handleInstallClick();
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <Download className="h-4 w-4" />
+                    Install App
+                  </Button>
+                )}
                 <div className="flex items-center gap-2 px-3">
                   <LanguageSwitcher />
                   <FeedbackForm />
@@ -195,6 +254,53 @@ const Navigation = () => {
         )}
       </div>
     </nav>
+
+    {/* iOS/Safari Install Guide Modal */}
+    {showIOSGuide && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowIOSGuide(false)}>
+        <div className="bg-background border border-border rounded-xl p-6 mx-4 max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-primary/15 rounded-full p-2.5">
+              <Smartphone className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="font-semibold text-lg">Install ShadowTalk AI</h3>
+          </div>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            {isIOS ? (
+              <>
+                <p className="font-medium text-foreground">On iPhone / iPad:</p>
+                <div className="flex items-start gap-3 bg-muted/30 rounded-lg p-3">
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                  <p>Tap the <Share className="inline h-4 w-4 mx-0.5" /> <strong>Share</strong> button in Safari's toolbar</p>
+                </div>
+                <div className="flex items-start gap-3 bg-muted/30 rounded-lg p-3">
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                  <p>Scroll down and tap <strong>"Add to Home Screen"</strong></p>
+                </div>
+                <div className="flex items-start gap-3 bg-muted/30 rounded-lg p-3">
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                  <p>Tap <strong>"Add"</strong> to install</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="font-medium text-foreground">In your browser:</p>
+                <div className="flex items-start gap-3 bg-muted/30 rounded-lg p-3">
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                  <p>Click the <strong>install icon</strong> in your browser's address bar (or menu → "Install app")</p>
+                </div>
+                <div className="flex items-start gap-3 bg-muted/30 rounded-lg p-3">
+                  <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                  <p>Click <strong>"Install"</strong> to confirm</p>
+                </div>
+              </>
+            )}
+          </div>
+          <Button className="w-full mt-5" onClick={() => setShowIOSGuide(false)}>Got it</Button>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 
