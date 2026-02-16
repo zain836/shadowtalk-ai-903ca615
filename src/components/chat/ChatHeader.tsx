@@ -39,6 +39,7 @@ import { ModelSelector, AIModel } from "./ModelSelector";
 import { MemoryPanel } from "./MemoryPanel";
 import { CustomInstructions } from "./CustomInstructions";
 import { BunkerModeToggle } from "./BunkerModeToggle";
+import { SovereignPulse } from "./SovereignPulse";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive" | "spicy";
@@ -442,6 +443,9 @@ export const ChatHeader = ({
         <div className="hidden sm:block">
           <BunkerModeToggle />
         </div>
+
+        {/* Sovereign Pulse - Privacy-aware status indicator */}
+        <SovereignPulse />
 
         {/* Connection Status Indicator - Shows online/offline + LLM status */}
         <div className="flex items-center">

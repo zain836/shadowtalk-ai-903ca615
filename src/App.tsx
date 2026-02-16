@@ -45,7 +45,8 @@ import BootScreen from "@/components/BootScreen";
   const WorkspacePage = lazy(() => import("./pages/WorkspacePage"));
   const MarketplacePage = lazy(() => import("./pages/MarketplacePage"));
   const DevelopersPage = lazy(() => import("./pages/DevelopersPage"));
-  const LifetimeDealPage = lazy(() => import("./pages/LifetimeDealPage"));
+   const LifetimeDealPage = lazy(() => import("./pages/LifetimeDealPage"));
+   const PrivacyScorePage = lazy(() => import("./pages/PrivacyScorePage"));
 import PWABanner from "./components/PWABanner";
 import CookieConsent from "./components/CookieConsent";
 import CustomerSupportWidget from "./components/CustomerSupportWidget";
@@ -125,6 +126,7 @@ const AnimatedRoutes = () => {
           <Route path="/workspace" element={<PageTransition><WorkspacePage /></PageTransition>} />
           <Route path="/marketplace" element={<PageTransition><MarketplacePage /></PageTransition>} />
           <Route path="/developers" element={<PageTransition><DevelopersPage /></PageTransition>} />
+          <Route path="/privacy-score" element={<PageTransition><PrivacyScorePage /></PageTransition>} />
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
         </Routes>
       </AnimatePresence>
