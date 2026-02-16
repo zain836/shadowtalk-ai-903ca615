@@ -40,6 +40,7 @@ interface MessageBubbleProps {
   onRegenerate: (index: number) => void;
   onTextToSpeech: (text: string, messageId: string) => void;
   onOpenCodeCanvas: (code: string, language: string) => void;
+  onLaunchWebsite?: (code: string, language: string) => void;
   onOpenInBrowser?: (url: string) => void;
 }
 
@@ -54,6 +55,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onRegenerate,
   onTextToSpeech,
   onOpenCodeCanvas,
+  onLaunchWebsite,
   onOpenInBrowser,
 }) => {
   const { toast } = useToast();
@@ -135,14 +137,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     const match = /language-(\w+)/.exec(className || '');
                     const codeString = String(children).replace(/\n$/, '');
                     if (!inline && match) {
-                      return <CodeBlock code={codeString} language={match[1]} onOpenCanvas={onOpenCodeCanvas} />;
+                      return <CodeBlock code={codeString} language={match[1]} onOpenCanvas={onOpenCodeCanvas} onLaunchWebsite={onLaunchWebsite} />;
                     }
                     return inline ? (
                       <code className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-md text-[13px] font-mono font-medium" {...props}>
                         {children}
                       </code>
                     ) : (
-                      <CodeBlock code={codeString} language="text" onOpenCanvas={onOpenCodeCanvas} />
+                      <CodeBlock code={codeString} language="text" onOpenCanvas={onOpenCodeCanvas} onLaunchWebsite={onLaunchWebsite} />
                     );
                   },
                   ul({ children }) { return <ul className="list-disc pl-5 space-y-1 my-2.5">{children}</ul>; },
