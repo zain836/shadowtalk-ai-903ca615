@@ -178,7 +178,7 @@ export const PersonalIDE = ({ initialCode, language, onClose }: PersonalIDEProps
   const [consoleLogs, setConsoleLogs] = useState<ConsoleLog[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(true);
-  const [showExplorer, setShowExplorer] = useState(true);
+  const [showExplorer, setShowExplorer] = useState(false);
   const [outputPanel, setOutputPanel] = useState<"console" | "preview" | "terminal">("preview");
   const [theme, setTheme] = useState("vs-dark");
   const [previewHtml, setPreviewHtml] = useState("");
@@ -749,7 +749,7 @@ export const PersonalIDE = ({ initialCode, language, onClose }: PersonalIDEProps
           )}
 
           {/* ─── Editor Panel ───────────────────────────────────────────── */}
-          <ResizablePanel defaultSize={showExplorer ? 45 : 55} minSize={25}>
+          <ResizablePanel defaultSize={showExplorer ? 40 : 50} minSize={25}>
             <div className="h-full flex flex-col">
               {/* File Tabs */}
               <div className="flex items-center border-b border-border bg-muted/30 overflow-x-auto">
@@ -846,7 +846,7 @@ export const PersonalIDE = ({ initialCode, language, onClose }: PersonalIDEProps
           <ResizableHandle withHandle />
 
           {/* ─── Output / Preview Panel ──────────────────────────────────── */}
-          <ResizablePanel defaultSize={40} minSize={20}>
+          <ResizablePanel defaultSize={showExplorer ? 45 : 50} minSize={20}>
             <div className="h-full flex flex-col">
               <Tabs value={outputPanel} onValueChange={v => setOutputPanel(v as "console" | "preview" | "terminal")} className="h-full flex flex-col">
                 <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-muted/30">
