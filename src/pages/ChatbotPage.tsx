@@ -11,7 +11,7 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
 import { CodeCanvas } from "@/components/chat/CodeCanvas";
-import { CodeWorkspace } from "@/components/chat/CodeWorkspace";
+import { PersonalIDE } from "@/components/chat/PersonalIDE";
 import { Canvas } from "@/components/chat/Canvas";
 import { ImageGenerator } from "@/components/chat/ImageGenerator";
 import { ImageDecoder } from "@/components/chat/ImageDecoder";
@@ -1427,7 +1427,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
       )}
 
       {codeCanvas && <CodeCanvas code={codeCanvas.code} language={codeCanvas.language} onClose={() => { trackCodeExecution(codeCanvas.language); setCodeCanvas(null); }} />}
-      {codeWorkspace && <CodeWorkspace initialCode={codeWorkspace.code} language={codeWorkspace.language} onClose={() => { trackCodeExecution(codeWorkspace.language); setCodeWorkspace(null); }} />}
+      {codeWorkspace && <PersonalIDE initialCode={codeWorkspace.code} language={codeWorkspace.language} onClose={() => { trackCodeExecution(codeWorkspace.language); setCodeWorkspace(null); }} />}
       {editingMessage && <EditMessageDialog message={editingMessage.content} onSave={(c) => handleEditMessage(editingMessage.index, c)} onCancel={() => setEditingMessage(null)} />}
       {showAnalytics && <AnalyticsDashboard onClose={() => setShowAnalytics(false)} messageCount={messages.length} conversationCount={conversations.length} />}
       {showScriptAutomation && <ScriptAutomation onClose={() => setShowScriptAutomation(false)} onRunScript={(p) => { setShowScriptAutomation(false); handleSendMessage(p); }} />}
