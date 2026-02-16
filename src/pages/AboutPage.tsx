@@ -6,6 +6,7 @@ import AboutStack from "@/components/about/AboutStack";
 import AboutProof from "@/components/about/AboutProof";
 import AboutProjects from "@/components/about/AboutProjects";
 import AboutCTA from "@/components/about/AboutCTA";
+import AboutForms from "@/components/about/AboutForms";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -37,6 +38,7 @@ const AboutPage = () => {
       <AboutStack />
       <AboutProof />
       <AboutProjects />
+      <AboutForms />
       <AboutCTA />
       <Footer />
     </div>
