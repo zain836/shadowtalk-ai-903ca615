@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { MessageCircle, X, Send, Bot, User, Minimize2, Maximize2 } from "lucide-react";
+import { MessageCircle, X, Send, User, Minimize2, Maximize2 } from "lucide-react";
+import ChatbotLogo from "@/components/ChatbotLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -84,7 +85,7 @@ const ChatWidget = () => {
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center space-x-3">
             <div className="relative">
-              <Bot className="h-6 w-6 text-primary" />
+              <ChatbotLogo size={24} />
               <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-success rounded-full pulse-dot"></div>
             </div>
             <div>
@@ -129,7 +130,7 @@ const ChatWidget = () => {
                     {msg.type === 'user' ? (
                       <User className="h-4 w-4 text-primary-foreground" />
                     ) : (
-                      <Bot className="h-4 w-4 text-secondary-foreground" />
+                      <ChatbotLogo size={16} />
                     )}
                   </div>
                   <div className={`max-w-[80%] rounded-lg p-3 ${

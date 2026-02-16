@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Loader2, Bot, User, Sparkles, Brain, Zap } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, User, Sparkles, Brain, Zap } from "lucide-react";
+import ChatbotLogo from "@/components/ChatbotLogo";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -202,9 +203,9 @@ const CustomerSupportWidget = () => {
                 )}
 
                 {/* Content */}
-                <div className="flex items-start gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-base">{currentMessage.icon || "✨"}</span>
+                 <div className="flex items-start gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5 overflow-hidden">
+                    <ChatbotLogo size={22} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-foreground leading-relaxed">{currentMessage.content}</p>
@@ -275,9 +276,9 @@ const CustomerSupportWidget = () => {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border bg-gradient-to-r from-primary/10 to-primary/5">
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                <Bot className="h-5 w-5 text-primary-foreground" />
+             <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                <ChatbotLogo size={28} />
               </div>
               <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-green-500" />
             </div>
@@ -303,8 +304,8 @@ const CustomerSupportWidget = () => {
             {messages.map((message, i) => (
               <div key={i} className={`flex gap-2 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                 {message.role === "assistant" && (
-                  <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                    <Bot className="h-4 w-4 text-primary" />
+                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <ChatbotLogo size={20} />
                   </div>
                 )}
                 <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
