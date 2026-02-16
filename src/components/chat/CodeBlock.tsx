@@ -8,6 +8,7 @@ interface CodeBlockProps {
   code: string;
   language: string;
   onOpenCanvas?: (code: string, language: string) => void;
+  onOpenIDE?: (code: string, language: string) => void;
   onLaunchWebsite?: (code: string, language: string) => void;
 }
 
@@ -35,7 +36,7 @@ const isFullWebsite = (code: string, lang: string): boolean => {
   return false;
 };
 
-export const CodeBlock = ({ code, language, onOpenCanvas, onLaunchWebsite }: CodeBlockProps) => {
+export const CodeBlock = ({ code, language, onOpenCanvas, onOpenIDE, onLaunchWebsite }: CodeBlockProps) => {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const { toast } = useToast();
@@ -76,22 +77,22 @@ export const CodeBlock = ({ code, language, onOpenCanvas, onLaunchWebsite }: Cod
               Launch
             </button>
           )}
-          {canRun && onOpenCanvas && (
+          {onOpenIDE && (
             <button
-              onClick={() => onOpenCanvas(code, language)}
+              onClick={() => onOpenIDE(code, language)}
               className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors"
             >
               <Play className="h-3 w-3" />
-              Run
+              Open in IDE
             </button>
           )}
-          {!canRun && onOpenCanvas && (
+          {onOpenCanvas && (
             <button
               onClick={() => onOpenCanvas(code, language)}
               className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors"
             >
               <PenLine className="h-3 w-3" />
-              Edit
+              Edit in Canvas
             </button>
           )}
           <button

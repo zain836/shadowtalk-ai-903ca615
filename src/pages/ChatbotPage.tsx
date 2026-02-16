@@ -1321,7 +1321,8 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
               onEdit={(index, content) => setEditingMessage({ index, content })}
               onRegenerate={handleRegenerate}
               onTextToSpeech={handleTextToSpeech}
-              onOpenCodeCanvas={(code, lang) => setCodeWorkspace({ code, language: lang })}
+              onOpenCodeCanvas={(code, lang) => setCodeCanvas({ code, language: lang })}
+              onOpenIDE={(code, lang) => setCodeWorkspace({ code, language: lang })}
               onLaunchWebsite={(code, lang) => setCodeWorkspace({ code, language: lang })}
               onOpenInBrowser={(url) => {
                 setBrowserInitialUrl(url);
