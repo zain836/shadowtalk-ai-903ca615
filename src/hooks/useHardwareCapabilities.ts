@@ -16,6 +16,10 @@ export interface HardwareCapabilities {
   // CPU
   logicalCores: number;
   
+  // NPU
+  hasNPU: boolean;
+  npuType: string | null;
+  
   // Storage
   estimatedStorage: number; // in GB
   usedStorage: number; // in GB
@@ -24,6 +28,7 @@ export interface HardwareCapabilities {
   tier: 'low' | 'mid' | 'high' | 'enterprise';
   maxModelSize: string; // e.g., "360M", "1.7B", "3B", "7B"
   recommendedModels: string[];
+  turboAvailable: boolean;
 }
 
 // =============================================================================
@@ -90,11 +95,14 @@ export const useHardwareCapabilities = () => {
     heapSizeLimit: 0,
     usedHeapSize: 0,
     logicalCores: 4,
+    hasNPU: false,
+    npuType: null,
     estimatedStorage: 0,
     usedStorage: 0,
     tier: 'low',
     maxModelSize: '360M',
     recommendedModels: MODEL_TIERS.low.models,
+    turboAvailable: false,
   });
 
   const [isDetecting, setIsDetecting] = useState(true);
@@ -153,6 +161,17 @@ export const useHardwareCapabilities = () => {
 
       // Detect CPU cores
       caps.logicalCores = navigator.hardwareConcurrency || 4;
+
+      // Detect NPU (Neural Processing Unit)
+      // NPU detection via User-Agent hints and GPU adapter info
+      const gpuVendorLower = (caps.gpuVendor || '').toLowerCase();
+      const gpuAdapterLower = (caps.gpuAdapter || '').toLowerCase();
+      const hasNPUHints = gpuAdapterLower.includes('npu') || gpuAdapterLower.includes('neural') ||
+        gpuVendorLower.includes('qualcomm') || gpuVendorLower.includes('intel') ||
+        gpuAdapterLower.includes('snapdragon') || gpuAdapterLower.includes('ai boost');
+      caps.hasNPU = hasNPUHints;
+      caps.npuType = hasNPUHints ? (gpuAdapterLower.includes('snapdragon') ? 'Snapdragon NPU' : 'Intel AI Boost') : null;
+      caps.turboAvailable = hasNPUHints || (caps.hasWebGPU && (caps.estimatedVRAM || 0) >= 4);
 
       // Detect storage
       if ('storage' in navigator && 'estimate' in navigator.storage) {
