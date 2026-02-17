@@ -1,21 +1,19 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { 
-  Shield, Copy, Check, ExternalLink, MessageCircle, 
+  Shield, Copy, Check, MessageCircle, 
   Zap, Lock, Plane, Bot, Palette, Crown, Globe, 
   Wallet, Building2, Smartphone, ArrowRight, Star,
   Coins, Code, FileText, Users, Rocket, Timer, Sparkles,
   CreditCard, BadgeCheck, Clock, ChevronRight, Landmark,
-  QrCode, ShieldCheck, Verified, ArrowUpRight
+  ShieldCheck, Verified, ArrowUpRight, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/AuthProvider";
 import { 
@@ -118,91 +116,119 @@ const FounderAccessPage = () => {
   const selectedProduct = getSelectedProduct();
 
   const paymentMethods = [
-    { id: 'bank', name: 'Bank Transfer', icon: Landmark, badge: 'Local', color: 'from-blue-500/20 to-blue-600/10' },
-    { id: 'mobile', name: 'Mobile Wallet', icon: Smartphone, badge: 'Instant', color: 'from-green-500/20 to-green-600/10' },
-    { id: 'crypto', name: 'Crypto (USDT)', icon: Wallet, badge: 'Global', color: 'from-amber-500/20 to-amber-600/10' },
-    { id: 'wire', name: 'Wire Transfer', icon: Globe, badge: 'International', color: 'from-purple-500/20 to-purple-600/10' },
+    { id: 'bank', name: 'Bank Transfer', icon: Landmark, badge: 'Local', desc: 'Meezan Bank' },
+    { id: 'mobile', name: 'Mobile Wallet', icon: Smartphone, badge: 'Instant', desc: 'EasyPaisa / JazzCash' },
+    { id: 'crypto', name: 'Crypto', icon: Wallet, badge: 'Global', desc: 'USDT (TRC20)' },
+    { id: 'wire', name: 'Wire Transfer', icon: Globe, badge: 'International', desc: 'SWIFT / Wise' },
   ];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.08 } }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
       <Navigation />
       
-      {/* Subtle gradient background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
-      
+      {/* Background effects */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.08),transparent_70%)]" />
+        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-[radial-gradient(ellipse_at_center,hsl(var(--secondary)/0.05),transparent_70%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(hsl(var(--border)/0.03)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border)/0.03)_1px,transparent_1px)] bg-[size:64px_64px]" />
+      </div>
+
       <div className="relative pt-20">
-        <div className="container max-w-7xl mx-auto px-4 py-8">
+        <motion.div 
+          className="container max-w-7xl mx-auto px-4 py-8"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           
-          {/* Compact Header */}
-          <motion.div 
-            className="text-center mb-8"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-4">
-              <ShieldCheck className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">Secure Checkout</span>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">Complete Your Purchase</h1>
-            <p className="text-muted-foreground">Select your plan and payment method below</p>
+          {/* Header */}
+          <motion.div className="text-center mb-10" variants={itemVariants}>
+            <motion.div 
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass border border-[hsl(var(--border))] mb-5"
+              whileHover={{ scale: 1.02 }}
+            >
+              <div className="w-2 h-2 rounded-full bg-[hsl(var(--success))] animate-pulse" />
+              <span className="text-sm font-medium text-muted-foreground">Secure Checkout</span>
+            </motion.div>
+            <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight">
+              Founder's <span className="gradient-text">Vault</span>
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-md mx-auto">
+              Select your plan and complete payment to unlock your access
+            </p>
           </motion.div>
 
-          {/* Main Layout: 2 Column on Desktop */}
-          <div className="grid lg:grid-cols-3 gap-8">
+          {/* Lifetime Deal Banner */}
+          <motion.div variants={itemVariants} className="mb-8">
+            <Link to="/lifetime-deal">
+              <motion.div 
+                className="group relative rounded-2xl overflow-hidden border border-[hsl(var(--border))] bg-gradient-to-r from-[hsl(40_95%_55%/0.08)] via-[hsl(var(--card))] to-[hsl(315_90%_58%/0.06)] p-[1px]"
+                whileHover={{ scale: 1.005 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex items-center justify-between gap-4 p-4 md:p-5 rounded-2xl bg-[hsl(var(--card)/0.8)] backdrop-blur-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[hsl(var(--warning))] to-[hsl(var(--accent))] flex items-center justify-center shrink-0 shadow-[0_0_20px_hsl(var(--warning)/0.3)]">
+                      <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge className="bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))] text-[10px] uppercase tracking-wider font-bold border-0">Limited</Badge>
+                        <span className="text-sm font-semibold text-[hsl(var(--warning))]">{slotsRemaining} of {totalSlots} spots left</span>
+                      </div>
+                      <h3 className="font-bold text-foreground">$99 Lifetime Deal — Everything, Forever</h3>
+                    </div>
+                  </div>
+                  <Button variant="secondary" size="sm" className="shrink-0 gap-1 group-hover:bg-[hsl(var(--warning))] group-hover:text-[hsl(var(--primary-foreground))] transition-colors hidden md:flex">
+                    View Deal <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+                {/* Progress bar */}
+                <div className="h-0.5 bg-[hsl(var(--muted))]">
+                  <motion.div 
+                    className="h-full bg-gradient-to-r from-[hsl(var(--warning))] to-[hsl(var(--accent))]"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercent}%` }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
+                  />
+                </div>
+              </motion.div>
+            </Link>
+          </motion.div>
+
+          {/* Main Layout */}
+          <div className="grid lg:grid-cols-5 gap-6">
             
             {/* Left Column - Plan Selection & Payment Methods */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-3 space-y-6">
               
-              {/* Lifetime Deal Banner */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <Link to="/lifetime-deal">
-                  <Card className="group border-2 border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-pink-500/10 hover:border-amber-500/50 transition-all overflow-hidden">
-                    <CardContent className="flex items-center justify-between gap-4 p-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center shrink-0">
-                          <Sparkles className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <Badge className="bg-destructive text-white text-xs">LIMITED</Badge>
-                            <span className="text-sm font-semibold text-amber-500">{slotsRemaining} spots left</span>
-                          </div>
-                          <h3 className="font-bold">$99 Lifetime Deal — Everything, Forever</h3>
-                        </div>
-                      </div>
-                      <Button variant="secondary" size="sm" className="shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                        View <ChevronRight className="w-4 h-4 ml-1" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </motion.div>
-
-              {/* Plan Selection Tabs */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Card>
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <CreditCard className="w-5 h-5 text-primary" />
-                      Select Your Plan
+              {/* Plan Selection */}
+              <motion.div variants={itemVariants}>
+                <Card className="glass border-[hsl(var(--border))] overflow-hidden">
+                  <CardHeader className="pb-3 border-b border-[hsl(var(--border))]">
+                    <CardTitle className="text-base flex items-center gap-2 font-semibold">
+                      <CreditCard className="w-4 h-4 text-primary" />
+                      Choose Your Plan
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-5">
                     <Tabs defaultValue="subscriptions">
-                      <TabsList className="grid grid-cols-5 mb-6">
-                        <TabsTrigger value="subscriptions" className="text-xs">Plans</TabsTrigger>
-                        <TabsTrigger value="credits" className="text-xs">Credits</TabsTrigger>
-                        <TabsTrigger value="solutions" className="text-xs">Solutions</TabsTrigger>
-                        <TabsTrigger value="api" className="text-xs">API</TabsTrigger>
-                        <TabsTrigger value="whitelabel" className="text-xs">License</TabsTrigger>
+                      <TabsList className="grid grid-cols-5 mb-5 bg-[hsl(var(--muted))] p-1 rounded-xl">
+                        <TabsTrigger value="subscriptions" className="text-xs rounded-lg data-[state=active]:bg-[hsl(var(--card))] data-[state=active]:shadow-sm">Plans</TabsTrigger>
+                        <TabsTrigger value="credits" className="text-xs rounded-lg data-[state=active]:bg-[hsl(var(--card))] data-[state=active]:shadow-sm">Credits</TabsTrigger>
+                        <TabsTrigger value="solutions" className="text-xs rounded-lg data-[state=active]:bg-[hsl(var(--card))] data-[state=active]:shadow-sm">Solutions</TabsTrigger>
+                        <TabsTrigger value="api" className="text-xs rounded-lg data-[state=active]:bg-[hsl(var(--card))] data-[state=active]:shadow-sm">API</TabsTrigger>
+                        <TabsTrigger value="whitelabel" className="text-xs rounded-lg data-[state=active]:bg-[hsl(var(--card))] data-[state=active]:shadow-sm">License</TabsTrigger>
                       </TabsList>
 
                       {/* Subscriptions Tab */}
@@ -211,37 +237,52 @@ const FounderAccessPage = () => {
                           {SUBSCRIPTION_TIERS.filter(t => t.id !== 'free').map((tier) => {
                             const Icon = getTierIcon(tier.id);
                             const isSelected = selectedTier === tier.id;
+                            const isElite = tier.id === 'elite';
                             
                             return (
                               <motion.div
                                 key={tier.id}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
+                                whileHover={{ scale: 1.03, y: -2 }}
+                                whileTap={{ scale: 0.97 }}
+                                transition={{ duration: 0.2 }}
                               >
-                                <Card 
-                                  className={`cursor-pointer transition-all h-full ${
+                                <div 
+                                  className={`relative cursor-pointer rounded-xl p-4 text-center transition-all border-2 ${
                                     isSelected 
-                                      ? 'ring-2 ring-primary bg-primary/5 border-primary' 
-                                      : 'hover:border-primary/50'
+                                      ? 'border-primary bg-[hsl(var(--primary)/0.08)] shadow-[0_0_24px_hsl(var(--primary)/0.15)]' 
+                                      : 'border-[hsl(var(--border))] hover:border-[hsl(var(--primary)/0.3)] bg-[hsl(var(--card))]'
                                   }`}
                                   onClick={() => setSelectedTier(tier.id)}
                                 >
-                                  <CardContent className="p-4 text-center">
-                                    <div className={`w-10 h-10 rounded-lg mx-auto mb-2 flex items-center justify-center ${
-                                      isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                                    }`}>
-                                      <Icon className="w-5 h-5" />
+                                  {isElite && (
+                                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                                      <Badge className="bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--secondary))] text-[hsl(var(--primary-foreground))] text-[10px] uppercase tracking-wider border-0 shadow-[var(--shadow-button)]">
+                                        Popular
+                                      </Badge>
                                     </div>
-                                    <h4 className="font-semibold text-sm">{tier.name}</h4>
-                                    <div className="mt-1">
-                                      <span className="text-xl font-bold">${tier.price}</span>
-                                      <span className="text-xs text-muted-foreground">{tier.period}</span>
-                                    </div>
-                                    {tier.badge && (
-                                      <Badge variant="secondary" className="mt-2 text-xs">{tier.badge}</Badge>
-                                    )}
-                                  </CardContent>
-                                </Card>
+                                  )}
+                                  <div className={`w-10 h-10 rounded-xl mx-auto mb-3 flex items-center justify-center transition-colors ${
+                                    isSelected 
+                                      ? 'bg-primary text-primary-foreground shadow-[var(--shadow-button)]' 
+                                      : 'bg-[hsl(var(--muted))] text-muted-foreground'
+                                  }`}>
+                                    <Icon className="w-5 h-5" />
+                                  </div>
+                                  <h4 className="font-semibold text-sm">{tier.name}</h4>
+                                  <div className="mt-1.5">
+                                    <span className="text-2xl font-bold">${tier.price}</span>
+                                    <span className="text-xs text-muted-foreground">{tier.period}</span>
+                                  </div>
+                                  {isSelected && (
+                                    <motion.div 
+                                      className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center"
+                                      initial={{ scale: 0 }}
+                                      animate={{ scale: 1 }}
+                                    >
+                                      <Check className="w-3 h-3 text-primary-foreground" />
+                                    </motion.div>
+                                  )}
+                                </div>
                               </motion.div>
                             );
                           })}
@@ -254,26 +295,30 @@ const FounderAccessPage = () => {
                           {CREDIT_PACKAGES.map((pkg) => {
                             const isSelected = selectedTier === `credits-${pkg.id}`;
                             return (
-                              <Card 
-                                key={pkg.id}
-                                className={`cursor-pointer transition-all ${
-                                  isSelected ? 'ring-2 ring-primary bg-primary/5' : 'hover:border-primary/50'
-                                }`}
-                                onClick={() => setSelectedTier(`credits-${pkg.id}`)}
-                              >
-                                <CardContent className="p-4 text-center">
-                                  <Coins className={`w-8 h-8 mx-auto mb-2 ${isSelected ? 'text-primary' : 'text-amber-500'}`} />
+                              <motion.div key={pkg.id} whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}>
+                                <div 
+                                  className={`cursor-pointer rounded-xl p-4 text-center transition-all border-2 relative ${
+                                    isSelected ? 'border-primary bg-[hsl(var(--primary)/0.08)] shadow-[0_0_24px_hsl(var(--primary)/0.15)]' : 'border-[hsl(var(--border))] hover:border-[hsl(var(--primary)/0.3)] bg-[hsl(var(--card))]'
+                                  }`}
+                                  onClick={() => setSelectedTier(`credits-${pkg.id}`)}
+                                >
+                                  <Coins className={`w-7 h-7 mx-auto mb-2 ${isSelected ? 'text-primary' : 'text-[hsl(var(--warning))]'}`} />
                                   <h4 className="font-semibold text-sm">{pkg.name}</h4>
-                                  <div className="text-2xl font-bold">{pkg.credits.toLocaleString()}</div>
+                                  <div className="text-2xl font-bold mt-1">{pkg.credits.toLocaleString()}</div>
                                   <p className="text-xs text-muted-foreground">credits</p>
                                   {pkg.bonus > 0 && (
-                                    <Badge variant="outline" className="mt-2 text-xs text-success border-success">
+                                    <Badge variant="outline" className="mt-2 text-[10px] text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)]">
                                       +{pkg.bonus} bonus
                                     </Badge>
                                   )}
                                   <div className="text-lg font-bold mt-2">${pkg.price}</div>
-                                </CardContent>
-                              </Card>
+                                  {isSelected && (
+                                    <motion.div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center" initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                                      <Check className="w-3 h-3 text-primary-foreground" />
+                                    </motion.div>
+                                  )}
+                                </div>
+                              </motion.div>
                             );
                           })}
                         </div>
@@ -285,20 +330,24 @@ const FounderAccessPage = () => {
                           {PAY_PER_SOLUTIONS.map((solution) => {
                             const isSelected = selectedTier === `solution-${solution.id}`;
                             return (
-                              <Card 
-                                key={solution.id}
-                                className={`cursor-pointer transition-all ${
-                                  isSelected ? 'ring-2 ring-primary bg-primary/5' : 'hover:border-primary/50'
-                                }`}
-                                onClick={() => setSelectedTier(`solution-${solution.id}`)}
-                              >
-                                <CardContent className="p-4">
+                              <motion.div key={solution.id} whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}>
+                                <div 
+                                  className={`cursor-pointer rounded-xl p-4 transition-all border-2 relative ${
+                                    isSelected ? 'border-primary bg-[hsl(var(--primary)/0.08)]' : 'border-[hsl(var(--border))] hover:border-[hsl(var(--primary)/0.3)] bg-[hsl(var(--card))]'
+                                  }`}
+                                  onClick={() => setSelectedTier(`solution-${solution.id}`)}
+                                >
                                   <span className="text-2xl">{solution.icon}</span>
                                   <h4 className="font-semibold mt-2">{solution.name}</h4>
-                                  <p className="text-xs text-muted-foreground mt-1">{solution.description}</p>
+                                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{solution.description}</p>
                                   <Badge variant="secondary" className="mt-3">{solution.priceRange}</Badge>
-                                </CardContent>
-                              </Card>
+                                  {isSelected && (
+                                    <motion.div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center" initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                                      <Check className="w-3 h-3 text-primary-foreground" />
+                                    </motion.div>
+                                  )}
+                                </div>
+                              </motion.div>
                             );
                           })}
                         </div>
@@ -310,20 +359,24 @@ const FounderAccessPage = () => {
                           {API_PLANS.map((plan) => {
                             const isSelected = selectedTier === `api-${plan.id}`;
                             return (
-                              <Card 
-                                key={plan.id}
-                                className={`cursor-pointer transition-all ${
-                                  isSelected ? 'ring-2 ring-primary bg-primary/5' : 'hover:border-primary/50'
-                                }`}
-                                onClick={() => setSelectedTier(`api-${plan.id}`)}
-                              >
-                                <CardContent className="p-4 text-center">
-                                  <Code className={`w-8 h-8 mx-auto mb-2 ${isSelected ? 'text-primary' : 'text-green-500'}`} />
+                              <motion.div key={plan.id} whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}>
+                                <div 
+                                  className={`cursor-pointer rounded-xl p-4 text-center transition-all border-2 relative ${
+                                    isSelected ? 'border-primary bg-[hsl(var(--primary)/0.08)]' : 'border-[hsl(var(--border))] hover:border-[hsl(var(--primary)/0.3)] bg-[hsl(var(--card))]'
+                                  }`}
+                                  onClick={() => setSelectedTier(`api-${plan.id}`)}
+                                >
+                                  <Code className={`w-7 h-7 mx-auto mb-2 ${isSelected ? 'text-primary' : 'text-[hsl(var(--success))]'}`} />
                                   <h4 className="font-semibold">{plan.name}</h4>
                                   <div className="text-2xl font-bold mt-1">${plan.price}<span className="text-sm text-muted-foreground">/mo</span></div>
                                   <p className="text-xs text-muted-foreground mt-2">{plan.requestsPerMonth.toLocaleString()} req/mo</p>
-                                </CardContent>
-                              </Card>
+                                  {isSelected && (
+                                    <motion.div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center" initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                                      <Check className="w-3 h-3 text-primary-foreground" />
+                                    </motion.div>
+                                  )}
+                                </div>
+                              </motion.div>
                             );
                           })}
                         </div>
@@ -335,19 +388,23 @@ const FounderAccessPage = () => {
                           {WHITELABEL_PLANS.map((plan) => {
                             const isSelected = selectedTier === `wl-${plan.id}`;
                             return (
-                              <Card 
-                                key={plan.id}
-                                className={`cursor-pointer transition-all ${
-                                  isSelected ? 'ring-2 ring-primary bg-primary/5' : 'hover:border-primary/50'
-                                }`}
-                                onClick={() => setSelectedTier(`wl-${plan.id}`)}
-                              >
-                                <CardContent className="p-4 text-center">
-                                  <Palette className={`w-8 h-8 mx-auto mb-2 ${isSelected ? 'text-primary' : 'text-purple-500'}`} />
+                              <motion.div key={plan.id} whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}>
+                                <div 
+                                  className={`cursor-pointer rounded-xl p-4 text-center transition-all border-2 relative ${
+                                    isSelected ? 'border-primary bg-[hsl(var(--primary)/0.08)]' : 'border-[hsl(var(--border))] hover:border-[hsl(var(--primary)/0.3)] bg-[hsl(var(--card))]'
+                                  }`}
+                                  onClick={() => setSelectedTier(`wl-${plan.id}`)}
+                                >
+                                  <Palette className={`w-7 h-7 mx-auto mb-2 ${isSelected ? 'text-primary' : 'text-[hsl(var(--secondary))]'}`} />
                                   <h4 className="font-semibold">{plan.name}</h4>
                                   <div className="text-2xl font-bold mt-1">${plan.price}<span className="text-sm text-muted-foreground">{plan.period}</span></div>
-                                </CardContent>
-                              </Card>
+                                  {isSelected && (
+                                    <motion.div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center" initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                                      <Check className="w-3 h-3 text-primary-foreground" />
+                                    </motion.div>
+                                  )}
+                                </div>
+                              </motion.div>
                             );
                           })}
                         </div>
@@ -358,20 +415,16 @@ const FounderAccessPage = () => {
               </motion.div>
 
               {/* Payment Methods */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Card>
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Wallet className="w-5 h-5 text-primary" />
+              <motion.div variants={itemVariants}>
+                <Card className="glass border-[hsl(var(--border))] overflow-hidden">
+                  <CardHeader className="pb-3 border-b border-[hsl(var(--border))]">
+                    <CardTitle className="text-base flex items-center gap-2 font-semibold">
+                      <Wallet className="w-4 h-4 text-primary" />
                       Payment Method
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    {/* Payment Method Selector */}
+                  <CardContent className="p-5">
+                    {/* Method Selector */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                       {paymentMethods.map((method) => {
                         const Icon = method.icon;
@@ -379,251 +432,212 @@ const FounderAccessPage = () => {
                         return (
                           <motion.button
                             key={method.id}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                            whileHover={{ scale: 1.03, y: -2 }}
+                            whileTap={{ scale: 0.97 }}
                             onClick={() => setActivePaymentMethod(method.id)}
-                            className={`relative p-4 rounded-xl border-2 transition-all text-left ${
+                            className={`relative p-4 rounded-xl border-2 transition-all text-left group ${
                               isActive 
-                                ? 'border-primary bg-primary/5' 
-                                : 'border-border hover:border-primary/30'
+                                ? 'border-primary bg-[hsl(var(--primary)/0.08)] shadow-[0_0_20px_hsl(var(--primary)/0.1)]' 
+                                : 'border-[hsl(var(--border))] hover:border-[hsl(var(--primary)/0.3)] bg-[hsl(var(--card))]'
                             }`}
                           >
-                            <Badge 
-                              variant="secondary" 
-                              className={`absolute -top-2 -right-2 text-xs ${isActive ? 'bg-primary text-primary-foreground' : ''}`}
-                            >
-                              {method.badge}
-                            </Badge>
-                            <Icon className={`w-6 h-6 mb-2 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-                            <span className={`text-sm font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+                            <Icon className={`w-5 h-5 mb-2 transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`} />
+                            <span className={`text-sm font-medium block ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
                               {method.name}
                             </span>
+                            <span className="text-[10px] text-muted-foreground">{method.desc}</span>
+                            {isActive && (
+                              <motion.div 
+                                className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary"
+                                layoutId="activePayment"
+                              />
+                            )}
                           </motion.button>
                         );
                       })}
                     </div>
 
                     {/* Payment Details */}
-                    <div className="bg-muted/50 rounded-xl p-5 border">
-                      {activePaymentMethod === 'bank' && (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2 mb-4">
-                            <Landmark className="w-5 h-5 text-primary" />
-                            <h4 className="font-semibold">Bank Transfer Details</h4>
+                    <AnimatePresence mode="wait">
+                      <motion.div 
+                        key={activePaymentMethod}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.25 }}
+                        className="rounded-xl p-5 border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.3)]"
+                      >
+                        {activePaymentMethod === 'bank' && (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 mb-4">
+                              <Landmark className="w-5 h-5 text-primary" />
+                              <h4 className="font-semibold text-sm">Bank Transfer Details</h4>
+                            </div>
+                            <PaymentDetailRow label="Bank Name" value={bankDetails.bankName} onCopy={() => copyToClipboard(bankDetails.bankName, "Bank Name")} copied={copiedField === "Bank Name"} />
+                            <PaymentDetailRow label="Account Title" value={bankDetails.accountName} onCopy={() => copyToClipboard(bankDetails.accountName, "Account Name")} copied={copiedField === "Account Name"} />
+                            <PaymentDetailRow label="IBAN" value={bankDetails.iban} onCopy={() => copyToClipboard(bankDetails.iban, "IBAN")} copied={copiedField === "IBAN"} mono />
                           </div>
-                          <PaymentDetailRow 
-                            label="Bank Name" 
-                            value={bankDetails.bankName}
-                            onCopy={() => copyToClipboard(bankDetails.bankName, "Bank Name")}
-                            copied={copiedField === "Bank Name"}
-                          />
-                          <PaymentDetailRow 
-                            label="Account Title" 
-                            value={bankDetails.accountName}
-                            onCopy={() => copyToClipboard(bankDetails.accountName, "Account Name")}
-                            copied={copiedField === "Account Name"}
-                          />
-                          <PaymentDetailRow 
-                            label="IBAN" 
-                            value={bankDetails.iban}
-                            onCopy={() => copyToClipboard(bankDetails.iban, "IBAN")}
-                            copied={copiedField === "IBAN"}
-                            mono
-                          />
-                        </div>
-                      )}
+                        )}
 
-                      {activePaymentMethod === 'mobile' && (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2 mb-4">
-                            <Smartphone className="w-5 h-5 text-green-500" />
-                            <h4 className="font-semibold">Mobile Wallet</h4>
+                        {activePaymentMethod === 'mobile' && (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 mb-4">
+                              <Smartphone className="w-5 h-5 text-[hsl(var(--success))]" />
+                              <h4 className="font-semibold text-sm">Mobile Wallet</h4>
+                            </div>
+                            <PaymentDetailRow label="EasyPaisa" value={mobileWallet.easypaisa} onCopy={() => copyToClipboard(mobileWallet.easypaisa, "EasyPaisa")} copied={copiedField === "EasyPaisa"} mono />
+                            <PaymentDetailRow label="JazzCash" value={mobileWallet.jazzcash} onCopy={() => copyToClipboard(mobileWallet.jazzcash, "JazzCash")} copied={copiedField === "JazzCash"} mono />
+                            <PaymentDetailRow label="Account Title" value={mobileWallet.name} onCopy={() => copyToClipboard(mobileWallet.name, "Wallet Name")} copied={copiedField === "Wallet Name"} />
                           </div>
-                          <PaymentDetailRow 
-                            label="EasyPaisa" 
-                            value={mobileWallet.easypaisa}
-                            onCopy={() => copyToClipboard(mobileWallet.easypaisa, "EasyPaisa")}
-                            copied={copiedField === "EasyPaisa"}
-                            mono
-                          />
-                          <PaymentDetailRow 
-                            label="JazzCash" 
-                            value={mobileWallet.jazzcash}
-                            onCopy={() => copyToClipboard(mobileWallet.jazzcash, "JazzCash")}
-                            copied={copiedField === "JazzCash"}
-                            mono
-                          />
-                          <PaymentDetailRow 
-                            label="Account Title" 
-                            value={mobileWallet.name}
-                            onCopy={() => copyToClipboard(mobileWallet.name, "Wallet Name")}
-                            copied={copiedField === "Wallet Name"}
-                          />
-                        </div>
-                      )}
+                        )}
 
-                      {activePaymentMethod === 'crypto' && (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2 mb-4">
-                            <Wallet className="w-5 h-5 text-amber-500" />
-                            <h4 className="font-semibold">USDT (TRC20)</h4>
+                        {activePaymentMethod === 'crypto' && (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 mb-4">
+                              <Wallet className="w-5 h-5 text-[hsl(var(--warning))]" />
+                              <h4 className="font-semibold text-sm">USDT (TRC20)</h4>
+                            </div>
+                            <PaymentDetailRow label="Network" value={cryptoDetails.network} onCopy={() => copyToClipboard(cryptoDetails.network, "Network")} copied={copiedField === "Network"} />
+                            <PaymentDetailRow label="Address" value={cryptoDetails.usdt} onCopy={() => copyToClipboard(cryptoDetails.usdt, "USDT Address")} copied={copiedField === "USDT Address"} mono />
+                            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1.5">
+                              <Shield className="w-3 h-3 text-[hsl(var(--warning))]" />
+                              Only send USDT on the Tron (TRC20) network
+                            </p>
                           </div>
-                          <PaymentDetailRow 
-                            label="Network" 
-                            value={cryptoDetails.network}
-                            onCopy={() => copyToClipboard(cryptoDetails.network, "Network")}
-                            copied={copiedField === "Network"}
-                          />
-                          <PaymentDetailRow 
-                            label="Address" 
-                            value={cryptoDetails.usdt}
-                            onCopy={() => copyToClipboard(cryptoDetails.usdt, "USDT Address")}
-                            copied={copiedField === "USDT Address"}
-                            mono
-                          />
-                          <p className="text-xs text-muted-foreground mt-2">
-                            ⚠️ Only send USDT on the Tron (TRC20) network
-                          </p>
-                        </div>
-                      )}
+                        )}
 
-                      {activePaymentMethod === 'wire' && (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2 mb-4">
-                            <Globe className="w-5 h-5 text-purple-500" />
-                            <h4 className="font-semibold">International Wire Transfer</h4>
+                        {activePaymentMethod === 'wire' && (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 mb-4">
+                              <Globe className="w-5 h-5 text-[hsl(var(--secondary))]" />
+                              <h4 className="font-semibold text-sm">International Wire Transfer</h4>
+                            </div>
+                            <PaymentDetailRow label="Bank" value={internationalDetails.bankName} onCopy={() => copyToClipboard(internationalDetails.bankName, "Int Bank")} copied={copiedField === "Int Bank"} />
+                            <PaymentDetailRow label="SWIFT/BIC" value={internationalDetails.swift} onCopy={() => copyToClipboard(internationalDetails.swift, "SWIFT")} copied={copiedField === "SWIFT"} mono />
+                            <PaymentDetailRow label="IBAN" value={internationalDetails.iban} onCopy={() => copyToClipboard(internationalDetails.iban, "Int IBAN")} copied={copiedField === "Int IBAN"} mono />
+                            <PaymentDetailRow label="Account Title" value={internationalDetails.accountName} onCopy={() => copyToClipboard(internationalDetails.accountName, "Int Name")} copied={copiedField === "Int Name"} />
+                            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1.5">
+                              <Zap className="w-3 h-3 text-[hsl(var(--secondary))]" />
+                              Use Wise or Remitly for lower fees
+                            </p>
                           </div>
-                          <PaymentDetailRow 
-                            label="Bank" 
-                            value={internationalDetails.bankName}
-                            onCopy={() => copyToClipboard(internationalDetails.bankName, "Int Bank")}
-                            copied={copiedField === "Int Bank"}
-                          />
-                          <PaymentDetailRow 
-                            label="SWIFT/BIC" 
-                            value={internationalDetails.swift}
-                            onCopy={() => copyToClipboard(internationalDetails.swift, "SWIFT")}
-                            copied={copiedField === "SWIFT"}
-                            mono
-                          />
-                          <PaymentDetailRow 
-                            label="IBAN" 
-                            value={internationalDetails.iban}
-                            onCopy={() => copyToClipboard(internationalDetails.iban, "Int IBAN")}
-                            copied={copiedField === "Int IBAN"}
-                            mono
-                          />
-                          <PaymentDetailRow 
-                            label="Account Title" 
-                            value={internationalDetails.accountName}
-                            onCopy={() => copyToClipboard(internationalDetails.accountName, "Int Name")}
-                            copied={copiedField === "Int Name"}
-                          />
-                          <p className="text-xs text-muted-foreground mt-2">
-                            💡 Use Wise or Remitly for lower fees
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
                   </CardContent>
                 </Card>
               </motion.div>
             </div>
 
             {/* Right Column - Order Summary (Sticky) */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-2">
               <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-                className="sticky top-24"
+                variants={itemVariants}
+                className="sticky top-24 space-y-4"
               >
-                <Card className="border-2 overflow-hidden">
-                  <div className="bg-gradient-to-r from-primary/10 to-secondary/10 p-4 border-b">
+                <Card className="border-2 border-[hsl(var(--border))] overflow-hidden bg-[hsl(var(--card))]">
+                  {/* Header gradient strip */}
+                  <div className="h-1 bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--secondary))] to-[hsl(var(--accent))]" />
+                  
+                  <div className="p-5 border-b border-[hsl(var(--border))]">
                     <h3 className="font-bold text-lg flex items-center gap-2">
-                      <FileText className="w-5 h-5" />
+                      <FileText className="w-5 h-5 text-primary" />
                       Order Summary
                     </h3>
                   </div>
                   
                   <CardContent className="p-5 space-y-5">
                     {/* Selected Plan */}
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div>
-                        <p className="font-medium">{selectedProduct.name}</p>
-                        <p className="text-xs text-muted-foreground">{selectedProduct.period === 'one-time' ? 'One-time purchase' : `Billed ${selectedProduct.period?.replace('/', '')}`}</p>
+                    <motion.div 
+                      className="p-4 rounded-xl bg-[hsl(var(--muted)/0.5)] border border-[hsl(var(--border))]"
+                      layout
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold">{selectedProduct.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {selectedProduct.period === 'one-time' ? 'One-time purchase' : `Billed ${selectedProduct.period?.replace('/', '')}`}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <motion.p 
+                            className="text-3xl font-bold gradient-text"
+                            key={`${selectedProduct.price}`}
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                          >
+                            {typeof selectedProduct.price === 'number' ? `$${selectedProduct.price}` : selectedProduct.price}
+                          </motion.p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-primary">
-                          {typeof selectedProduct.price === 'number' ? `$${selectedProduct.price}` : selectedProduct.price}
-                        </p>
-                      </div>
-                    </div>
+                    </motion.div>
 
-                    <Separator />
+                    <Separator className="bg-[hsl(var(--border))]" />
 
                     {/* Steps */}
                     <div className="space-y-3">
-                      <h4 className="text-sm font-semibold text-muted-foreground">How to Complete</h4>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">How to Complete</h4>
                       <div className="space-y-3">
-                        <StepItem number={1} title="Send Payment" description="Transfer the amount using your selected method" />
-                        <StepItem number={2} title="Screenshot Receipt" description="Take a clear photo of your payment confirmation" />
-                        <StepItem number={3} title="Send on WhatsApp" description="Upload receipt for instant activation" />
+                        <StepItem number={1} title="Send Payment" description="Transfer using your selected method" />
+                        <StepItem number={2} title="Screenshot Receipt" description="Take a clear photo of confirmation" />
+                        <StepItem number={3} title="Send on WhatsApp" description="Upload for instant activation" />
                       </div>
                     </div>
 
-                    <Separator />
+                    <Separator className="bg-[hsl(var(--border))]" />
 
-                    {/* CTA Button */}
-                    <Button 
-                      size="lg" 
-                      className="w-full bg-gradient-to-r from-success to-green-600 hover:from-success/90 hover:to-green-600/90 text-white font-semibold"
-                      onClick={() => window.open(whatsappLink, '_blank')}
-                    >
-                      <MessageCircle className="w-5 h-5 mr-2" />
-                      Complete on WhatsApp
-                      <ArrowUpRight className="w-4 h-4 ml-2" />
-                    </Button>
+                    {/* CTA */}
+                    <div className="space-y-3">
+                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                        <Button 
+                          size="lg" 
+                          className="w-full bg-gradient-to-r from-[hsl(var(--success))] to-[hsl(150_80%_35%)] hover:opacity-90 text-white font-semibold gap-2 shadow-[0_4px_24px_hsl(var(--success)/0.3)]"
+                          onClick={() => window.open(whatsappLink, '_blank')}
+                        >
+                          <MessageCircle className="w-5 h-5" />
+                          Complete on WhatsApp
+                          <ArrowUpRight className="w-4 h-4" />
+                        </Button>
+                      </motion.div>
 
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => window.open(internationalWhatsappLink, '_blank')}
-                    >
-                      <Globe className="w-4 h-4 mr-2" />
-                      International Users
-                    </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full gap-2 border-[hsl(var(--border))] text-muted-foreground hover:text-foreground"
+                        onClick={() => window.open(internationalWhatsappLink, '_blank')}
+                      >
+                        <Globe className="w-4 h-4" />
+                        International Users
+                      </Button>
+                    </div>
 
                     {/* Trust Badges */}
                     <div className="grid grid-cols-3 gap-2 pt-2">
-                      <div className="text-center p-2 bg-muted/30 rounded-lg">
-                        <ShieldCheck className="w-5 h-5 mx-auto text-success mb-1" />
-                        <p className="text-xs text-muted-foreground">Secure</p>
-                      </div>
-                      <div className="text-center p-2 bg-muted/30 rounded-lg">
-                        <Clock className="w-5 h-5 mx-auto text-primary mb-1" />
-                        <p className="text-xs text-muted-foreground">Instant</p>
-                      </div>
-                      <div className="text-center p-2 bg-muted/30 rounded-lg">
-                        <Verified className="w-5 h-5 mx-auto text-amber-500 mb-1" />
-                        <p className="text-xs text-muted-foreground">Verified</p>
-                      </div>
+                      {[
+                        { icon: ShieldCheck, label: "Secure", color: "text-[hsl(var(--success))]" },
+                        { icon: Clock, label: "Instant", color: "text-primary" },
+                        { icon: Verified, label: "Verified", color: "text-[hsl(var(--warning))]" },
+                      ].map((badge) => (
+                        <div key={badge.label} className="text-center p-2.5 rounded-lg bg-[hsl(var(--muted)/0.3)] border border-[hsl(var(--border)/0.5)]">
+                          <badge.icon className={`w-4 h-4 mx-auto mb-1 ${badge.color}`} />
+                          <p className="text-[10px] text-muted-foreground font-medium">{badge.label}</p>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
 
                 {/* Support Card */}
-                <Card className="mt-4 bg-muted/30">
+                <Card className="border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.2)]">
                   <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <MessageCircle className="w-5 h-5 text-primary" />
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-[hsl(var(--primary)/0.1)] border border-[hsl(var(--primary)/0.2)] flex items-center justify-center shrink-0">
+                        <MessageCircle className="w-4 h-4 text-primary" />
                       </div>
                       <div>
                         <h4 className="font-medium text-sm">Need Help?</h4>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Contact us on WhatsApp for instant support with your purchase.
+                        <p className="text-xs text-muted-foreground">
+                          WhatsApp support for instant help
                         </p>
                       </div>
                     </div>
@@ -635,25 +649,21 @@ const FounderAccessPage = () => {
 
           {/* Footer Trust Bar */}
           <motion.div 
-            className="flex items-center justify-center gap-8 mt-12 py-6 border-t text-muted-foreground"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
+            className="flex flex-wrap items-center justify-center gap-6 md:gap-8 mt-12 py-6 border-t border-[hsl(var(--border))]"
+            variants={itemVariants}
           >
-            <div className="flex items-center gap-2 text-sm">
-              <Shield className="w-4 h-4 text-success" />
-              <span>256-bit Encryption</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Lock className="w-4 h-4 text-primary" />
-              <span>Privacy First</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <BadgeCheck className="w-4 h-4 text-amber-500" />
-              <span>Verified Business</span>
-            </div>
+            {[
+              { icon: Shield, label: "256-bit Encryption", color: "text-[hsl(var(--success))]" },
+              { icon: Lock, label: "Privacy First", color: "text-primary" },
+              { icon: BadgeCheck, label: "Verified Business", color: "text-[hsl(var(--warning))]" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <item.icon className={`w-4 h-4 ${item.color}`} />
+                <span>{item.label}</span>
+              </div>
+            ))}
           </motion.div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
@@ -663,21 +673,21 @@ const FounderAccessPage = () => {
 const PaymentDetailRow = ({ 
   label, value, onCopy, copied, mono = false 
 }: { label: string; value: string; onCopy: () => void; copied: boolean; mono?: boolean }) => (
-  <div className="flex items-center justify-between gap-3 p-3 bg-background rounded-lg border">
+  <div className="flex items-center justify-between gap-3 p-3 bg-[hsl(var(--card))] rounded-lg border border-[hsl(var(--border))] group hover:border-[hsl(var(--primary)/0.3)] transition-colors">
     <div className="min-w-0">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={`font-medium truncate ${mono ? 'font-mono text-sm' : ''}`}>
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{label}</p>
+      <p className={`font-medium truncate mt-0.5 ${mono ? 'font-mono text-sm' : ''}`}>
         {value}
       </p>
     </div>
     <Button 
       variant="ghost" 
       size="icon" 
-      className="h-8 w-8 shrink-0"
+      className="h-8 w-8 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity"
       onClick={onCopy}
     >
       {copied ? (
-        <Check className="w-4 h-4 text-success" />
+        <Check className="w-4 h-4 text-[hsl(var(--success))]" />
       ) : (
         <Copy className="w-4 h-4" />
       )}
@@ -687,7 +697,7 @@ const PaymentDetailRow = ({
 
 const StepItem = ({ number, title, description }: { number: number; title: string; description: string }) => (
   <div className="flex items-start gap-3">
-    <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-[hsl(var(--secondary))] text-primary-foreground text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 shadow-[0_0_12px_hsl(var(--primary)/0.3)]">
       {number}
     </div>
     <div>
