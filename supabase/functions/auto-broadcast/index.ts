@@ -118,7 +118,7 @@ serve(async (req) => {
                 Authorization: `Bearer ${resendKey}`,
               },
               body: JSON.stringify({
-                from: "ShadowTalk AI <onboarding@resend.dev>",
+                from: "ShadowTalk AI <noreply@shadowtalk.ai>",
                 to: [u.email!],
                 subject: `${typeLabel}: ${title}`,
                 html: emailHtml,

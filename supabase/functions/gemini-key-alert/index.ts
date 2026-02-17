@@ -110,7 +110,7 @@ serve(async (req: Request): Promise<Response> => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "ShadowTalk AI <onboarding@resend.dev>",
+        from: "ShadowTalk AI <noreply@shadowtalk.ai>",
         to: [alertEmail],
         subject,
         html: `

@@ -147,7 +147,7 @@ Time: ${new Date().toLocaleString()}
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "ShadowTalk AI <onboarding@resend.dev>",
+          from: "ShadowTalk AI <noreply@shadowtalk.ai>",
           to: [adminEmail],
           subject: `${getCategoryLabel(category)} - New Feedback (${rating}⭐)`,
           html: emailHtml,

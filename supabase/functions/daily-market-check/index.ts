@@ -157,7 +157,7 @@ Only set hasUpdate=true if there's something genuinely new or notable. Don't fab
                 "Authorization": `Bearer ${resendKey}`,
               },
               body: JSON.stringify({
-                from: "ShadowTalk AI <onboarding@resend.dev>",
+                from: "ShadowTalk AI <noreply@shadowtalk.ai>",
                 to: [user.email],
                 subject: `📊 Market Update: ${relevantUpdates.length} change${relevantUpdates.length > 1 ? 's' : ''} detected`,
                 html: emailHtml,
