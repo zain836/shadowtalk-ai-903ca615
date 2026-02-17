@@ -46,6 +46,8 @@ import { WordleGame } from "@/components/chat/WordleGame";
 import { VisionAgent } from "@/components/chat/VisionAgent";
 import { CommandPalette } from "@/components/chat/CommandPalette";
 import { KnowledgeVault } from "@/components/chat/KnowledgeVault";
+import { IntelligenceHub } from "@/components/chat/IntelligenceHub";
+import { useIntelligenceHub } from "@/hooks/useIntelligenceHub";
 import { MemoryPanel } from "@/components/chat/MemoryPanel";
 import { MissionControl } from "@/components/chat/MissionControl";
 import { CustomInstructions } from "@/components/chat/CustomInstructions";
@@ -183,6 +185,7 @@ const ChatbotPage = () => {
   const [showBunkerMode, setShowBunkerMode] = useState(false);
   const [showCognitiveLoop, setShowCognitiveLoop] = useState(false);
   const [showPluginsManager, setShowPluginsManager] = useState(false);
+  const [showIntelligenceHub, setShowIntelligenceHub] = useState(false);
   
   // Tool params for auto-execution
   const [imageGeneratorPrompt, setImageGeneratorPrompt] = useState<string | undefined>(undefined);
@@ -232,6 +235,7 @@ const ChatbotPage = () => {
   const toolOrchestrator = useToolOrchestrator(); // Intelligent tool detection
   const thinkingSteps = useThinkingSteps(); // Claude-style thinking transparency
   const proactiveAI = useProactiveAI(false); // Always active on chatbot page
+  const intelligenceHub = useIntelligenceHub(); // Retention: AI memory + knowledge + streaks
   
   // Thinking transparency state
   const [showThinkingPanel, setShowThinkingPanel] = useState(true);
@@ -1195,15 +1199,20 @@ const ChatbotPage = () => {
         if (assistantContent) {
           setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: assistantContent, timestamp: new Date() }]);
           await saveMessage(assistantContent, 'assistant');
+          // Intelligence Hub: extract memories & knowledge
+          intelligenceHub.extractMemories(messageToSend, assistantContent);
+          intelligenceHub.extractKnowledge(messageToSend, assistantContent, currentConversationId || undefined);
         }
       } else {
         // Use Lovable AI (default)
         let requestBody;
         const businessMemoryContext = getMemoryContext();
+        const aiMemoryContext = intelligenceHub.getMemoryContext();
+        const combinedMemory = [businessMemoryContext, aiMemoryContext].filter(Boolean).join('\n') || undefined;
         if (isResearchMode) {
-          requestBody = { deepResearch: true, researchQuery: messageToSend, businessMemory: businessMemoryContext || undefined };
+          requestBody = { deepResearch: true, researchQuery: messageToSend, businessMemory: combinedMemory };
         } else {
-          requestBody = { messages: chatMessages, personality, mode: chatMode, modePrompt: getModePrompt(chatMode), businessMemory: businessMemoryContext || undefined };
+          requestBody = { messages: chatMessages, personality, mode: chatMode, modePrompt: getModePrompt(chatMode), businessMemory: combinedMemory };
         }
 
         // Save search to history if in research mode
@@ -1273,7 +1282,12 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
           }
         }
 
-        if (assistantContent) await saveMessage(assistantContent, 'assistant');
+        if (assistantContent) {
+          await saveMessage(assistantContent, 'assistant');
+          // Intelligence Hub: extract memories & knowledge
+          intelligenceHub.extractMemories(messageToSend, assistantContent);
+          intelligenceHub.extractKnowledge(messageToSend, assistantContent, currentConversationId || undefined);
+        }
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return;
@@ -1999,7 +2013,10 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
               setShowKnowledgeVault(true);
               break;
             case 'memory':
-              setShowMemoryPanel(true);
+              setShowIntelligenceHub(true);
+              break;
+            case 'intelligence-hub':
+              setShowIntelligenceHub(true);
               break;
             case 'missions':
               setShowMissionControl(true);
@@ -2048,6 +2065,12 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
           onClose={() => setShowKnowledgeVault(false)}
         />
       )}
+
+      {/* Intelligence Hub */}
+      <IntelligenceHub
+        isOpen={showIntelligenceHub}
+        onClose={() => setShowIntelligenceHub(false)}
+      />
 
       {/* Memory Panel - wrapped in sheet */}
       {showMemoryPanel && (

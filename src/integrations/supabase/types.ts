@@ -100,6 +100,45 @@ export type Database = {
           },
         ]
       }
+      ai_memories: {
+        Row: {
+          category: string
+          confidence: number
+          content: string
+          created_at: string
+          id: string
+          last_referenced_at: string
+          source: string
+          times_referenced: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          confidence?: number
+          content: string
+          created_at?: string
+          id?: string
+          last_referenced_at?: string
+          source?: string
+          times_referenced?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          confidence?: number
+          content?: string
+          created_at?: string
+          id?: string
+          last_referenced_at?: string
+          source?: string
+          times_referenced?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           created_at: string
@@ -432,6 +471,48 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_insights: {
+        Row: {
+          category: string
+          content: string
+          expires_at: string | null
+          generated_at: string
+          id: string
+          is_pinned: boolean
+          is_read: boolean
+          metadata: Json | null
+          source: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          content: string
+          expires_at?: string | null
+          generated_at?: string
+          id?: string
+          is_pinned?: boolean
+          is_read?: boolean
+          metadata?: Json | null
+          source?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          expires_at?: string | null
+          generated_at?: string
+          id?: string
+          is_pinned?: boolean
+          is_read?: boolean
+          metadata?: Json | null
+          source?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       eco_actions: {
         Row: {
           category: string
@@ -695,6 +776,54 @@ export type Database = {
           setting_key?: string
           setting_value?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      knowledge_entries: {
+        Row: {
+          access_count: number
+          connections: string[] | null
+          content: string
+          created_at: string
+          entry_type: string
+          id: string
+          last_accessed_at: string | null
+          source_conversation_id: string | null
+          source_message_id: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_count?: number
+          connections?: string[] | null
+          content: string
+          created_at?: string
+          entry_type?: string
+          id?: string
+          last_accessed_at?: string | null
+          source_conversation_id?: string | null
+          source_message_id?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_count?: number
+          connections?: string[] | null
+          content?: string
+          created_at?: string
+          entry_type?: string
+          id?: string
+          last_accessed_at?: string | null
+          source_conversation_id?: string | null
+          source_message_id?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -2103,6 +2232,42 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_streaks: {
+        Row: {
+          created_at: string
+          current_streak: number
+          id: string
+          last_active_date: string
+          longest_streak: number
+          streak_multiplier: number
+          total_active_days: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_active_date?: string
+          longest_streak?: number
+          streak_multiplier?: number
+          total_active_days?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_active_date?: string
+          longest_streak?: number
+          streak_multiplier?: number
+          total_active_days?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
