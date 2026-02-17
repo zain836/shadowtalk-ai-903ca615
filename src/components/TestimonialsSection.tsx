@@ -1,10 +1,38 @@
 import { Star, Quote, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import avatar1 from "@/assets/avatar-1.jpg";
 import avatar2 from "@/assets/avatar-2.jpg";
 import avatar3 from "@/assets/avatar-3.jpg";
+
+const identityPool = [
+  { name: "Lena Vasquez", role: "Lead Engineer", company: "ArcLight Systems" },
+  { name: "Omar Khalil", role: "Head of Operations", company: "Stratosphere" },
+  { name: "Priya Sharma", role: "CTO & Co-Founder", company: "Nimbus Labs" },
+  { name: "Marcus Chen", role: "Senior Developer", company: "Vertigo Digital" },
+  { name: "Sofia Andersson", role: "Product Lead", company: "Polaris AI" },
+  { name: "Jake Okafor", role: "DevOps Manager", company: "CloudStack" },
+  { name: "Aisha Patel", role: "Engineering Director", company: "Helix Studios" },
+  { name: "Ryan Tanaka", role: "Startup Founder", company: "Wavefront" },
+  { name: "Nina Ivanova", role: "Tech Architect", company: "Quantum Leap" },
+  { name: "Diego Morales", role: "VP of Engineering", company: "Nextera" },
+  { name: "Hana Kim", role: "AI Researcher", company: "DeepMind Labs" },
+  { name: "Ethan Brooks", role: "Full Stack Lead", company: "Forge Systems" },
+];
+
+const reviewTemplates = [
+  { content: "This chatbot has completely transformed my workflow! The code generation feature saved me 20+ hours a week. The AI understands context better than any tool I've used before.", highlight: "20+ hours saved weekly", metric: "+340%", metricLabel: "Productivity" },
+  { content: "Incredible AI assistant! I use it for everything from writing documentation to automating repetitive tasks. The offline mode is a game-changer for remote work.", highlight: "Offline mode game-changer", metric: "100%", metricLabel: "Uptime" },
+  { content: "The script automation feature is phenomenal. I can generate complex automation scripts in minutes instead of hours. Best investment I've made for my productivity.", highlight: "Minutes instead of hours", metric: "10x", metricLabel: "Faster" },
+];
+
+const avatars = [avatar1, avatar2, avatar3];
+
+function shuffleAndPick<T>(arr: T[], count: number): T[] {
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
 
 const cardVariants = {
   hidden: { opacity: 0, y: 60, rotateX: 15 },
@@ -24,41 +52,15 @@ const TestimonialsSection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
 
-  const testimonials = [
-    {
-      name: "Lena Vasquez",
-      role: "Lead Engineer",
-      company: "ArcLight Systems",
-      avatar: avatar1,
+  const testimonials = useMemo(() => {
+    const picked = shuffleAndPick(identityPool, 3);
+    return picked.map((identity, i) => ({
+      ...identity,
+      avatar: avatars[i],
       rating: 5,
-      content: "This chatbot has completely transformed my workflow! The code generation feature saved me 20+ hours a week. The AI understands context better than any tool I've used before.",
-      highlight: "20+ hours saved weekly",
-      metric: "+340%",
-      metricLabel: "Productivity",
-    },
-    {
-      name: "Omar Khalil",
-      role: "Head of Operations",
-      company: "Stratosphere",
-      avatar: avatar2,
-      rating: 5,
-      content: "Incredible AI assistant! I use it for everything from writing documentation to automating repetitive tasks. The offline mode is a game-changer for remote work.",
-      highlight: "Offline mode game-changer",
-      metric: "100%",
-      metricLabel: "Uptime",
-    },
-    {
-      name: "Priya Sharma",
-      role: "CTO & Co-Founder",
-      company: "Nimbus Labs",
-      avatar: avatar3,
-      rating: 5,
-      content: "The script automation feature is phenomenal. I can generate complex automation scripts in minutes instead of hours. Best investment I've made for my productivity.",
-      highlight: "Minutes instead of hours",
-      metric: "10x",
-      metricLabel: "Faster",
-    },
-  ];
+      ...reviewTemplates[i],
+    }));
+  }, []);
 
   return (
     <section ref={sectionRef} className="py-28 bg-background relative overflow-hidden">
