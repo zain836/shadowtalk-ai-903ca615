@@ -221,8 +221,9 @@ const parseStreamingResponse = async (response: Response, onChunk: (content: str
 
 // ─── Sub-Components ────────────────────────────────────────────
 
-const ErrorOverlay = ({ error, url, onRetry, onOpenExternal, onGoHome }: {
+const ErrorOverlay = ({ error, url, onRetry, onOpenExternal, onGoHome, onViewViaProxy, isProxyLoading }: {
   error: TabError; url: string; onRetry: () => void; onOpenExternal: () => void; onGoHome: () => void;
+  onViewViaProxy?: () => void; isProxyLoading?: boolean;
 }) => {
   const iconMap = {
     blocked: <ShieldAlert className="h-10 w-10 text-amber-500" />,
@@ -247,11 +248,17 @@ const ErrorOverlay = ({ error, url, onRetry, onOpenExternal, onGoHome }: {
         <p className="text-sm text-muted-foreground mb-2">{error.message}</p>
         <p className="text-xs text-muted-foreground/70 mb-6 font-mono truncate max-w-xs mx-auto">{getDomainFromUrl(url)}</p>
         <div className="flex flex-col gap-3">
-          {error.retryable && <Button onClick={onRetry} className="gap-2"><RefreshCw className="h-4 w-4" />Try Again</Button>}
-          <Button onClick={onOpenExternal} variant={error.retryable ? "outline" : "default"} className="gap-2"><ExternalLink className="h-4 w-4" />Open in New Tab</Button>
+          {(error.type === "blocked" || error.type === "cors") && onViewViaProxy && (
+            <Button onClick={onViewViaProxy} disabled={isProxyLoading} className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70">
+              {isProxyLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
+              {isProxyLoading ? "Fetching page..." : "View via Proxy"}
+            </Button>
+          )}
+          {error.retryable && <Button onClick={onRetry} variant="outline" className="gap-2"><RefreshCw className="h-4 w-4" />Try Again</Button>}
+          <Button onClick={onOpenExternal} variant="outline" className="gap-2"><ExternalLink className="h-4 w-4" />Open in New Tab</Button>
           <Button variant="ghost" onClick={onGoHome} className="gap-2 text-muted-foreground"><Home className="h-4 w-4" />Go Home</Button>
         </div>
-        {error.type === "blocked" && <p className="text-xs text-muted-foreground mt-4">Tip: DuckDuckGo and many sites allow embedding.</p>}
+        {error.type === "blocked" && <p className="text-xs text-muted-foreground mt-4">Proxy fetches the page server-side to bypass iframe restrictions.</p>}
       </div>
     </motion.div>
   );
@@ -359,6 +366,8 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
   const [copied, setCopied] = useState(false);
   const [historySearch, setHistorySearch] = useState("");
+  const [proxyHtml, setProxyHtml] = useState<string | null>(null);
+  const [isProxyLoading, setIsProxyLoading] = useState(false);
 
   // AI Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -447,6 +456,7 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
   // ─── Navigation ────────────────────────────────────────────
 
   const navigateTo = useCallback((url: string) => {
+    setProxyHtml(null);
     const formattedUrl = formatUrl(url);
 
     if (isBlockedDomain(formattedUrl)) {
@@ -609,6 +619,37 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
       id: crypto.randomUUID(), url: activeTab.url, filename: `screenshot-${Date.now()}.png`,
       status: "complete", progress: 100, timestamp: new Date(),
     }, ...prev]);
+  };
+
+  const fetchViaProxy = async () => {
+    setIsProxyLoading(true);
+    setProxyHtml(null);
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetchAIWithRetry(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/web-proxy`,
+        {
+          method: "POST", headers,
+          body: JSON.stringify({ url: activeTab.url, mode: "proxy" }),
+        },
+        1, 20000
+      );
+      const data = await response.json();
+      if (data.success && data.html) {
+        setProxyHtml(data.html);
+        setTabs(prev => prev.map(tab => tab.id === activeTabId ? {
+          ...tab, error: null, isLoading: false, title: data.title || tab.title,
+        } : tab));
+        toast({ title: "Page loaded via proxy", description: data.title || getDomainFromUrl(activeTab.url) });
+      } else {
+        toast({ title: "Proxy failed", description: data.error || "Could not fetch page", variant: "destructive" });
+      }
+    } catch (err) {
+      const msg = err instanceof AIError ? err.message : "Proxy request failed";
+      toast({ title: "Proxy error", description: msg, variant: "destructive" });
+    } finally {
+      setIsProxyLoading(false);
+    }
   };
 
   const enableReadingMode = async () => {
@@ -1397,17 +1438,45 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
               {readingMode && <ReadingModeOverlay content={readingContent} onClose={() => setReadingMode(false)} />}
             </AnimatePresence>
 
-            {!activeTab.error && (
+            {!activeTab.error && !proxyHtml && (
               <iframe ref={iframeRef} src={activeTab.url} className="w-full h-full border-0"
                 onLoad={handleIframeLoad} onError={handleIframeError}
                 sandbox="allow-same-origin allow-scripts allow-popups allow-forms" title="Browser" />
             )}
 
+            {proxyHtml && !activeTab.error && (
+              <div className="absolute inset-0 flex flex-col">
+                <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border-b border-primary/20 text-xs">
+                  <Globe className="h-3.5 w-3.5 text-primary" />
+                  <span className="font-medium text-primary">Viewing via proxy</span>
+                  <span className="text-muted-foreground">— {getDomainFromUrl(activeTab.url)}</span>
+                  <div className="ml-auto flex gap-1.5">
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] rounded" onClick={() => window.open(activeTab.url, "_blank")}>
+                      <ExternalLink className="h-3 w-3 mr-1" /> Open Original
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] rounded" onClick={() => { setProxyHtml(null); navigateTo(DEFAULT_HOME); }}>
+                      <X className="h-3 w-3 mr-1" /> Close
+                    </Button>
+                  </div>
+                </div>
+                <iframe
+                  srcDoc={proxyHtml}
+                  className="flex-1 w-full border-0 bg-white"
+                  sandbox="allow-same-origin allow-popups allow-forms"
+                  title="Proxied Browser"
+                />
+              </div>
+            )}
+
             <AnimatePresence>
               {activeTab.error && (
                 <ErrorOverlay error={activeTab.error} url={activeTab.url}
-                  onRetry={() => navigateTo(activeTab.url)} onOpenExternal={() => window.open(activeTab.url, "_blank")}
-                  onGoHome={() => navigateTo(DEFAULT_HOME)} />
+                  onRetry={() => { setProxyHtml(null); navigateTo(activeTab.url); }}
+                  onOpenExternal={() => window.open(activeTab.url, "_blank")}
+                  onGoHome={() => { setProxyHtml(null); navigateTo(DEFAULT_HOME); }}
+                  onViewViaProxy={fetchViaProxy}
+                  isProxyLoading={isProxyLoading}
+                />
               )}
             </AnimatePresence>
           </div>
