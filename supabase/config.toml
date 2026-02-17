@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.auto-broadcast]
 verify_jwt = false
+
+[functions.proactive-ai]
+verify_jwt = false
