@@ -62,7 +62,7 @@ For offline mode, all data remains on your device and is never transmitted to ou
 • **Export**: Download your data in a portable format.
 • **Opt-out**: Unsubscribe from marketing communications.
 
-To exercise these rights, visit your account settings or contact us at privacy@shadowtalk.ai.`
+To exercise these rights, visit your account settings or contact us at privacy@shadowtalk-ai.com.`
     },
     {
       title: "6. Data Retention",
@@ -84,7 +84,7 @@ You can delete your account and associated data at any time from your profile se
     },
     {
       title: "8. Children's Privacy",
-      content: `Our services are not directed to children under 13. We do not knowingly collect personal information from children under 13. If you become aware that a child has provided us with personal information, please contact us at privacy@shadowtalk.ai.`
+      content: `Our services are not directed to children under 13. We do not knowingly collect personal information from children under 13. If you become aware that a child has provided us with personal information, please contact us at privacy@shadowtalk-ai.com.`
     },
     {
       title: "9. Changes to This Policy",
@@ -100,10 +100,10 @@ We encourage you to review this Privacy Policy periodically.`
       title: "10. Contact Us",
       content: `If you have questions about this Privacy Policy or our privacy practices, please contact us at:
 
-**Email**: privacy@shadowtalk.ai
+**Email**: privacy@shadowtalk-ai.com
 **Address**: Karachi, Pakistan
 
-For data protection inquiries in the EU, you may also contact our Data Protection Officer at dpo@shadowtalk.ai.`
+For data protection inquiries in the EU, you may also contact our Data Protection Officer at dpo@shadowtalk-ai.com.`
     }
   ];
 

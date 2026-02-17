@@ -30,7 +30,7 @@ interface ShareDialogProps {
 export const ShareDialog = ({ isOpen, onClose, messages, conversationTitle }: ShareDialogProps) => {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
-  const [shareUrl] = useState(`https://shadowtalk.ai/share/${crypto.randomUUID().slice(0, 8)}`);
+  const [shareUrl] = useState(`https://shadowtalk-ai.com/share/${crypto.randomUUID().slice(0, 8)}`);
 
   const filteredMessages = messages.filter(m => m.id !== 'welcome');
 
