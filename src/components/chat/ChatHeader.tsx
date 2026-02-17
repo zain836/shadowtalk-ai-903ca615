@@ -41,6 +41,8 @@ import { CustomInstructions } from "./CustomInstructions";
 import { BunkerModeToggle } from "./BunkerModeToggle";
 import { SovereignPulse } from "./SovereignPulse";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useRobustOfflineAI } from "@/hooks/useRobustOfflineAI";
+import { usePrivacyScore } from "@/hooks/usePrivacyScore";
 
 type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive" | "spicy";
 type UserPlan = 'free' | 'pro' | 'premium' | 'lifetime' | 'elite' | 'enterprise';
@@ -184,6 +186,9 @@ export const ChatHeader = ({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const isProOrHigher = userPlan === 'pro' || userPlan === 'elite';
   const isElite = userPlan === 'elite';
+  const { isReady: isAIReady } = useRobustOfflineAI();
+  const { score: privacyScore } = usePrivacyScore();
+  const isOffline = typeof navigator !== 'undefined' ? !navigator.onLine : false;
 
   const handleMenuAction = (action: () => void) => {
     setDrawerOpen(false);
@@ -445,7 +450,12 @@ export const ChatHeader = ({
         </div>
 
         {/* Sovereign Pulse - Privacy-aware status indicator */}
-        <SovereignPulse />
+        <SovereignPulse
+          isOffline={isOffline}
+          isAIReady={isAIReady}
+          privacyScore={privacyScore.overall}
+          blockedAttempts={privacyScore.trackersBlocked}
+        />
 
         {/* Connection Status Indicator - Shows online/offline + LLM status */}
         <div className="flex items-center">
