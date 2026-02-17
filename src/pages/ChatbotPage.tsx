@@ -79,6 +79,11 @@ import { useGuestUsage, GUEST_LIMITS } from "@/hooks/useGuestUsage";
 import { useToolOrchestrator, ToolType } from "@/hooks/useToolOrchestrator";
 import { useProactiveAI } from "@/hooks/useProactiveAI";
 import { NetworkTransitionOverlay } from "@/components/chat/NetworkTransitionOverlay";
+import { useOfflineSessionTracker } from "@/hooks/useOfflineSessionTracker";
+import { useLocalVectorStore } from "@/hooks/useLocalVectorStore";
+import { useKnowledgeSnapshot } from "@/hooks/useKnowledgeSnapshot";
+import { useServerSyncQueue } from "@/hooks/useServerSyncQueue";
+import { useGhostAds } from "@/hooks/useGhostAds";
 
 // Types
 interface SpeechRecognitionEvent extends Event {
@@ -242,12 +247,19 @@ const ChatbotPage = () => {
   // Thinking transparency state
   const [showThinkingPanel, setShowThinkingPanel] = useState(true);
   
+  // Phase integrations
+  const offlineSessionTracker = useOfflineSessionTracker();
+  const localVectorStore = useLocalVectorStore();
+  const knowledgeSnapshot = useKnowledgeSnapshot();
+  const serverSyncQueue = useServerSyncQueue();
+  const ghostAds = useGhostAds();
+  
   // Determine if user is a guest (not logged in)
   const isGuest = !user;
   
   // Track user geolocation for analytics
   useGeoLocation();
-  
+
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
