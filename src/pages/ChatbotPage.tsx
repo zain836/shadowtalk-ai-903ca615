@@ -2188,7 +2188,6 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
           </div>
         </div>
       )}
-     </div>
     </motion.div>
   );
 };
