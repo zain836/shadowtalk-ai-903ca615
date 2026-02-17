@@ -827,6 +827,39 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_snapshots: {
+        Row: {
+          checksum: string | null
+          created_at: string
+          entity_count: number
+          id: string
+          relationship_count: number
+          snapshot_data: Json
+          user_id: string
+          version: number
+        }
+        Insert: {
+          checksum?: string | null
+          created_at?: string
+          entity_count?: number
+          id?: string
+          relationship_count?: number
+          snapshot_data?: Json
+          user_id: string
+          version?: number
+        }
+        Update: {
+          checksum?: string | null
+          created_at?: string
+          entity_count?: number
+          id?: string
+          relationship_count?: number
+          snapshot_data?: Json
+          user_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
       manual_payments: {
         Row: {
           amount: number
@@ -1157,6 +1190,99 @@ export type Database = {
           refresh_token?: string | null
           scope?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      offline_session_analytics: {
+        Row: {
+          created_at: string
+          device_type: string | null
+          duration_ms: number | null
+          features_used: string[] | null
+          id: string
+          messages_sent: number
+          metadata: Json | null
+          model_used: string | null
+          session_end: string | null
+          session_start: string
+          synced_at: string | null
+          user_id: string
+          was_synced: boolean
+        }
+        Insert: {
+          created_at?: string
+          device_type?: string | null
+          duration_ms?: number | null
+          features_used?: string[] | null
+          id?: string
+          messages_sent?: number
+          metadata?: Json | null
+          model_used?: string | null
+          session_end?: string | null
+          session_start: string
+          synced_at?: string | null
+          user_id: string
+          was_synced?: boolean
+        }
+        Update: {
+          created_at?: string
+          device_type?: string | null
+          duration_ms?: number | null
+          features_used?: string[] | null
+          id?: string
+          messages_sent?: number
+          metadata?: Json | null
+          model_used?: string | null
+          session_end?: string | null
+          session_start?: string
+          synced_at?: string | null
+          user_id?: string
+          was_synced?: boolean
+        }
+        Relationships: []
+      }
+      offline_sync_queue: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          error_message: string | null
+          id: string
+          max_retries: number
+          operation_data: Json
+          operation_type: string
+          priority: number
+          processed_at: string | null
+          retry_count: number
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          error_message?: string | null
+          id?: string
+          max_retries?: number
+          operation_data?: Json
+          operation_type: string
+          priority?: number
+          processed_at?: string | null
+          retry_count?: number
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          error_message?: string | null
+          id?: string
+          max_retries?: number
+          operation_data?: Json
+          operation_type?: string
+          priority?: number
+          processed_at?: string | null
+          retry_count?: number
+          status?: string
           user_id?: string
         }
         Relationships: []
