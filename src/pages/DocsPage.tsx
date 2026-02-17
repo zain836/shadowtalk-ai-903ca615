@@ -113,9 +113,10 @@ const DocsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const features = [
-    { icon: Compass, title: "ShadowBrowser", description: "Built-in AI-powered browser with Browse Together mode", badge: "New" },
-    { icon: Eye, title: "Browse Together", description: "AI assists while you browse - summaries, insights, Q&A", badge: "New" },
-    { icon: MessageSquare, title: "AI Chat", description: "Engage in natural conversations with advanced AI models", badge: "Free" },
+    { icon: Brain, title: "Proactive AI Intelligence", description: "Real AI-generated contextual suggestions based on your behavior — no mock data", badge: "New" },
+    { icon: Compass, title: "ShadowBrowser", description: "Built-in AI-powered browser with Browse Together mode", badge: "Free" },
+    { icon: Eye, title: "Browse Together", description: "AI assists while you browse - summaries, insights, Q&A", badge: "Free" },
+    { icon: MessageSquare, title: "AI Chat", description: "Engage in natural conversations with advanced AI models — powered by real Gemini AI", badge: "Free" },
     { icon: Image, title: "Image Generation", description: "Create stunning images from text descriptions", badge: "Pro" },
     { icon: Mic, title: "Voice Input", description: "Speak to the AI using voice recognition", badge: "Free" },
     { icon: Code, title: "Code Generation", description: "Generate and debug code in multiple languages", badge: "Pro" },
@@ -691,6 +692,70 @@ const DocsPage = () => {
                     </ol>
                   </CardContent>
                 </Card>
+              </DocSection>
+
+              <DocSection title="Proactive AI Intelligence">
+                <p className="text-muted-foreground mb-6">
+                  ShadowTalk AI uses real AI-powered behavioral intelligence to proactively assist you — no mock or hardcoded responses.
+                </p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <Brain className="h-5 w-5 text-primary" />
+                        <CardTitle>How It Works</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          29+ behavioral triggers monitor your activity in real-time
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          Contextual data (page, mood, scroll depth, visit count) sent to AI
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          Gemini Flash Lite generates personalized, relevant suggestions
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          Smart 2-minute cache prevents redundant AI calls
+                        </li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-primary" />
+                        <CardTitle>Trigger Examples</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          Idle detection — AI suggests actions when you pause
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          Deep scroll — contextual tips as you explore content
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          Cognitive load estimation — simplifies suggestions when overwhelmed
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 text-green-500" />
+                          Return visitor — personalized welcome based on history
+                        </li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </div>
               </DocSection>
             </TabsContent>
 
