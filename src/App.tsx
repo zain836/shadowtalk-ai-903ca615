@@ -48,12 +48,13 @@ import BootScreen from "@/components/BootScreen";
    const LifetimeDealPage = lazy(() => import("./pages/LifetimeDealPage"));
     const PrivacyScorePage = lazy(() => import("./pages/PrivacyScorePage"));
   const PresentationBuilderPage = lazy(() => import("./pages/PresentationBuilderPage"));
-  const MissionControlPage = lazy(() => import("./pages/MissionControlPage"));
+   const MissionControlPage = lazy(() => import("./pages/MissionControlPage"));
+   const ReferralPage = lazy(() => import("./pages/ReferralPage"));
 import PWABanner from "./components/PWABanner";
 import CookieConsent from "./components/CookieConsent";
 import CustomerSupportWidget from "./components/CustomerSupportWidget";
 import { JourneyTracker } from "./components/JourneyTracker";
-
+import { useReferralCapture } from "./hooks/useReferralTracking";
 // ElevenLabs Agent ID is now configured via the backend secret ELEVENLABS_AGENT_ID
 
  // Configure React Query with production-ready settings
@@ -92,6 +93,7 @@ import { JourneyTracker } from "./components/JourneyTracker";
 
 const AnimatedRoutes = () => {
   const location = useLocation();
+  useReferralCapture();
   return (
     <Suspense fallback={<PageLoader />}>
       <AnimatePresence mode="wait">
@@ -131,6 +133,7 @@ const AnimatedRoutes = () => {
           <Route path="/privacy-score" element={<PageTransition><PrivacyScorePage /></PageTransition>} />
           <Route path="/presentations" element={<PageTransition><PresentationBuilderPage /></PageTransition>} />
           <Route path="/missioncontrol" element={<PageTransition><MissionControlPage /></PageTransition>} />
+          <Route path="/referral" element={<PageTransition><ReferralPage /></PageTransition>} />
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
         </Routes>
       </AnimatePresence>
