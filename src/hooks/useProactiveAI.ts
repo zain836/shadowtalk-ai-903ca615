@@ -168,17 +168,18 @@ const PAGE_NARRATIONS: Record<string, { threshold: number; content: string; icon
 // ─── Storage Helpers ───────────────────────────────────
 
 function getVisitorMemory(): VisitorMemory {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  return {
+  const defaults: VisitorMemory = {
     visitCount: 0, lastVisit: 0, pagesVisited: [], navigationHistory: [],
     hasInteracted: false, totalTimeSpent: 0, moodHistory: [],
     copiedTexts: [], phantomTypeCount: 0,
     activityByHour: {}, decisionCount: 0, vocabularyLevel: 'unknown',
     featureSwitchTimestamps: [],
   };
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return { ...defaults, ...JSON.parse(stored) };
+  } catch {}
+  return defaults;
 }
 
 function saveVisitorMemory(memory: VisitorMemory) {
