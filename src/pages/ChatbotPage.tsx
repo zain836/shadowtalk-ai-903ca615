@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -1383,27 +1384,47 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
   const isSpecialMode = ['ppag', 'hsca'].includes(chatMode);
 
   return (
-    <div className="min-h-screen bg-background">
+    <motion.div 
+      className="min-h-screen bg-background"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+    >
       <div className="flex h-screen w-full relative">
         {/* Mobile Sidebar Overlay */}
-        {showSidebar && (
-          <div 
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
-            onClick={() => setShowSidebar(false)}
-          />
-        )}
+        <AnimatePresence>
+          {showSidebar && (
+            <motion.div 
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
+              onClick={() => setShowSidebar(false)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            />
+          )}
+        </AnimatePresence>
         
         {/* Sidebar */}
-        {showSidebar && (
-          <ConversationSidebar
-            conversations={conversations}
-            currentConversationId={currentConversationId}
-            onCreateNew={() => { createNewConversation(); setShowSidebar(false); }}
-            onSelect={(id) => { loadConversation(id); setShowSidebar(false); }}
-            onDelete={deleteConversation}
-            onClearAll={clearAllConversations}
-          />
-        )}
+        <AnimatePresence>
+          {showSidebar && (
+            <motion.div
+              initial={{ x: -280, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -280, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            >
+              <ConversationSidebar
+                conversations={conversations}
+                currentConversationId={currentConversationId}
+                onCreateNew={() => { createNewConversation(); setShowSidebar(false); }}
+                onSelect={(id) => { loadConversation(id); setShowSidebar(false); }}
+                onDelete={deleteConversation}
+                onClearAll={clearAllConversations}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
@@ -2168,6 +2189,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         </div>
       )}
      </div>
+    </motion.div>
   );
 };
 
