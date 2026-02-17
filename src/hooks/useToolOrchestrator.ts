@@ -44,7 +44,8 @@ export type ToolType =
   | 'referral'
   | 'workspace'
   | 'marketplace'
-  | 'privacy_score';
+  | 'privacy_score'
+  | 'presentation_builder';
 
 interface ToolDetectionResult {
   tool: ToolType | null;
@@ -679,6 +680,27 @@ const TOOL_PATTERNS: Array<{
     ],
     priority: 4,
     autoExecute: false,
+  },
+
+  // Presentation Builder
+  {
+    tool: 'presentation_builder',
+    patterns: [
+      /\b(create|make|build|generate|design)\s+(?:a\s+|an\s+)?(?:presentation|ppt|pptx|slides?|slide\s*deck|deck|powerpoint|pitch\s*deck)/i,
+      /\bpresentation\s+(?:builder|creator|maker|generator)/i,
+      /\b(build|create)\s+(?:me\s+)?(?:a\s+)?(?:slide\s*)?deck/i,
+      /\bpitch\s*deck/i,
+      /\bpowerpoint/i,
+      /\bslide\s*show/i,
+    ],
+    priority: 9,
+    autoExecute: false,
+    extractParams: (msg: string) => {
+      const cleaned = msg
+        .replace(/^(create|make|build|generate|design)\s+(me\s+)?(a\s+|an\s+)?(presentation|ppt|pptx|slides?|slide\s*deck|deck|powerpoint|pitch\s*deck)\s*(about|on|for)?\s*/i, '')
+        .trim();
+      return { topic: cleaned || msg };
+    }
   },
 ];
 
