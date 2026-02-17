@@ -758,6 +758,60 @@ export type Database = {
         }
         Relationships: []
       }
+      marketplace_agents: {
+        Row: {
+          author: string
+          author_id: string | null
+          category: string
+          created_at: string
+          description: string
+          downloads: number
+          icon: string
+          id: string
+          is_active: boolean
+          name: string
+          price: string
+          rating: number
+          tags: string[]
+          updated_at: string
+          verified: boolean
+        }
+        Insert: {
+          author: string
+          author_id?: string | null
+          category?: string
+          created_at?: string
+          description: string
+          downloads?: number
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: string
+          rating?: number
+          tags?: string[]
+          updated_at?: string
+          verified?: boolean
+        }
+        Update: {
+          author?: string
+          author_id?: string | null
+          category?: string
+          created_at?: string
+          description?: string
+          downloads?: number
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: string
+          rating?: number
+          tags?: string[]
+          updated_at?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -1849,6 +1903,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_installed_agents: {
+        Row: {
+          agent_id: string
+          id: string
+          installed_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          id?: string
+          installed_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          id?: string
+          installed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_installed_agents_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_agents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_journeys: {
         Row: {
