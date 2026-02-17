@@ -5,7 +5,7 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 const ContentPartSchema = z.union([
   z.object({
     type: z.literal("text"),
-    text: z.string().min(1).max(10000),
+    text: z.string().min(1).max(100000),
   }),
   z.object({
     type: z.literal("image_url"),
@@ -24,7 +24,7 @@ export const ChatRequestSchema = z.object({
       z.string().min(1).max(100000),
       z.array(ContentPartSchema).min(1).max(20),
     ]),
-  })).max(100).optional(), // Removed min(1) to allow empty array for image generation and other special modes
+  })).max(500).optional(), // Removed min(1) to allow empty array for image generation and other special modes
   personality: z.enum([
     "friendly", "sarcastic", "professional", "creative", 
     "meticulous", "curious", "diplomatic", "witty", 
