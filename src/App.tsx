@@ -53,6 +53,9 @@ import BootScreen from "@/components/BootScreen";
 const DeepResearchPage = lazy(() => import("./pages/DeepResearchPage"));
 const KnowledgeGraphPage = lazy(() => import("./pages/KnowledgeGraphPage"));
 const StrategyLabPage = lazy(() => import("./pages/StrategyLabPage"));
+const SovereignDataPage = lazy(() => import("./pages/SovereignDataPage"));
+const StealthVaultPage = lazy(() => import("./pages/StealthVaultPage"));
+const BusinessMemoryPage = lazy(() => import("./pages/BusinessMemoryPage"));
 const PWABanner = lazy(() => import("./components/PWABanner"));
 const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
@@ -140,6 +143,9 @@ const AnimatedRoutes = () => {
           <Route path="/research" element={<PageTransition><DeepResearchPage /></PageTransition>} />
           <Route path="/knowledge" element={<PageTransition><KnowledgeGraphPage /></PageTransition>} />
           <Route path="/strategy-lab" element={<PageTransition><StrategyLabPage /></PageTransition>} />
+          <Route path="/sovereign-data" element={<PageTransition><SovereignDataPage /></PageTransition>} />
+          <Route path="/vault" element={<PageTransition><StealthVaultPage /></PageTransition>} />
+          <Route path="/business-memory" element={<PageTransition><BusinessMemoryPage /></PageTransition>} />
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
         </Routes>
       </AnimatePresence>
