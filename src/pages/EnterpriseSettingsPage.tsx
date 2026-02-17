@@ -214,9 +214,9 @@ const EnterpriseSettingsPage = () => {
                   <CardContent className="relative z-10">
                     <div className="grid gap-4 md:grid-cols-2">
                       {[
-                        { label: "ACS URL", value: "https://shadowtalk.ai/auth/saml/callback" },
-                        { label: "Entity ID", value: "https://shadowtalk.ai/saml/metadata" },
-                        { label: "OAuth Callback URL", value: "https://shadowtalk.ai/auth/callback" },
+                        { label: "ACS URL", value: "https://shadowtalk-ai.com/auth/saml/callback" },
+                        { label: "Entity ID", value: "https://shadowtalk-ai.com/saml/metadata" },
+                        { label: "OAuth Callback URL", value: "https://shadowtalk-ai.com/auth/callback" },
                         { label: "Name ID Format", value: "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress" },
                       ].map((item, i) => (
                         <div key={i} className="glass-subtle rounded-xl p-3">
