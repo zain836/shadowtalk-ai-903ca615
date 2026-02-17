@@ -56,6 +56,7 @@ import { PluginsManager } from "@/components/chat/PluginsManager";
 import { ChatGPTBeaterIndicator } from "@/components/chat/ChatGPTBeaterIndicator";
 import { ClaudeBeaterIndicator } from "@/components/chat/ClaudeBeaterIndicator";
 import { GeminiBeaterIndicator } from "@/components/chat/GeminiBeaterIndicator";
+import { ManusAIBeaterIndicator } from "@/components/chat/ManusAIBeaterIndicator";
 import { GoogleIntegrationPanel } from "@/components/chat/GoogleIntegrationPanel";
 import { ThinkingTransparency, useThinkingSteps } from "@/components/chat/ThinkingTransparency";
 import { LiveCodeArtifact, extractCodeArtifacts } from "@/components/chat/LiveCodeArtifact";
