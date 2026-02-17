@@ -2074,6 +2074,48 @@ export type Database = {
           },
         ]
       }
+      whatsapp_links: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          is_verified: boolean
+          last_message_at: string | null
+          message_count: number
+          phone_number: string
+          updated_at: string
+          user_id: string
+          verification_code: string | null
+          verification_expires_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_verified?: boolean
+          last_message_at?: string | null
+          message_count?: number
+          phone_number: string
+          updated_at?: string
+          user_id: string
+          verification_code?: string | null
+          verification_expires_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_verified?: boolean
+          last_message_at?: string | null
+          message_count?: number
+          phone_number?: string
+          updated_at?: string
+          user_id?: string
+          verification_code?: string | null
+          verification_expires_at?: string | null
+        }
+        Relationships: []
+      }
       workspace_branding: {
         Row: {
           accent_color: string | null
