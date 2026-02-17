@@ -319,13 +319,13 @@ export const SSOProvider: React.FC<SSOProviderProps> = ({ workspaceId, onConfigu
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">ACS URL:</span>
                     <code className="text-xs bg-background px-2 py-1 rounded">
-                      https://axsudmhjpfzffcicfvuj.supabase.co/auth/v1/sso/saml/acs
+                      {`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/sso/saml/acs`}
                     </code>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Entity ID:</span>
                     <code className="text-xs bg-background px-2 py-1 rounded">
-                      https://axsudmhjpfzffcicfvuj.supabase.co/auth/v1/sso/saml/metadata
+                      {`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/sso/saml/metadata`}
                     </code>
                   </div>
                 </div>
@@ -397,7 +397,7 @@ export const SSOProvider: React.FC<SSOProviderProps> = ({ workspaceId, onConfigu
               <div className="bg-muted/50 rounded-lg p-4">
                 <Label className="text-sm font-medium">Redirect URI</Label>
                 <code className="block mt-2 text-xs bg-background px-3 py-2 rounded">
-                  https://axsudmhjpfzffcicfvuj.supabase.co/auth/v1/callback
+                  {`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/callback`}
                 </code>
               </div>
 
