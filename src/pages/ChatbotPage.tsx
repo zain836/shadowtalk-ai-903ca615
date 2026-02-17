@@ -1286,10 +1286,10 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
   };
 
   // Voice Functions
-  const toggleVoiceInput = () => {
+  const toggleVoiceInput = async () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      toast({ title: "Not supported", description: "Voice input is not supported in your browser.", variant: "destructive" });
+      toast({ title: "Not supported", description: "Voice input is not supported in your browser. Please use Chrome or Edge.", variant: "destructive" });
       return;
     }
 
@@ -1299,16 +1299,46 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
       return;
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    recognition.onstart = () => { setIsListening(true); toast({ title: "Listening...", description: "Speak now." }); trackVoiceInput(); };
-    recognition.onresult = (event: SpeechRecognitionEvent) => setMessage(Array.from(event.results).map(r => r[0].transcript).join(''));
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => { setIsListening(false); if (event.error !== 'aborted') toast({ title: "Voice error", description: event.error, variant: "destructive" }); };
-    recognition.onend = () => setIsListening(false);
-    recognitionRef.current = recognition;
-    recognition.start();
+    // Request microphone permission explicitly on desktop
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Stop all tracks immediately — we just needed the permission grant
+      stream.getTracks().forEach(track => track.stop());
+    } catch (err: unknown) {
+      const permErr = err instanceof Error ? err.message : String(err);
+      console.error('[Voice] Microphone permission denied:', permErr);
+      toast({ title: "Microphone access denied", description: "Please allow microphone access in your browser settings and try again.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      recognition.onstart = () => { setIsListening(true); toast({ title: "Listening...", description: "Speak now." }); trackVoiceInput(); };
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        const transcript = Array.from(event.results).map(r => r[0].transcript).join('');
+        if (transcript) setMessage(transcript);
+      };
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error('[Voice] Recognition error:', event.error);
+        setIsListening(false);
+        if (event.error === 'not-allowed') {
+          toast({ title: "Microphone blocked", description: "Check your browser's address bar for microphone permissions.", variant: "destructive" });
+        } else if (event.error === 'no-speech') {
+          toast({ title: "No speech detected", description: "Please try again and speak clearly." });
+        } else if (event.error !== 'aborted') {
+          toast({ title: "Voice error", description: event.error, variant: "destructive" });
+        }
+      };
+      recognition.onend = () => setIsListening(false);
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (startErr) {
+      console.error('[Voice] Failed to start recognition:', startErr);
+      toast({ title: "Voice input failed", description: "Could not start voice recognition. Please try Chrome or Edge.", variant: "destructive" });
+    }
   };
 
   const handleTextToSpeech = (text: string, messageId: string) => {
