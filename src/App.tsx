@@ -56,6 +56,10 @@ const StrategyLabPage = lazy(() => import("./pages/StrategyLabPage"));
 const SovereignDataPage = lazy(() => import("./pages/SovereignDataPage"));
 const StealthVaultPage = lazy(() => import("./pages/StealthVaultPage"));
 const BusinessMemoryPage = lazy(() => import("./pages/BusinessMemoryPage"));
+const SovereignWalletPage = lazy(() => import("./pages/SovereignWalletPage"));
+const GhostAdsPage = lazy(() => import("./pages/GhostAdsPage"));
+const EnterpriseLicensePage = lazy(() => import("./pages/EnterpriseLicensePage"));
+const DataInsightsPage = lazy(() => import("./pages/DataInsightsPage"));
 const PWABanner = lazy(() => import("./components/PWABanner"));
 const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
@@ -146,6 +150,10 @@ const AnimatedRoutes = () => {
           <Route path="/sovereign-data" element={<PageTransition><SovereignDataPage /></PageTransition>} />
           <Route path="/vault" element={<PageTransition><StealthVaultPage /></PageTransition>} />
           <Route path="/business-memory" element={<PageTransition><BusinessMemoryPage /></PageTransition>} />
+          <Route path="/wallet" element={<PageTransition><SovereignWalletPage /></PageTransition>} />
+          <Route path="/ghost-ads" element={<PageTransition><GhostAdsPage /></PageTransition>} />
+          <Route path="/offline-license" element={<PageTransition><EnterpriseLicensePage /></PageTransition>} />
+          <Route path="/data-insights" element={<PageTransition><DataInsightsPage /></PageTransition>} />
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
         </Routes>
       </AnimatePresence>
