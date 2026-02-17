@@ -14,10 +14,10 @@ const BootScreen = ({ onComplete }: BootScreenProps) => {
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase('text'), 800),
-      setTimeout(() => setPhase('loading'), 1600),
-      setTimeout(() => setPhase('complete'), 3500),
-      setTimeout(onComplete, 4000),
+      setTimeout(() => setPhase('text'), 300),
+      setTimeout(() => setPhase('loading'), 600),
+      setTimeout(() => setPhase('complete'), 1400),
+      setTimeout(onComplete, 1600),
     ];
 
     const progressInterval = setInterval(() => {

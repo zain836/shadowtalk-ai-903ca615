@@ -50,10 +50,10 @@ import BootScreen from "@/components/BootScreen";
   const PresentationBuilderPage = lazy(() => import("./pages/PresentationBuilderPage"));
    const MissionControlPage = lazy(() => import("./pages/MissionControlPage"));
    const ReferralPage = lazy(() => import("./pages/ReferralPage"));
-import PWABanner from "./components/PWABanner";
-import CookieConsent from "./components/CookieConsent";
-import CustomerSupportWidget from "./components/CustomerSupportWidget";
-import { JourneyTracker } from "./components/JourneyTracker";
+const PWABanner = lazy(() => import("./components/PWABanner"));
+const CookieConsent = lazy(() => import("./components/CookieConsent"));
+const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
+const JourneyTracker = lazy(() => import("./components/JourneyTracker").then(m => ({ default: m.JourneyTracker })));
 import { useReferralCapture } from "./hooks/useReferralTracking";
 // ElevenLabs Agent ID is now configured via the backend secret ELEVENLABS_AGENT_ID
 
@@ -173,10 +173,12 @@ const App = () => {
               <Sonner />
                <BrowserRouter>
                  <AnimatedRoutes />
-                 <JourneyTracker />
-                 <PWABanner />
-                 <CookieConsent />
-                 <CustomerSupportWidget />
+                 <Suspense fallback={null}>
+                   <JourneyTracker />
+                   <PWABanner />
+                   <CookieConsent />
+                   <CustomerSupportWidget />
+                 </Suspense>
                </BrowserRouter>
             </AuthProvider>
           </TooltipProvider>
