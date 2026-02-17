@@ -78,6 +78,7 @@ import { useBusinessMemory } from "@/hooks/useBusinessMemory";
 import { useGuestUsage, GUEST_LIMITS } from "@/hooks/useGuestUsage";
 import { useToolOrchestrator, ToolType } from "@/hooks/useToolOrchestrator";
 import { useProactiveAI } from "@/hooks/useProactiveAI";
+import { NetworkTransitionOverlay } from "@/components/chat/NetworkTransitionOverlay";
 
 // Types
 interface SpeechRecognitionEvent extends Event {
@@ -1483,6 +1484,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
           )}
 
 
+          <NetworkTransitionOverlay />
           {/* Messages */}
           {!isSpecialMode && (
             <ChatMessages
