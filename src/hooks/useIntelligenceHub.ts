@@ -106,15 +106,15 @@ export const useIntelligenceHub = () => {
       
       setStreak(prev => prev ? { ...prev, current_streak: newStreak, longest_streak: longestStreak, last_active_date: today, total_active_days: prev.total_active_days + 1, streak_multiplier: multiplier } : null);
     } else {
-      // First ever visit
-      const { data } = await supabase.from('user_streaks').insert({
+      // First ever visit — upsert to avoid 409 conflict on duplicate
+      const { data } = await supabase.from('user_streaks').upsert({
         user_id: user.id,
         current_streak: 1,
         longest_streak: 1,
         last_active_date: today,
         total_active_days: 1,
         streak_multiplier: 1.0,
-      }).select().single();
+      }, { onConflict: 'user_id' }).select().single();
       if (data) setStreak(data as UserStreak);
     }
   }, [user, streak]);
