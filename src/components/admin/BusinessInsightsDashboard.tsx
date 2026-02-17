@@ -99,14 +99,36 @@ export function BusinessInsightsDashboard() {
           .slice(0, 10)
       );
 
-      // Generate trend data (mock for now, would need aggregation query)
+      // Generate trend data from real database records
+      const { data: allIntentData, error: trendError } = await supabase
+        .from('business_intents')
+        .select('created_at')
+        .gte('created_at', startDate);
+
       const trendData: TrendData[] = [];
+      const dailyCounts: Record<string, number> = {};
+      
+      // Initialize all days with 0
       for (let i = days - 1; i >= 0; i--) {
-        const date = format(subDays(new Date(), i), 'MMM dd');
-        // Simulated data based on total
-        const count = Math.floor(Math.random() * (total / days) * 2);
-        trendData.push({ date, count });
+        const dateKey = format(subDays(new Date(), i), 'yyyy-MM-dd');
+        dailyCounts[dateKey] = 0;
       }
+      
+      // Count actual records per day
+      if (!trendError && allIntentData) {
+        allIntentData.forEach(item => {
+          const dateKey = format(new Date(item.created_at), 'yyyy-MM-dd');
+          if (dailyCounts[dateKey] !== undefined) {
+            dailyCounts[dateKey]++;
+          }
+        });
+      }
+
+      // Convert to trend array
+      Object.entries(dailyCounts).forEach(([dateKey, count]) => {
+        trendData.push({ date: format(new Date(dateKey), 'MMM dd'), count });
+      });
+      
       setTrends(trendData);
 
     } catch (error) {
