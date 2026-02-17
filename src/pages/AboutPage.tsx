@@ -1,9 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import AboutHero from "@/components/about/AboutHero";
+import AboutStats from "@/components/about/AboutStats";
 import AboutMission from "@/components/about/AboutMission";
+import AboutTimeline from "@/components/about/AboutTimeline";
+import AboutSkills from "@/components/about/AboutSkills";
 import AboutStack from "@/components/about/AboutStack";
 import AboutProof from "@/components/about/AboutProof";
+import AboutTeam from "@/components/about/AboutTeam";
 import AboutProjects from "@/components/about/AboutProjects";
 import AboutCTA from "@/components/about/AboutCTA";
 import AboutForms from "@/components/about/AboutForms";
@@ -34,9 +38,16 @@ const AboutPage = () => {
 
       <AboutHero />
       <Separator className="max-w-4xl mx-auto opacity-30" />
+      <AboutStats />
+      <Separator className="max-w-4xl mx-auto opacity-30" />
       <AboutMission />
+      <AboutTimeline />
+      <Separator className="max-w-4xl mx-auto opacity-30" />
+      <AboutSkills />
       <AboutStack />
       <AboutProof />
+      <AboutTeam />
+      <Separator className="max-w-4xl mx-auto opacity-30" />
       <AboutProjects />
       <AboutForms />
       <AboutCTA />
