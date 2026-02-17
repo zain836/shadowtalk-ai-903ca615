@@ -21,7 +21,7 @@ export const ChatRequestSchema = z.object({
   messages: z.array(z.object({
     role: z.enum(["user", "assistant", "system"]),
     content: z.union([
-      z.string().min(1).max(10000),
+      z.string().min(1).max(100000),
       z.array(ContentPartSchema).min(1).max(20),
     ]),
   })).max(100).optional(), // Removed min(1) to allow empty array for image generation and other special modes
