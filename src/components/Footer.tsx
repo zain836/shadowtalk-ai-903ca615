@@ -10,8 +10,20 @@ const Footer = () => {
       links: [
         { name: "Features", href: "/#features" },
         { name: "Pricing", href: "/pricing" },
+        { name: "Chatbot", href: "/chatbot" },
+        { name: "Marketplace", href: "/marketplace" },
         { name: "API Docs", href: "/api" },
         { name: "Changelog", href: "/changelog" },
+      ],
+    },
+    {
+      title: "Tools",
+      links: [
+        { name: "Mission Control", href: "/missioncontrol" },
+        { name: "Presentations", href: "/presentations" },
+        { name: "Privacy Score", href: "/privacy-score" },
+        { name: "Developers", href: "/developers" },
+        { name: "Billing", href: "/billing" },
       ],
     },
     {
@@ -30,6 +42,8 @@ const Footer = () => {
         { name: "Blog", href: "/blog" },
         { name: "Careers", href: "/careers" },
         { name: "Press", href: "/press" },
+        { name: "Founder Access", href: "/founder-access" },
+        { name: "Lifetime Deal", href: "/lifetime-deal" },
       ],
     },
     {
@@ -57,7 +71,7 @@ const Footer = () => {
 
       <div className="container mx-auto px-4 py-16 relative z-10">
         {/* Main Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-10 mb-14">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-10 mb-14">
           {/* Brand */}
           <div className="lg:col-span-2">
             <motion.div
