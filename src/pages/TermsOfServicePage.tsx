@@ -121,7 +121,7 @@ Your continued use of the Service after changes become effective constitutes acc
       title: "12. Contact Us",
       content: `If you have questions about these Terms of Service, please contact us at:
 
-**Email**: legal@shadowtalk.ai
+**Email**: legal@shadowtalk-ai.com
 **Address**: Karachi, Pakistan`
     }
   ];

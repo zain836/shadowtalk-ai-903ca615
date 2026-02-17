@@ -9,10 +9,14 @@ import FAQSection from "@/components/FAQSection";
 import Footer from "@/components/Footer";
 import CouponBanner from "@/components/CouponBanner";
 import PWABanner from "@/components/PWABanner";
+import { SEOHead } from "@/components/SEOHead";
+import { PAGE_SEO } from "@/lib/seo";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <>
+      <SEOHead meta={PAGE_SEO.home} />
+      <div className="min-h-screen bg-background">
       <CouponBanner />
       <Navigation />
       <HeroSection />
@@ -24,7 +28,8 @@ const Index = () => {
       <FAQSection />
       <Footer />
       <PWABanner />
-    </div>
+      </div>
+    </>
   );
 };
 

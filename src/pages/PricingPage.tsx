@@ -2,17 +2,22 @@ import Navigation from "@/components/Navigation";
 import PricingSection from "@/components/PricingSection";
 import Footer from "@/components/Footer";
 import ChatWidget from "@/components/ChatWidget";
+import { SEOHead } from "@/components/SEOHead";
+import { PAGE_SEO } from "@/lib/seo";
 
 const PricingPage = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <>
+      <SEOHead meta={PAGE_SEO.pricing} />
+      <div className="min-h-screen bg-background">
       <Navigation />
       <div className="pt-16">
         <PricingSection />
       </div>
       <Footer />
       <ChatWidget />
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -65,12 +65,12 @@ const API_TIERS = [
 ];
 
 const CODE_EXAMPLES = {
-  curl: `curl -X POST https://api.shadowtalk.ai/v1/chat \\
+  curl: `curl -X POST https://api.shadowtalk-ai.com/v1/chat \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"messages": [{"role": "user", "content": "Hello!"}]}'`,
   
-  javascript: `const response = await fetch('https://api.shadowtalk.ai/v1/chat', {
+  javascript: `const response = await fetch('https://api.shadowtalk-ai.com/v1/chat', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer YOUR_API_KEY',
@@ -87,7 +87,7 @@ console.log(data.choices[0].message.content);`,
   python: `import requests
 
 response = requests.post(
-    'https://api.shadowtalk.ai/v1/chat',
+    'https://api.shadowtalk-ai.com/v1/chat',
     headers={
         'Authorization': 'Bearer YOUR_API_KEY',
         'Content-Type': 'application/json',

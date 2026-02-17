@@ -146,7 +146,7 @@ const APIPage = () => {
   };
 
   const codeExamples = {
-    curl: `curl -X POST https://api.shadowtalk.ai/v1/chat \\
+    curl: `curl -X POST https://api.shadowtalk-ai.com/v1/chat \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{

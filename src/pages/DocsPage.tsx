@@ -316,9 +316,9 @@ const DocsPage = () => {
                 </p>
                 <div className="grid gap-5 md:grid-cols-3">
                   {[
-                    { icon: Monitor, title: "Desktop (Chrome)", steps: ["Visit shadowtalk.ai", "Click the install icon in the address bar", "Click \"Install\" in the prompt", "Launch from your desktop"] },
-                    { icon: Smartphone, title: "iOS (Safari)", steps: ["Open Safari and visit shadowtalk.ai", "Tap the Share button", "Scroll down and tap \"Add to Home Screen\"", "Tap \"Add\" to confirm"] },
-                    { icon: Smartphone, title: "Android (Chrome)", steps: ["Open Chrome and visit shadowtalk.ai", "Tap the banner or menu (three dots)", "Select \"Install App\"", "Confirm installation"] },
+                    { icon: Monitor, title: "Desktop (Chrome)", steps: ["Visit shadowtalk-ai.com", "Click the install icon in the address bar", "Click \"Install\" in the prompt", "Launch from your desktop"] },
+                    { icon: Smartphone, title: "iOS (Safari)", steps: ["Open Safari and visit shadowtalk-ai.com", "Tap the Share button", "Scroll down and tap \"Add to Home Screen\"", "Tap \"Add\" to confirm"] },
+                    { icon: Smartphone, title: "Android (Chrome)", steps: ["Open Chrome and visit shadowtalk-ai.com", "Tap the banner or menu (three dots)", "Select \"Install App\"", "Confirm installation"] },
                   ].map((platform, idx) => (
                     <motion.div key={idx} custom={idx} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}>
                       <Card className="card-glass h-full overflow-hidden">
@@ -562,7 +562,7 @@ const DocsPage = () => {
                   <Card className="card-glass mb-6 overflow-hidden">
                     <CardHeader className="relative z-10"><CardTitle>Base URL</CardTitle></CardHeader>
                     <CardContent className="relative z-10">
-                      <code className="px-4 py-2.5 rounded-xl glass-subtle text-primary text-sm font-mono inline-block">https://api.shadowtalk.ai/v1</code>
+                      <code className="px-4 py-2.5 rounded-xl glass-subtle text-primary text-sm font-mono inline-block">https://api.shadowtalk-ai.com/v1</code>
                     </CardContent>
                   </Card>
                 </motion.div>
