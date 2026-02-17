@@ -5,95 +5,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Star, Download, Users, Bot, FileText, TrendingUp, Shield, Zap, Code } from "lucide-react";
+import { Search, Star, Download, Users, Bot, FileText, TrendingUp, Shield, Zap, Code, Loader2, Check } from "lucide-react";
 import { useState } from "react";
+import { useMarketplace } from "@/hooks/useMarketplace";
+import type { LucideIcon } from "lucide-react";
 
-const agents = [
-  {
-    id: "1",
-    name: "Tax Filing Agent (PK)",
-    description: "Automates FBR tax filing, NTN registration, and SECP compliance for Pakistani businesses.",
-    category: "strategy",
-    author: "ShadowTalk Team",
-    downloads: 2847,
-    rating: 4.8,
-    price: "Free",
-    tags: ["Pakistan", "Tax", "Compliance"],
-    icon: FileText,
-    verified: true,
-  },
-  {
-    id: "2",
-    name: "Board Meeting Prep Suite",
-    description: "Generates encrypted board decks, financial summaries, and action items from meeting transcripts.",
-    category: "strategy",
-    author: "ShadowTalk Team",
-    downloads: 1203,
-    rating: 4.9,
-    price: "Pro",
-    tags: ["CEO", "Meetings", "Reports"],
-    icon: TrendingUp,
-    verified: true,
-  },
-  {
-    id: "3",
-    name: "Security Audit Scanner",
-    description: "Deep-scan codebases for vulnerabilities, generate OWASP reports, and suggest remediation.",
-    category: "scripts",
-    author: "ShadowTalk Team",
-    downloads: 5621,
-    rating: 4.7,
-    price: "Free",
-    tags: ["Security", "DevOps", "OWASP"],
-    icon: Shield,
-    verified: true,
-  },
-  {
-    id: "4",
-    name: "SEO Content Pipeline",
-    description: "Research keywords, generate optimized articles, and schedule publishing across platforms.",
-    category: "scripts",
-    author: "CreatorLabs",
-    downloads: 3189,
-    rating: 4.6,
-    price: "Free",
-    tags: ["SEO", "Content", "Marketing"],
-    icon: Zap,
-    verified: false,
-  },
-  {
-    id: "5",
-    name: "Full-Stack API Builder",
-    description: "Generates deployment-ready REST APIs with auth, validation, and database schemas.",
-    category: "scripts",
-    author: "ShadowTalk Team",
-    downloads: 4502,
-    rating: 4.9,
-    price: "Free",
-    tags: ["Backend", "API", "Node.js"],
-    icon: Code,
-    verified: true,
-  },
-  {
-    id: "6",
-    name: "Competitor Intelligence Agent",
-    description: "Monitors competitor websites, pricing changes, and product launches with daily reports.",
-    category: "strategy",
-    author: "MarketEdge",
-    downloads: 982,
-    rating: 4.5,
-    price: "Pro",
-    tags: ["Research", "Competitive", "Intelligence"],
-    icon: Bot,
-    verified: false,
-  },
-];
+const iconMap: Record<string, LucideIcon> = {
+  Bot, FileText, TrendingUp, Shield, Zap, Code,
+};
 
 const MarketplacePage = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const { agents, installedIds, loading, installingId, installAgent, uninstallAgent } = useMarketplace();
+
   const filteredAgents = agents.filter(
     (a) =>
       a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      a.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
@@ -134,60 +62,104 @@ const MarketplacePage = () => {
             <TabsTrigger value="scripts">Smart Scripts</TabsTrigger>
           </TabsList>
 
-          {["all", "strategy", "scripts"].map((tab) => (
-            <TabsContent key={tab} value={tab}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-                {filteredAgents
-                  .filter((a) => tab === "all" || a.category === tab)
-                  .map((agent) => (
-                    <Card key={agent.id} className="hover:border-primary/30 transition-colors group">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-primary/10">
-                              <agent.icon className="h-5 w-5 text-primary" />
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            ["all", "strategy", "scripts"].map((tab) => (
+              <TabsContent key={tab} value={tab}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                  {filteredAgents
+                    .filter((a) => tab === "all" || a.category === tab)
+                    .map((agent) => {
+                      const IconComp = iconMap[agent.icon] || Bot;
+                      const isInstalled = installedIds.has(agent.id);
+                      const isLoading = installingId === agent.id;
+
+                      return (
+                        <Card key={agent.id} className="hover:border-primary/30 transition-colors group">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-lg bg-primary/10">
+                                  <IconComp className="h-5 w-5 text-primary" />
+                                </div>
+                                <div>
+                                  <CardTitle className="text-base flex items-center gap-2">
+                                    {agent.name}
+                                    {agent.verified && (
+                                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Verified</Badge>
+                                    )}
+                                  </CardTitle>
+                                  <p className="text-xs text-muted-foreground">by {agent.author}</p>
+                                </div>
+                              </div>
+                              <Badge variant={agent.price === "Free" ? "outline" : "default"} className="text-xs">
+                                {agent.price}
+                              </Badge>
                             </div>
-                            <div>
-                              <CardTitle className="text-base flex items-center gap-2">
-                                {agent.name}
-                                {agent.verified && (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Verified</Badge>
-                                )}
-                              </CardTitle>
-                              <p className="text-xs text-muted-foreground">by {agent.author}</p>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-sm text-muted-foreground mb-4">{agent.description}</p>
+                            <div className="flex flex-wrap gap-1.5 mb-4">
+                              {agent.tags.map((tag) => (
+                                <Badge
+                                  key={tag}
+                                  variant="outline"
+                                  className="text-[10px] cursor-pointer hover:bg-primary/10"
+                                  onClick={() => setSearchQuery(tag)}
+                                >
+                                  {tag}
+                                </Badge>
+                              ))}
                             </div>
-                          </div>
-                          <Badge variant={agent.price === "Free" ? "outline" : "default"} className="text-xs">
-                            {agent.price}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground mb-4">{agent.description}</p>
-                        <div className="flex flex-wrap gap-1.5 mb-4">
-                          {agent.tags.map((tag) => (
-                            <Badge key={tag} variant="outline" className="text-[10px]">{tag}</Badge>
-                          ))}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Star className="h-3 w-3 text-yellow-500" /> {agent.rating}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Download className="h-3 w-3" /> {agent.downloads.toLocaleString()}
-                            </span>
-                          </div>
-                          <Button size="sm" variant="outline" className="text-xs">
-                            Install
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </div>
-            </TabsContent>
-          ))}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Star className="h-3 w-3 text-yellow-500" /> {Number(agent.rating).toFixed(1)}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Download className="h-3 w-3" /> {agent.downloads.toLocaleString()}
+                                </span>
+                              </div>
+                              {isInstalled ? (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-xs"
+                                  disabled={isLoading}
+                                  onClick={() => uninstallAgent(agent.id)}
+                                >
+                                  {isLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
+                                  Installed
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs"
+                                  disabled={isLoading}
+                                  onClick={() => installAgent(agent.id)}
+                                >
+                                  {isLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                                  Install
+                                </Button>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  {filteredAgents.filter((a) => tab === "all" || a.category === tab).length === 0 && (
+                    <div className="col-span-full text-center py-12 text-muted-foreground">
+                      No agents found matching "{searchQuery}"
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            ))
+          )}
         </Tabs>
 
         {/* Creator CTA */}
