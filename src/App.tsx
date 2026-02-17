@@ -50,6 +50,9 @@ import BootScreen from "@/components/BootScreen";
   const PresentationBuilderPage = lazy(() => import("./pages/PresentationBuilderPage"));
    const MissionControlPage = lazy(() => import("./pages/MissionControlPage"));
    const ReferralPage = lazy(() => import("./pages/ReferralPage"));
+const DeepResearchPage = lazy(() => import("./pages/DeepResearchPage"));
+const KnowledgeGraphPage = lazy(() => import("./pages/KnowledgeGraphPage"));
+const StrategyLabPage = lazy(() => import("./pages/StrategyLabPage"));
 const PWABanner = lazy(() => import("./components/PWABanner"));
 const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
@@ -134,6 +137,9 @@ const AnimatedRoutes = () => {
           <Route path="/presentations" element={<PageTransition><PresentationBuilderPage /></PageTransition>} />
           <Route path="/missioncontrol" element={<PageTransition><MissionControlPage /></PageTransition>} />
           <Route path="/referral" element={<PageTransition><ReferralPage /></PageTransition>} />
+          <Route path="/research" element={<PageTransition><DeepResearchPage /></PageTransition>} />
+          <Route path="/knowledge" element={<PageTransition><KnowledgeGraphPage /></PageTransition>} />
+          <Route path="/strategy-lab" element={<PageTransition><StrategyLabPage /></PageTransition>} />
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
         </Routes>
       </AnimatePresence>
