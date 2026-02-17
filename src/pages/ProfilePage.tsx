@@ -5,28 +5,29 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
-  ArrowLeft, User, Bell, Shield, Save, Loader2, Camera, Gift,
-  BarChart3, CreditCard, ExternalLink, Crown, Lock, KeyRound,
-  LogOut, Trash2, Mail, Eye, EyeOff, CheckCircle2, AlertTriangle,
+  User, Bell, Shield, Save, Loader2, CreditCard, ExternalLink, Crown,
+  Lock, KeyRound, LogOut, Trash2, Mail, Eye, EyeOff, CheckCircle2,
+  AlertTriangle, Activity, Settings, Link2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import ReferralProgram from "@/components/ReferralProgram";
-import UsageAnalytics from "@/components/UsageAnalytics";
 import { PLAN_DETAILS } from "@/lib/stripe";
 import { MissionValueDashboard } from "@/components/MissionValueDashboard";
 import { UsageHistoryTable } from "@/components/UsageHistoryTable";
 import { CreditEmptyPrompt } from "@/components/CreditEmptyPrompt";
 import { useShadowCredits } from "@/hooks/useShadowCredits";
 import { TwoFactorSetup } from "@/components/profile/TwoFactorSetup";
+import { ProfileHeader } from "@/components/profile/ProfileHeader";
+import { ProfileTab } from "@/components/profile/ProfileTab";
+import { ActivityTab } from "@/components/profile/ActivityTab";
+import { PreferencesTab } from "@/components/profile/PreferencesTab";
+import { LinkedAccountsTab } from "@/components/profile/LinkedAccountsTab";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle,
@@ -40,6 +41,7 @@ interface Profile {
   notification_email: boolean;
   notification_push: boolean;
   notification_mentions: boolean;
+  created_at?: string;
 }
 
 const ProfilePage = () => {
@@ -178,37 +180,15 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/60 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background">
-                <AvatarImage src={avatarUrl} />
-                <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                  {displayName?.[0]?.toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="text-lg font-bold text-foreground">{displayName || "Profile Settings"}</h1>
-                <p className="text-xs text-muted-foreground">{user?.email}</p>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground">
-              <LogOut className="h-4 w-4 mr-2" /> Sign Out
-            </Button>
-            <Button onClick={saveProfile} disabled={isSaving} size="sm" className="btn-glow">
-              {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-              Save
-            </Button>
-          </div>
-        </div>
-      </header>
+      <ProfileHeader
+        displayName={displayName}
+        email={user?.email || ""}
+        avatarUrl={avatarUrl}
+        userPlan={userPlan}
+        isSaving={isSaving}
+        onSave={saveProfile}
+        onSignOut={handleSignOut}
+      />
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Credits Dashboard */}
@@ -225,74 +205,47 @@ const ProfilePage = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid grid-cols-4 w-full max-w-lg mx-auto bg-muted/50 backdrop-blur-sm">
-            <TabsTrigger value="profile" className="gap-1.5 text-xs">
-              <User className="h-3.5 w-3.5" /> Profile
+          <TabsList className="grid grid-cols-7 w-full max-w-2xl mx-auto bg-muted/50 backdrop-blur-sm">
+            <TabsTrigger value="profile" className="gap-1 text-xs">
+              <User className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Profile</span>
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-1.5 text-xs">
-              <Bell className="h-3.5 w-3.5" /> Alerts
+            <TabsTrigger value="activity" className="gap-1 text-xs">
+              <Activity className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Activity</span>
             </TabsTrigger>
-            <TabsTrigger value="security" className="gap-1.5 text-xs">
-              <Shield className="h-3.5 w-3.5" /> Security
+            <TabsTrigger value="notifications" className="gap-1 text-xs">
+              <Bell className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Alerts</span>
             </TabsTrigger>
-            <TabsTrigger value="billing" className="gap-1.5 text-xs">
-              <CreditCard className="h-3.5 w-3.5" /> Billing
+            <TabsTrigger value="security" className="gap-1 text-xs">
+              <Shield className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Security</span>
+            </TabsTrigger>
+            <TabsTrigger value="linked" className="gap-1 text-xs">
+              <Link2 className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Linked</span>
+            </TabsTrigger>
+            <TabsTrigger value="preferences" className="gap-1 text-xs">
+              <Settings className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Prefs</span>
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="gap-1 text-xs">
+              <CreditCard className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Billing</span>
             </TabsTrigger>
           </TabsList>
 
           {/* ===== PROFILE TAB ===== */}
           <TabsContent value="profile">
-            <motion.div {...tabMotion}>
-              <Card className="glass border-border/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5 text-primary" /> Profile Information
-                  </CardTitle>
-                  <CardDescription>Your public-facing identity in chat rooms and conversations</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Avatar */}
-                  <div className="flex items-center gap-6">
-                    <div className="relative group">
-                      <Avatar className="h-24 w-24 ring-2 ring-border group-hover:ring-primary/50 transition-all">
-                        <AvatarImage src={avatarUrl} />
-                        <AvatarFallback className="text-2xl bg-primary/20 text-primary">
-                          {displayName?.[0]?.toUpperCase() || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="absolute -bottom-1 -right-1 p-1.5 bg-primary rounded-full shadow-lg">
-                        <Camera className="h-3 w-3 text-primary-foreground" />
-                      </div>
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <Label className="text-xs text-muted-foreground">Avatar URL</Label>
-                      <Input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://example.com/avatar.jpg" className="bg-muted/30 border-border/50" />
-                    </div>
-                  </div>
+            <ProfileTab
+              displayName={displayName}
+              setDisplayName={setDisplayName}
+              email={user?.email || ""}
+              bio={bio}
+              setBio={setBio}
+              avatarUrl={avatarUrl}
+              setAvatarUrl={setAvatarUrl}
+              createdAt={profile?.created_at}
+            />
+          </TabsContent>
 
-                  <Separator className="bg-border/30" />
-
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Display Name</Label>
-                      <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your display name" maxLength={50} className="bg-muted/30 border-border/50" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Email</Label>
-                      <Input value={user?.email || ""} disabled className="bg-muted/50 text-muted-foreground" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>Bio</Label>
-                      <span className="text-xs text-muted-foreground">{bio.length}/500</span>
-                    </div>
-                    <Textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell others a bit about yourself..." rows={4} maxLength={500} className="bg-muted/30 border-border/50 resize-none" />
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+          {/* ===== ACTIVITY TAB ===== */}
+          <TabsContent value="activity">
+            {user && <ActivityTab userId={user.id} />}
           </TabsContent>
 
           {/* ===== NOTIFICATIONS TAB ===== */}
@@ -332,7 +285,6 @@ const ProfilePage = () => {
           {/* ===== SECURITY TAB ===== */}
           <TabsContent value="security">
             <motion.div {...tabMotion} className="space-y-6">
-              {/* 2FA */}
               <Card className="glass border-border/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -345,7 +297,6 @@ const ProfilePage = () => {
                 </CardContent>
               </Card>
 
-              {/* Password */}
               <Card className="glass border-border/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -371,7 +322,6 @@ const ProfilePage = () => {
                 </CardContent>
               </Card>
 
-              {/* Danger Zone */}
               <Card className="glass border-destructive/20">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-destructive">
@@ -391,6 +341,16 @@ const ProfilePage = () => {
                 </CardContent>
               </Card>
             </motion.div>
+          </TabsContent>
+
+          {/* ===== LINKED ACCOUNTS TAB ===== */}
+          <TabsContent value="linked">
+            {user && <LinkedAccountsTab userId={user.id} email={user.email || ""} />}
+          </TabsContent>
+
+          {/* ===== PREFERENCES TAB ===== */}
+          <TabsContent value="preferences">
+            <PreferencesTab />
           </TabsContent>
 
           {/* ===== BILLING TAB ===== */}
@@ -448,12 +408,10 @@ const ProfilePage = () => {
                 </CardContent>
               </Card>
 
-              {/* Usage History */}
               {!creditsLoading && transactions.length > 0 && (
                 <UsageHistoryTable transactions={transactions} />
               )}
 
-              {/* Referral */}
               <ReferralProgram />
             </motion.div>
           </TabsContent>
