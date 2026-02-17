@@ -5,7 +5,7 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 const ContentPartSchema = z.union([
   z.object({
     type: z.literal("text"),
-    text: z.string().min(1).max(100000),
+    text: z.string().min(1),
   }),
   z.object({
     type: z.literal("image_url"),
@@ -21,7 +21,7 @@ export const ChatRequestSchema = z.object({
   messages: z.array(z.object({
     role: z.enum(["user", "assistant", "system"]),
     content: z.union([
-      z.string().min(1).max(100000),
+      z.string().min(1),
       z.array(ContentPartSchema).min(1).max(20),
     ]),
   })).max(500).optional(), // Removed min(1) to allow empty array for image generation and other special modes
