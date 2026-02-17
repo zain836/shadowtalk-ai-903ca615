@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Shield, X, Lock, Unlock, Plus, Trash2, Eye, EyeOff,
   CheckCircle2, XCircle, RefreshCw, Settings, Link, Unlink,
-  Mail, Calendar, FileText, MessageSquare, CreditCard, Users, Share2
+  Mail, Calendar, FileText, MessageSquare, CreditCard, Users, Share2,
+  Smartphone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useShadowVault, AVAILABLE_SERVICES, ServiceType } from "@/hooks/useShadowVault";
 import { cn } from "@/lib/utils";
+import { WhatsAppConnect } from "./WhatsAppConnect";
 
 interface ShadowVaultPanelProps {
   isOpen: boolean;
@@ -299,6 +301,15 @@ export const ShadowVaultPanel = ({ isOpen, onClose }: ShadowVaultPanelProps) => 
                     </div>
                   </ScrollArea>
                 </div>
+              </div>
+
+              {/* WhatsApp Integration */}
+              <div className="mt-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Smartphone className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="font-semibold">WhatsApp Channel</h3>
+                </div>
+                <WhatsAppConnect />
               </div>
 
               {/* Privacy Notice */}
