@@ -26,9 +26,9 @@ const TestimonialsSection = () => {
 
   const testimonials = [
     {
-      name: "Emily Carter",
-      role: "Software Developer",
-      company: "NovaTech",
+      name: "Lena Vasquez",
+      role: "Lead Engineer",
+      company: "ArcLight Systems",
       avatar: avatar1,
       rating: 5,
       content: "This chatbot has completely transformed my workflow! The code generation feature saved me 20+ hours a week. The AI understands context better than any tool I've used before.",
@@ -37,9 +37,9 @@ const TestimonialsSection = () => {
       metricLabel: "Productivity",
     },
     {
-      name: "James Mitchell",
-      role: "Product Manager",
-      company: "Launchpad.io",
+      name: "Omar Khalil",
+      role: "Head of Operations",
+      company: "Stratosphere",
       avatar: avatar2,
       rating: 5,
       content: "Incredible AI assistant! I use it for everything from writing documentation to automating repetitive tasks. The offline mode is a game-changer for remote work.",
@@ -48,9 +48,9 @@ const TestimonialsSection = () => {
       metricLabel: "Uptime",
     },
     {
-      name: "Daniel Park",
-      role: "Full Stack Developer",
-      company: "CodeForge",
+      name: "Priya Sharma",
+      role: "CTO & Co-Founder",
+      company: "Nimbus Labs",
       avatar: avatar3,
       rating: 5,
       content: "The script automation feature is phenomenal. I can generate complex automation scripts in minutes instead of hours. Best investment I've made for my productivity.",
