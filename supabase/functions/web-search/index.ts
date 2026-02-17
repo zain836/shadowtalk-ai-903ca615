@@ -1,27 +1,32 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import { requireAuth } from "../_shared/auth.ts";
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsOptions(origin);
   }
+
+  const corsHeaders = getCorsHeaders(origin);
+
+  // Require authentication
+  const auth = await requireAuth(req, corsHeaders);
+  if (!auth.authenticated) return auth.response;
 
   try {
     const { query, numResults = 5 } = await req.json();
 
-    if (!query) {
-      return new Response(JSON.stringify({ error: "Query is required" }), {
+    if (!query || typeof query !== "string" || query.length > 500) {
+      return new Response(JSON.stringify({ error: "Invalid query (max 500 chars)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const apiKey = Deno.env.get("AIzaSyApab-8gpoG739QFGoMHERvIglR9KUpmLk");
-    const searchEngineId = Deno.env.get("32505dc3078844606");
+    const apiKey = Deno.env.get("GOOGLE_SEARCH_API_KEY");
+    const searchEngineId = Deno.env.get("GOOGLE_SEARCH_ENGINE_ID");
 
     if (!apiKey || !searchEngineId) {
       console.error("Google Search credentials not configured");
@@ -31,13 +36,13 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[WEB-SEARCH] Searching for: "${query}"`);
+    console.log(`[WEB-SEARCH] User ${auth.userId} searching for: "${query}"`);
 
     const searchUrl = new URL("https://www.googleapis.com/customsearch/v1");
     searchUrl.searchParams.set("key", apiKey);
     searchUrl.searchParams.set("cx", searchEngineId);
     searchUrl.searchParams.set("q", query);
-    searchUrl.searchParams.set("num", String(Math.min(numResults, 10)));
+    searchUrl.searchParams.set("num", String(Math.min(Math.max(1, numResults), 10)));
 
     const response = await fetch(searchUrl.toString());
     const data = await response.json();
@@ -57,15 +62,13 @@ serve(async (req) => {
       displayLink: item.displayLink,
     }));
 
-    console.log(`[WEB-SEARCH] Found ${results.length} results`);
-
     return new Response(
       JSON.stringify({ success: true, results, totalResults: data.searchInformation?.totalResults }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
     console.error("Web search error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Search failed" }), {
+    return new Response(JSON.stringify({ error: "Search failed" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

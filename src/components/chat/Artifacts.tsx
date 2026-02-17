@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import DOMPurify from "dompurify";
 import { X, Download, Copy, ExternalLink, Maximize2, Minimize2, Code, FileText, Table, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -70,13 +71,19 @@ export const Artifacts = ({ artifacts, onClose, onRemoveArtifact }: ArtifactsPro
             sandbox="allow-scripts"
           />
         );
-      case 'svg':
+      case 'svg': {
+        const sanitizedSvg = DOMPurify.sanitize(artifact.content, { 
+          USE_PROFILES: { svg: true, svgFilters: true },
+          ADD_TAGS: ['svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'text', 'g', 'defs', 'clipPath', 'use'],
+          ADD_ATTR: ['viewBox', 'fill', 'stroke', 'stroke-width', 'd', 'cx', 'cy', 'r', 'x', 'y', 'width', 'height', 'transform', 'xmlns'],
+        });
         return (
           <div 
             className="w-full h-full flex items-center justify-center p-4"
-            dangerouslySetInnerHTML={{ __html: artifact.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizedSvg }}
           />
         );
+      }
       case 'code':
         return (
           <pre className="p-4 rounded-md bg-muted/50 overflow-auto text-sm font-mono h-full">
