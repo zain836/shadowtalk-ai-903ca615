@@ -58,111 +58,63 @@ interface BehaviorSignals {
 
 const STORAGE_KEY = 'shadowtalk-visitor-memory';
 const SESSION_KEY = 'shadowtalk-proactive-session';
+const PROACTIVE_AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proactive-ai`;
 
-// Time-aware greetings
-function getTemporalGreeting(): { greeting: string; icon: string } {
-  const now = new Date();
-  const hour = now.getHours();
-  const day = now.getDay();
-  const isWeekend = day === 0 || day === 6;
+// ─── AI Message Generator ──────────────────────────────
+// Calls the proactive-ai edge function for genuine, contextual messages.
+// Falls back to a simple default if the API is unavailable.
 
-  if (hour >= 0 && hour < 5) return { greeting: "🌙 Burning the midnight oil? I respect the hustle. Need an AI co-pilot for your late-night session?", icon: "🌙" };
-  if (hour >= 5 && hour < 9) return { greeting: "🌅 Early riser! Your brain is freshest right now — perfect time to explore what ShadowTalk can do for you.", icon: "🌅" };
-  if (hour >= 9 && hour < 12) {
-    if (isWeekend) return { greeting: "☕ Weekend morning vibes. No rush — browse at your pace. I'll be here if anything catches your eye.", icon: "☕" };
-    return { greeting: "⚡ Monday morning momentum! Let's make this productive. What are you building today?", icon: "⚡" };
+const aiMessageCache = new Map<string, { message: string; timestamp: number }>();
+const AI_CACHE_TTL = 120000; // 2 min cache per trigger type
+
+async function generateAIMessage(context: {
+  triggerType: string;
+  currentPage: string;
+  mood?: string;
+  visitCount?: number;
+  pagesVisited?: string[];
+  scrollPercent?: number;
+  extraContext?: string;
+}): Promise<string | null> {
+  const cacheKey = `${context.triggerType}-${context.currentPage}-${context.mood || ''}`;
+  const cached = aiMessageCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < AI_CACHE_TTL) {
+    return cached.message;
   }
-  if (hour >= 12 && hour < 14) return { greeting: "🍽️ Lunch break browsing? Smart move. I can give you a 2-minute overview of anything on this page.", icon: "🍽️" };
-  if (hour >= 14 && hour < 17) return { greeting: "🎯 Afternoon focus time. I'll keep interruptions minimal — but I'm watching if you need help.", icon: "🎯" };
-  if (hour >= 17 && hour < 20) return { greeting: "🌆 Wrapping up your day? If you're evaluating tools, I can save you time with a quick comparison.", icon: "🌆" };
-  if (hour >= 20 && hour < 23) return { greeting: "🌃 Evening exploration. Take your time — no pressure. I'll surface insights as you scroll.", icon: "🌃" };
-  return { greeting: "🌙 Night owl session! I'm fully awake and ready whenever you are.", icon: "🌙" };
+
+  try {
+    const resp = await fetch(PROACTIVE_AI_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify(context),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const message = data.message;
+    if (message) {
+      aiMessageCache.set(cacheKey, { message, timestamp: Date.now() });
+    }
+    return message || null;
+  } catch {
+    return null;
+  }
 }
 
-// Mood-based responses
-const MOOD_RESPONSES: Record<UserMood, { content: string; icon: string }[]> = {
-  frustrated: [
-    { content: "😤 I sense some friction. Tell me what's not working — I'll cut straight to the answer.", icon: "😤" },
-    { content: "🔧 Something seem off? I'm watching your frustration signals. Let me help before you bounce.", icon: "🔧" },
-  ],
-  excited: [
-    { content: "🔥 You're exploring fast — love the energy! Want me to fast-track you to the best features?", icon: "🔥" },
-    { content: "⚡ Your click pattern tells me you're excited about what you're seeing. Ready to try it live?", icon: "⚡" },
-  ],
-  confused: [
-    { content: "🤔 You've been going back and forth. Need me to explain something more clearly?", icon: "🤔" },
-    { content: "🧭 Looks like you're searching for something specific. Tell me what and I'll find it instantly.", icon: "🧭" },
-  ],
-  focused: [
-    { content: "📖 Deep reading mode detected. I'll stay quiet — but flag me if you want a summary.", icon: "📖" },
-  ],
-  bored: [
-    { content: "😴 You seem to be losing interest. Want me to show you something you haven't discovered yet?", icon: "😴" },
-    { content: "💎 Here's a hidden feature most people miss: try saying 'launch mission' in the chatbot. Game changer.", icon: "💎" },
-  ],
-  rushed: [
-    { content: "⏱️ Short on time? Tell me what you need in one sentence. I'll get it for you in 10 seconds.", icon: "⏱️" },
-  ],
-  neutral: [],
-};
-
-// Navigation pattern predictions — expanded for ultra-proactive coverage
-const PREDICTION_PATTERNS: { pattern: string[]; prediction: string; icon: string }[] = [
-  { pattern: ['/pricing', '/about'], prediction: "💡 Visited pricing then came here? You're evaluating if we're legit. We are — but ask me anything to verify.", icon: "💡" },
-  { pattern: ['/pricing', '/faq'], prediction: "🤝 Checking pricing and FAQs? You're close to deciding. Want me to address your biggest hesitation?", icon: "🤝" },
-  { pattern: ['/', '/chatbot'], prediction: "🚀 Jumped straight to the chatbot! Power user move. Try 'Ctrl+Shift+A' for the autonomous agent mode.", icon: "🚀" },
-  { pattern: ['/pricing', '/pricing'], prediction: "🔄 You keep returning to pricing. Something not clear? I can build a custom comparison for your use case.", icon: "🔄" },
-  { pattern: ['/docs', '/chatbot'], prediction: "📚 Read the docs, now trying it live — smart approach. Need me to walk you through any feature?", icon: "📚" },
-  { pattern: ['/about', '/pricing'], prediction: "🎯 Liked what you saw about us? The Founder's Vault plan is our best value — want details?", icon: "🎯" },
-  { pattern: ['/', '/pricing'], prediction: "💸 Checking pricing already? You're moving fast. Want me to calculate ROI for your specific use case?", icon: "💸" },
-  { pattern: ['/', '/about'], prediction: "🔍 Curious about who built this? Smart move. The origin story explains why this AI is different from everything else.", icon: "🔍" },
-  { pattern: ['/chatbot', '/pricing'], prediction: "🤑 Tried the chatbot and now checking pricing? You've seen the power — I can show you the plan that matches your usage.", icon: "🤑" },
-  { pattern: ['/chatbot', '/strategy'], prediction: "🧠 From chatbot to strategy agent — you're unlocking the serious tools. This is where ShadowTalk becomes your AI co-founder.", icon: "🧠" },
-  { pattern: ['/strategy', '/chatbot'], prediction: "📊 Generated a strategy and back to chat? I can help you execute every recommendation from that report right here.", icon: "📊" },
-  { pattern: ['/', '/'], prediction: "🏠 Refreshed the homepage? Looking for something specific? Tell me — I'll find it before you scroll.", icon: "🏠" },
-];
-
-// Ambient narration per page section — significantly expanded
-const PAGE_NARRATIONS: Record<string, { threshold: number; content: string; icon: string }[]> = {
-  '/about': [
-    { threshold: 10, content: "👀 Reading about the architect? Zain built this entire platform solo at 17. The AI you're using right now? He designed it.", icon: "👀" },
-    { threshold: 30, content: "📊 You're exploring the tech stack section. Fun fact: ShadowTalk runs 30+ AI tools orchestrated by a single cognitive loop.", icon: "📊" },
-    { threshold: 50, content: "💡 The vision section explains why this isn't just another chatbot — it's an autonomous business operating system.", icon: "💡" },
-    { threshold: 70, content: "🤝 Seeing the forms section? You can skip those — just tell me what you need right here.", icon: "🤝" },
-    { threshold: 90, content: "🏁 You've read the entire about page. You know us now. Ready to experience the tech firsthand?", icon: "🏁" },
-  ],
-  '/pricing': [
-    { threshold: 10, content: "💰 Pro tip: The free tier includes agentic tasks that competitors charge $20/mo for.", icon: "💰" },
-    { threshold: 35, content: "📊 Comparing plans? The Elite tier unlocks 30+ AI tools, autonomous agents, and unlimited strategy reports.", icon: "📊" },
-    { threshold: 60, content: "🏆 The Lifetime Deal at the bottom? Only 50 spots. Most users don't scroll this far.", icon: "🏆" },
-    { threshold: 85, content: "⚡ You've seen every plan. Still deciding? Tell me your budget and use case — I'll pick the perfect plan in 5 seconds.", icon: "⚡" },
-  ],
-  '/': [
-    { threshold: 10, content: "🎬 Welcome to ShadowTalk. Keep scrolling — every section reveals a capability that doesn't exist anywhere else.", icon: "🎬" },
-    { threshold: 25, content: "⚡ You're past the hero section. The features below are what make us incomparable — keep going.", icon: "⚡" },
-    { threshold: 40, content: "🔥 See these AI capabilities? Every single one works right now — no waitlists, no beta. Try them live.", icon: "🔥" },
-    { threshold: 55, content: "📈 Halfway through. Most visitors who reach this point end up signing up. Just saying.", icon: "📈" },
-    { threshold: 70, content: "🧠 The tools section you're approaching — these are autonomous agents that work while you sleep.", icon: "🧠" },
-    { threshold: 85, content: "🏁 You've seen almost everything. The chatbot is where the real magic happens — want to try it?", icon: "🏁" },
-  ],
-  '/chatbot': [
-    { threshold: 5, content: "🧠 You're in the AI cockpit. Try: 'analyze my business', 'security audit', or 'creative synthesis' for power features.", icon: "🧠" },
-    { threshold: 30, content: "⚡ Pro tip: Press Ctrl+Shift+A to launch the autonomous agent — it executes multi-step plans independently.", icon: "⚡" },
-    { threshold: 60, content: "🔮 Try typing 'launch mission' for background autonomous execution, or 'open strategy' for CEO-grade business analysis.", icon: "🔮" },
-  ],
-  '/strategy': [
-    { threshold: 10, content: "📊 The Strategy Agent can generate investor-grade reports. Most users don't realize it's free for the first report.", icon: "📊" },
-    { threshold: 40, content: "💼 The CEO Suite below gives you encrypted strategic workflows — competitor analysis, pivot playbooks, and funding strategies.", icon: "💼" },
-    { threshold: 70, content: "🚀 Scroll down for the Hype Engine — it proactively monitors market shifts and alerts you before competitors react.", icon: "🚀" },
-  ],
-  '/faq': [
-    { threshold: 15, content: "❓ Reading FAQs? Most questions are answered faster by just asking me. Try it — I have instant access to everything.", icon: "❓" },
-    { threshold: 50, content: "📖 Still browsing FAQs? I can answer ANY question about ShadowTalk in real-time. No searching required.", icon: "📖" },
-  ],
-  '/docs': [
-    { threshold: 10, content: "📚 Documentation explorer! I can summarize any section, explain code examples, or guide you step-by-step. Just ask.", icon: "📚" },
-    { threshold: 40, content: "🛠️ Deep in the docs — you're serious about integration. Want me to generate starter code for your specific use case?", icon: "🛠️" },
-  ],
+// Simple fallback icons per trigger type
+const TRIGGER_ICONS: Record<string, string> = {
+  greeting: '👋', returning: '🎯', temporal: '⏰', mood: '🧠',
+  prediction: '🔮', narration: '📖', 'exit-intent': '🚪', nudge: '💭',
+  phantom: '🔮', copy: '📋', battery: '🔋', connection: '📡',
+  'tab-rivalry': '👀', hesitation: '⏳', device: '📱', 'ambient-light': '🌙',
+  confidence: '🎯', 'cursor-orbit': '🎯', 'déjà-vu': '🔄',
+  'micro-gesture': '🤔', breathing: '🫁', 'touch-pressure': '📱',
+  chronobio: '⏰', 'decision-fatigue': '🧠', 'visual-attention': '👁️',
+  'digital-twin': '🤖', subconscious: '💫', 'cognitive-load': '🧠',
+  linguistic: '📝', fomo: '😱',
 };
 
 // ─── Storage Helpers ───────────────────────────────────
@@ -327,26 +279,28 @@ export function useProactiveAI(isChatOpen: boolean) {
     if (session.shownMessages.some(m => m.startsWith('greeting') || m.startsWith('returning') || m.startsWith('temporal'))) return;
     const memory = memoryRef.current;
     const delay = memory.visitCount <= 1 ? 1200 : 800;
-    const timer = setTimeout(() => {
-      if (memory.visitCount <= 1) {
-        const temporal = getTemporalGreeting();
-        enqueueMessage({ content: temporal.greeting, type: 'temporal', priority: 10, dismissable: true, icon: temporal.icon });
-      } else {
-        const daysSinceVisit = Math.floor((Date.now() - memory.lastVisit) / 86400000);
-        let content: string; let icon: string;
-        if (daysSinceVisit > 7) {
-          content = `👋 It's been ${daysSinceVisit} days! Welcome back. A lot has changed — want a recap of new features?`; icon = "👋";
-        } else if (daysSinceVisit > 1) {
-          content = `🎯 Back again! Visit #${memory.visitCount}. ${memory.lastConversationTopic ? `We left off discussing "${memory.lastConversationTopic}". Continue?` : "I remember your last session. Ready to pick up?"}`; icon = "🎯";
-        } else {
-          const temporal = getTemporalGreeting();
-          content = `${temporal.icon} Visit #${memory.visitCount} today! ${temporal.greeting}`; icon = temporal.icon;
-        }
-        enqueueMessage({ content, type: 'returning', priority: 10, dismissable: true, icon });
-      }
+    const timer = setTimeout(async () => {
+      const triggerType = memory.visitCount <= 1 ? 'greeting' : 'returning';
+      const daysSinceVisit = Math.floor((Date.now() - memory.lastVisit) / 86400000);
+      const extraContext = memory.visitCount > 1
+        ? `Returning visitor (visit #${memory.visitCount}, ${daysSinceVisit} days since last visit). ${memory.lastConversationTopic ? `Last topic: "${memory.lastConversationTopic}"` : ''}`
+        : 'First-time visitor, make them feel welcome';
+      const aiMsg = await generateAIMessage({
+        triggerType,
+        currentPage: location.pathname,
+        visitCount: memory.visitCount,
+        pagesVisited: memory.pagesVisited,
+        extraContext,
+      });
+      const icon = TRIGGER_ICONS[triggerType] || '👋';
+      enqueueMessage({
+        content: aiMsg || `${icon} Welcome! How can I help you today?`,
+        type: triggerType === 'greeting' ? 'temporal' : 'returning',
+        priority: 10, dismissable: true, icon,
+      });
     }, delay);
     return () => clearTimeout(timer);
-  }, [enqueueMessage]);
+  }, [enqueueMessage, location.pathname]);
 
   // ─── 2. Behavior Signal Collection ──────────────────
 
@@ -410,7 +364,7 @@ export function useProactiveAI(isChatOpen: boolean) {
   // ─── 3. Mood Detection Loop ─────────────────────────
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       const now = Date.now();
       const clicksPerMinute = clickTimestampsRef.current.filter(t => now - t < 60000).length;
       const signals: BehaviorSignals = {
@@ -425,16 +379,23 @@ export function useProactiveAI(isChatOpen: boolean) {
         memoryRef.current.moodHistory.push({ mood, timestamp: now });
         if (memoryRef.current.moodHistory.length > 20) memoryRef.current.moodHistory = memoryRef.current.moodHistory.slice(-20);
         saveVisitorMemory(memoryRef.current);
-        const responses = MOOD_RESPONSES[mood];
-        if (responses.length > 0) {
-          const response = responses[Math.floor(Math.random() * responses.length)];
-          enqueueMessage({ content: response.content, type: 'mood', priority: mood === 'frustrated' ? 9 : 6, dismissable: true, icon: response.icon });
+        const aiMsg = await generateAIMessage({
+          triggerType: 'mood',
+          currentPage: location.pathname,
+          mood,
+          visitCount: memoryRef.current.visitCount,
+          pagesVisited: memoryRef.current.pagesVisited,
+          extraContext: `User mood changed to ${mood}. Clicks/min: ${clicksPerMinute}, idle: ${mouseIdleRef.current}ms`,
+        });
+        const icon = TRIGGER_ICONS.mood;
+        if (aiMsg) {
+          enqueueMessage({ content: aiMsg, type: 'mood', priority: mood === 'frustrated' ? 9 : 6, dismissable: true, icon });
         }
       }
       if (now % 10000 < 3000) rapidClickRef.current = 0;
-    }, 1500); // Check mood every 1.5s for faster reaction
+    }, 1500);
     return () => clearInterval(interval);
-  }, [detectedMood, enqueueMessage]);
+  }, [detectedMood, enqueueMessage, location.pathname]);
 
   // ─── 4. Navigation Pattern Prediction ───────────────
 
@@ -451,14 +412,23 @@ export function useProactiveAI(isChatOpen: boolean) {
 
       const recentPaths = memory.navigationHistory.slice(-3).map(h => h.path);
       recentPaths.push(currentPath);
-      for (const pred of PREDICTION_PATTERNS) {
-        const matchLen = pred.pattern.length;
-        const recent = recentPaths.slice(-matchLen);
-        if (recent.length >= matchLen && recent.every((p, i) => p === pred.pattern[i])) {
-          setTimeout(() => { enqueueMessage({ content: pred.prediction, type: 'prediction', priority: 8, dismissable: true, icon: pred.icon }); }, 3000);
-          break;
-        }
+      
+      // Use AI for navigation predictions instead of hardcoded patterns
+      if (recentPaths.length >= 2) {
+        setTimeout(async () => {
+          const aiMsg = await generateAIMessage({
+            triggerType: 'prediction',
+            currentPage: currentPath,
+            visitCount: memory.visitCount,
+            pagesVisited: recentPaths,
+            extraContext: `Navigation path: ${recentPaths.join(' → ')}. Dwell time on previous page: ${Math.round(dwellMs / 1000)}s`,
+          });
+          if (aiMsg) {
+            enqueueMessage({ content: aiMsg, type: 'prediction', priority: 8, dismissable: true, icon: TRIGGER_ICONS.prediction });
+          }
+        }, 3000);
       }
+      
       lastPathRef.current = currentPath;
       pageEntryRef.current = Date.now();
       scrollPercentRef.current = 0;
@@ -468,18 +438,35 @@ export function useProactiveAI(isChatOpen: boolean) {
   // ─── 5. Ambient Narration (Scroll-Aware) ────────────
 
   useEffect(() => {
-    const handler = () => {
-      const narrations = PAGE_NARRATIONS[location.pathname];
-      if (!narrations) return;
-      const session = sessionRef.current;
+    // Track scroll milestones: 25%, 50%, 75%, 90%
+    const SCROLL_MILESTONES = [25, 50, 75, 90];
+    let lastMilestone = 0;
+    
+    const handler = async () => {
       const scrollPct = scrollPercentRef.current;
-      for (const narration of narrations) {
-        const narrationId = `narration-${location.pathname}-${narration.threshold}`;
-        if (scrollPct >= narration.threshold && !session.shownNarrations.includes(narrationId)) {
-          session.shownNarrations.push(narrationId);
-          saveSessionState(session);
-          enqueueMessage({ content: narration.content, type: 'narration', priority: 5, dismissable: true, icon: narration.icon });
-          break;
+      const session = sessionRef.current;
+      
+      for (const milestone of SCROLL_MILESTONES) {
+        if (scrollPct >= milestone && milestone > lastMilestone) {
+          const narrationId = `narration-${location.pathname}-${milestone}`;
+          if (!session.shownNarrations.includes(narrationId)) {
+            session.shownNarrations.push(narrationId);
+            saveSessionState(session);
+            lastMilestone = milestone;
+            
+            const aiMsg = await generateAIMessage({
+              triggerType: 'narration',
+              currentPage: location.pathname,
+              scrollPercent: milestone,
+              visitCount: memoryRef.current.visitCount,
+              pagesVisited: memoryRef.current.pagesVisited,
+              extraContext: `User scrolled to ${milestone}% of the ${location.pathname} page`,
+            });
+            if (aiMsg) {
+              enqueueMessage({ content: aiMsg, type: 'narration', priority: 5, dismissable: true, icon: TRIGGER_ICONS.narration });
+            }
+            break;
+          }
         }
       }
     };
@@ -490,46 +477,79 @@ export function useProactiveAI(isChatOpen: boolean) {
   // ─── 6. Exit Intent ─────────────────────────────────
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const handler = async (e: MouseEvent) => {
       if (e.clientY <= 0 && Date.now() - pageEntryRef.current > 3000) {
-        const exitMessages = [
-          "🚪 Wait! Before you leave — what's the ONE thing that would make you stay? I'll make it happen in 10 seconds.",
-          "⚡ Leaving already? Most people discover their favorite feature on their second minute. Give me 30 seconds to impress you.",
-          "🎯 I noticed you're about to leave. Quick: tell me what you were looking for and I'll find it instantly.",
-        ];
-        enqueueMessage({ content: exitMessages[Math.floor(Math.random() * exitMessages.length)], type: 'exit-intent', priority: 9, dismissable: true, icon: "🚪" });
+        const aiMsg = await generateAIMessage({
+          triggerType: 'exit-intent',
+          currentPage: location.pathname,
+          visitCount: memoryRef.current.visitCount,
+          pagesVisited: memoryRef.current.pagesVisited,
+          extraContext: `User moving mouse to leave. Time on page: ${Math.round((Date.now() - pageEntryRef.current) / 1000)}s`,
+        });
+        enqueueMessage({
+          content: aiMsg || "🚪 Heading out? Let me know if there's anything I can help with before you go.",
+          type: 'exit-intent', priority: 9, dismissable: true, icon: TRIGGER_ICONS['exit-intent'],
+        });
       }
     };
     document.addEventListener('mouseleave', handler);
     return () => document.removeEventListener('mouseleave', handler);
-  }, [enqueueMessage]);
+  }, [enqueueMessage, location.pathname]);
 
   // ─── 7. Idle Nudge ──────────────────────────────────
 
   useEffect(() => {
-    const nudges = [
-      "💭 You've been quiet. I'm still here — thinking of ways to help. Just say the word.",
-      "🧠 While you're thinking, I'm analyzing your session. Want me to share what I've learned about your interests?",
-      "✨ Still here! Did you know I can generate code, write strategies, audit security, and create images — all from a single chat?",
-      "🔮 I've been studying your browsing pattern. I have 3 personalized recommendations ready. Want to hear them?",
-    ];
-    let nudgeIdx = 0;
-    const timer = setInterval(() => {
+    const timer = setInterval(async () => {
       if (mouseIdleRef.current > 12000 && !isChatOpen) {
-        enqueueMessage({ content: nudges[nudgeIdx % nudges.length], type: 'nudge', priority: 4, dismissable: true, icon: "💭" });
-        nudgeIdx++;
+        const aiMsg = await generateAIMessage({
+          triggerType: 'nudge',
+          currentPage: location.pathname,
+          mood: detectedMood,
+          visitCount: memoryRef.current.visitCount,
+          pagesVisited: memoryRef.current.pagesVisited,
+          extraContext: `User has been idle for ${Math.round(mouseIdleRef.current / 1000)}s on ${location.pathname}`,
+        });
+        if (aiMsg) {
+          enqueueMessage({ content: aiMsg, type: 'nudge', priority: 4, dismissable: true, icon: TRIGGER_ICONS.nudge });
+        }
       }
-    }, 15000); // Nudge every 15s if idle for 12s
+    }, 15000);
     return () => clearInterval(timer);
-  }, [isChatOpen, enqueueMessage]);
+  }, [isChatOpen, enqueueMessage, location.pathname, detectedMood]);
 
   // ════════════════════════════════════════════════════
   // ═══ BEYOND-AI PROACTIVE DETECTIONS ════════════════
   // ════════════════════════════════════════════════════
 
+  // Helper: enqueue AI-generated message for any trigger
+  const enqueueAIMessage = useCallback(async (
+    triggerType: string,
+    priority: number,
+    extraContext: string,
+    fallback?: string,
+  ) => {
+    const aiMsg = await generateAIMessage({
+      triggerType,
+      currentPage: location.pathname,
+      mood: detectedMood,
+      visitCount: memoryRef.current.visitCount,
+      pagesVisited: memoryRef.current.pagesVisited,
+      extraContext,
+    });
+    const icon = TRIGGER_ICONS[triggerType] || '💬';
+    const content = aiMsg || fallback;
+    if (content) {
+      enqueueMessage({
+        content,
+        type: triggerType as ProactiveMessageType,
+        priority,
+        dismissable: true,
+        icon,
+      });
+    }
+  }, [enqueueMessage, location.pathname, detectedMood]);
+
   // ─── 8. PHANTOM TYPING — User types then deletes everything ───
-  // Detects when someone starts typing a message, hesitates, then erases it.
-  // This means they're struggling to articulate — AI intervenes.
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -538,10 +558,8 @@ export function useProactiveAI(isChatOpen: boolean) {
       const val = target.value;
 
       inputLengthHistoryRef.current.push({ len: val.length, t: Date.now() });
-      // Keep last 20 entries
       if (inputLengthHistoryRef.current.length > 20) inputLengthHistoryRef.current = inputLengthHistoryRef.current.slice(-10);
 
-      // Track if they typed at least 10 chars then deleted to 0
       if (val.length === 0) {
         const history = inputLengthHistoryRef.current;
         const maxLen = Math.max(...history.map(h => h.len));
@@ -551,18 +569,7 @@ export function useProactiveAI(isChatOpen: boolean) {
 
           if (phantomTimerRef.current) clearTimeout(phantomTimerRef.current);
           phantomTimerRef.current = setTimeout(() => {
-            const msgs = [
-              "👻 I noticed you started typing something then erased it. Don't worry about phrasing it perfectly — just say it rough, I'll understand.",
-              "✏️ Struggled to type that? Here's a trick: describe your problem in 5 words or less. I'll ask the right follow-up questions.",
-              "🔮 You erased your message. Sometimes the hardest questions to ask are the most important ones. Try me — I've heard everything.",
-            ];
-            enqueueMessage({
-              content: msgs[memoryRef.current.phantomTypeCount % msgs.length],
-              type: 'phantom',
-              priority: 9,
-              dismissable: true,
-              icon: "👻",
-            });
+            enqueueAIMessage('phantom', 9, `User typed ~${maxLen} characters then deleted everything. This is attempt #${memoryRef.current.phantomTypeCount}. They're struggling to articulate something.`);
           }, 2000);
 
           inputLengthHistoryRef.current = [];
@@ -572,10 +579,9 @@ export function useProactiveAI(isChatOpen: boolean) {
 
     document.addEventListener('input', handler, { passive: true });
     return () => document.removeEventListener('input', handler);
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 9. COPY-PASTE AWARENESS — Detects what users copy ───
-  // When users copy text, they found something valuable. React to it.
+  // ─── 9. COPY-PASTE AWARENESS ───
 
   useEffect(() => {
     const handler = () => {
@@ -589,30 +595,15 @@ export function useProactiveAI(isChatOpen: boolean) {
 
       const copyCount = memoryRef.current.copiedTexts.length;
 
-      if (copyCount === 1) {
-        enqueueMessage({
-          content: `📋 You just copied something — saving it mentally. Want me to explain "${selection.slice(0, 40)}..." in more detail?`,
-          type: 'copy',
-          priority: 7,
-          dismissable: true,
-          icon: "📋",
-        });
-      } else if (copyCount === 3) {
-        enqueueMessage({
-          content: "📑 You've been copying a lot of content. Building a document? I can compile everything you've highlighted into a clean summary.",
-          type: 'copy',
-          priority: 7,
-          dismissable: true,
-          icon: "📑",
-        });
+      if (copyCount === 1 || copyCount === 3) {
+        enqueueAIMessage('copy', 7, `User copied text: "${selection.slice(0, 80)}". Total copies this session: ${copyCount}.`);
       }
     };
     document.addEventListener('copy', handler);
     return () => document.removeEventListener('copy', handler);
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 10. BATTERY EMPATHY — Knows when you're running low ───
-  // Uses Battery Status API to detect low power and suggest efficiency.
+  // ─── 10. BATTERY EMPATHY ───
 
   useEffect(() => {
     let mounted = true;
@@ -624,38 +615,22 @@ export function useProactiveAI(isChatOpen: boolean) {
 
         const handler = () => {
           if (!mounted) return;
-          if (battery.level <= 0.15 && !battery.charging) {
-            enqueueMessage({
-              content: `🔋 Your battery is at ${Math.round(battery.level * 100)}%. Let me switch to efficiency mode — shorter responses, faster answers, zero fluff. What do you need?`,
-              type: 'battery',
-              priority: 8,
-              dismissable: true,
-              icon: "🔋",
-            });
-          } else if (battery.level <= 0.05 && !battery.charging) {
-            enqueueMessage({
-              content: "🪫 Critical battery! Quick — tell me ONE thing you need before your device dies. I'll make it count.",
-              type: 'battery',
-              priority: 10,
-              dismissable: true,
-              icon: "🪫",
-            });
+          const level = Math.round(battery.level * 100);
+          if (level <= 15 && !battery.charging) {
+            enqueueAIMessage('battery', level <= 5 ? 10 : 8, `User battery at ${level}%, not charging.`);
           }
         };
 
         battery.addEventListener('levelchange', handler);
-        // Initial check
         handler();
-
         return () => battery.removeEventListener('levelchange', handler);
       } catch {}
     };
     checkBattery();
     return () => { mounted = false; };
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 11. CONNECTION SPEED EMPATHY — Adapts to network quality ───
-  // Uses Network Information API to detect slow connections.
+  // ─── 11. CONNECTION SPEED EMPATHY ───
 
   useEffect(() => {
     const nav = navigator as any;
@@ -663,37 +638,22 @@ export function useProactiveAI(isChatOpen: boolean) {
     if (!conn) return;
 
     const handler = () => {
-      const effectiveType = conn.effectiveType; // '4g', '3g', '2g', 'slow-2g'
-      const downlink = conn.downlink; // Mbps
+      const effectiveType = conn.effectiveType;
+      const downlink = conn.downlink;
 
       if (effectiveType === '2g' || effectiveType === 'slow-2g' || downlink < 0.5) {
-        enqueueMessage({
-          content: "📡 I'm detecting a slow connection. I'll keep my responses ultra-compact and pre-cache what you might need next. You won't feel the lag.",
-          type: 'connection',
-          priority: 7,
-          dismissable: true,
-          icon: "📡",
-        });
+        enqueueAIMessage('connection', 7, `User on very slow connection: ${effectiveType}, ${downlink}Mbps`);
       } else if (effectiveType === '3g' || downlink < 1.5) {
-        enqueueMessage({
-          content: "🌐 Your connection seems limited. I'll optimize — text-first responses, no heavy assets. Ask me anything.",
-          type: 'connection',
-          priority: 5,
-          dismissable: true,
-          icon: "🌐",
-        });
+        enqueueAIMessage('connection', 5, `User on moderate connection: ${effectiveType}, ${downlink}Mbps`);
       }
     };
 
     conn.addEventListener('change', handler);
-    // Initial check
     setTimeout(handler, 5000);
-
     return () => conn.removeEventListener('change', handler);
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 12. TAB RIVALRY — Detects competitor browsing patterns ───
-  // Measures how long users spend away and reacts when they return.
+  // ─── 12. TAB RIVALRY ───
 
   useEffect(() => {
     const handler = () => {
@@ -704,43 +664,22 @@ export function useProactiveAI(isChatOpen: boolean) {
         totalTabAwayRef.current += awayMs;
         tabBlurTimestampRef.current = null;
 
-        if (awayMs > 30000 && awayMs < 300000) {
-          // Away 30s-5min: probably comparing competitors
-          enqueueMessage({
-            content: "🔍 Back from comparing? I get it — due diligence matters. What's the one feature that would seal the deal for you? I'll show you we have it.",
-            type: 'tab-rivalry',
-            priority: 8,
-            dismissable: true,
-            icon: "🔍",
-          });
-        } else if (awayMs >= 300000 && awayMs < 1800000) {
-          // Away 5-30min: deep comparison or distracted
-          enqueueMessage({
-            content: "⏳ You were away for a while. While you were gone, I was analyzing your browsing pattern. Want a personalized feature comparison based on what you've explored?",
-            type: 'tab-rivalry',
-            priority: 7,
-            dismissable: true,
-            icon: "⏳",
-          });
-        } else if (awayMs >= 1800000) {
-          // Away 30min+: probably forgot about us
-          enqueueMessage({
-            content: "🎯 Welcome back! It's been a while. Quick recap: you were exploring " + location.pathname.replace('/', '') + ". Want to continue or start fresh?",
-            type: 'tab-rivalry',
-            priority: 9,
-            dismissable: true,
-            icon: "🎯",
-          });
+        if (awayMs > 30000) {
+          const awayMinutes = Math.round(awayMs / 60000);
+          enqueueAIMessage(
+            'tab-rivalry',
+            awayMs >= 1800000 ? 9 : awayMs >= 300000 ? 7 : 8,
+            `User returned after being away for ${awayMinutes > 0 ? awayMinutes + ' minutes' : Math.round(awayMs / 1000) + ' seconds'}. They were browsing on ${location.pathname}.`
+          );
         }
       }
     };
 
     document.addEventListener('visibilitychange', handler);
     return () => document.removeEventListener('visibilitychange', handler);
-  }, [enqueueMessage, location.pathname]);
+  }, [enqueueAIMessage, location.pathname]);
 
-  // ─── 13. SCROLL HESITATION — Where you pause = what interests you ───
-  // Tracks scroll velocity drops to detect what sections captivate the user.
+  // ─── 13. SCROLL HESITATION ───
 
   useEffect(() => {
     let lastCheckY = 0;
@@ -750,27 +689,18 @@ export function useProactiveAI(isChatOpen: boolean) {
       const currentY = window.scrollY;
       const velocity = scrollVelocityRef.current;
 
-      // User stopped scrolling in a new zone
       if (velocity < 0.5 && Math.abs(currentY - lastCheckY) < 20) {
         if (!pauseStart) {
           pauseStart = Date.now();
         } else {
           const pauseDuration = Date.now() - pauseStart;
-          // If they've been staring at one spot for 5+ seconds
           if (pauseDuration > 5000 && pauseDuration < 10000) {
-            // Find what element they're looking at
             const centerEl = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
             const text = centerEl?.textContent?.trim()?.slice(0, 60);
 
             if (text && text.length > 10) {
-              enqueueMessage({
-                content: `🔬 You've been staring at this section for ${Math.round(pauseDuration / 1000)}s. "${text}..." — Want me to deep-dive into this topic?`,
-                type: 'hesitation',
-                priority: 6,
-                dismissable: true,
-                icon: "🔬",
-              });
-              pauseStart = 0; // Reset
+              enqueueAIMessage('hesitation', 6, `User paused scrolling for ${Math.round(pauseDuration / 1000)}s staring at: "${text}"`);
+              pauseStart = 0;
             }
           }
         }
@@ -782,10 +712,9 @@ export function useProactiveAI(isChatOpen: boolean) {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 14. DEVICE PERSONALITY — Different AI for different screens ───
-  // Mobile users get snappier, more action-oriented messages.
+  // ─── 14. DEVICE PERSONALITY ───
 
   useEffect(() => {
     const width = window.innerWidth;
@@ -793,62 +722,31 @@ export function useProactiveAI(isChatOpen: boolean) {
     const isUltrawide = width > 2000;
     const isTouchDevice = 'ontouchstart' in window;
 
-    const timer = setTimeout(() => { // Trigger device detection faster
+    const timer = setTimeout(() => {
       if (isMobile && isTouchDevice) {
-        enqueueMessage({
-          content: "📱 Mobile detected. I'll be extra concise — swipe-friendly answers, zero scrolling walls. Tap me anytime.",
-          type: 'device',
-          priority: 4,
-          dismissable: true,
-          icon: "📱",
-        });
+        enqueueAIMessage('device', 4, 'User on mobile touch device');
       } else if (isUltrawide) {
-        enqueueMessage({
-          content: "🖥️ Ultrawide monitor? Power user setup. You'd love our split-view: keep the chatbot open while using the strategy agent side-by-side.",
-          type: 'device',
-          priority: 4,
-          dismissable: true,
-          icon: "🖥️",
-        });
+        enqueueAIMessage('device', 4, 'User on ultrawide monitor — power user setup');
       }
-    }, 3000); // Faster device detection
+    }, 3000);
 
     return () => clearTimeout(timer);
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 15. AMBIENT LIGHT / DARK MODE AWARENESS ───────
-  // Detects system theme preference and time-of-day to comment.
+  // ─── 15. AMBIENT LIGHT / DARK MODE ───
 
   useEffect(() => {
     const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
     const handler = (e: MediaQueryListEvent) => {
-      if (e.matches) {
-        enqueueMessage({
-          content: "🌑 Dark mode activated. Your eyes will thank you. I've adjusted my vibe — same intelligence, darker aesthetic.",
-          type: 'ambient-light',
-          priority: 3,
-          dismissable: true,
-          icon: "🌑",
-        });
-      } else {
-        enqueueMessage({
-          content: "☀️ Light mode on. Fresh and clean. If the brightness is too much, I support dark mode too — try switching your system theme.",
-          type: 'ambient-light',
-          priority: 3,
-          dismissable: true,
-          icon: "☀️",
-        });
-      }
+      enqueueAIMessage('ambient-light', 3, `User switched to ${e.matches ? 'dark' : 'light'} mode`);
     };
 
     darkModeQuery.addEventListener('change', handler);
     return () => darkModeQuery.removeEventListener('change', handler);
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 16. KEYSTROKE CONFIDENCE ANALYSIS ─────────────
-  // Analyzes rhythm of typing to detect confidence vs uncertainty.
-  // Steady rhythm = confident. Irregular bursts = unsure.
+  // ─── 16. KEYSTROKE CONFIDENCE ANALYSIS ───
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -864,7 +762,6 @@ export function useProactiveAI(isChatOpen: boolean) {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Confidence analysis loop
   useEffect(() => {
     const interval = setInterval(() => {
       const intervals = keystrokeIntervalsRef.current;
@@ -875,25 +772,16 @@ export function useProactiveAI(isChatOpen: boolean) {
       const stdDev = Math.sqrt(variance);
       const coefficientOfVariation = stdDev / avg;
 
-      // High CV = erratic typing = uncertainty
       if (coefficientOfVariation > 1.2 && avg > 200) {
-        enqueueMessage({
-          content: "🎭 Your typing rhythm tells me you're uncertain about something. No judgment — tell me what's on your mind, even if it's half-formed. I'll shape it.",
-          type: 'confidence',
-          priority: 7,
-          dismissable: true,
-          icon: "🎭",
-        });
-        keystrokeIntervalsRef.current = []; // Reset after trigger
+        enqueueAIMessage('confidence', 7, `Erratic typing detected: CV=${coefficientOfVariation.toFixed(2)}, avg interval=${Math.round(avg)}ms. User seems uncertain.`);
+        keystrokeIntervalsRef.current = [];
       }
-    }, 8000); // Faster confidence detection
+    }, 8000);
 
     return () => clearInterval(interval);
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 17. CURSOR ORBIT DETECTION ────────────────────
-  // Tracks when the cursor circles around an element without clicking.
-  // "Gravitational pull" — they want to click but aren't sure.
+  // ─── 17. CURSOR ORBIT DETECTION ───
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -912,69 +800,50 @@ export function useProactiveAI(isChatOpen: boolean) {
 
       const recent = positions.slice(-15);
       const timeSpan = recent[recent.length - 1].t - recent[0].t;
-      if (timeSpan < 2000) return; // Need at least 2s of data
+      if (timeSpan < 2000) return;
 
-      // Calculate centroid
       const cx = recent.reduce((s, p) => s + p.x, 0) / recent.length;
       const cy = recent.reduce((s, p) => s + p.y, 0) / recent.length;
-
-      // Calculate average distance from centroid
       const avgDist = recent.reduce((s, p) => s + Math.sqrt(Math.pow(p.x - cx, 2) + Math.pow(p.y - cy, 2)), 0) / recent.length;
 
-      // If cursor stays within a 100px radius for 3+ seconds = orbiting
       if (avgDist < 100 && avgDist > 20 && timeSpan > 3000) {
-        // Find what they're orbiting
         const orbitEl = document.elementFromPoint(cx, cy);
         const isButton = orbitEl?.closest('button, a, [role="button"]');
 
         if (isButton) {
           const label = isButton.textContent?.trim()?.slice(0, 30);
-          enqueueMessage({
-            content: `🪐 Your cursor keeps orbiting "${label}" but you haven't clicked. Hesitating? It's ${label?.toLowerCase()?.includes('free') ? 'totally free' : 'worth it'} — I can preview what happens if you click.`,
-            type: 'cursor-orbit',
-            priority: 8,
-            dismissable: true,
-            icon: "🪐",
-          });
-          cursorPositionsRef.current = []; // Reset
+          enqueueAIMessage('cursor-orbit', 8, `User cursor orbiting "${label}" button for ${Math.round(timeSpan / 1000)}s without clicking`);
+          cursorPositionsRef.current = [];
         }
       }
-    }, 2500); // Faster cursor orbit detection
+    }, 2500);
 
     return () => clearInterval(interval);
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 18. DÉJÀ VU — Re-reading the same section ─────
-  // Detects when users scroll back to re-read a section they already passed.
+  // ─── 18. DÉJÀ VU ───
 
   useEffect(() => {
     const handler = () => {
-      const zone = Math.floor(window.scrollY / 300); // 300px zones
+      const zone = Math.floor(window.scrollY / 300);
       const count = rereadSectionsRef.current.get(zone) || 0;
       rereadSectionsRef.current.set(zone, count + 1);
 
-      if (count === 3) { // Third time visiting this zone
+      if (count === 3) {
         const centerEl = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
         const heading = centerEl?.closest('section, article, div')?.querySelector('h1, h2, h3');
         const text = heading?.textContent?.trim() || centerEl?.textContent?.trim()?.slice(0, 40);
 
         if (text) {
-          enqueueMessage({
-            content: `🔁 Déjà vu — you keep coming back to "${text}". This section clearly resonates. Want me to expand on it or answer a specific question?`,
-            type: 'déjà-vu',
-            priority: 7,
-            dismissable: true,
-            icon: "🔁",
-          });
+          enqueueAIMessage('déjà-vu', 7, `User revisited section "${text}" 3+ times — it clearly resonates`);
         }
       }
     };
     window.addEventListener('scroll', handler, { passive: true });
     return () => window.removeEventListener('scroll', handler);
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 19. MICRO-GESTURE — Selection without copy ────
-  // User highlights text but doesn't copy — they're thinking about it.
+  // ─── 19. MICRO-GESTURE — Selection without copy ───
 
   useEffect(() => {
     let selectionTimer: ReturnType<typeof setTimeout> | null = null;
@@ -985,15 +854,9 @@ export function useProactiveAI(isChatOpen: boolean) {
       selectionTimer = setTimeout(() => {
         const selection = window.getSelection()?.toString()?.trim();
         if (selection && selection.length > 15 && selection.length < 200) {
-          enqueueMessage({
-            content: `💡 You highlighted: "${selection.slice(0, 50)}..." — thinking it over? I can break it down, challenge it, or expand it. Your call.`,
-            type: 'micro-gesture',
-            priority: 6,
-            dismissable: true,
-            icon: "💡",
-          });
+          enqueueAIMessage('micro-gesture', 6, `User highlighted text without copying: "${selection.slice(0, 80)}"`);
         }
-      }, 4000); // Wait 4s after selection to see if they do something
+      }, 4000);
     };
 
     document.addEventListener('selectionchange', handler);
@@ -1001,15 +864,13 @@ export function useProactiveAI(isChatOpen: boolean) {
       document.removeEventListener('selectionchange', handler);
       if (selectionTimer) clearTimeout(selectionTimer);
     };
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
   // ════════════════════════════════════════════════════
   // ═══ BEYOND-HUMAN LEVEL DETECTIONS ═════════════════
   // ════════════════════════════════════════════════════
 
-  // ─── 20. BREATHING PATTERN DETECTION ───────────────
-  // Uses DeviceMotion API to detect micro-tremors from breathing.
-  // On mobile, holding the phone transmits chest movement.
+  // ─── 20. BREATHING PATTERN DETECTION ───
 
   useEffect(() => {
     let samples: number[] = [];
@@ -1018,58 +879,38 @@ export function useProactiveAI(isChatOpen: boolean) {
     const handler = (e: DeviceMotionEvent) => {
       const acc = e.accelerationIncludingGravity;
       if (!acc || acc.x === null || acc.y === null || acc.z === null) return;
-
       const magnitude = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
       const delta = Math.abs(magnitude - lastMagnitude);
       lastMagnitude = magnitude;
-
       samples.push(delta);
       if (samples.length > 100) samples = samples.slice(-60);
     };
 
-    // Check for permission and add listener
     if (typeof DeviceMotionEvent !== 'undefined') {
       window.addEventListener('devicemotion', handler);
     }
 
-    // Analysis loop
     const interval = setInterval(() => {
       if (samples.length < 30) return;
-
       const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
       const peaks = samples.filter(s => s > avg * 1.5).length;
 
-      // High frequency micro-movements = fast breathing = stress
       if (peaks > 15) {
-        enqueueMessage({
-          content: "🫁 I'm sensing rapid micro-movements from your device — your breathing might be elevated. Take a slow breath. I can simplify whatever's stressing you.",
-          type: 'breathing',
-          priority: 8,
-          dismissable: true,
-          icon: "🫁",
-        });
+        enqueueAIMessage('breathing', 8, 'Elevated device micro-movements detected — user may be stressed or breathing rapidly');
         samples = [];
       } else if (peaks < 5 && samples.length > 50) {
-        // Very still = deep calm or sleeping
-        enqueueMessage({
-          content: "🧘 You're incredibly still right now — deep focus or deep thought? Either way, I'll match your calm. Ask when ready.",
-          type: 'breathing',
-          priority: 3,
-          dismissable: true,
-          icon: "🧘",
-        });
+        enqueueAIMessage('breathing', 3, 'Very still device — user is deeply calm or focused');
         samples = [];
       }
-    }, 12000); // Faster breathing analysis
+    }, 12000);
 
     return () => {
       window.removeEventListener('devicemotion', handler);
       clearInterval(interval);
     };
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 21. TOUCH PRESSURE SENSING ────────────────────
-  // Uses Touch.force property (0-1) to measure tap intensity.
+  // ─── 21. TOUCH PRESSURE SENSING ───
 
   useEffect(() => {
     const pressures: number[] = [];
@@ -1087,39 +928,25 @@ export function useProactiveAI(isChatOpen: boolean) {
 
     const interval = setInterval(() => {
       if (pressures.length < 10) return;
-
       const avg = pressures.reduce((a, b) => a + b, 0) / pressures.length;
 
       if (avg > 0.7) {
-        enqueueMessage({
-          content: "👆 You're pressing the screen quite hard — I can feel the tension through the glass. Let me help resolve whatever's causing that friction.",
-          type: 'touch-pressure',
-          priority: 7,
-          dismissable: true,
-          icon: "👆",
-        });
+        enqueueAIMessage('touch-pressure', 7, `Hard screen presses detected (avg force: ${avg.toFixed(2)}). User may be frustrated.`);
         pressures.length = 0;
       } else if (avg < 0.15 && avg > 0) {
-        enqueueMessage({
-          content: "🪶 Feather-light touches — you're browsing gently, taking it all in. I'll keep my suggestions soft and exploratory.",
-          type: 'touch-pressure',
-          priority: 3,
-          dismissable: true,
-          icon: "🪶",
-        });
+        enqueueAIMessage('touch-pressure', 3, `Very light touches (avg force: ${avg.toFixed(2)}). User browsing gently.`);
         pressures.length = 0;
       }
-    }, 8000); // Faster touch pressure sensing
+    }, 8000);
 
     return () => {
       window.removeEventListener('touchstart', handler);
       window.removeEventListener('touchmove', handler);
       clearInterval(interval);
     };
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 22. CHRONOBIOLOGICAL SYNC ─────────────────────
-  // Learns your personal rhythm across visits to predict peak hours.
+  // ─── 22. CHRONOBIOLOGICAL SYNC ───
 
   useEffect(() => {
     const memory = memoryRef.current;
@@ -1129,7 +956,6 @@ export function useProactiveAI(isChatOpen: boolean) {
     memory.activityByHour[hour] = (memory.activityByHour[hour] || 0) + 1;
     saveVisitorMemory(memory);
 
-    // Only trigger after 3+ visits (enough data)
     if (memory.visitCount < 3) return;
 
     const entries = Object.entries(memory.activityByHour).map(([h, s]) => ({ hour: Number(h), score: s as number }));
@@ -1139,34 +965,17 @@ export function useProactiveAI(isChatOpen: boolean) {
     if (peakHour && peakHour.score >= 3) {
       const currentHour = new Date().getHours();
       const isPeak = currentHour === peakHour.hour;
+      const peakLabel = peakHour.hour > 12 ? `${peakHour.hour - 12}pm` : `${peakHour.hour}am`;
 
       const timer = setTimeout(() => {
-        if (isPeak) {
-          enqueueMessage({
-            content: `🧬 Chronobio-sync: You're most active at ${peakHour.hour > 12 ? peakHour.hour - 12 + 'pm' : peakHour.hour + 'am'}. Right now is YOUR peak hour — best time for deep work or big decisions.`,
-            type: 'chronobio',
-            priority: 6,
-            dismissable: true,
-            icon: "🧬",
-          });
-        } else {
-          const peakLabel = peakHour.hour > 12 ? `${peakHour.hour - 12}pm` : `${peakHour.hour}am`;
-          enqueueMessage({
-            content: `🧬 Your personal data says you're sharpest at ${peakLabel}. Right now might not be your peak — want me to keep things light, or push through?`,
-            type: 'chronobio',
-            priority: 4,
-            dismissable: true,
-            icon: "🧬",
-          });
-        }
-      }, 6000); // Faster chronobio trigger
+        enqueueAIMessage('chronobio', isPeak ? 6 : 4, `User's peak activity hour is ${peakLabel} (based on ${memory.visitCount} visits). Currently ${isPeak ? 'at peak' : 'off-peak'}.`);
+      }, 6000);
 
       return () => clearTimeout(timer);
     }
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 23. DECISION FATIGUE METER ────────────────────
-  // Counts every click/selection/navigation as a micro-decision.
+  // ─── 23. DECISION FATIGUE METER ───
 
   useEffect(() => {
     const memory = memoryRef.current;
@@ -1176,31 +985,16 @@ export function useProactiveAI(isChatOpen: boolean) {
       memory.decisionCount += 1;
       saveVisitorMemory(memory);
 
-      if (memory.decisionCount === 35) {
-        enqueueMessage({
-          content: "🧠 Decision fatigue alert: You've made 35+ micro-decisions this session. Your brain is getting tired of choosing. Want me to just recommend the best option?",
-          type: 'decision-fatigue',
-          priority: 8,
-          dismissable: true,
-          icon: "🧠",
-        });
-      } else if (memory.decisionCount === 60) {
-        enqueueMessage({
-          content: "⚠️ 60+ decisions in one session — that's beyond the cognitive limit. I'm switching to binary mode: I'll give you ONE recommendation. Yes or no. That's it.",
-          type: 'decision-fatigue',
-          priority: 9,
-          dismissable: true,
-          icon: "⚠️",
-        });
+      if (memory.decisionCount === 35 || memory.decisionCount === 60) {
+        enqueueAIMessage('decision-fatigue', memory.decisionCount >= 60 ? 9 : 8, `User has made ${memory.decisionCount} micro-decisions this session — cognitive overload threshold reached.`);
       }
     };
 
     window.addEventListener('click', clickHandler, { passive: true });
     return () => window.removeEventListener('click', clickHandler);
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 24. VISUAL ATTENTION CARTOGRAPHY ──────────────
-  // Builds estimated eye-position from scroll + cursor proximity.
+  // ─── 24. VISUAL ATTENTION CARTOGRAPHY ───
 
   useEffect(() => {
     const attentionZones: Map<string, number> = new Map();
@@ -1211,41 +1005,31 @@ export function useProactiveAI(isChatOpen: boolean) {
       const dt = now - lastCheck;
       lastCheck = now;
 
-      if (scrollVelocityRef.current > 2) return; // Skipping while scrolling fast
+      if (scrollVelocityRef.current > 2) return;
 
-      // Estimate gaze position: center of viewport
       const gazeY = window.scrollY + window.innerHeight * 0.4;
-      const zone = Math.floor(gazeY / 200); // 200px zones
+      const zone = Math.floor(gazeY / 200);
       const zoneKey = `${location.pathname}-${zone}`;
 
       attentionZones.set(zoneKey, (attentionZones.get(zoneKey) || 0) + dt);
 
-      // Find hotspot — most gazed zone
       const entries = Array.from(attentionZones.entries());
       const hotspot = entries.sort((a, b) => b[1] - a[1])[0];
 
       if (hotspot && hotspot[1] > 12000 && hotspot[1] < 18000) {
-        // 20s+ staring at one zone
         const zoneY = Number(hotspot[0].split('-').pop()) * 200;
         const el = document.elementFromPoint(window.innerWidth / 2, zoneY - window.scrollY + 100);
         const heading = el?.closest('section, article')?.querySelector('h1, h2, h3');
         const label = heading?.textContent?.trim() || 'this section';
 
-        enqueueMessage({
-          content: `👁️ Visual attention mapped: You've spent 20+ seconds focused on "${label}". Your gaze keeps returning here — this is clearly important to you. Want to go deeper?`,
-          type: 'visual-attention',
-          priority: 6,
-          dismissable: true,
-          icon: "👁️",
-        });
+        enqueueAIMessage('visual-attention', 6, `User spent 20+ seconds focused on "${label}" — high visual attention zone`);
       }
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [enqueueMessage, location.pathname]);
+  }, [enqueueAIMessage, location.pathname]);
 
-  // ─── 25. DIGITAL TWIN PREDICTION ───────────────────
-  // Predicts your NEXT action based on behavioral patterns.
+  // ─── 25. DIGITAL TWIN PREDICTION ───
 
   useEffect(() => {
     const memory = memoryRef.current;
@@ -1253,10 +1037,8 @@ export function useProactiveAI(isChatOpen: boolean) {
 
     const timer = setTimeout(() => {
       const history = memory.navigationHistory;
-      const lastTwo = history.slice(-2).map(h => h.path);
       const currentPath = location.pathname;
 
-      // Build transition probability map
       const transitions: Record<string, Record<string, number>> = {};
       for (let i = 0; i < history.length - 1; i++) {
         const from = history[i].path;
@@ -1273,29 +1055,14 @@ export function useProactiveAI(isChatOpen: boolean) {
         const predictedPath = sorted[0][0];
         const confidence = Math.round((sorted[0][1] / Object.values(nextPredictions).reduce((a, b) => a + b, 0)) * 100);
 
-        const pathNames: Record<string, string> = {
-          '/': 'the homepage', '/pricing': 'pricing', '/about': 'about us',
-          '/chatbot': 'the chatbot', '/strategy': 'strategy agent',
-          '/docs': 'documentation', '/faq': 'FAQs',
-        };
-
-        const label = pathNames[predictedPath] || predictedPath;
-
-        enqueueMessage({
-          content: `🪞 Digital Twin prediction (${confidence}% confidence): Based on your behavioral pattern, you're about to visit ${label}. I've already pre-analyzed that page for you — want the summary now?`,
-          type: 'digital-twin',
-          priority: 7,
-          dismissable: true,
-          icon: "🪞",
-        });
+        enqueueAIMessage('digital-twin', 7, `Based on navigation history, predicting user will visit ${predictedPath} next (${confidence}% confidence).`);
       }
-    }, 5000); // Faster digital twin prediction
+    }, 5000);
 
     return () => clearTimeout(timer);
-  }, [location.pathname, enqueueMessage]);
+  }, [location.pathname, enqueueAIMessage]);
 
-  // ─── 26. SUBCONSCIOUS ELEMENT ATTRACTION ───────────
-  // Tracks which elements the cursor hovers near most without clicking.
+  // ─── 26. SUBCONSCIOUS ELEMENT ATTRACTION ───
 
   useEffect(() => {
     const hoverMap: Map<string, number> = new Map();
@@ -1303,54 +1070,40 @@ export function useProactiveAI(isChatOpen: boolean) {
     const handler = (e: MouseEvent) => {
       const el = document.elementFromPoint(e.clientX, e.clientY);
       if (!el) return;
-
       const interactive = el.closest('button, a, [role="button"], input, .card');
       if (!interactive) return;
-
       const label = interactive.textContent?.trim()?.slice(0, 40) || interactive.getAttribute('aria-label') || 'element';
       const key = label.toLowerCase();
-
       hoverMap.set(key, (hoverMap.get(key) || 0) + 1);
     };
 
     window.addEventListener('mousemove', handler, { passive: true });
 
     const interval = setInterval(() => {
-      const entries = Array.from(hoverMap.entries()).filter(([, count]) => count > 30); // Lower threshold
+      const entries = Array.from(hoverMap.entries()).filter(([, count]) => count > 30);
       if (entries.length === 0) return;
-
       const topAttraction = entries.sort((a, b) => b[1] - a[1])[0];
 
-      enqueueMessage({
-        content: `🧲 Subconscious signal: Your cursor has gravitated toward "${topAttraction[0]}" ${topAttraction[1]} times without clicking. Something's pulling you there — explore it?`,
-        type: 'subconscious',
-        priority: 7,
-        dismissable: true,
-        icon: "🧲",
-      });
-
+      enqueueAIMessage('subconscious', 7, `User cursor gravitated toward "${topAttraction[0]}" ${topAttraction[1]} times without clicking — subconscious attraction detected`);
       hoverMap.clear();
-    }, 12000); // Faster subconscious detection
+    }, 12000);
 
     return () => {
       window.removeEventListener('mousemove', handler);
       clearInterval(interval);
     };
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 27. COGNITIVE LOAD ESTIMATION ─────────────────
-  // Measures page complexity × erratic behavior to detect overload.
+  // ─── 27. COGNITIVE LOAD ESTIMATION ───
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // Count visible text elements
       const textElements = document.querySelectorAll('p, h1, h2, h3, h4, li, span, td');
       const visibleCount = Array.from(textElements).filter(el => {
         const rect = el.getBoundingClientRect();
         return rect.top >= 0 && rect.top <= window.innerHeight;
       }).length;
 
-      // High element count + erratic scroll + frequent focus loss = overloaded
       const erraticScore = (
         (visibleCount > 20 ? 3 : visibleCount > 10 ? 1 : 0) +
         (scrollVelocityRef.current > 4 ? 2 : 0) +
@@ -1359,21 +1112,14 @@ export function useProactiveAI(isChatOpen: boolean) {
       );
 
       if (erraticScore >= 5) {
-        enqueueMessage({
-          content: `📊 Cognitive load critical: ${visibleCount}+ elements competing for your attention, erratic scrolling, and tab switching. Your brain is overloaded. Tell me your ONE goal — I'll filter everything else out.`,
-          type: 'cognitive-load',
-          priority: 8,
-          dismissable: true,
-          icon: "📊",
-        });
+        enqueueAIMessage('cognitive-load', 8, `Cognitive overload: ${visibleCount}+ visible elements, erratic scrolling, tab switching. User needs focus.`);
       }
-    }, 10000); // Faster cognitive load detection
+    }, 10000);
 
     return () => clearInterval(interval);
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 28. LINGUISTIC FINGERPRINTING ─────────────────
-  // Analyzes typed words to detect vocabulary level and match it.
+  // ─── 28. LINGUISTIC FINGERPRINTING ───
 
   useEffect(() => {
     const words: string[] = [];
@@ -1396,7 +1142,6 @@ export function useProactiveAI(isChatOpen: boolean) {
     const interval = setInterval(() => {
       if (words.length < 8) return;
 
-      // Simple vocabulary analysis
       const avgWordLen = words.reduce((s, w) => s + w.length, 0) / words.length;
       const complexWords = words.filter(w => w.length > 8).length;
       const ratio = complexWords / words.length;
@@ -1404,44 +1149,23 @@ export function useProactiveAI(isChatOpen: boolean) {
       const memory = memoryRef.current;
       let level: 'simple' | 'moderate' | 'advanced' = 'moderate';
 
-      if (ratio > 0.3 || avgWordLen > 7) {
-        level = 'advanced';
-      } else if (ratio < 0.1 && avgWordLen < 5) {
-        level = 'simple';
-      }
+      if (ratio > 0.3 || avgWordLen > 7) level = 'advanced';
+      else if (ratio < 0.1 && avgWordLen < 5) level = 'simple';
 
       if (memory.vocabularyLevel !== level && level !== 'moderate') {
         memory.vocabularyLevel = level;
         saveVisitorMemory(memory);
-
-        if (level === 'advanced') {
-          enqueueMessage({
-            content: "🔮 Linguistic analysis: Your vocabulary suggests expertise. I'm upgrading my response depth — no hand-holding, straight to advanced concepts. Specify your domain and I'll match your level.",
-            type: 'linguistic',
-            priority: 5,
-            dismissable: true,
-            icon: "🔮",
-          });
-        } else if (level === 'simple') {
-          enqueueMessage({
-            content: "🔮 I'm tuning my language to be clearer and more direct. No jargon, no fluff — just answers you can act on immediately.",
-            type: 'linguistic',
-            priority: 5,
-            dismissable: true,
-            icon: "🔮",
-          });
-        }
+        enqueueAIMessage('linguistic', 5, `User vocabulary level detected as "${level}" (avg word length: ${avgWordLen.toFixed(1)}, complex ratio: ${(ratio * 100).toFixed(0)}%). Adjust communication style.`);
       }
-    }, 10000); // Faster linguistic fingerprinting
+    }, 10000);
 
     return () => {
       window.removeEventListener('keydown', handler);
       clearInterval(interval);
     };
-  }, [enqueueMessage]);
+  }, [enqueueAIMessage]);
 
-  // ─── 29. FOMO CASCADE DETECTION ────────────────────
-  // Rapid page switching between features = wants everything.
+  // ─── 29. FOMO CASCADE DETECTION ───
 
   useEffect(() => {
     const memory = memoryRef.current;
@@ -1449,28 +1173,21 @@ export function useProactiveAI(isChatOpen: boolean) {
 
     const now = Date.now();
     memory.featureSwitchTimestamps.push(now);
-    // Keep last 2 minutes
     memory.featureSwitchTimestamps = memory.featureSwitchTimestamps.filter(t => now - t < 120000);
     saveVisitorMemory(memory);
 
     const recentSwitches = memory.featureSwitchTimestamps.length;
 
-    if (recentSwitches >= 4) { // Lower threshold for FOMO
+    if (recentSwitches >= 4) {
       const timer = setTimeout(() => {
-        enqueueMessage({
-          content: `😱 FOMO detected: You've explored ${recentSwitches} pages in 2 minutes — you want everything! Good news: the all-access plan covers every feature you've looked at. Want a personalized bundle?`,
-          type: 'fomo',
-          priority: 8,
-          dismissable: true,
-          icon: "😱",
-        });
+        enqueueAIMessage('fomo', 8, `User explored ${recentSwitches} pages in 2 minutes — rapid feature switching, FOMO pattern.`);
         memory.featureSwitchTimestamps = [];
         saveVisitorMemory(memory);
       }, 2000);
 
       return () => clearTimeout(timer);
     }
-  }, [location.pathname, enqueueMessage]);
+  }, [location.pathname, enqueueAIMessage]);
 
   return {
     currentMessage,
