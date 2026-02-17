@@ -5,6 +5,12 @@ import { useRef, useMemo } from "react";
 import avatar1 from "@/assets/avatar-1.jpg";
 import avatar2 from "@/assets/avatar-2.jpg";
 import avatar3 from "@/assets/avatar-3.jpg";
+import avatar4 from "@/assets/avatar-4.jpg";
+import avatar5 from "@/assets/avatar-5.jpg";
+import avatar6 from "@/assets/avatar-6.jpg";
+import avatar7 from "@/assets/avatar-7.jpg";
+import avatar8 from "@/assets/avatar-8.jpg";
+import avatar9 from "@/assets/avatar-9.jpg";
 
 const identityPool = [
   { name: "Lena Vasquez", role: "Lead Engineer", company: "ArcLight Systems" },
@@ -27,7 +33,7 @@ const reviewTemplates = [
   { content: "The script automation feature is phenomenal. I can generate complex automation scripts in minutes instead of hours. Best investment I've made for my productivity.", highlight: "Minutes instead of hours", metric: "10x", metricLabel: "Faster" },
 ];
 
-const avatars = [avatar1, avatar2, avatar3];
+const avatarPool = [avatar1, avatar2, avatar3, avatar4, avatar5, avatar6, avatar7, avatar8, avatar9];
 
 function shuffleAndPick<T>(arr: T[], count: number): T[] {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
@@ -53,10 +59,11 @@ const TestimonialsSection = () => {
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
 
   const testimonials = useMemo(() => {
-    const picked = shuffleAndPick(identityPool, 3);
-    return picked.map((identity, i) => ({
+    const pickedIdentities = shuffleAndPick(identityPool, 3);
+    const pickedAvatars = shuffleAndPick(avatarPool, 3);
+    return pickedIdentities.map((identity, i) => ({
       ...identity,
-      avatar: avatars[i],
+      avatar: pickedAvatars[i],
       rating: 5,
       ...reviewTemplates[i],
     }));
