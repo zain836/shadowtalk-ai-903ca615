@@ -2,9 +2,9 @@ import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Presentation, Plus, Download, Wand2, ChevronLeft, ChevronRight, 
-  Trash2, Copy, GripVertical, Type, BarChart3, Quote, Layout, 
-  Clock, GitCompare, List, Image, X, Loader2, Maximize, Minimize,
-  SlidersHorizontal, Palette, FileText, Eye
+  Trash2, Copy, Type, BarChart3, Quote, Layout, 
+  Clock, GitCompare, List, Image, Loader2, Maximize, Minimize,
+  SlidersHorizontal, FileText, Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,42 +16,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
+import SlideRenderer from "@/components/presentation/SlideRenderer";
+import { Slide, PresentationData, ThemeKey, THEMES } from "@/components/presentation/types";
 
-// Types
-interface SlideContent {
-  [key: string]: unknown;
-}
-
-interface Slide {
-  id: string;
-  layout: string;
-  title: string;
-  subtitle?: string;
-  content: SlideContent;
-  speakerNotes?: string;
-  transition?: string;
-}
-
-interface PresentationData {
-  title: string;
-  slides: Slide[];
-  metadata?: {
-    estimatedDuration?: number;
-    targetAudience?: string;
-    keyTakeaways?: string[];
-  };
-}
-
-type ThemeKey = 'corporate' | 'startup' | 'academic' | 'creative' | 'minimal' | 'dark_elegance';
-
-const THEMES: Record<ThemeKey, { name: string; bg: string; accent: string; text: string; secondaryBg: string; accentGradient: string }> = {
-  corporate: { name: "Corporate", bg: "#FFFFFF", accent: "#1E40AF", text: "#111827", secondaryBg: "#F3F4F6", accentGradient: "linear-gradient(135deg, #1E40AF, #3B82F6)" },
-  startup: { name: "Startup", bg: "#0F172A", accent: "#8B5CF6", text: "#F8FAFC", secondaryBg: "#1E293B", accentGradient: "linear-gradient(135deg, #8B5CF6, #EC4899)" },
-  academic: { name: "Academic", bg: "#FFFBEB", accent: "#92400E", text: "#1C1917", secondaryBg: "#FEF3C7", accentGradient: "linear-gradient(135deg, #92400E, #D97706)" },
-  creative: { name: "Creative", bg: "#FDF2F8", accent: "#DB2777", text: "#1F2937", secondaryBg: "#FCE7F3", accentGradient: "linear-gradient(135deg, #DB2777, #F97316)" },
-  minimal: { name: "Minimal", bg: "#FAFAFA", accent: "#18181B", text: "#18181B", secondaryBg: "#F4F4F5", accentGradient: "linear-gradient(135deg, #18181B, #52525B)" },
-  dark_elegance: { name: "Dark Elegance", bg: "#09090B", accent: "#FBBF24", text: "#FAFAFA", secondaryBg: "#18181B", accentGradient: "linear-gradient(135deg, #FBBF24, #F59E0B)" },
-};
+// Re-export for backward compatibility
+export type { Slide, ThemeKey };
+export { THEMES };
 
 const LAYOUT_ICONS: Record<string, React.ReactNode> = {
   title: <Type className="w-4 h-4" />,
@@ -69,363 +39,6 @@ const LAYOUT_ICONS: Record<string, React.ReactNode> = {
   roadmap: <Clock className="w-4 h-4" />,
   kpi_dashboard: <BarChart3 className="w-4 h-4" />,
   process: <List className="w-4 h-4" />,
-};
-
-// Slide Renderer
-const SlideRenderer = ({ slide, theme, scale = 1 }: { slide: Slide; theme: ThemeKey; scale?: number }) => {
-  const t = THEMES[theme];
-  const content = slide.content || {};
-
-  const baseStyle: React.CSSProperties = {
-    width: 960,
-    height: 540,
-    backgroundColor: t.bg,
-    color: t.text,
-    transform: `scale(${scale})`,
-    transformOrigin: "top left",
-    fontFamily: theme === 'corporate' ? '"Segoe UI", system-ui, sans-serif' : theme === 'startup' ? '"Inter", sans-serif' : '"Georgia", serif',
-    overflow: "hidden",
-    position: "relative",
-  };
-
-  const AccentBar = () => <div className="h-1 w-24 rounded-full mb-6" style={{ background: t.accentGradient }} />;
-
-  const SlideHeader = ({ title, subtitle }: { title: string; subtitle?: string }) => (
-    <div className="mb-2">
-      <h2 className="text-3xl font-bold leading-tight" style={{ color: t.accent }}>{title}</h2>
-      {subtitle && <p className="text-base opacity-60 mt-1">{subtitle}</p>}
-      <AccentBar />
-    </div>
-  );
-
-  const renderContent = () => {
-    switch (slide.layout) {
-      case "title":
-        return (
-          <div className="flex flex-col items-center justify-center h-full p-16 text-center" style={{ background: t.accentGradient }}>
-            <div className="w-16 h-1 rounded-full bg-white/30 mb-8" />
-            <h1 className="text-5xl font-bold mb-4 leading-tight" style={{ color: "#FFFFFF" }}>{slide.title}</h1>
-            {slide.subtitle && <p className="text-2xl opacity-90 mb-6" style={{ color: "#FFFFFF" }}>{slide.subtitle}</p>}
-            {(content as any).tagline && (
-              <p className="text-lg mt-4 opacity-80 max-w-xl leading-relaxed" style={{ color: "#FFFFFF" }}>{(content as any).tagline}</p>
-            )}
-            <div className="flex items-center gap-6 mt-10 opacity-60">
-              {(content as any).presenter && <span className="text-sm text-white">{(content as any).presenter}</span>}
-              {(content as any).date && <span className="text-sm text-white">{(content as any).date}</span>}
-            </div>
-          </div>
-        );
-
-      case "bullets":
-        return (
-          <div className="flex flex-col h-full p-12">
-            <SlideHeader title={slide.title} subtitle={slide.subtitle} />
-            {(content as any).heading && <h3 className="text-lg font-semibold mb-4 opacity-80">{(content as any).heading}</h3>}
-            <ul className="space-y-3 flex-1">
-              {((content as any).bullets || []).map((b: string, i: number) => (
-                <li key={i} className="flex items-start gap-3 text-base leading-relaxed">
-                  <span className="w-2.5 h-2.5 rounded-full mt-2 shrink-0 shadow-sm" style={{ backgroundColor: t.accent }} />
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        );
-
-      case "stats":
-        return (
-          <div className="flex flex-col h-full p-12">
-            <SlideHeader title={slide.title} subtitle={slide.subtitle} />
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 flex-1 items-center">
-              {((content as any).stats || []).map((s: any, i: number) => (
-                <div key={i} className="text-center p-5 rounded-xl border" style={{ backgroundColor: t.secondaryBg, borderColor: t.accent + '20' }}>
-                  <div className="text-4xl font-bold mb-1" style={{ color: t.accent }}>{s.value}</div>
-                  <div className="text-sm opacity-70 mb-2">{s.label}</div>
-                  {s.change && <div className="text-xs font-semibold px-2 py-0.5 rounded-full inline-block" style={{ backgroundColor: t.accent + '15', color: t.accent }}>{s.change}</div>}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case "two_column":
-        return (
-          <div className="flex flex-col h-full p-12">
-            <SlideHeader title={slide.title} subtitle={slide.subtitle} />
-            <div className="grid grid-cols-2 gap-6 flex-1">
-              {["left", "right"].map((side) => {
-                const col = (content as any)[side];
-                if (!col) return null;
-                return (
-                  <div key={side} className="p-5 rounded-xl border" style={{ backgroundColor: t.secondaryBg, borderColor: t.accent + '15' }}>
-                    <h3 className="text-lg font-bold mb-3" style={{ color: t.accent }}>{col.heading}</h3>
-                    <ul className="space-y-2.5">
-                      {(col.points || []).map((p: string, i: number) => (
-                        <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
-                          <span className="w-1.5 h-1.5 rounded-full mt-2 shrink-0" style={{ backgroundColor: t.accent }} />
-                          {p}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-
-      case "quote":
-        return (
-          <div className="flex flex-col items-center justify-center h-full p-16 text-center" style={{ backgroundColor: t.secondaryBg }}>
-            <div className="text-8xl leading-none mb-4 opacity-20" style={{ color: t.accent }}>"</div>
-            <p className="text-2xl italic max-w-2xl leading-relaxed mb-6">{(content as any).quote}</p>
-            <div>
-              <p className="text-lg font-bold" style={{ color: t.accent }}>— {(content as any).author}</p>
-              {(content as any).role && <p className="text-sm opacity-60 mt-1">{(content as any).role}</p>}
-            </div>
-          </div>
-        );
-
-      case "timeline":
-        return (
-          <div className="flex flex-col h-full p-12">
-            <SlideHeader title={slide.title} subtitle={slide.subtitle} />
-            <div className="flex-1 relative flex items-center">
-              <div className="absolute top-1/2 left-0 right-0 h-0.5 opacity-20" style={{ backgroundColor: t.accent }} />
-              <div className="flex items-start gap-3 w-full justify-between">
-                {((content as any).events || []).map((e: any, i: number) => (
-                  <div key={i} className="flex-1 text-center relative px-2">
-                    <div className="text-xl font-bold mb-2" style={{ color: t.accent }}>{e.year}</div>
-                    <div className="w-4 h-4 rounded-full mx-auto mb-3 border-2 shadow-sm" style={{ backgroundColor: t.bg, borderColor: t.accent }} />
-                    <div className="font-semibold text-sm mb-1">{e.title}</div>
-                    <div className="text-xs opacity-60 leading-relaxed">{e.description}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-
-      case "comparison":
-        return (
-          <div className="flex flex-col h-full p-12">
-            <SlideHeader title={slide.title} subtitle={slide.subtitle} />
-            <div className="grid grid-cols-2 gap-5 flex-1">
-              {((content as any).items || []).map((item: any, i: number) => (
-                <div key={i} className="p-4 rounded-xl border" style={{ backgroundColor: t.secondaryBg, borderColor: t.accent + '15' }}>
-                  <h3 className="text-lg font-bold mb-3" style={{ color: t.accent }}>{item.name}</h3>
-                  {item.pros && (
-                    <div className="mb-3">
-                      <span className="text-xs font-bold text-green-600 uppercase tracking-wider">Strengths</span>
-                      <ul className="mt-1.5 space-y-1.5">{item.pros.map((p: string, j: number) => <li key={j} className="text-xs flex items-start gap-1.5"><span className="text-green-500 mt-0.5">✓</span> {p}</li>)}</ul>
-                    </div>
-                  )}
-                  {item.cons && (
-                    <div>
-                      <span className="text-xs font-bold text-red-500 uppercase tracking-wider">Weaknesses</span>
-                      <ul className="mt-1.5 space-y-1.5">{item.cons.map((c: string, j: number) => <li key={j} className="text-xs flex items-start gap-1.5"><span className="text-red-400 mt-0.5">✗</span> {c}</li>)}</ul>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case "image_text":
-        return (
-          <div className="flex h-full">
-            <div className="w-1/2 p-12 flex flex-col justify-center">
-              <h2 className="text-3xl font-bold mb-2" style={{ color: t.accent }}>{slide.title}</h2>
-              <AccentBar />
-              {(content as any).heading && <h3 className="text-lg font-semibold mb-3">{(content as any).heading}</h3>}
-              <p className="text-sm leading-relaxed opacity-80 mb-4">{(content as any).text}</p>
-              {(content as any).keyPoints && (
-                <ul className="space-y-2">
-                  {(content as any).keyPoints.map((kp: string, i: number) => (
-                    <li key={i} className="text-sm flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full mt-2 shrink-0" style={{ backgroundColor: t.accent }} />
-                      {kp}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="w-1/2 flex items-center justify-center p-8" style={{ backgroundColor: t.secondaryBg }}>
-              <div className="w-full h-full rounded-xl flex items-center justify-center border border-dashed opacity-40" style={{ borderColor: t.accent }}>
-                <div className="text-center">
-                  <Image className="w-12 h-12 mx-auto mb-2" style={{ color: t.accent }} />
-                  <p className="text-xs opacity-60">{(content as any).imagePrompt || "Visual placeholder"}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case "funnel":
-        return (
-          <div className="flex flex-col h-full p-12">
-            <SlideHeader title={slide.title} subtitle={slide.subtitle} />
-            <div className="flex-1 flex flex-col justify-center items-center gap-2">
-              {((content as any).stages || []).map((stage: any, i: number, arr: any[]) => {
-                const widthPct = 100 - (i * (60 / arr.length));
-                return (
-                  <div key={i} className="flex items-center gap-4 w-full" style={{ maxWidth: `${widthPct}%` }}>
-                    <div className="flex-1 py-3 px-5 rounded-lg text-center border" style={{ background: t.accentGradient, opacity: 1 - (i * 0.12) }}>
-                      <div className="text-sm font-bold text-white">{stage.name}</div>
-                      {stage.value && <div className="text-xs text-white/80 mt-0.5">{stage.value}</div>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-
-      case "swot":
-        return (
-          <div className="flex flex-col h-full p-10">
-            <SlideHeader title={slide.title} subtitle={slide.subtitle} />
-            <div className="grid grid-cols-2 gap-4 flex-1">
-              {[
-                { key: "strengths", label: "Strengths", color: "#22C55E", bg: "#22C55E15" },
-                { key: "weaknesses", label: "Weaknesses", color: "#EF4444", bg: "#EF444415" },
-                { key: "opportunities", label: "Opportunities", color: "#3B82F6", bg: "#3B82F615" },
-                { key: "threats", label: "Threats", color: "#F59E0B", bg: "#F59E0B15" },
-              ].map(({ key, label, color, bg }) => (
-                <div key={key} className="p-4 rounded-xl border" style={{ backgroundColor: bg, borderColor: color + '30' }}>
-                  <h4 className="text-sm font-bold uppercase tracking-wider mb-2" style={{ color }}>{label}</h4>
-                  <ul className="space-y-1.5">
-                    {((content as any)[key] || []).map((item: string, i: number) => (
-                      <li key={i} className="text-xs leading-relaxed flex items-start gap-1.5">
-                        <span className="mt-1 w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case "roadmap":
-        return (
-          <div className="flex flex-col h-full p-12">
-            <SlideHeader title={slide.title} subtitle={slide.subtitle} />
-            <div className="flex gap-4 flex-1 items-stretch">
-              {((content as any).phases || []).map((phase: any, i: number) => {
-                const statusColors: Record<string, string> = { done: "#22C55E", active: "#3B82F6", upcoming: "#94A3B8" };
-                const sc = statusColors[phase.status] || t.accent;
-                return (
-                  <div key={i} className="flex-1 p-4 rounded-xl border-t-4 flex flex-col" style={{ backgroundColor: t.secondaryBg, borderTopColor: sc }}>
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-bold">{phase.name}</h4>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: sc + '20', color: sc }}>{phase.status}</span>
-                    </div>
-                    <p className="text-[10px] opacity-50 mb-2">{phase.timeline}</p>
-                    <ul className="space-y-1.5 flex-1">
-                      {(phase.items || []).map((item: string, j: number) => (
-                        <li key={j} className="text-xs flex items-start gap-1.5">
-                          <span className="mt-1 w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: sc }} />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-
-      case "kpi_dashboard":
-        return (
-          <div className="flex flex-col h-full p-12">
-            <SlideHeader title={slide.title} subtitle={slide.subtitle} />
-            <div className="grid grid-cols-3 gap-4 flex-1 items-center">
-              {((content as any).kpis || []).map((kpi: any, i: number) => {
-                const statusColors: Record<string, string> = { on_track: "#22C55E", at_risk: "#F59E0B", behind: "#EF4444" };
-                const sc = statusColors[kpi.status] || t.accent;
-                return (
-                  <div key={i} className="p-4 rounded-xl border-l-4 text-center" style={{ backgroundColor: t.secondaryBg, borderLeftColor: sc }}>
-                    <p className="text-xs opacity-50 uppercase tracking-wider mb-1">{kpi.name}</p>
-                    <div className="text-3xl font-bold mb-1" style={{ color: t.accent }}>{kpi.value}</div>
-                    <p className="text-[10px] opacity-50">Target: {kpi.target}</p>
-                    {kpi.trend && <p className="text-xs font-semibold mt-1" style={{ color: sc }}>{kpi.trend}</p>}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-
-      case "process":
-        return (
-          <div className="flex flex-col h-full p-12">
-            <SlideHeader title={slide.title} subtitle={slide.subtitle} />
-            <div className="flex gap-3 flex-1 items-center">
-              {((content as any).steps || []).map((step: any, i: number, arr: any[]) => (
-                <div key={i} className="flex items-center flex-1">
-                  <div className="flex flex-col items-center text-center flex-1">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm mb-3 shadow-md" style={{ background: t.accentGradient }}>
-                      {step.number || i + 1}
-                    </div>
-                    <h4 className="text-sm font-bold mb-1">{step.title}</h4>
-                    <p className="text-xs opacity-60 leading-relaxed px-1">{step.description}</p>
-                  </div>
-                  {i < arr.length - 1 && <div className="w-8 h-0.5 shrink-0 opacity-30" style={{ backgroundColor: t.accent }} />}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case "closing":
-        return (
-          <div className="flex flex-col items-center justify-center h-full p-16 text-center" style={{ background: t.accentGradient }}>
-            <h2 className="text-4xl font-bold mb-4" style={{ color: "#FFFFFF" }}>{slide.title}</h2>
-            {(content as any).heading && <p className="text-xl mb-6 opacity-90 max-w-xl" style={{ color: "#FFFFFF" }}>{(content as any).heading}</p>}
-            {(content as any).nextSteps && (
-              <div className="mb-6 text-left max-w-md">
-                {(content as any).nextSteps.map((ns: string, i: number) => (
-                  <div key={i} className="flex items-center gap-2 mb-2">
-                    <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold">{i + 1}</span>
-                    <span className="text-sm text-white/90">{ns}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {(content as any).cta && (
-              <div className="px-8 py-3 rounded-full text-lg font-semibold" style={{ backgroundColor: "rgba(255,255,255,0.2)", color: "#FFFFFF" }}>
-                {(content as any).cta}
-              </div>
-            )}
-            {(content as any).contact && <p className="mt-6 text-sm opacity-60" style={{ color: "#FFFFFF" }}>{(content as any).contact}</p>}
-          </div>
-        );
-
-      default: // content
-        return (
-          <div className="flex flex-col h-full p-12">
-            <SlideHeader title={slide.title} subtitle={slide.subtitle} />
-            {(content as any).heading && <h3 className="text-lg font-semibold mb-4 opacity-80">{(content as any).heading}</h3>}
-            <div className="space-y-4 flex-1">
-              {((content as any).paragraphs || []).map((p: string, i: number) => (
-                <p key={i} className="text-base leading-relaxed">{p}</p>
-              ))}
-            </div>
-          </div>
-        );
-    }
-  };
-
-  return (
-    <div style={baseStyle} className="rounded-lg shadow-xl border border-border/20">
-      {renderContent()}
-      <div className="absolute bottom-3 right-4 text-xs opacity-20 font-medium" style={{ color: t.text }}>ShadowTalk AI</div>
-    </div>
-  );
 };
 
 const PresentationBuilderPage = () => {
@@ -454,12 +67,11 @@ const PresentationBuilderPage = () => {
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      // Add IDs to slides
       const slides = (data.slides || []).map((s: Slide, i: number) => ({ ...s, id: `slide-${i}-${Date.now()}` }));
       setPresentation({ ...data, slides });
       setCurrentSlide(0);
       setActiveTab("editor");
-      toast.success(`Generated ${slides.length} slides!`);
+      toast.success(`Generated ${slides.length} premium slides!`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to generate");
     } finally {
@@ -477,51 +89,215 @@ const PresentationBuilderPage = () => {
 
       pptx.author = "ShadowTalk AI";
       pptx.title = presentation.title;
+      pptx.layout = "LAYOUT_WIDE";
 
       for (const slide of presentation.slides) {
         const pptSlide = pptx.addSlide();
         const content = slide.content || {};
+        const accentClean = t.accent.replace("#", "");
+        const accentEndClean = t.accentEnd.replace("#", "");
+        const textClean = t.text.replace("#", "");
+        const bgClean = t.bg.replace("#", "");
+        const secondaryClean = t.secondaryBg.replace("#", "");
 
         if (slide.layout === "title" || slide.layout === "closing") {
-          pptSlide.background = { color: t.accent.replace("#", "") };
-          pptSlide.addText(slide.title, { x: 0.5, y: 1.5, w: 9, h: 1.5, fontSize: 36, bold: true, color: "FFFFFF", align: "center" });
-          if (slide.subtitle) pptSlide.addText(slide.subtitle, { x: 0.5, y: 3.2, w: 9, h: 1, fontSize: 20, color: "FFFFFF", align: "center" });
-          const tagline = (content as { tagline?: string; cta?: string }).tagline || (content as { cta?: string }).cta;
-          if (tagline) pptSlide.addText(tagline, { x: 1.5, y: 4.2, w: 7, h: 0.8, fontSize: 14, color: "FFFFFF", align: "center" });
+          pptSlide.background = { fill: accentClean };
+          // Decorative shapes
+          pptSlide.addShape(pptxgenjs.default.ShapeType.ellipse, { x: -1, y: -1, w: 4, h: 4, fill: { color: "FFFFFF", transparency: 92 } });
+          pptSlide.addShape(pptxgenjs.default.ShapeType.ellipse, { x: 7.5, y: 3, w: 5, h: 5, fill: { color: "FFFFFF", transparency: 94 } });
+          // Top line
+          pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: 4, y: 1, w: 2, h: 0.04, fill: { color: "FFFFFF", transparency: 60 } });
+
+          pptSlide.addText(slide.title, { x: 1, y: 1.5, w: 8, h: 1.6, fontSize: 36, bold: true, color: "FFFFFF", align: "center", fontFace: "Arial" });
+          if (slide.subtitle) pptSlide.addText(slide.subtitle, { x: 1.5, y: 3.2, w: 7, h: 0.8, fontSize: 18, color: "FFFFFF", align: "center", transparency: 15 });
+
+          if (slide.layout === "title") {
+            const tagline = (content as any).tagline;
+            if (tagline) pptSlide.addText(tagline, { x: 1.5, y: 4.1, w: 7, h: 0.6, fontSize: 13, color: "FFFFFF", align: "center", italic: true, transparency: 30 });
+            const presenterDate = [(content as any).presenter, (content as any).date].filter(Boolean).join("  |  ");
+            if (presenterDate) pptSlide.addText(presenterDate, { x: 2, y: 5, w: 6, h: 0.4, fontSize: 11, color: "FFFFFF", align: "center", transparency: 45 });
+          } else {
+            // Closing
+            const heading = (content as any).heading;
+            if (heading) pptSlide.addText(heading, { x: 1.5, y: 3.2, w: 7, h: 0.6, fontSize: 16, color: "FFFFFF", align: "center", transparency: 15 });
+            const nextSteps = (content as any).nextSteps || [];
+            nextSteps.forEach((ns: string, i: number) => {
+              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: 2.8, y: 4 + i * 0.5, w: 0.35, h: 0.3, fill: { color: "FFFFFF", transparency: 80 }, rectRadius: 0.05 });
+              pptSlide.addText(`${i + 1}`, { x: 2.8, y: 4 + i * 0.5, w: 0.35, h: 0.3, fontSize: 9, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
+              pptSlide.addText(ns, { x: 3.3, y: 4 + i * 0.5, w: 5, h: 0.3, fontSize: 12, color: "FFFFFF", transparency: 15 });
+            });
+            const cta = (content as any).cta;
+            if (cta) {
+              const yPos = 4 + nextSteps.length * 0.5 + 0.4;
+              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: 3, y: yPos, w: 4, h: 0.5, fill: { color: "FFFFFF", transparency: 85 }, rectRadius: 0.25, line: { color: "FFFFFF", width: 1.5, transparency: 70 } });
+              pptSlide.addText(cta, { x: 3, y: yPos, w: 4, h: 0.5, fontSize: 13, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
+            }
+          }
         } else {
-          pptSlide.background = { color: t.bg.replace("#", "") };
-          pptSlide.addText(slide.title, { x: 0.5, y: 0.3, w: 9, h: 0.7, fontSize: 28, bold: true, color: t.accent.replace("#", "") });
-          pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: 0.5, y: 1.05, w: 1.5, h: 0.06, fill: { color: t.accent.replace("#", "") } });
+          pptSlide.background = { fill: bgClean };
+          // Accent bar at bottom
+          pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: 0, y: 7.3, w: 13.33, h: 0.12, fill: { color: accentClean } });
+          // Corner accent
+          pptSlide.addShape(pptxgenjs.default.ShapeType.ellipse, { x: 10.5, y: -0.8, w: 3.5, h: 3.5, fill: { color: accentClean, transparency: 94 } });
+          // Title bar indicator
+          pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: 0.5, y: 0.38, w: 0.08, h: 0.6, fill: { color: accentClean }, rectRadius: 0.04 });
+          pptSlide.addText(slide.title, { x: 0.75, y: 0.3, w: 9, h: 0.7, fontSize: 24, bold: true, color: accentClean, fontFace: "Arial" });
+          if (slide.subtitle) pptSlide.addText(slide.subtitle, { x: 0.75, y: 0.95, w: 9, h: 0.35, fontSize: 11, color: textClean, italic: true, transparency: 50 });
+
+          const yStart = slide.subtitle ? 1.5 : 1.3;
 
           if (slide.layout === "bullets") {
-            const bullets = (content as { bullets?: string[] }).bullets || [];
+            const bullets = (content as any).bullets || [];
             bullets.forEach((b: string, i: number) => {
-              pptSlide.addText(`• ${b}`, { x: 0.8, y: 1.4 + i * 0.6, w: 8.2, h: 0.5, fontSize: 16, color: t.text.replace("#", "") });
+              // Numbered badge
+              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: 0.7, y: yStart + i * 0.65, w: 0.35, h: 0.35, fill: { color: accentClean }, rectRadius: 0.05 });
+              pptSlide.addText(`${i + 1}`, { x: 0.7, y: yStart + i * 0.65, w: 0.35, h: 0.35, fontSize: 10, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
+              pptSlide.addText(b, { x: 1.2, y: yStart + i * 0.65, w: 8.5, h: 0.55, fontSize: 13, color: textClean });
             });
           } else if (slide.layout === "stats") {
-            const stats = (content as { stats?: Array<{value: string; label: string}> }).stats || [];
-            stats.forEach((s, i) => {
-              const col = i % 4;
-              pptSlide.addText(s.value, { x: 0.5 + col * 2.3, y: 2, w: 2, h: 0.8, fontSize: 32, bold: true, color: t.accent.replace("#", ""), align: "center" });
-              pptSlide.addText(s.label, { x: 0.5 + col * 2.3, y: 2.8, w: 2, h: 0.5, fontSize: 11, color: t.text.replace("#", ""), align: "center" });
+            const stats = (content as any).stats || [];
+            stats.forEach((s: any, i: number) => {
+              const xPos = 0.5 + i * 3;
+              // Card background
+              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: xPos, y: yStart + 0.5, w: 2.7, h: 2.2, fill: { color: secondaryClean }, rectRadius: 0.15, line: { color: accentClean, width: 0.5, transparency: 85 } });
+              // Top accent line
+              pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: xPos, y: yStart + 0.5, w: 2.7, h: 0.06, fill: { color: accentClean, transparency: 40 } });
+              pptSlide.addText(s.value, { x: xPos, y: yStart + 0.8, w: 2.7, h: 0.8, fontSize: 28, bold: true, color: accentClean, align: "center" });
+              pptSlide.addText(s.label, { x: xPos + 0.15, y: yStart + 1.5, w: 2.4, h: 0.4, fontSize: 10, color: textClean, align: "center", transparency: 40 });
+              if (s.change) {
+                pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: xPos + 0.6, y: yStart + 1.9, w: 1.5, h: 0.3, fill: { color: accentClean, transparency: 88 }, rectRadius: 0.15 });
+                pptSlide.addText(s.change, { x: xPos + 0.6, y: yStart + 1.9, w: 1.5, h: 0.3, fontSize: 9, bold: true, color: accentClean, align: "center", valign: "middle" });
+              }
             });
           } else if (slide.layout === "quote") {
-            pptSlide.addText(`"${(content as { quote?: string }).quote}"`, { x: 1, y: 1.5, w: 8, h: 2, fontSize: 22, italic: true, color: t.text.replace("#", ""), align: "center" });
-            pptSlide.addText(`— ${(content as { author?: string }).author}`, { x: 1, y: 3.8, w: 8, h: 0.5, fontSize: 16, bold: true, color: t.accent.replace("#", ""), align: "center" });
+            // Giant quote marks
+            pptSlide.addText('"', { x: 0.8, y: 1, w: 2, h: 2, fontSize: 120, color: accentClean, transparency: 90, fontFace: "Georgia" });
+            pptSlide.addText((content as any).quote || "", { x: 1.5, y: 2, w: 7.5, h: 2.5, fontSize: 20, italic: true, color: textClean, align: "center" });
+            pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: 4.5, y: 4.8, w: 1.5, h: 0.04, fill: { color: accentClean } });
+            pptSlide.addText(`${(content as any).author || ""}`, { x: 2, y: 5, w: 6, h: 0.4, fontSize: 15, bold: true, color: accentClean, align: "center" });
+            if ((content as any).role) pptSlide.addText((content as any).role, { x: 2, y: 5.4, w: 6, h: 0.3, fontSize: 11, color: textClean, align: "center", transparency: 50 });
           } else if (slide.layout === "two_column") {
             ["left", "right"].forEach((side, idx) => {
-              const col = (content as Record<string, { heading?: string; points?: string[] }>)[side];
+              const col = (content as any)[side];
               if (!col) return;
-              const xOff = idx === 0 ? 0.5 : 5.2;
-              pptSlide.addText(col.heading || "", { x: xOff, y: 1.4, w: 4.3, h: 0.5, fontSize: 18, bold: true, color: t.accent.replace("#", "") });
+              const xOff = idx === 0 ? 0.5 : 5.5;
+              // Card bg
+              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: xOff, y: yStart, w: 4.5, h: 4.8, fill: { color: secondaryClean }, rectRadius: 0.15, line: { color: accentClean, width: 0.5, transparency: 88 } });
+              pptSlide.addShape(pptxgenjs.default.ShapeType.ellipse, { x: xOff + 0.2, y: yStart + 0.2, w: 0.15, h: 0.15, fill: { color: accentClean } });
+              pptSlide.addText(col.heading || "", { x: xOff + 0.5, y: yStart + 0.1, w: 3.8, h: 0.4, fontSize: 14, bold: true, color: accentClean });
               (col.points || []).forEach((p: string, j: number) => {
-                pptSlide.addText(`• ${p}`, { x: xOff + 0.2, y: 2.1 + j * 0.5, w: 4, h: 0.4, fontSize: 13, color: t.text.replace("#", "") });
+                pptSlide.addText(`• ${p}`, { x: xOff + 0.4, y: yStart + 0.7 + j * 0.6, w: 3.8, h: 0.5, fontSize: 11, color: textClean });
               });
             });
+          } else if (slide.layout === "swot") {
+            const quads = [
+              { key: "strengths", label: "STRENGTHS", color: "16A34A", x: 0.5, y: yStart },
+              { key: "weaknesses", label: "WEAKNESSES", color: "DC2626", x: 5.2, y: yStart },
+              { key: "opportunities", label: "OPPORTUNITIES", color: "2563EB", x: 0.5, y: yStart + 2.8 },
+              { key: "threats", label: "THREATS", color: "D97706", x: 5.2, y: yStart + 2.8 },
+            ];
+            quads.forEach(({ key, label, color, x, y }) => {
+              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x, y, w: 4.5, h: 2.5, fill: { color, transparency: 94 }, rectRadius: 0.15, line: { color, width: 0.8, transparency: 75 } });
+              pptSlide.addText(label, { x: x + 0.2, y: y + 0.1, w: 3, h: 0.3, fontSize: 9, bold: true, color });
+              ((content as any)[key] || []).forEach((item: string, i: number) => {
+                pptSlide.addText(`• ${item}`, { x: x + 0.3, y: y + 0.5 + i * 0.45, w: 3.9, h: 0.4, fontSize: 10, color: textClean });
+              });
+            });
+          } else if (slide.layout === "timeline") {
+            const events = (content as any).events || [];
+            // Timeline line
+            pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: 0.8, y: yStart + 1.5, w: 9.5, h: 0.03, fill: { color: accentClean, transparency: 80 } });
+            events.forEach((e: any, i: number) => {
+              const xPos = 0.8 + (i * (9.5 / events.length));
+              pptSlide.addShape(pptxgenjs.default.ShapeType.ellipse, { x: xPos + 0.3, y: yStart + 1.35, w: 0.3, h: 0.3, fill: { color: bgClean }, line: { color: accentClean, width: 2 } });
+              pptSlide.addText(e.year, { x: xPos, y: yStart + 0.5, w: 1.5, h: 0.4, fontSize: 14, bold: true, color: accentClean, align: "center" });
+              pptSlide.addText(e.title, { x: xPos, y: yStart + 1.8, w: 1.5, h: 0.3, fontSize: 10, bold: true, color: textClean, align: "center" });
+              pptSlide.addText(e.description, { x: xPos - 0.1, y: yStart + 2.2, w: 1.7, h: 0.8, fontSize: 8, color: textClean, align: "center", transparency: 40 });
+            });
+          } else if (slide.layout === "kpi_dashboard") {
+            const kpis = (content as any).kpis || [];
+            const cols = 3;
+            kpis.forEach((kpi: any, i: number) => {
+              const col = i % cols;
+              const row = Math.floor(i / cols);
+              const xPos = 0.5 + col * 3.5;
+              const yPos = yStart + row * 2.5;
+              const statusColors: Record<string, string> = { on_track: "16A34A", at_risk: "D97706", behind: "DC2626" };
+              const sc = statusColors[kpi.status] || accentClean;
+              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: xPos, y: yPos, w: 3.2, h: 2.2, fill: { color: secondaryClean }, rectRadius: 0.15 });
+              pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: xPos, y: yPos, w: 0.06, h: 2.2, fill: { color: sc } });
+              pptSlide.addText(kpi.name, { x: xPos + 0.2, y: yPos + 0.15, w: 2.8, h: 0.25, fontSize: 8, bold: true, color: textClean, transparency: 50 });
+              pptSlide.addText(kpi.value, { x: xPos + 0.2, y: yPos + 0.5, w: 2.8, h: 0.7, fontSize: 24, bold: true, color: accentClean });
+              pptSlide.addText(`Target: ${kpi.target}`, { x: xPos + 0.2, y: yPos + 1.3, w: 1.5, h: 0.25, fontSize: 8, color: textClean, transparency: 50 });
+              if (kpi.trend) pptSlide.addText(kpi.trend, { x: xPos + 1.8, y: yPos + 1.3, w: 1.2, h: 0.25, fontSize: 9, bold: true, color: sc, align: "right" });
+            });
+          } else if (slide.layout === "roadmap") {
+            const phases = (content as any).phases || [];
+            const phaseWidth = (10 - 0.5 * (phases.length + 1)) / phases.length;
+            phases.forEach((phase: any, i: number) => {
+              const xPos = 0.5 + i * (phaseWidth + 0.5);
+              const statusColors: Record<string, string> = { done: "16A34A", active: "2563EB", upcoming: "94A3B8" };
+              const sc = statusColors[phase.status] || accentClean;
+              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: xPos, y: yStart, w: phaseWidth, h: 5, fill: { color: secondaryClean }, rectRadius: 0.15 });
+              pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: xPos, y: yStart, w: phaseWidth, h: 0.08, fill: { color: sc } });
+              pptSlide.addText(phase.name, { x: xPos + 0.15, y: yStart + 0.2, w: phaseWidth - 0.3, h: 0.3, fontSize: 11, bold: true, color: textClean });
+              pptSlide.addText(phase.timeline || "", { x: xPos + 0.15, y: yStart + 0.5, w: phaseWidth - 0.3, h: 0.2, fontSize: 8, color: textClean, transparency: 55 });
+              (phase.items || []).forEach((item: string, j: number) => {
+                pptSlide.addText(`• ${item}`, { x: xPos + 0.2, y: yStart + 0.9 + j * 0.45, w: phaseWidth - 0.4, h: 0.4, fontSize: 9, color: textClean });
+              });
+            });
+          } else if (slide.layout === "process") {
+            const steps = (content as any).steps || [];
+            steps.forEach((step: any, i: number) => {
+              const xPos = 0.4 + i * (10 / steps.length);
+              const w = (10 / steps.length) - 0.4;
+              // Circle number
+              pptSlide.addShape(pptxgenjs.default.ShapeType.ellipse, { x: xPos + w / 2 - 0.25, y: yStart + 0.5, w: 0.5, h: 0.5, fill: { color: accentClean } });
+              pptSlide.addText(`${step.number || i + 1}`, { x: xPos + w / 2 - 0.25, y: yStart + 0.5, w: 0.5, h: 0.5, fontSize: 14, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
+              pptSlide.addText(step.title, { x: xPos, y: yStart + 1.2, w: w, h: 0.35, fontSize: 11, bold: true, color: textClean, align: "center" });
+              pptSlide.addText(step.description, { x: xPos, y: yStart + 1.6, w: w, h: 1, fontSize: 9, color: textClean, align: "center", transparency: 40 });
+              // Arrow
+              if (i < steps.length - 1) {
+                pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: xPos + w - 0.05, y: yStart + 0.7, w: 0.4, h: 0.03, fill: { color: accentClean, transparency: 75 } });
+              }
+            });
+          } else if (slide.layout === "funnel") {
+            const stages = (content as any).stages || [];
+            stages.forEach((stage: any, i: number) => {
+              const indent = i * 0.5;
+              const w = 10 - indent * 2;
+              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: 0.5 + indent, y: yStart + i * 0.9, w, h: 0.7, fill: { color: accentClean, transparency: 15 + i * 10 }, rectRadius: 0.1 });
+              pptSlide.addText(`${stage.name}${stage.value ? ' — ' + stage.value : ''}`, { x: 0.5 + indent + 0.3, y: yStart + i * 0.9, w: w - 0.6, h: 0.7, fontSize: 13, bold: true, color: "FFFFFF", valign: "middle" });
+            });
+          } else if (slide.layout === "comparison") {
+            const items = (content as any).items || [];
+            items.forEach((item: any, i: number) => {
+              const xPos = 0.5 + i * 5;
+              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: xPos, y: yStart, w: 4.5, h: 5, fill: { color: secondaryClean }, rectRadius: 0.15 });
+              // Header bar
+              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: xPos + 0.2, y: yStart + 0.2, w: 4.1, h: 0.5, fill: { color: accentClean }, rectRadius: 0.1 });
+              pptSlide.addText(item.name, { x: xPos + 0.2, y: yStart + 0.2, w: 4.1, h: 0.5, fontSize: 14, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
+              if (item.pros) {
+                pptSlide.addText("ADVANTAGES", { x: xPos + 0.3, y: yStart + 0.9, w: 3, h: 0.25, fontSize: 8, bold: true, color: "16A34A" });
+                item.pros.forEach((p: string, j: number) => {
+                  pptSlide.addText(`✓ ${p}`, { x: xPos + 0.4, y: yStart + 1.2 + j * 0.4, w: 3.8, h: 0.35, fontSize: 10, color: textClean });
+                });
+              }
+              const prosLen = (item.pros || []).length;
+              if (item.cons) {
+                pptSlide.addText("LIMITATIONS", { x: xPos + 0.3, y: yStart + 1.3 + prosLen * 0.4, w: 3, h: 0.25, fontSize: 8, bold: true, color: "DC2626" });
+                item.cons.forEach((cc: string, j: number) => {
+                  pptSlide.addText(`✗ ${cc}`, { x: xPos + 0.4, y: yStart + 1.6 + prosLen * 0.4 + j * 0.4, w: 3.8, h: 0.35, fontSize: 10, color: textClean });
+                });
+              }
+            });
           } else {
-            const paragraphs = (content as { paragraphs?: string[] }).paragraphs || [];
+            // Content / default
+            const heading = (content as any).heading;
+            if (heading) pptSlide.addText(heading, { x: 0.75, y: yStart, w: 9, h: 0.4, fontSize: 16, bold: true, color: textClean, transparency: 20 });
+            const paragraphs = (content as any).paragraphs || [];
             paragraphs.forEach((p: string, i: number) => {
-              pptSlide.addText(p, { x: 0.5, y: 1.4 + i * 0.8, w: 9, h: 0.7, fontSize: 15, color: t.text.replace("#", "") });
+              pptSlide.addText(p, { x: 0.75, y: yStart + 0.6 + i * 1, w: 9, h: 0.9, fontSize: 14, color: textClean });
             });
           }
         }
@@ -529,9 +305,10 @@ const PresentationBuilderPage = () => {
         if (slide.speakerNotes) pptSlide.addNotes(slide.speakerNotes);
       }
 
+      // Add branding footer to all non-title slides
       const filename = `${presentation.title.replace(/[^a-zA-Z0-9]/g, '_')}.pptx`;
       await pptx.writeFile({ fileName: filename });
-      toast.success("PPTX downloaded!");
+      toast.success("Professional PPTX downloaded!");
     } catch (err) {
       console.error(err);
       toast.error("Export failed");
@@ -586,7 +363,6 @@ const PresentationBuilderPage = () => {
       <Navigation />
       <div className="pt-16">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-[calc(100vh-64px)]">
-          {/* Top toolbar */}
           <div className="border-b border-border px-4 py-2 flex items-center justify-between bg-card/50 backdrop-blur">
             <div className="flex items-center gap-3">
               <Presentation className="w-5 h-5 text-primary" />
@@ -619,7 +395,6 @@ const PresentationBuilderPage = () => {
             </div>
           </div>
 
-          {/* Generate Tab */}
           <TabsContent value="generate" className="m-0 h-full">
             <div className="flex items-center justify-center h-full p-8">
               <Card className="w-full max-w-2xl p-8 space-y-6">
@@ -628,7 +403,7 @@ const PresentationBuilderPage = () => {
                     <Wand2 className="w-8 h-8 text-primary" />
                   </div>
                   <h2 className="text-2xl font-bold">AI Presentation Builder</h2>
-                  <p className="text-muted-foreground">Describe your topic and let AI create stunning slides</p>
+                  <p className="text-muted-foreground">Describe your topic and generate professional, data-rich slides</p>
                 </div>
 
                 <div className="space-y-4">
@@ -644,7 +419,7 @@ const PresentationBuilderPage = () => {
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">Additional Context (optional)</label>
                     <Textarea 
-                      placeholder="Key points, data, audience info..." 
+                      placeholder="Key points, data, audience info, specific requirements..." 
                       value={additionalContext} 
                       onChange={(e) => setAdditionalContext(e.target.value)}
                       rows={3}
@@ -679,13 +454,9 @@ const PresentationBuilderPage = () => {
                   </div>
                   <Button onClick={generatePresentation} disabled={isGenerating} className="w-full h-12 text-base gap-2">
                     {isGenerating ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" /> Generating Slides...
-                      </>
+                      <><Loader2 className="w-5 h-5 animate-spin" /> Generating Masterclass Slides...</>
                     ) : (
-                      <>
-                        <Wand2 className="w-5 h-5" /> Generate Presentation
-                      </>
+                      <><Wand2 className="w-5 h-5" /> Generate Presentation</>
                     )}
                   </Button>
                 </div>
@@ -693,11 +464,9 @@ const PresentationBuilderPage = () => {
             </div>
           </TabsContent>
 
-          {/* Editor Tab */}
           <TabsContent value="editor" className="m-0 h-full">
             {presentation && (
               <div className="flex h-full">
-                {/* Sidebar thumbnails */}
                 <div className="w-52 border-r border-border overflow-y-auto p-2 bg-muted/30 space-y-2">
                   {presentation.slides.map((slide, i) => (
                     <div
@@ -726,7 +495,6 @@ const PresentationBuilderPage = () => {
                   </Button>
                 </div>
 
-                {/* Main canvas */}
                 <div className="flex-1 flex flex-col">
                   <div className="flex-1 flex items-center justify-center bg-muted/20 p-8 overflow-auto">
                     {currentSlideData && (
@@ -735,7 +503,6 @@ const PresentationBuilderPage = () => {
                       </div>
                     )}
                   </div>
-                  {/* Navigation */}
                   <div className="border-t border-border p-3 flex items-center justify-between bg-card/50">
                     <Button variant="ghost" size="sm" onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))} disabled={currentSlide === 0}>
                       <ChevronLeft className="w-4 h-4" />
@@ -754,7 +521,6 @@ const PresentationBuilderPage = () => {
                       <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>
-                  {/* Speaker notes */}
                   {currentSlideData?.speakerNotes && (
                     <div className="border-t border-border p-3 bg-muted/20">
                       <p className="text-xs text-muted-foreground font-medium mb-1">Speaker Notes</p>
@@ -766,7 +532,6 @@ const PresentationBuilderPage = () => {
             )}
           </TabsContent>
 
-          {/* Present Tab (Fullscreen mode) */}
           <TabsContent value="present" className="m-0 h-full">
             {presentation && (
               <div ref={fullscreenRef} className="h-full bg-black flex flex-col items-center justify-center relative" onKeyDown={(e) => {
