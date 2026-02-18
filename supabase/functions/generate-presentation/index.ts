@@ -15,52 +15,80 @@ serve(async (req) => {
 
     const count = slideCount || 10;
 
-    const systemPrompt = `You are a world-class McKinsey-tier presentation strategist and designer. You create presentations that are DENSE with actionable insights, data, and compelling narratives — never generic or empty.
+    const systemPrompt = `You are a world-class McKinsey-tier presentation strategist. You create presentations PACKED with specific data, actionable insights, and compelling narratives.
 
-CRITICAL RULES:
-1. Every slide MUST have substantial, specific content. NEVER leave content fields empty or with placeholder text.
-2. Bullet points must be 15-30 words each — full sentences with specific data, examples, or actionable insights.
-3. Stats must use realistic, specific numbers (not round numbers) — e.g., "47.3%" not "50%", "$2.4M" not "$2M".
-4. Paragraphs must be 2-4 sentences each, packed with insight.
-5. Speaker notes must be 3-5 detailed sentences that expand on the slide content with talking points.
-6. Use a VARIETY of layouts — never more than 2 consecutive slides with the same layout.
-7. The first slide must be "title" and the last must be "closing". Between them, use diverse layouts.
+CRITICAL: Return ONLY a valid JSON object. No markdown fences, no explanation, no text before or after the JSON.
 
-Generate exactly ${count} slides for the given topic.
+CONTENT DENSITY RULES:
+1. Every slide MUST have substantial content — NEVER return empty content objects.
+2. Bullet points: 15-30 words each with specific data/examples.
+3. Stats: Use precise numbers like "47.3%" not "50%", "$2.4M" not "$2M".
+4. Paragraphs: 2-4 sentences each, packed with insight.
+5. Speaker notes: 3-5 detailed sentences expanding on slide content.
+6. Use at least 6 DIFFERENT layout types. Never 2+ consecutive same layouts.
+7. First slide = "title", last slide = "closing".
 
-AVAILABLE LAYOUTS (use at least 6 different types):
-- "title": Opening slide. content: { "tagline": string (compelling 10-15 word hook), "presenter": string, "date": string }
-- "content": Rich paragraph content. content: { "heading": string, "paragraphs": string[] (2-4 paragraphs, each 2-3 sentences) }
-- "two_column": Side-by-side comparison. content: { "left": { "heading": string, "points": string[] (4-6 detailed points) }, "right": { "heading": string, "points": string[] (4-6 detailed points) } }
-- "bullets": Key points. content: { "heading": string (subtitle), "bullets": string[] (5-8 bullets, each 15-30 words with specific details) }
-- "stats": Key metrics. content: { "stats": [{ "value": string, "label": string, "change": string }] } (exactly 4 stats with trend indicators like "+12.3%" or "↑ 2.1x")
-- "quote": Impactful quote. content: { "quote": string (powerful 15-30 word quote), "author": string, "role": string }
-- "timeline": Chronological events. content: { "events": [{ "year": string, "title": string, "description": string (2 sentences) }] } (4-6 events)
-- "comparison": Feature comparison. content: { "items": [{ "name": string, "pros": string[] (3-4 specific pros), "cons": string[] (2-3 specific cons) }] } (2-3 items)
-- "image_text": Visual + text split. content: { "heading": string, "text": string (2-3 rich sentences), "imagePrompt": string (detailed image description), "keyPoints": string[] (3-4 short points) }
-- "funnel": Process/funnel visualization. content: { "stages": [{ "name": string, "value": string, "description": string }] } (4-6 stages)
-- "swot": SWOT analysis. content: { "strengths": string[], "weaknesses": string[], "opportunities": string[], "threats": string[] } (3-4 items each)
-- "roadmap": Strategic roadmap. content: { "phases": [{ "name": string, "timeline": string, "items": string[], "status": string }] } (3-5 phases, status: "done"|"active"|"upcoming")
-- "kpi_dashboard": KPI overview. content: { "kpis": [{ "name": string, "value": string, "target": string, "status": string, "trend": string }] } (4-6 KPIs, status: "on_track"|"at_risk"|"behind")
-- "process": Step-by-step process. content: { "steps": [{ "number": number, "title": string, "description": string }] } (4-6 steps)
-- "closing": Final slide. content: { "heading": string (memorable closing statement), "cta": string (clear call-to-action), "contact": string, "nextSteps": string[] (3-4 concrete next steps) }
+Generate exactly ${count} slides.
 
-Each slide object:
-- "layout": one of the above
-- "title": compelling slide title (4-8 words, never generic like "Overview" — be specific)
-- "subtitle": optional descriptive subtitle
-- "content": content object matching the layout spec above
-- "speakerNotes": 3-5 sentences of detailed talking points with data references
-- "transition": "fade" | "slide" | "zoom"
+LAYOUT SPECIFICATIONS (follow content structure EXACTLY):
 
-Style: "${style || 'corporate'}"
-- corporate: Data-driven, authoritative, precise metrics, professional vocabulary
-- startup: Bold claims, growth narratives, disruption language, future-focused
-- academic: Evidence-based, citations, structured arguments, nuanced analysis
-- creative: Storytelling, emotional hooks, vivid metaphors, unconventional angles
-- minimal: Sparse but impactful, one key insight per slide, powerful white space
+"title" → content: { "tagline": "compelling 10-15 word hook", "presenter": "name", "date": "date" }
 
-Return: { "title": string, "slides": [...], "metadata": { "estimatedDuration": number, "targetAudience": string, "keyTakeaways": string[] (5-7 takeaways) } }`;
+"bullets" → content: { "heading": "subtitle text", "bullets": ["15-30 word bullet with specific data...", "another detailed bullet..."] } (5-8 bullets)
+
+"stats" → content: { "stats": [{ "value": "$2.4M", "label": "Revenue Impact", "change": "+23.1% YoY" }] } (exactly 4 stats)
+
+"two_column" → content: { "left": { "heading": "Left Title", "points": ["detailed point..."] }, "right": { "heading": "Right Title", "points": ["detailed point..."] } } (4-6 points each side)
+
+"content" → content: { "heading": "Section heading", "paragraphs": ["2-3 sentence paragraph...", "another paragraph..."] } (2-4 paragraphs)
+
+"quote" → content: { "quote": "15-30 word impactful quote", "author": "Name", "role": "Title/Role" }
+
+"timeline" → content: { "events": [{ "year": "2023", "title": "Event Name", "description": "2 sentence description" }] } (4-6 events)
+
+"comparison" → content: { "items": [{ "name": "Option A", "pros": ["specific pro..."], "cons": ["specific con..."] }] } (2-3 items, 3-4 pros, 2-3 cons each)
+
+"image_text" → content: { "heading": "Title", "text": "2-3 rich sentences", "imagePrompt": "detailed image description", "keyPoints": ["short point 1", "short point 2"] } (3-4 key points)
+
+"funnel" → content: { "stages": [{ "name": "Awareness", "value": "10,000 leads", "description": "Top of funnel acquisition" }] } (4-6 stages)
+
+"swot" → content: { "strengths": ["item..."], "weaknesses": ["item..."], "opportunities": ["item..."], "threats": ["item..."] } (3-4 items each)
+
+"roadmap" → content: { "phases": [{ "name": "Phase 1", "timeline": "Q1 2026", "items": ["deliverable..."], "status": "done" }] } (3-5 phases, status: "done"|"active"|"upcoming")
+
+"kpi_dashboard" → content: { "kpis": [{ "name": "CAC", "value": "$142", "target": "$120", "status": "at_risk", "trend": "↑ 8.3%" }] } (4-6 KPIs, status: "on_track"|"at_risk"|"behind")
+
+"process" → content: { "steps": [{ "number": 1, "title": "Step Name", "description": "What happens in this step" }] } (4-6 steps)
+
+"closing" → content: { "heading": "memorable closing statement", "cta": "clear call-to-action", "contact": "email/website", "nextSteps": ["concrete step 1", "concrete step 2"] } (3-4 next steps)
+
+Each slide object structure:
+{
+  "layout": "one of the above",
+  "title": "4-8 word compelling title (never generic like 'Overview')",
+  "subtitle": "optional descriptive subtitle",
+  "content": { ... matching layout spec above ... },
+  "speakerNotes": "3-5 sentences of detailed talking points",
+  "transition": "fade" | "slide" | "zoom"
+}
+
+Style "${style || 'corporate'}":
+- corporate: Data-driven, authoritative, precise metrics
+- startup: Bold, growth narratives, disruption language
+- academic: Evidence-based, citations, structured arguments
+- creative: Storytelling, emotional hooks, vivid metaphors
+- minimal: Sparse but impactful, one key insight per slide
+
+RETURN THIS EXACT JSON STRUCTURE:
+{
+  "title": "Presentation Title",
+  "slides": [ ... array of slide objects ... ],
+  "metadata": {
+    "estimatedDuration": 20,
+    "targetAudience": "description",
+    "keyTakeaways": ["takeaway 1", "takeaway 2", "takeaway 3", "takeaway 4", "takeaway 5"]
+  }
+}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -69,52 +97,12 @@ Return: { "title": string, "slides": [...], "metadata": { "estimatedDuration": n
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Create a comprehensive, data-rich presentation about: ${topic}${additionalContext ? `\n\nAdditional context and requirements: ${additionalContext}` : ''}\n\nRemember: Every slide must have SUBSTANTIAL, SPECIFIC content. No empty or placeholder text. Use realistic data and specific examples throughout.` },
+          { role: "user", content: `Create a comprehensive, data-rich presentation about: ${topic}${additionalContext ? `\n\nAdditional context: ${additionalContext}` : ''}\n\nIMPORTANT: Every slide's "content" field MUST be fully populated with specific data matching the layout specification. Do NOT return empty content objects.` },
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "create_presentation",
-              description: "Create a structured presentation with rich, detailed slides",
-              parameters: {
-                type: "object",
-                properties: {
-                  title: { type: "string", description: "Presentation title" },
-                  slides: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        layout: { type: "string", enum: ["title", "content", "two_column", "image_text", "quote", "stats", "timeline", "comparison", "bullets", "closing", "funnel", "swot", "roadmap", "kpi_dashboard", "process"] },
-                        title: { type: "string" },
-                        subtitle: { type: "string" },
-                        content: { type: "object" },
-                        speakerNotes: { type: "string" },
-                        transition: { type: "string", enum: ["fade", "slide", "zoom"] }
-                      },
-                      required: ["layout", "title", "content", "speakerNotes"]
-                    }
-                  },
-                  metadata: {
-                    type: "object",
-                    properties: {
-                      estimatedDuration: { type: "number" },
-                      targetAudience: { type: "string" },
-                      keyTakeaways: { type: "array", items: { type: "string" } }
-                    }
-                  }
-                },
-                required: ["title", "slides", "metadata"],
-                additionalProperties: false
-              }
-            }
-          }
-        ],
-        tool_choice: { type: "function", function: { name: "create_presentation" } },
+        temperature: 0.7,
       }),
     });
 
@@ -135,17 +123,35 @@ Return: { "title": string, "slides": [...], "metadata": { "estimatedDuration": n
     }
 
     const data = await response.json();
+    let raw = data.choices?.[0]?.message?.content || '';
     
-    // Extract from tool call
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    let presentation;
-    if (toolCall?.function?.arguments) {
-      presentation = typeof toolCall.function.arguments === 'string' 
-        ? JSON.parse(toolCall.function.arguments) 
-        : toolCall.function.arguments;
-    } else {
-      const content = data.choices?.[0]?.message?.content || '';
-      presentation = JSON.parse(content);
+    // Strip markdown code fences if present
+    raw = raw.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    
+    const presentation = JSON.parse(raw);
+
+    // Validate slides have content
+    if (presentation.slides) {
+      presentation.slides = presentation.slides.map((slide: any) => {
+        if (!slide.content || Object.keys(slide.content).length === 0) {
+          // Provide fallback content based on layout
+          switch (slide.layout) {
+            case 'title':
+              slide.content = { tagline: slide.subtitle || slide.title, presenter: "ShadowTalk AI", date: new Date().toLocaleDateString() };
+              break;
+            case 'bullets':
+              slide.content = { heading: slide.subtitle || "", bullets: ["Key insight from this section — detailed analysis pending.", "Strategic consideration worth exploring further.", "Data point to validate with stakeholder input."] };
+              break;
+            case 'closing':
+              slide.content = { heading: "Thank you", cta: "Let's discuss next steps", contact: "", nextSteps: ["Review key findings", "Schedule follow-up meeting"] };
+              break;
+            default:
+              slide.content = { heading: slide.subtitle || slide.title, paragraphs: [slide.speakerNotes || "Content for this slide."] };
+              slide.layout = 'content';
+          }
+        }
+        return slide;
+      });
     }
 
     return new Response(JSON.stringify(presentation), {
