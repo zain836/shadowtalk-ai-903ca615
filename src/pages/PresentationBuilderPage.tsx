@@ -64,12 +64,11 @@ const PresentationBuilderPage = () => {
     setIsGenerating(true);
     setGenerationPhase("researching");
 
-    // Real phased progress — the edge function runs 3 sequential AI calls
-    // Phase timings are calibrated to actual AI processing durations
+    // Manus-style phased progress (single powerful AI call with internal phases)
     const phaseTimers: ReturnType<typeof setTimeout>[] = [];
-    phaseTimers.push(setTimeout(() => setGenerationPhase("structuring"), 12000));
-    phaseTimers.push(setTimeout(() => setGenerationPhase("designing"), 25000));
-    phaseTimers.push(setTimeout(() => setGenerationPhase("polishing"), 45000));
+    phaseTimers.push(setTimeout(() => setGenerationPhase("structuring"), 5000));
+    phaseTimers.push(setTimeout(() => setGenerationPhase("designing"), 12000));
+    phaseTimers.push(setTimeout(() => setGenerationPhase("polishing"), 22000));
 
     try {
       const { data, error } = await supabase.functions.invoke("generate-presentation", {
