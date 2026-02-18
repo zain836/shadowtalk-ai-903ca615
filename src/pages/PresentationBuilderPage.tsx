@@ -4,7 +4,7 @@ import {
   Presentation, Plus, Download, Wand2, ChevronLeft, ChevronRight, 
   Trash2, Copy, Type, BarChart3, Quote, Layout, 
   Clock, GitCompare, List, Image, Loader2, Maximize, Minimize,
-  SlidersHorizontal, FileText, Eye
+  SlidersHorizontal, FileText, Eye, Search, ListTree, Palette, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
 import SlideRenderer from "@/components/presentation/SlideRenderer";
+import GenerationProgress, { GenerationPhase } from "@/components/presentation/GenerationProgress";
 import { Slide, PresentationData, ThemeKey, THEMES } from "@/components/presentation/types";
 
 // Re-export for backward compatibility
@@ -52,6 +53,7 @@ const PresentationBuilderPage = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeTab, setActiveTab] = useState("generate");
+  const [generationPhase, setGenerationPhase] = useState<GenerationPhase>("idle");
   const fullscreenRef = useRef<HTMLDivElement>(null);
 
   const generatePresentation = useCallback(async () => {
@@ -60,22 +62,37 @@ const PresentationBuilderPage = () => {
       return;
     }
     setIsGenerating(true);
+    setGenerationPhase("researching");
+
+    // Simulate Manus-like phased progress
+    const phaseTimers: ReturnType<typeof setTimeout>[] = [];
+    phaseTimers.push(setTimeout(() => setGenerationPhase("structuring"), 3000));
+    phaseTimers.push(setTimeout(() => setGenerationPhase("designing"), 7000));
+    phaseTimers.push(setTimeout(() => setGenerationPhase("polishing"), 12000));
+
     try {
       const { data, error } = await supabase.functions.invoke("generate-presentation", {
         body: { topic, slideCount: parseInt(slideCount), style, additionalContext },
       });
+
+      // Clear phase timers
+      phaseTimers.forEach(clearTimeout);
+
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
+      setGenerationPhase("done");
       const slides = (data.slides || []).map((s: Slide, i: number) => ({ ...s, id: `slide-${i}-${Date.now()}` }));
       setPresentation({ ...data, slides });
       setCurrentSlide(0);
       setActiveTab("editor");
-      toast.success(`Generated ${slides.length} premium slides!`);
+      toast.success(`Generated ${slides.length} research-backed slides!`);
     } catch (err) {
+      phaseTimers.forEach(clearTimeout);
       toast.error(err instanceof Error ? err.message : "Failed to generate");
     } finally {
       setIsGenerating(false);
+      setGenerationPhase("idle");
     }
   }, [topic, slideCount, style, additionalContext]);
 
@@ -397,70 +414,91 @@ const PresentationBuilderPage = () => {
 
           <TabsContent value="generate" className="m-0 h-full">
             <div className="flex items-center justify-center h-full p-8">
-              <Card className="w-full max-w-2xl p-8 space-y-6">
-                <div className="text-center space-y-2">
-                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-                    <Wand2 className="w-8 h-8 text-primary" />
-                  </div>
-                  <h2 className="text-2xl font-bold">AI Presentation Builder</h2>
-                  <p className="text-muted-foreground">Describe your topic and generate professional, data-rich slides</p>
-                </div>
+              <AnimatePresence mode="wait">
+                {isGenerating ? (
+                  <motion.div
+                    key="progress"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="w-full flex justify-center"
+                  >
+                    <GenerationProgress phase={generationPhase} topic={topic} />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="form"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="w-full flex justify-center"
+                  >
+                    <Card className="w-full max-w-2xl p-8 space-y-6">
+                      <div className="text-center space-y-2">
+                        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+                          <Wand2 className="w-8 h-8 text-primary" />
+                        </div>
+                        <h2 className="text-2xl font-bold">AI Presentation Builder</h2>
+                        <p className="text-muted-foreground text-sm">Like Manus — we research, structure, design, and polish your deck</p>
+                        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/60">
+                          <Search className="w-3 h-3" /> Research → <ListTree className="w-3 h-3" /> Structure → <Palette className="w-3 h-3" /> Design → <Sparkles className="w-3 h-3" /> Polish
+                        </div>
+                      </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-1.5 block">Topic / Title</label>
-                    <Input 
-                      placeholder="e.g. Q4 Revenue Growth Strategy for SaaS Startups" 
-                      value={topic} 
-                      onChange={(e) => setTopic(e.target.value)}
-                      className="h-12 text-base"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1.5 block">Additional Context (optional)</label>
-                    <Textarea 
-                      placeholder="Key points, data, audience info, specific requirements..." 
-                      value={additionalContext} 
-                      onChange={(e) => setAdditionalContext(e.target.value)}
-                      rows={3}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium mb-1.5 block">Slides</label>
-                      <Select value={slideCount} onValueChange={setSlideCount}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {["5", "8", "10", "15", "20"].map(n => <SelectItem key={n} value={n}>{n} slides</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1.5 block">Theme</label>
-                      <Select value={style} onValueChange={(v) => setStyle(v as ThemeKey)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(THEMES).map(([k, v]) => (
-                            <SelectItem key={k} value={k}>
-                              <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: v.accent }} />
-                                {v.name}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <Button onClick={generatePresentation} disabled={isGenerating} className="w-full h-12 text-base gap-2">
-                    {isGenerating ? (
-                      <><Loader2 className="w-5 h-5 animate-spin" /> Generating Masterclass Slides...</>
-                    ) : (
-                      <><Wand2 className="w-5 h-5" /> Generate Presentation</>
-                    )}
-                  </Button>
-                </div>
-              </Card>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium mb-1.5 block">Topic / Title</label>
+                          <Input 
+                            placeholder="e.g. Q4 Revenue Growth Strategy for SaaS Startups" 
+                            value={topic} 
+                            onChange={(e) => setTopic(e.target.value)}
+                            className="h-12 text-base"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium mb-1.5 block">Additional Context (optional)</label>
+                          <Textarea 
+                            placeholder="Key points, data, audience info, specific requirements..." 
+                            value={additionalContext} 
+                            onChange={(e) => setAdditionalContext(e.target.value)}
+                            rows={3}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium mb-1.5 block">Slides</label>
+                            <Select value={slideCount} onValueChange={setSlideCount}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {["5", "8", "10", "15", "20"].map(n => <SelectItem key={n} value={n}>{n} slides</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium mb-1.5 block">Theme</label>
+                            <Select value={style} onValueChange={(v) => setStyle(v as ThemeKey)}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(THEMES).map(([k, v]) => (
+                                  <SelectItem key={k} value={k}>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: v.accent }} />
+                                      {v.name}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <Button onClick={generatePresentation} disabled={isGenerating} className="w-full h-12 text-base gap-2">
+                          <Wand2 className="w-5 h-5" /> Generate Research-Backed Presentation
+                        </Button>
+                      </div>
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </TabsContent>
 
