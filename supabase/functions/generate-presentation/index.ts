@@ -15,73 +15,109 @@ serve(async (req) => {
 
     const count = slideCount || 10;
 
-    const systemPrompt = `You are a WORLD-CLASS presentation strategist who operates like Manus AI — you RESEARCH first, then STRUCTURE, then DESIGN content. You create Fortune 500 quality, TED-talk caliber presentations.
+    // Theme color palettes for the AI to use
+    const themes: Record<string, { bg: string; accent: string; accentEnd: string; text: string; secondaryBg: string }> = {
+      corporate: { bg: "#FFFFFF", accent: "#1E40AF", accentEnd: "#3B82F6", text: "#111827", secondaryBg: "#F3F4F6" },
+      startup: { bg: "#0F172A", accent: "#8B5CF6", accentEnd: "#EC4899", text: "#F8FAFC", secondaryBg: "#1E293B" },
+      academic: { bg: "#FFFBEB", accent: "#92400E", accentEnd: "#D97706", text: "#1C1917", secondaryBg: "#FEF3C7" },
+      creative: { bg: "#FDF2F8", accent: "#DB2777", accentEnd: "#F97316", text: "#1F2937", secondaryBg: "#FCE7F3" },
+      minimal: { bg: "#FAFAFA", accent: "#18181B", accentEnd: "#52525B", text: "#18181B", secondaryBg: "#F4F4F5" },
+      dark_elegance: { bg: "#09090B", accent: "#FBBF24", accentEnd: "#F59E0B", text: "#FAFAFA", secondaryBg: "#18181B" },
+    };
+
+    const t = themes[style || "corporate"] || themes.corporate;
+
+    const systemPrompt = `You are a WORLD-CLASS presentation designer who CODES every single slide as custom HTML/CSS — just like Manus AI. You don't use templates. Each slide is a unique, hand-crafted visual masterpiece with bespoke layouts, typography, and data visualization.
 
 RETURN ONLY VALID JSON. No markdown fences. No text before or after.
 
-YOUR WORKFLOW (follow this mental model):
-PHASE 1 - RESEARCH: Before writing ANY slide, mentally research the topic. Identify real companies, actual market data, genuine research studies, true industry trends, and factual statistics relevant to "${topic}". Ground every claim in plausible, specific data.
-PHASE 2 - STRUCTURE: Plan a compelling narrative arc across all slides. Hook → Context → Evidence → Deep Analysis → Future Vision → Call to Action. Select the optimal layout type for each narrative beat.
-PHASE 3 - CONTENT DENSITY: Every single field must be FULLY populated with research-grade content. No generic filler. No empty fields.
-PHASE 4 - POLISH: Add precise speaker notes with rhetorical techniques, pause points, and audience engagement cues.
+YOUR DESIGN SYSTEM:
+- Slide canvas: exactly 960px × 540px, overflow hidden
+- Background: ${t.bg}
+- Primary text: ${t.text}
+- Accent color: ${t.accent}
+- Accent gradient: linear-gradient(135deg, ${t.accent}, ${t.accentEnd})
+- Secondary background: ${t.secondaryBg}
+- Font stack: 'Inter', 'Segoe UI', system-ui, sans-serif
+- All text must be readable against the background
 
-MASTERCLASS CONTENT RULES:
-1. EVERY slide content field MUST be FULLY POPULATED — never empty.
-2. Titles: Powerful, specific, 4-8 words. NEVER generic ("Overview", "Introduction"). Use action verbs and specific claims ("Revenue Surged 340% in Q3", "Five Forces Reshaping Healthcare").
-3. Bullets: Each 20-35 words. Include specific numbers, company names, research citations, or concrete examples. Example: "Stanford Medical's AI radiology tool reduced false negatives by 31.4%, processing 847 scans daily at $0.12 per analysis — 94% cheaper than manual review."
-4. Stats: ALWAYS use precise, realistic numbers ($12.7M not $10M, 47.3% not 50%). Include trend indicators.
-5. Paragraphs: 3-4 sentences each. Dense with insight. Reference specific studies, companies, or market data.
-6. Speaker notes: 4-6 sentences. Include rhetorical questions, pause points, audience engagement cues, and additional data not on the slide.
-7. Use 7+ DIFFERENT layout types across the deck. NEVER repeat the same layout consecutively.
-8. Slide 1 = "title", Last slide = "closing". Plan a narrative arc: Hook → Context → Evidence → Analysis → Vision → Action.
+CODING RULES:
+1. Each slide's "html" field contains a COMPLETE, self-contained HTML string with inline styles. No external CSS, no class references.
+2. The root element MUST be a <div> with: width:960px; height:540px; overflow:hidden; position:relative; background:${t.bg}; color:${t.text}; font-family:'Inter','Segoe UI',system-ui,sans-serif;
+3. Use ONLY inline styles (style="..."). No <style> tags, no CSS classes.
+4. Create VISUALLY DIVERSE slides — use creative layouts like:
+   - Split layouts (40/60, 30/70)
+   - Full-bleed accent backgrounds for title/closing slides
+   - Grid-based metric dashboards with colored indicator bars
+   - Timeline layouts with connecting lines and milestone dots
+   - Side-by-side comparison cards with colored headers
+   - Funnel/pyramid shapes using decreasing-width divs
+   - SWOT quadrant grids with colored borders
+   - Process flows with numbered circles and arrows
+   - Quote slides with oversized quotation marks
+   - KPI cards with status indicators (green/amber/red)
+5. Use the accent gradient for visual emphasis: backgrounds, left borders, numbered badges, decorative elements.
+6. Include decorative elements: corner accents, bottom bars, subtle radial gradients, divider lines.
+7. Typography hierarchy: titles 36-44px font-weight:900, subtitles 18-22px font-weight:300, body 13-15px, captions 10-11px.
+8. Every data point must use PRECISE numbers ($12.7M not $10M, 47.3% not 50%).
+9. DENSE content — every slide must be packed with real data, research citations, company names, and actionable insights.
+10. Speaker notes: 4-6 sentences with rhetorical techniques and additional context.
 
-LAYOUT SPECS (populate content EXACTLY as shown):
+SLIDE VARIETY (use 7+ different visual approaches across the deck):
+- Title: Full accent-gradient background, centered large title, subtitle, decorative radial overlays
+- Data/Stats: Grid of metric cards with top accent bars, large numbers, trend indicators
+- Bullets: Numbered badges with accent gradient, generous line spacing
+- Two-column: Cards with rounded corners, colored dot headers
+- Quote: Giant transparent quotation marks, centered italic text, attribution with divider
+- Timeline: Horizontal line with connected dots, year labels above, descriptions below
+- Comparison: Side-by-side cards with accent-colored headers, pros/cons with ✓/✗ icons
+- SWOT: 2×2 grid with distinct colors (green/red/blue/amber) per quadrant
+- Funnel: Decreasing-width bars stacked vertically with accent gradient
+- KPI Dashboard: 6-card grid with left color borders indicating status
+- Roadmap: Horizontal phase cards with top color borders and status badges
+- Process Flow: Horizontal steps with numbered circles and connecting arrows
+- Content/Paragraphs: Clean layout with heading, accent left-bar, flowing paragraphs
+- Closing: Full accent background, CTA button, numbered next steps
 
-"title" → { "tagline": "12-18 word compelling hook that creates urgency", "presenter": "Name, Title", "date": "Month Year" }
+CONTENT QUALITY (McKinsey/BCG level):
+- Every bullet: 20-35 words with specific data, company names, or research citations
+- Example: "Stanford Medical's AI radiology tool reduced false negatives by 31.4%, processing 847 scans daily at $0.12 per analysis — 94% cheaper than manual review."
+- Stats use realistic precise numbers with trend indicators
+- Paragraphs: 3-4 sentences, dense with insight
 
-"bullets" → { "heading": "subtitle context", "bullets": ["20-35 word bullet with specific data, company name, or research citation...", ...] } (6-8 bullets)
-
-"stats" → { "stats": [{ "value": "$12.7M", "label": "Metric Name", "change": "+23.1% YoY" }, ...] } (exactly 4 stats)
-
-"two_column" → { "left": { "heading": "Title", "points": ["detailed point with data..."] }, "right": { "heading": "Title", "points": ["detailed point..."] } } (5-6 points each)
-
-"content" → { "heading": "Section heading", "paragraphs": ["3-4 sentence paragraph with research citations and specific data...", ...] } (3-4 paragraphs)
-
-"quote" → { "quote": "20-35 word powerful, memorable quote", "author": "Full Name", "role": "Title, Organization" }
-
-"timeline" → { "events": [{ "year": "2023", "title": "Milestone Name", "description": "2-3 sentence description with impact metrics" }, ...] } (4-6 events)
-
-"comparison" → { "items": [{ "name": "Option A", "pros": ["specific advantage with data..."], "cons": ["specific limitation..."] }, ...] } (2 items, 4 pros, 3 cons each)
-
-"image_text" → { "heading": "Title", "text": "3-4 rich sentences with data", "imagePrompt": "detailed photographic description", "keyPoints": ["concise point", ...] } (4 key points)
-
-"funnel" → { "stages": [{ "name": "Stage", "value": "metric", "description": "what happens" }, ...] } (5-6 stages)
-
-"swot" → { "strengths": ["item..."], "weaknesses": ["item..."], "opportunities": ["item..."], "threats": ["item..."] } (4 items each)
-
-"roadmap" → { "phases": [{ "name": "Phase", "timeline": "Q1-Q2 2026", "items": ["deliverable..."], "status": "done|active|upcoming" }, ...] } (4 phases)
-
-"kpi_dashboard" → { "kpis": [{ "name": "Metric", "value": "$142", "target": "$120", "status": "on_track|at_risk|behind", "trend": "↑ 8.3%" }, ...] } (6 KPIs)
-
-"process" → { "steps": [{ "number": 1, "title": "Step", "description": "2 sentence description" }, ...] } (5 steps)
-
-"closing" → { "heading": "memorable 10-15 word closing statement", "cta": "bold call-to-action", "contact": "email or website", "nextSteps": ["concrete actionable step...", ...] } (4 next steps)
-
-Each slide: { "layout": "...", "title": "...", "subtitle": "...", "content": { ... }, "speakerNotes": "...", "transition": "fade|slide|zoom" }
-
-Style "${style || 'corporate'}":
-- corporate: McKinsey-level precision, data-heavy, authoritative, structured argumentation
-- startup: Y Combinator pitch energy, bold claims backed by metrics, growth narrative
-- academic: Peer-reviewed rigor, methodology emphasis, citation-rich, nuanced analysis
-- creative: TED-talk storytelling, emotional arc, vivid metaphors, surprise reveals
-- minimal: Apple keynote aesthetic, one powerful insight per slide, dramatic white space
-
-OUTPUT:
+OUTPUT FORMAT:
 {
-  "title": "...",
-  "slides": [ ... ],
-  "metadata": { "estimatedDuration": N, "targetAudience": "...", "keyTakeaways": ["...", "...", "...", "...", "..."], "researchSources": ["source1", "source2", "source3"] }
-}`;
+  "title": "Presentation Title",
+  "slides": [
+    {
+      "title": "Slide Title",
+      "subtitle": "Optional subtitle",
+      "layout": "descriptive_layout_name",
+      "html": "<div style=\\"width:960px;height:540px;overflow:hidden;position:relative;...\\">...complete slide HTML...</div>",
+      "speakerNotes": "4-6 sentences with rhetorical techniques...",
+      "content": { ... structured data for PPTX export ... }
+    }
+  ],
+  "metadata": {
+    "estimatedDuration": N,
+    "targetAudience": "...",
+    "keyTakeaways": ["...", "...", "..."],
+    "researchSources": ["source1", "source2", "source3"]
+  }
+}
+
+CRITICAL: The "html" field is the PRIMARY output. It must be visually stunning, pixel-perfect HTML. The "content" field is secondary — a simplified structured version for PPTX export fallback.
+
+For the "content" field, use these structures based on layout type:
+- title: { tagline, presenter, date }
+- bullets: { heading, bullets: [] }
+- stats: { stats: [{ value, label, change }] }
+- closing: { heading, cta, contact, nextSteps: [] }
+- quote: { quote, author, role }
+- For others: { heading, paragraphs: [] }
+
+Generate exactly ${count} slides. Slide 1 = title slide, last slide = closing. Each slide MUST have unique, custom-coded HTML.`;
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -92,7 +128,7 @@ OUTPUT:
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Create a MASTERCLASS presentation about: ${topic}${additionalContext ? `\n\nContext: ${additionalContext}` : ''}\n\nREMINDER: Every "content" field MUST be a fully populated object matching the layout specification. Empty content = failure. Include specific numbers, company names, research data, and actionable insights on EVERY slide.` },
+          { role: "user", content: `Create a MASTERCLASS presentation about: ${topic}${additionalContext ? `\n\nContext: ${additionalContext}` : ''}\n\nREMINDER: Every slide MUST have a custom-coded "html" field with bespoke HTML/CSS. No two slides should look the same. Include precise data, research citations, and company names. CODE each slide like a professional web designer would.` },
         ],
         temperature: 0.8,
       }),
@@ -122,13 +158,26 @@ OUTPUT:
     
     const presentation = JSON.parse(raw);
 
-    // Validate and fix empty content
+    // Validate slides have html field, fallback if missing
     if (presentation.slides) {
       presentation.slides = presentation.slides.map((slide: any) => {
+        if (!slide.html) {
+          // Generate basic fallback HTML if AI didn't provide it
+          const bgStyle = slide.layout === 'title' || slide.layout === 'closing' 
+            ? `background:linear-gradient(135deg, ${themes[style||'corporate']?.accent || '#1E40AF'}, ${themes[style||'corporate']?.accentEnd || '#3B82F6'});color:#fff;`
+            : `background:${themes[style||'corporate']?.bg || '#fff'};color:${themes[style||'corporate']?.text || '#111'};`;
+          
+          slide.html = `<div style="width:960px;height:540px;overflow:hidden;position:relative;${bgStyle}font-family:'Inter',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;text-align:center;">
+            <h1 style="font-size:38px;font-weight:900;margin-bottom:16px;">${slide.title || 'Untitled'}</h1>
+            ${slide.subtitle ? `<p style="font-size:18px;opacity:0.8;font-weight:300;">${slide.subtitle}</p>` : ''}
+          </div>`;
+        }
+
+        // Ensure content fallback for PPTX export
         if (!slide.content || Object.keys(slide.content).length === 0) {
           switch (slide.layout) {
             case 'title':
-              slide.content = { tagline: slide.subtitle || "Exploring the future of " + (presentation.title || "innovation"), presenter: "ShadowTalk AI", date: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) };
+              slide.content = { tagline: slide.subtitle || "Exploring the future of innovation", presenter: "ShadowTalk AI", date: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) };
               break;
             case 'bullets':
               slide.content = { heading: slide.subtitle || "", bullets: [slide.speakerNotes || "Key insight from this analysis."] };
@@ -137,11 +186,10 @@ OUTPUT:
               slide.content = { stats: [{ value: "N/A", label: "Data pending", change: "" }] };
               break;
             case 'closing':
-              slide.content = { heading: "Thank you for your time", cta: "Let's take action together", contact: "", nextSteps: ["Review findings", "Schedule follow-up"] };
+              slide.content = { heading: "Thank you", cta: "Let's take action", contact: "", nextSteps: ["Review findings", "Schedule follow-up"] };
               break;
             default:
-              slide.content = { heading: slide.subtitle || slide.title, paragraphs: [slide.speakerNotes || "Detailed content for this section."] };
-              slide.layout = 'content';
+              slide.content = { heading: slide.subtitle || slide.title, paragraphs: [slide.speakerNotes || "Content for this section."] };
           }
         }
         return slide;

@@ -8,6 +8,7 @@ export interface Slide {
   title: string;
   subtitle?: string;
   content: SlideContent;
+  html?: string;
   speakerNotes?: string;
   transition?: string;
 }
