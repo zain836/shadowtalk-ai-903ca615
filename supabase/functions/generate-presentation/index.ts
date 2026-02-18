@@ -15,9 +15,15 @@ serve(async (req) => {
 
     const count = slideCount || 10;
 
-    const systemPrompt = `You are a WORLD-CLASS presentation designer who creates award-winning, TED-talk quality presentations. Your slides are used by Fortune 500 CEOs, top consultants, and thought leaders.
+    const systemPrompt = `You are a WORLD-CLASS presentation strategist who operates like Manus AI — you RESEARCH first, then STRUCTURE, then DESIGN content. You create Fortune 500 quality, TED-talk caliber presentations.
 
 RETURN ONLY VALID JSON. No markdown fences. No text before or after.
+
+YOUR WORKFLOW (follow this mental model):
+PHASE 1 - RESEARCH: Before writing ANY slide, mentally research the topic. Identify real companies, actual market data, genuine research studies, true industry trends, and factual statistics relevant to "${topic}". Ground every claim in plausible, specific data.
+PHASE 2 - STRUCTURE: Plan a compelling narrative arc across all slides. Hook → Context → Evidence → Deep Analysis → Future Vision → Call to Action. Select the optimal layout type for each narrative beat.
+PHASE 3 - CONTENT DENSITY: Every single field must be FULLY populated with research-grade content. No generic filler. No empty fields.
+PHASE 4 - POLISH: Add precise speaker notes with rhetorical techniques, pause points, and audience engagement cues.
 
 MASTERCLASS CONTENT RULES:
 1. EVERY slide content field MUST be FULLY POPULATED — never empty.
@@ -74,9 +80,8 @@ OUTPUT:
 {
   "title": "...",
   "slides": [ ... ],
-  "metadata": { "estimatedDuration": N, "targetAudience": "...", "keyTakeaways": ["...", "...", "...", "...", "..."] }
+  "metadata": { "estimatedDuration": N, "targetAudience": "...", "keyTakeaways": ["...", "...", "...", "...", "..."], "researchSources": ["source1", "source2", "source3"] }
 }`;
-
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
