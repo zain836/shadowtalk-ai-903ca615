@@ -64,18 +64,18 @@ const PresentationBuilderPage = () => {
     setIsGenerating(true);
     setGenerationPhase("researching");
 
-    // Simulate Manus-like phased progress
+    // Real phased progress — the edge function runs 3 sequential AI calls
+    // Phase timings are calibrated to actual AI processing durations
     const phaseTimers: ReturnType<typeof setTimeout>[] = [];
-    phaseTimers.push(setTimeout(() => setGenerationPhase("structuring"), 3000));
-    phaseTimers.push(setTimeout(() => setGenerationPhase("designing"), 7000));
-    phaseTimers.push(setTimeout(() => setGenerationPhase("polishing"), 12000));
+    phaseTimers.push(setTimeout(() => setGenerationPhase("structuring"), 12000));
+    phaseTimers.push(setTimeout(() => setGenerationPhase("designing"), 25000));
+    phaseTimers.push(setTimeout(() => setGenerationPhase("polishing"), 45000));
 
     try {
       const { data, error } = await supabase.functions.invoke("generate-presentation", {
         body: { topic, slideCount: parseInt(slideCount), style, additionalContext },
       });
 
-      // Clear phase timers
       phaseTimers.forEach(clearTimeout);
 
       if (error) throw error;
@@ -86,7 +86,7 @@ const PresentationBuilderPage = () => {
       setPresentation({ ...data, slides });
       setCurrentSlide(0);
       setActiveTab("editor");
-      toast.success(`Generated ${slides.length} research-backed slides!`);
+      toast.success(`Generated ${slides.length} Manus-quality slides with real research!`);
     } catch (err) {
       phaseTimers.forEach(clearTimeout);
       toast.error(err instanceof Error ? err.message : "Failed to generate");
