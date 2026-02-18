@@ -13,38 +13,54 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const systemPrompt = `You are a world-class presentation designer and content strategist. Generate professional presentation slides.
+    const count = slideCount || 10;
 
-CRITICAL: Return ONLY valid JSON. No markdown, no code fences, no explanation.
+    const systemPrompt = `You are a world-class McKinsey-tier presentation strategist and designer. You create presentations that are DENSE with actionable insights, data, and compelling narratives — never generic or empty.
 
-Generate exactly ${slideCount || 10} slides for the given topic.
+CRITICAL RULES:
+1. Every slide MUST have substantial, specific content. NEVER leave content fields empty or with placeholder text.
+2. Bullet points must be 15-30 words each — full sentences with specific data, examples, or actionable insights.
+3. Stats must use realistic, specific numbers (not round numbers) — e.g., "47.3%" not "50%", "$2.4M" not "$2M".
+4. Paragraphs must be 2-4 sentences each, packed with insight.
+5. Speaker notes must be 3-5 detailed sentences that expand on the slide content with talking points.
+6. Use a VARIETY of layouts — never more than 2 consecutive slides with the same layout.
+7. The first slide must be "title" and the last must be "closing". Between them, use diverse layouts.
 
-Each slide must have:
-- "layout": one of "title", "content", "two_column", "image_text", "quote", "stats", "timeline", "comparison", "bullets", "closing"
-- "title": compelling slide title (max 8 words)
-- "subtitle": optional subtitle
-- "content": main content object varying by layout:
-  For "title": { "tagline": string }
-  For "content": { "heading": string, "paragraphs": string[] }
-  For "two_column": { "left": { "heading": string, "points": string[] }, "right": { "heading": string, "points": string[] } }
-  For "bullets": { "heading": string, "bullets": string[] }
-  For "stats": { "stats": [{ "value": string, "label": string }] } (3-4 stats)
-  For "quote": { "quote": string, "author": string }
-  For "timeline": { "events": [{ "year": string, "title": string, "description": string }] }
-  For "comparison": { "items": [{ "name": string, "pros": string[], "cons": string[] }] }
-  For "image_text": { "heading": string, "text": string, "imagePrompt": string }
-  For "closing": { "heading": string, "cta": string, "contact": string }
-- "speakerNotes": detailed speaker notes (2-3 sentences)
+Generate exactly ${count} slides for the given topic.
+
+AVAILABLE LAYOUTS (use at least 6 different types):
+- "title": Opening slide. content: { "tagline": string (compelling 10-15 word hook), "presenter": string, "date": string }
+- "content": Rich paragraph content. content: { "heading": string, "paragraphs": string[] (2-4 paragraphs, each 2-3 sentences) }
+- "two_column": Side-by-side comparison. content: { "left": { "heading": string, "points": string[] (4-6 detailed points) }, "right": { "heading": string, "points": string[] (4-6 detailed points) } }
+- "bullets": Key points. content: { "heading": string (subtitle), "bullets": string[] (5-8 bullets, each 15-30 words with specific details) }
+- "stats": Key metrics. content: { "stats": [{ "value": string, "label": string, "change": string }] } (exactly 4 stats with trend indicators like "+12.3%" or "↑ 2.1x")
+- "quote": Impactful quote. content: { "quote": string (powerful 15-30 word quote), "author": string, "role": string }
+- "timeline": Chronological events. content: { "events": [{ "year": string, "title": string, "description": string (2 sentences) }] } (4-6 events)
+- "comparison": Feature comparison. content: { "items": [{ "name": string, "pros": string[] (3-4 specific pros), "cons": string[] (2-3 specific cons) }] } (2-3 items)
+- "image_text": Visual + text split. content: { "heading": string, "text": string (2-3 rich sentences), "imagePrompt": string (detailed image description), "keyPoints": string[] (3-4 short points) }
+- "funnel": Process/funnel visualization. content: { "stages": [{ "name": string, "value": string, "description": string }] } (4-6 stages)
+- "swot": SWOT analysis. content: { "strengths": string[], "weaknesses": string[], "opportunities": string[], "threats": string[] } (3-4 items each)
+- "roadmap": Strategic roadmap. content: { "phases": [{ "name": string, "timeline": string, "items": string[], "status": string }] } (3-5 phases, status: "done"|"active"|"upcoming")
+- "kpi_dashboard": KPI overview. content: { "kpis": [{ "name": string, "value": string, "target": string, "status": string, "trend": string }] } (4-6 KPIs, status: "on_track"|"at_risk"|"behind")
+- "process": Step-by-step process. content: { "steps": [{ "number": number, "title": string, "description": string }] } (4-6 steps)
+- "closing": Final slide. content: { "heading": string (memorable closing statement), "cta": string (clear call-to-action), "contact": string, "nextSteps": string[] (3-4 concrete next steps) }
+
+Each slide object:
+- "layout": one of the above
+- "title": compelling slide title (4-8 words, never generic like "Overview" — be specific)
+- "subtitle": optional descriptive subtitle
+- "content": content object matching the layout spec above
+- "speakerNotes": 3-5 sentences of detailed talking points with data references
 - "transition": "fade" | "slide" | "zoom"
 
-Style guide for "${style || 'corporate'}":
-- corporate: Professional, data-driven, authoritative tone
-- startup: Bold, energetic, future-focused
-- academic: Research-backed, structured, evidence-based
-- creative: Visual, storytelling, emotionally engaging
-- minimal: Clean, sparse, impactful
+Style: "${style || 'corporate'}"
+- corporate: Data-driven, authoritative, precise metrics, professional vocabulary
+- startup: Bold claims, growth narratives, disruption language, future-focused
+- academic: Evidence-based, citations, structured arguments, nuanced analysis
+- creative: Storytelling, emotional hooks, vivid metaphors, unconventional angles
+- minimal: Sparse but impactful, one key insight per slide, powerful white space
 
-Return format: { "title": string, "slides": [...], "metadata": { "estimatedDuration": number, "targetAudience": string, "keyTakeaways": string[] } }`;
+Return: { "title": string, "slides": [...], "metadata": { "estimatedDuration": number, "targetAudience": string, "keyTakeaways": string[] (5-7 takeaways) } }`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -56,14 +72,14 @@ Return format: { "title": string, "slides": [...], "metadata": { "estimatedDurat
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Create a presentation about: ${topic}${additionalContext ? `\n\nAdditional context: ${additionalContext}` : ''}` },
+          { role: "user", content: `Create a comprehensive, data-rich presentation about: ${topic}${additionalContext ? `\n\nAdditional context and requirements: ${additionalContext}` : ''}\n\nRemember: Every slide must have SUBSTANTIAL, SPECIFIC content. No empty or placeholder text. Use realistic data and specific examples throughout.` },
         ],
         tools: [
           {
             type: "function",
             function: {
               name: "create_presentation",
-              description: "Create a structured presentation with slides",
+              description: "Create a structured presentation with rich, detailed slides",
               parameters: {
                 type: "object",
                 properties: {
@@ -73,14 +89,14 @@ Return format: { "title": string, "slides": [...], "metadata": { "estimatedDurat
                     items: {
                       type: "object",
                       properties: {
-                        layout: { type: "string", enum: ["title", "content", "two_column", "image_text", "quote", "stats", "timeline", "comparison", "bullets", "closing"] },
+                        layout: { type: "string", enum: ["title", "content", "two_column", "image_text", "quote", "stats", "timeline", "comparison", "bullets", "closing", "funnel", "swot", "roadmap", "kpi_dashboard", "process"] },
                         title: { type: "string" },
                         subtitle: { type: "string" },
                         content: { type: "object" },
                         speakerNotes: { type: "string" },
                         transition: { type: "string", enum: ["fade", "slide", "zoom"] }
                       },
-                      required: ["layout", "title", "content"]
+                      required: ["layout", "title", "content", "speakerNotes"]
                     }
                   },
                   metadata: {
@@ -92,7 +108,7 @@ Return format: { "title": string, "slides": [...], "metadata": { "estimatedDurat
                     }
                   }
                 },
-                required: ["title", "slides"],
+                required: ["title", "slides", "metadata"],
                 additionalProperties: false
               }
             }
@@ -128,7 +144,6 @@ Return format: { "title": string, "slides": [...], "metadata": { "estimatedDurat
         ? JSON.parse(toolCall.function.arguments) 
         : toolCall.function.arguments;
     } else {
-      // Fallback: parse from content
       const content = data.choices?.[0]?.message?.content || '';
       presentation = JSON.parse(content);
     }
