@@ -1,14 +1,14 @@
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import OfflineKnowledgeExplorer from "@/components/chat/OfflineKnowledgeExplorer";
+import VisualKnowledgeGraph from "@/components/chat/VisualKnowledgeGraph";
 
 const KnowledgeGraphPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <div className="container mx-auto px-4 pt-24 pb-16 max-w-3xl">
+      <div className="container mx-auto px-4 pt-24 pb-16 max-w-5xl">
         <div className="h-[calc(100vh-10rem)]">
-          <OfflineKnowledgeExplorer />
+          <VisualKnowledgeGraph />
         </div>
       </div>
       <Footer />

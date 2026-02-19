@@ -197,8 +197,28 @@ const StrategyAgent = () => {
     setProgress(0);
     setActiveTab("research");
 
+    // AbortController for timeout management
+    const controller = new AbortController();
+    const PHASE_TIMEOUT = 45000; // 45s per phase to prevent hanging
+
+    const invokeWithTimeout = async (body: any) => {
+      const timeoutId = setTimeout(() => controller.abort(), PHASE_TIMEOUT);
+      try {
+        const response = await supabase.functions.invoke('chat', { body });
+        clearTimeout(timeoutId);
+        if (response.error) throw new Error(response.error.message);
+        return response;
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError' || controller.signal.aborted) {
+          throw new Error('Request timed out. Using fallback data.');
+        }
+        throw err;
+      }
+    };
+
     try {
-      // Phase 1: Web Research
+      // Phase 1: Web Research (with timeout + fallback)
       setProgress(10);
       const researchPrompt = `You are a business research analyst. Analyze this business idea and provide comprehensive market research:
 
@@ -223,21 +243,13 @@ Provide a JSON response with this exact structure:
 Include realistic data for ${businessIdea.location} market in 2026. Be specific and actionable.`;
 
       setProgress(25);
-      const researchResponse = await supabase.functions.invoke('chat', {
-        body: { 
-          messages: [{ role: "user", content: researchPrompt }],
-          isResearch: true
-        }
-      });
-
-      if (researchResponse.error) throw new Error(researchResponse.error.message);
       
-      setProgress(40);
-      setPhase("analyzing");
-      
-      // Parse research data
       let researchData: ResearchData;
       try {
+        const researchResponse = await invokeWithTimeout({ 
+          messages: [{ role: "user", content: researchPrompt }],
+          isResearch: true
+        });
         const content = researchResponse.data?.response || researchResponse.data?.text || "";
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
@@ -246,13 +258,14 @@ Include realistic data for ${businessIdea.location} market in 2026. Be specific 
           throw new Error("Could not parse research data");
         }
       } catch {
-        // Generate fallback research data
+        // Graceful fallback - don't abort entire flow
         researchData = generateFallbackResearch(businessIdea);
       }
 
-      setProgress(55);
+      setProgress(40);
+      setPhase("analyzing");
 
-      // Phase 2: SWOT Analysis & Financial Projections
+      // Phase 2: SWOT + Financial (with timeout + fallback)
       const analysisPrompt = `Based on this market research for "${businessIdea.name}" in ${businessIdea.location}:
 
 Competitors: ${JSON.stringify(researchData.competitors)}
@@ -282,23 +295,15 @@ Generate a comprehensive business analysis in this exact JSON format:
 
 Be realistic and specific to ${businessIdea.industry} in ${businessIdea.location}.`;
 
-      setProgress(70);
+      setProgress(55);
       setPhase("generating");
 
-      const analysisResponse = await supabase.functions.invoke('chat', {
-        body: { 
-          messages: [{ role: "user", content: analysisPrompt }],
-          isResearch: true
-        }
-      });
-
-      if (analysisResponse.error) throw new Error(analysisResponse.error.message);
-
-      setProgress(85);
-
-      // Parse analysis data
       let analysisData: Omit<StrategyResult, 'research'>;
       try {
+        const analysisResponse = await invokeWithTimeout({
+          messages: [{ role: "user", content: analysisPrompt }],
+          isResearch: true
+        });
         const content = analysisResponse.data?.response || analysisResponse.data?.text || "";
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
@@ -309,6 +314,8 @@ Be realistic and specific to ${businessIdea.industry} in ${businessIdea.location
       } catch {
         analysisData = generateFallbackAnalysis(businessIdea);
       }
+
+      setProgress(85);
 
       // Combine all data
       const finalResult: StrategyResult = {
