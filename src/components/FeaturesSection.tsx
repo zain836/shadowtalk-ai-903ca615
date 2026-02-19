@@ -42,7 +42,7 @@ const FeaturesSection = () => {
       description: "Advanced AI that understands context and provides intelligent responses to any question.",
       gradient: "from-primary/20 to-primary/5",
       iconColor: "text-primary",
-      span: "md:col-span-2",
+      span: "sm:col-span-2 md:col-span-2",
     },
     {
       icon: Code,
@@ -66,7 +66,7 @@ const FeaturesSection = () => {
       description: "Continue working without internet. Your AI assistant is always available, anywhere.",
       gradient: "from-warning/20 to-warning/5",
       iconColor: "text-warning",
-      span: "md:col-span-2",
+      span: "sm:col-span-2 md:col-span-2",
     },
     {
       icon: Shield,
@@ -135,8 +135,8 @@ const FeaturesSection = () => {
           </motion.p>
         </div>
 
-        {/* Bento Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+        {/* Bento Grid - responsive with no overlap on mobile */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 max-w-5xl mx-auto px-1">
           {features.map((feature, index) => (
             <motion.div
               key={index}

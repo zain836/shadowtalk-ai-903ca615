@@ -8,6 +8,8 @@ import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useAuth } from "@/components/AuthProvider";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { StealthKillSwitch } from "@/components/StealthKillSwitch";
+import { HardwarePassthrough } from "@/components/HardwarePassthrough";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,17 +43,35 @@ const Navigation = () => {
     };
     window.addEventListener('beforeinstallprompt', handler);
     window.addEventListener('appinstalled', () => setIsInstalled(true));
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+
+    // Re-listen if prompt was consumed
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
   }, []);
 
   const handleInstallClick = useCallback(async () => {
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') setIsInstalled(true);
-      setDeferredPrompt(null);
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') setIsInstalled(true);
+        setDeferredPrompt(null);
+      } catch (e) {
+        console.warn('[PWA] Prompt failed, showing guide:', e);
+        setShowIOSGuide(true);
+      }
+    } else if ('getInstalledRelatedApps' in navigator) {
+      // Check if already installed via Related Apps API
+      try {
+        const relatedApps = await (navigator as any).getInstalledRelatedApps();
+        if (relatedApps.length > 0) {
+          setIsInstalled(true);
+          return;
+        }
+      } catch {}
+      setShowIOSGuide(true);
     } else {
-      // Show install guide for all platforms when native prompt isn't available
       setShowIOSGuide(true);
     }
   }, [deferredPrompt]);
@@ -151,7 +171,9 @@ const Navigation = () => {
           </div>
 
           {/* CTA Buttons */}
-          <div className="hidden md:flex items-center space-x-2">
+          <div className="hidden md:flex items-center space-x-1.5">
+            <StealthKillSwitch />
+            <HardwarePassthrough />
             {!isInstalled && (
               <Button
                 variant="outline"

@@ -232,7 +232,15 @@ const AuthPage = () => {
           className="mt-6 flex items-center justify-center gap-4 text-xs text-muted-foreground"
         >
           <span className="flex items-center gap-1"><Shield className="h-3 w-3 text-success" /> E2E Encrypted</span>
-          <span className="flex items-center gap-1"><Zap className="h-3 w-3 text-primary" /> Offline Ready</span>
+          <span className="flex items-center gap-1">
+            {isOffline ? (
+              <><WifiOff className="h-3 w-3 text-warning" /> <span className="text-warning">Offline Mode Active</span></>
+            ) : hasOfflineCredentials ? (
+              <><Zap className="h-3 w-3 text-success" /> <span className="text-success">Offline Ready</span></>
+            ) : (
+              <><Zap className="h-3 w-3 text-muted-foreground" /> Offline Not Set Up</>
+            )}
+          </span>
         </motion.div>
       </div>
     </div>
