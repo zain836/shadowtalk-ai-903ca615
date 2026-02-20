@@ -77,7 +77,7 @@ import { useGeoLocation } from "@/hooks/useGeoLocation";
 import { useBusinessMemory } from "@/hooks/useBusinessMemory";
 import { useGuestUsage, GUEST_LIMITS } from "@/hooks/useGuestUsage";
 import { useToolOrchestrator, ToolType } from "@/hooks/useToolOrchestrator";
-import { useProactiveAI } from "@/hooks/useProactiveAI";
+
 import { NetworkTransitionOverlay } from "@/components/chat/NetworkTransitionOverlay";
 import { useOfflineSessionTracker } from "@/hooks/useOfflineSessionTracker";
 import { useLocalVectorStore } from "@/hooks/useLocalVectorStore";
@@ -241,7 +241,7 @@ const ChatbotPage = () => {
   const guestUsage = useGuestUsage(); // Guest usage tracking
   const toolOrchestrator = useToolOrchestrator(); // Intelligent tool detection
   const thinkingSteps = useThinkingSteps(); // Claude-style thinking transparency
-  const proactiveAI = useProactiveAI(false); // Always active on chatbot page
+  // proactiveAI removed from main chatbot — runs on 24/7 support widget only
   const intelligenceHub = useIntelligenceHub(); // Retention: AI memory + knowledge + streaks
   
   // Thinking transparency state
@@ -264,22 +264,10 @@ const ChatbotPage = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const lastProactiveIdRef = useRef<string | null>(null);
+  
 
-  // ─── Proactive AI: inject messages into main chat ───
-  useEffect(() => {
-    if (proactiveAI.currentMessage && proactiveAI.isVisible && proactiveAI.currentMessage.id !== lastProactiveIdRef.current) {
-      lastProactiveIdRef.current = proactiveAI.currentMessage.id;
-      const proactiveMsg: Message = {
-        id: `proactive-${proactiveAI.currentMessage.id}`,
-        type: "ai",
-        content: `${proactiveAI.currentMessage.icon || "✨"} **Proactive Insight** — ${proactiveAI.currentMessage.content}`,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, proactiveMsg]);
-      proactiveAI.recordInteraction(proactiveAI.currentMessage.content.slice(0, 50));
-    }
-  }, [proactiveAI.currentMessage, proactiveAI.isVisible]);
+  // ─── Proactive AI removed from main chatbot ─────────
+  // Proactive behavioral engine now runs exclusively in the 24/7 CustomerSupportWidget
 
    // Auto-initialize offline AI when going offline - use Robust Offline AI
   useEffect(() => {
