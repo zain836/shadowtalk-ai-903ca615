@@ -118,23 +118,51 @@ export const MultiModalFusion = ({
       i.id === item.id ? { ...i, status: 'processing' } : i
     ));
 
-    // Simulate processing (in real app, would call AI)
-    await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
-
-    setItems(prev => prev.map(i => {
-      if (i.id !== item.id) return i;
+    // Process item using real AI via vision-analyze or chat
+    try {
+      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
       
-      let analysis: string | undefined;
-      let transcription: string | undefined;
-
-      if (item.type === 'image') {
-        analysis = 'Image analyzed: Contains visual elements ready for AI interpretation';
+      let promptContent = `Analyze this ${item.type} input`;
+      if (item.type === 'image' && item.data) {
+        promptContent = `Analyze this image. The image data is provided as base64.`;
       } else if (item.type === 'audio' || item.type === 'voice') {
-        transcription = 'Audio transcribed and ready for context';
+        promptContent = `This is an audio recording named "${item.name}". Provide a transcription summary.`;
+      } else if (item.type === 'code') {
+        promptContent = `Analyze this code file "${item.name}" and describe what it does.`;
+      } else {
+        promptContent = `Analyze this file: "${item.name}" (type: ${item.type})`;
       }
 
-      return { ...i, status: 'ready', analysis, transcription };
-    }));
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
+        },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: promptContent }],
+          personality: "professional",
+          mode: "general"
+        })
+      });
+
+      const data = await resp.json();
+      const aiResult = typeof data === 'string' ? data : (data?.response || data?.text || 'Analysis complete');
+
+      setItems(prev => prev.map(i => {
+        if (i.id !== item.id) return i;
+        return {
+          ...i,
+          status: 'ready',
+          analysis: item.type === 'image' || item.type === 'code' || item.type === 'file' ? aiResult.slice(0, 300) : undefined,
+          transcription: item.type === 'audio' || item.type === 'voice' ? aiResult.slice(0, 300) : undefined,
+        };
+      }));
+    } catch {
+      setItems(prev => prev.map(i => 
+        i.id === item.id ? { ...i, status: 'ready', analysis: 'Processing failed — please retry' } : i
+      ));
+    }
   }, []);
 
   // Voice recording

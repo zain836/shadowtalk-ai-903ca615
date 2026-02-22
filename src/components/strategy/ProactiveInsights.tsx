@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Sparkles, TrendingUp, Zap, Eye, Lightbulb, Rocket, 
@@ -136,28 +137,75 @@ export const ProactiveInsights = () => {
   const [loading, setLoading] = useState(true);
   const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    // Simulate proactive analysis
-    const timer = setTimeout(() => {
+  const fetchInsights = useCallback(async () => {
+    setLoading(true);
+    setCompletedTasks(new Set());
+
+    try {
+      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
+        },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "Generate 5 proactive business growth insights for a privacy-first AI chat platform. For each, provide: title, description, urgency (low/medium/high/critical), impact score (1-100), category, and actionable next step. Format as JSON array." }],
+          personality: "professional",
+          mode: "general"
+        })
+      });
+
+      const data = await resp.json();
+      const responseText = typeof data === 'string' ? data : (data?.response || data?.text || '');
+      
+      // Try to parse AI-generated insights
+      try {
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          const icons = [<Flame className="h-4 w-4" />, <Rocket className="h-4 w-4" />, <Users className="h-4 w-4" />, <Globe className="h-4 w-4" />, <Target className="h-4 w-4" />];
+          const categories = ["Trend-Scout", "Creative-Director", "Growth-Hacker", "Market-Analyzer", "Revenue-Optimizer"];
+          
+          setTasks(parsed.slice(0, 5).map((item: any, idx: number) => ({
+            id: String(idx + 1),
+            type: ["trend", "content", "growth", "action"][idx % 4] as HypeTask["type"],
+            title: item.title || `Insight ${idx + 1}`,
+            description: item.description || "",
+            urgency: item.urgency || "medium",
+            impact: item.impact || 70 + idx * 5,
+            category: categories[idx % categories.length],
+            actionLabel: item.actionLabel || item.action || "Take Action",
+            timeEstimate: item.timeEstimate || "10 min",
+            icon: icons[idx % icons.length],
+          })));
+        } else {
+          setTasks(generateHypeTasks());
+        }
+      } catch {
+        setTasks(generateHypeTasks());
+      }
+
+      setTrends(generateTrendSignals());
+    } catch {
+      // Fallback to generated data
       setTasks(generateHypeTasks());
       setTrends(generateTrendSignals());
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
+    }
+
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    fetchInsights();
+  }, [fetchInsights]);
 
   const handleAction = (taskId: string) => {
     setCompletedTasks(prev => new Set([...prev, taskId]));
   };
 
   const refreshInsights = () => {
-    setLoading(true);
-    setCompletedTasks(new Set());
-    setTimeout(() => {
-      setTasks(generateHypeTasks());
-      setTrends(generateTrendSignals());
-      setLoading(false);
-    }, 1500);
+    fetchInsights();
   };
 
   const activeTasks = tasks.filter(t => !completedTasks.has(t.id));

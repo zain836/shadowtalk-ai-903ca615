@@ -228,19 +228,33 @@ export const GeminiLiveMode = ({ isOpen, onClose, onInsertToChat }: GeminiLiveMo
     
     setIsProcessing(true);
     
-    // Simulate AI thinking and response
-    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 700));
-    
-    const responses = [
-      "That's a great point! I think we can explore that further. What specific aspects interest you most?",
-      "Interesting perspective. Let me think about that for a moment... Yes, I see what you mean.",
-      "I understand. Would you like me to elaborate on any particular part of that?",
-      "That reminds me of something related. Have you considered looking at it from this angle?",
-      "Absolutely! That's exactly right. Is there anything else you'd like to discuss?",
-    ];
-    
-    const aiResponse = responses[Math.floor(Math.random() * responses.length)];
-    addAIResponse(aiResponse);
+    // Call real AI backend
+    try {
+      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
+        },
+        body: JSON.stringify({
+          messages: [
+            ...transcript.filter(t => t.role === "user" || t.role === "ai").slice(-6).map(t => ({
+              role: t.role === "ai" ? "assistant" : "user",
+              content: t.text
+            })),
+            { role: "user", content: text }
+          ],
+          personality: "professional",
+          mode: "general"
+        })
+      });
+      const data = await resp.json();
+      const aiResponse = typeof data === 'string' ? data : (data?.response || data?.text || "I understand. Can you tell me more?");
+      addAIResponse(aiResponse);
+    } catch {
+      addAIResponse("I'm having trouble connecting right now. Could you repeat that?");
+    }
   };
 
   // Add AI response with text-to-speech

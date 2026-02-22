@@ -422,9 +422,29 @@ Provide the BEST possible answer by combining their expertise.`;
         curr.confidence > best.confidence ? curr : best
       ).agentName;
 
-      // Phase 5: Learning - Update procedural memory (TODO: implement)
+      // Phase 5: Learning - Persist memory to ai_memories table
       setState(prev => ({ ...prev, currentPhase: 'learning', progress: 95 }));
       onProgress?.('learning', [], 95);
+
+      let memoryUpdated = false;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Store key insights from this cognitive loop as memories
+          const memoryContent = `Query: ${query}\nConsensus: ${consensusLevel.toFixed(0)}%\nDominant Agent: ${dominantAgent}\nKey insight: ${finalAnswer.slice(0, 500)}`;
+          
+          await supabase.from('ai_memories').insert({
+            user_id: user.id,
+            content: memoryContent,
+            category: 'cognitive_loop',
+            source: 'auto',
+            confidence: consensusLevel / 100,
+          });
+          memoryUpdated = true;
+        }
+      } catch (memError) {
+        console.warn('Memory persistence failed:', memError);
+      }
 
       const result: CognitiveResult = {
         finalAnswer,
@@ -433,7 +453,7 @@ Provide the BEST possible answer by combining their expertise.`;
         consensusLevel,
         dominantAgent,
         totalLatencyMs: Date.now() - startTime,
-        memoryUpdated: false, // TODO: implement memory update
+        memoryUpdated,
       };
 
       setState({
