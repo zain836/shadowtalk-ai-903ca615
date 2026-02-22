@@ -165,20 +165,44 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete, initialGoal
           return { ...prev, steps: newSteps };
         });
 
-        // Simulate step execution
-        await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
+        // Execute step via AI
+        const startMs = Date.now();
+        try {
+          const stepResp = await fetch(CHAT_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
+            },
+            body: JSON.stringify({
+              messages: [{ role: "user", content: `Execute this step for the goal "${goal}": ${step.action}. Provide a concise result.` }],
+              personality: "professional",
+              mode: "general"
+            })
+          });
+          const stepData = await stepResp.json();
+          const stepResult = typeof stepData === 'string' ? stepData : (stepData?.response || stepData?.text || `Completed: ${step.action}`);
+          const duration = Date.now() - startMs;
 
-        setCurrentTask(prev => {
-          if (!prev) return null;
-          const newSteps = [...prev.steps];
-          newSteps[i] = { 
-            ...newSteps[i], 
-            status: "completed",
-            result: `Completed: ${step.action}`,
-            duration: 1500 + Math.floor(Math.random() * 1000)
-          };
-          return { ...prev, steps: newSteps };
-        });
+          setCurrentTask(prev => {
+            if (!prev) return null;
+            const newSteps = [...prev.steps];
+            newSteps[i] = { 
+              ...newSteps[i], 
+              status: "completed",
+              result: stepResult.slice(0, 200),
+              duration
+            };
+            return { ...prev, steps: newSteps };
+          });
+        } catch (stepError) {
+          setCurrentTask(prev => {
+            if (!prev) return null;
+            const newSteps = [...prev.steps];
+            newSteps[i] = { ...newSteps[i], status: "failed", result: "Step execution failed", duration: Date.now() - startMs };
+            return { ...prev, steps: newSteps };
+          });
+        }
 
         addLog(`Step ${i + 1} completed`);
       }

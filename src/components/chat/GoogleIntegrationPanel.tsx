@@ -79,67 +79,124 @@ export const GoogleIntegrationPanel: React.FC<GoogleIntegrationPanelProps> = ({
     setIsConnecting(serviceId);
     
     try {
-      // In production, this would initiate OAuth flow
-      // For now, simulate connection
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setServices(prev => prev.map(s => 
-        s.id === serviceId ? { ...s, connected: true, lastSync: new Date().toISOString() } : s
-      ));
-      
-      toast({
-        title: `${serviceId.charAt(0).toUpperCase() + serviceId.slice(1)} Connected`,
-        description: 'You can now access your Google data securely.'
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: 'Please sign in first', variant: 'destructive' });
+        setIsConnecting(null);
+        return;
+      }
+
+      // Initiate real OAuth flow
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/oauth-initiate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ provider: "google", scope: "both" })
       });
+
+      const data = await resp.json();
+      
+      if (data.authUrl) {
+        // Open OAuth popup
+        const popup = window.open(data.authUrl, 'google-auth', 'width=500,height=600');
+        
+        // Listen for OAuth completion
+        const handleMessage = (event: MessageEvent) => {
+          if (event.data?.type === 'oauth-success') {
+            setServices(prev => prev.map(s => ({
+              ...s, connected: true, lastSync: new Date().toISOString()
+            })));
+            toast({ title: 'Google Connected!', description: 'All Google services are now linked.' });
+            window.removeEventListener('message', handleMessage);
+          } else if (event.data?.type === 'oauth-error') {
+            toast({ title: 'Connection Failed', description: event.data.error, variant: 'destructive' });
+            window.removeEventListener('message', handleMessage);
+          }
+        };
+        window.addEventListener('message', handleMessage);
+      } else {
+        toast({ title: 'Connection Failed', description: data.error || 'Could not start OAuth flow', variant: 'destructive' });
+      }
     } catch (error) {
-      toast({
-        title: 'Connection Failed',
-        description: 'Please try again later.',
-        variant: 'destructive'
-      });
+      toast({ title: 'Connection Failed', description: 'Please try again later.', variant: 'destructive' });
     } finally {
       setIsConnecting(null);
     }
   };
 
   const handleDisconnect = async (serviceId: string) => {
-    setServices(prev => prev.map(s => 
-      s.id === serviceId ? { ...s, connected: false, lastSync: undefined } : s
-    ));
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('oauth_tokens').delete().eq('user_id', user.id).eq('provider', 'google');
+    }
     
-    toast({
-      title: 'Disconnected',
-      description: `${serviceId.charAt(0).toUpperCase() + serviceId.slice(1)} has been disconnected.`
-    });
+    setServices(prev => prev.map(s => ({ ...s, connected: false, lastSync: undefined })));
+    setFiles([]);
+    
+    toast({ title: 'Disconnected', description: 'Google services have been disconnected.' });
   };
 
   const loadDriveFiles = async () => {
     setIsLoadingFiles(true);
     
-    // Simulate loading files
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setFiles([
-      { id: '1', name: 'Project Proposal.docx', type: 'document', modified: '2 hours ago' },
-      { id: '2', name: 'Budget 2024.xlsx', type: 'spreadsheet', modified: '1 day ago' },
-      { id: '3', name: 'Presentation.pptx', type: 'presentation', modified: '3 days ago' },
-      { id: '4', name: 'Meeting Notes.docx', type: 'document', modified: '1 week ago' },
-      { id: '5', name: 'Research Data.csv', type: 'spreadsheet', modified: '2 weeks ago' }
-    ]);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-api`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ action: "drive.list", params: { maxResults: 20 } })
+      });
+
+      const result = await resp.json();
+      
+      if (result.data) {
+        setFiles(result.data.map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          type: f.mimeType?.includes('spreadsheet') ? 'spreadsheet' 
+              : f.mimeType?.includes('presentation') ? 'presentation' 
+              : 'document',
+          modified: f.modifiedTime ? new Date(f.modifiedTime).toLocaleDateString() : 'Unknown',
+        })));
+      }
+    } catch (error) {
+      console.error('Failed to load Drive files:', error);
+      toast({ title: 'Failed to load files', variant: 'destructive' });
+    }
     
     setIsLoadingFiles(false);
   };
 
-  const handleImportFile = (file: { id: string; name: string }) => {
-    const sampleContent = `# ${file.name}\n\nThis is the imported content from your Google Drive file.\n\n[Content would be extracted here in production]`;
-    onImportContent?.(sampleContent, `Google Drive: ${file.name}`);
-    
-    toast({
-      title: 'File Imported',
-      description: `${file.name} has been imported to your chat.`
-    });
-    
-    onClose();
+  const handleImportFile = async (file: { id: string; name: string }) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-api`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ action: "drive.get", params: { fileId: file.id } })
+      });
+
+      const result = await resp.json();
+      const content = result.data?.content || `# ${file.name}\n\nContent could not be extracted.`;
+      onImportContent?.(content, `Google Drive: ${file.name}`);
+      
+      toast({ title: 'File Imported', description: `${file.name} has been imported to your chat.` });
+      onClose();
+    } catch {
+      toast({ title: 'Import Failed', variant: 'destructive' });
+    }
   };
 
   const connectedCount = services.filter(s => s.connected).length;
