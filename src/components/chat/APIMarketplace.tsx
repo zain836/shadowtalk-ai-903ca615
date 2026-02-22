@@ -136,18 +136,32 @@ export const APIMarketplace = ({ isOpen, onClose }: APIMarketplaceProps) => {
   };
 
   const loadUsageMetrics = async () => {
-    // Mock usage data - in production, fetch from analytics table
-    const mockMetrics: UsageMetric[] = Array.from({ length: 7 }, (_, i) => {
+    if (!user) return;
+    
+    // Fetch real usage data from usage_analytics for last 7 days
+    const metrics: UsageMetric[] = [];
+    for (let i = 6; i >= 0; i--) {
       const date = new Date();
-      date.setDate(date.getDate() - (6 - i));
-      return {
+      date.setDate(date.getDate() - i);
+      const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString();
+      const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).toISOString();
+      
+      const { data, count } = await supabase
+        .from('usage_analytics')
+        .select('tokens_used', { count: 'exact' })
+        .eq('user_id', user.id)
+        .gte('created_at', dayStart)
+        .lt('created_at', dayEnd);
+      
+      const totalTokens = (data || []).reduce((sum, r) => sum + (r.tokens_used || 0), 0);
+      metrics.push({
         date: date.toISOString().split('T')[0],
-        requests: Math.floor(Math.random() * 500) + 100,
-        tokens: Math.floor(Math.random() * 50000) + 10000,
-        cost: Math.random() * 5 + 0.5,
-      };
-    });
-    setUsageMetrics(mockMetrics);
+        requests: count || 0,
+        tokens: totalTokens,
+        cost: totalTokens * 0.00001, // $0.01 per 1000 tokens estimate
+      });
+    }
+    setUsageMetrics(metrics);
   };
 
   const createApiKey = async () => {
