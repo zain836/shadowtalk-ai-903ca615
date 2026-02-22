@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Shield, Zap, ArrowRight } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
@@ -47,13 +48,29 @@ const scaleFadeIn = {
 const HeroSection = () => {
   const navigate = useNavigate();
 
-  const liveStats = useMemo(() => {
-    const users = 45000 + Math.floor(Math.random() * 8000);
-    const reviews = 11000 + Math.floor(Math.random() * 3000);
-    const ratings = [4.8, 4.9, 4.9, 4.9, 5.0];
-    const rating = ratings[Math.floor(Math.random() * ratings.length)];
-    const dealsLeft = 20 + Math.floor(Math.random() * 35);
-    return { users, reviews, rating, dealsLeft };
+  const [liveStats, setLiveStats] = useState({ users: 45000, reviews: 11000, rating: 4.9, dealsLeft: 30 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const [profilesRes, feedbackRes] = await Promise.all([
+        supabase.from('profiles').select('id', { count: 'exact', head: true }),
+        supabase.from('feedback').select('rating').not('rating', 'is', null),
+      ]);
+      
+      const userCount = profilesRes.count || 0;
+      const reviews = feedbackRes.data || [];
+      const avgRating = reviews.length > 0 
+        ? reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length 
+        : 4.9;
+      
+      setLiveStats({
+        users: Math.max(userCount, 100), // Show at least base count
+        reviews: reviews.length,
+        rating: Math.round(avgRating * 10) / 10,
+        dealsLeft: 30, // This can be managed via admin later
+      });
+    };
+    fetchStats();
   }, []);
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);

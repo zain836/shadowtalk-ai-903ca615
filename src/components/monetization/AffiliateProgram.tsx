@@ -123,13 +123,21 @@ export function AffiliateProgram() {
       const active = referrals.filter(r => r.status === 'converted');
       const earnings = referrals.reduce((sum, r) => sum + (r.commission_amount || 0), 0);
       
+      // Fetch real click count from affiliate_clicks
+      const { count: clickCount } = await supabase
+        .from('affiliate_clicks')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+      const paidCommissions = referrals.filter(r => r.commission_paid).reduce((s, r) => s + (r.commission_amount || 0), 0);
+
       setStats({
         totalReferrals: referrals.length,
         activeSubscribers: active.length,
         totalEarnings: earnings,
-        pendingPayout: earnings * 0.3, // Example: 30% pending
+        pendingPayout: earnings - paidCommissions,
         conversionRate: referrals.length > 0 ? (active.length / referrals.length) * 100 : 0,
-        clicks: referrals.length * 5, // Mock data
+        clicks: clickCount || 0,
       });
     }
   };

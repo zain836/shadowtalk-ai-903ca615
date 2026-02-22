@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -88,26 +89,58 @@ export function UsageBasedBilling() {
     loadUsageData();
   }, [userPlan]);
 
-  const loadUsageData = () => {
+  const loadUsageData = useCallback(async () => {
     const limits = PLAN_LIMITS[userPlan] || PLAN_LIMITS.free;
     
-    // Mock usage data - in production, fetch from database
-    const mockUsage: Record<string, number> = {
-      messages: Math.floor(Math.random() * (limits.messages * 0.8)),
-      imageGenerations: Math.floor(Math.random() * (limits.imageGenerations * 0.6)),
-      codeExecutions: Math.floor(Math.random() * (limits.codeExecutions * 0.5)),
-      webSearches: Math.floor(Math.random() * (limits.webSearches * 0.7)),
-      voiceMinutes: Math.floor(Math.random() * (limits.voiceMinutes * 0.4)),
-      fileUploads: Math.floor(Math.random() * (limits.fileUploads * 0.3)),
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Get current month start
+    const now = new Date();
+    const cycleStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    // Fetch real usage data from usage_analytics for current billing cycle
+    const { data: usageData } = await supabase
+      .from('usage_analytics')
+      .select('action_type')
+      .eq('user_id', user.id)
+      .gte('created_at', cycleStart.toISOString());
+
+    // Count by action type
+    const counts: Record<string, number> = {
+      messages: 0,
+      imageGenerations: 0,
+      codeExecutions: 0,
+      webSearches: 0,
+      voiceMinutes: 0,
+      fileUploads: 0,
     };
 
+    const actionMap: Record<string, string> = {
+      'message': 'messages',
+      'chat_message': 'messages',
+      'image_generation': 'imageGenerations',
+      'code_execution': 'codeExecutions',
+      'web_search': 'webSearches',
+      'deep_research': 'webSearches',
+      'voice_input': 'voiceMinutes',
+      'voice_output': 'voiceMinutes',
+      'file_upload': 'fileUploads',
+    };
+
+    (usageData || []).forEach(row => {
+      const key = actionMap[row.action_type] || 'messages';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
     const newMetrics: UsageMetric[] = [
-      { name: "AI Messages", used: mockUsage.messages, limit: limits.messages, unit: "messages" },
-      { name: "Image Generations", used: mockUsage.imageGenerations, limit: limits.imageGenerations, unit: "images" },
-      { name: "Code Executions", used: mockUsage.codeExecutions, limit: limits.codeExecutions, unit: "runs" },
-      { name: "Web Searches", used: mockUsage.webSearches, limit: limits.webSearches, unit: "searches" },
-      { name: "Voice Minutes", used: mockUsage.voiceMinutes, limit: limits.voiceMinutes, unit: "min" },
-      { name: "File Uploads", used: mockUsage.fileUploads, limit: limits.fileUploads, unit: "files" },
+      { name: "AI Messages", used: counts.messages, limit: limits.messages, unit: "messages" },
+      { name: "Image Generations", used: counts.imageGenerations, limit: limits.imageGenerations, unit: "images" },
+      { name: "Code Executions", used: counts.codeExecutions, limit: limits.codeExecutions, unit: "runs" },
+      { name: "Web Searches", used: counts.webSearches, limit: limits.webSearches, unit: "searches" },
+      { name: "Voice Minutes", used: counts.voiceMinutes, limit: limits.voiceMinutes, unit: "min" },
+      { name: "File Uploads", used: counts.fileUploads, limit: limits.fileUploads, unit: "files" },
     ];
 
     // Calculate overages
@@ -121,11 +154,6 @@ export function UsageBasedBilling() {
 
     setMetrics(newMetrics);
 
-    // Calculate billing cycle
-    const now = new Date();
-    const cycleStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const cycleEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    
     const totalOverage = newMetrics.reduce((sum, m) => {
       return sum + (m.overage && m.overageRate ? m.overage * m.overageRate : 0);
     }, 0);
@@ -136,7 +164,7 @@ export function UsageBasedBilling() {
       currentUsage: totalOverage,
       estimatedBill: totalOverage,
     });
-  };
+  }, [userPlan]);
 
   const formatLimit = (limit: number): string => {
     if (limit === Infinity) return "Unlimited";
