@@ -1,15 +1,19 @@
-import { useState } from "react";
-import { MessageCircle, X, Send, User, Minimize2, Maximize2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { MessageCircle, X, Send, User, Minimize2, Maximize2, Loader2 } from "lucide-react";
 import ChatbotLogo from "@/components/ChatbotLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 const ChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [onlineUsers] = useState(Math.floor(Math.random() * 1000) + 47000);
   const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -18,9 +22,14 @@ const ChatWidget = () => {
       timestamp: new Date()
     }
   ]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const sendMessage = () => {
-    if (!message.trim()) return;
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const sendMessage = async () => {
+    if (!message.trim() || isLoading) return;
 
     const newMessage = {
       id: messages.length + 1,
@@ -29,27 +38,81 @@ const ChatWidget = () => {
       timestamp: new Date()
     };
 
-    setMessages([...messages, newMessage]);
+    setMessages(prev => [...prev, newMessage]);
+    const userMsg = message;
     setMessage("");
+    setIsLoading(true);
 
-    // Simulate realistic bot response with multiple options
-    setTimeout(() => {
-      const responses = [
-        "🔥 Perfect! I can build that for you right now. Which tech stack would you prefer - React, Python, Node.js, or something else? I have access to real-time APIs and can generate production-ready code.",
-        "⚡ Excellent choice! Let me analyze your requirements and create a custom solution. I can automate this entire workflow and save you hours of manual work. Want to see the magic?",
-        "🚀 I love ambitious projects! I can help you build that with cutting-edge AI. Should I generate the frontend, backend, database schema, or all three? I work 10x faster than traditional development.",
-        "💡 Brilliant idea! I have real-time access to the latest frameworks and can create scalable solutions. Let me show you three different approaches and you can choose your favorite.",
-        "🎯 That's exactly what I excel at! I can generate clean, documented code that follows best practices. Plus, I'll include error handling and optimization. Ready to revolutionize your workflow?",
-      ];
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
 
-      const botResponse = {
+      const chatHistory = messages.slice(-8).map(m => ({
+        role: m.type === 'user' ? 'user' : 'assistant',
+        content: m.content
+      }));
+      chatHistory.push({ role: 'user', content: userMsg });
+
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          messages: chatHistory,
+          personality: 'friendly',
+          mode: 'general'
+        }),
+      });
+
+      if (!resp.ok) throw new Error("Failed");
+
+      const reader = resp.body?.getReader();
+      const decoder = new TextDecoder();
+      let assistantContent = "";
+      let textBuffer = "";
+
+      // Add placeholder message
+      const botId = messages.length + 2;
+      setMessages(prev => [...prev, { id: botId, type: "bot", content: "...", timestamp: new Date() }]);
+
+      while (reader) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "" || !line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const content = JSON.parse(jsonStr).choices?.[0]?.delta?.content;
+            if (content) {
+              assistantContent += content;
+              setMessages(prev => prev.map(m => m.id === botId ? { ...m, content: assistantContent } : m));
+            }
+          } catch { /* skip parse errors */ }
+        }
+      }
+
+      if (!assistantContent) {
+        setMessages(prev => prev.filter(m => m.id !== botId));
+      }
+    } catch (error) {
+      console.error("Chat error:", error);
+      setMessages(prev => [...prev, {
         id: messages.length + 2,
         type: "bot",
-        content: responses[Math.floor(Math.random() * responses.length)],
+        content: "Sorry, I encountered an error. Please try again.",
         timestamp: new Date()
-      };
-      setMessages(prev => [...prev, botResponse]);
-    }, 2000);
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -94,20 +157,10 @@ const ChatWidget = () => {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsMinimized(!isMinimized)}
-              className="h-8 w-8 p-0"
-            >
+            <Button variant="ghost" size="sm" onClick={() => setIsMinimized(!isMinimized)} className="h-8 w-8 p-0">
               {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsOpen(false)}
-              className="h-8 w-8 p-0"
-            >
+            <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)} className="h-8 w-8 p-0">
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -145,6 +198,7 @@ const ChatWidget = () => {
                   </div>
                 </div>
               ))}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}
@@ -156,9 +210,10 @@ const ChatWidget = () => {
                   onKeyPress={handleKeyPress}
                   placeholder="Type your message..."
                   className="flex-1"
+                  disabled={isLoading}
                 />
-                <Button onClick={sendMessage} size="sm" className="btn-glow">
-                  <Send className="h-4 w-4" />
+                <Button onClick={sendMessage} size="sm" className="btn-glow" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
