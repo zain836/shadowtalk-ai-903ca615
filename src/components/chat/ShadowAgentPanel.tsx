@@ -454,7 +454,7 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({ onExecuteTask, isEx
     return items;
   };
 
-  const runComplianceScan = useCallback(() => {
+  const runComplianceScan = useCallback(async () => {
     if (!selectedIndustry) { toast.error('Select an industry'); return; }
     if (selectedRegions.length === 0) { toast.error('Select at least one region'); return; }
 
@@ -467,22 +467,89 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({ onExecuteTask, isEx
       return prev + 4;
     }), 80);
 
-    setTimeout(() => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const industry = INDUSTRIES.find(i => i.id === selectedIndustry);
+      const regionLabels = selectedRegions.map(r => REGIONS.find(reg => reg.id === r)?.label || r);
+      
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          messages: [{
+            role: 'user',
+            content: `You are a regulatory compliance expert. Generate a compliance checklist for a ${industry?.label} business operating in ${regionLabels.join(', ')}. Return ONLY a JSON array of objects with these fields: regulation (string), category (string - region name), requirement (string), status (one of: compliant, partial, non_compliant, review_needed), risk (one of: critical, high, medium, low), action (string), deadline (string date). Generate 6-12 realistic items based on real regulations. Return only the JSON array, no markdown.`
+          }],
+          personality: 'professional',
+          mode: 'general'
+        }),
+      });
+
       clearInterval(interval);
       setComplianceProgress(100);
+
+      if (resp.ok) {
+        const reader = resp.body?.getReader();
+        const decoder = new TextDecoder();
+        let fullContent = "";
+        let textBuffer = "";
+
+        while (reader) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          textBuffer += decoder.decode(value, { stream: true });
+          let newlineIndex: number;
+          while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+            let line = textBuffer.slice(0, newlineIndex);
+            textBuffer = textBuffer.slice(newlineIndex + 1);
+            if (line.endsWith("\r")) line = line.slice(0, -1);
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === "[DONE]") break;
+            try {
+              const content = JSON.parse(jsonStr).choices?.[0]?.delta?.content;
+              if (content) fullContent += content;
+            } catch { /* skip */ }
+          }
+        }
+
+        // Parse AI response as JSON
+        try {
+          const jsonMatch = fullContent.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]) as ComplianceItem[];
+            const items = parsed.map(item => ({ ...item, id: crypto.randomUUID() }));
+            setComplianceItems(items);
+            const critical = items.filter(i => i.status === 'non_compliant').length;
+            const partial = items.filter(i => i.status === 'partial').length;
+            if (critical > 0) {
+              toast.error(`${critical} non-compliant items found`, { description: `${partial} partial compliance areas need attention` });
+            } else {
+              toast.success('Compliance scan complete!', { description: `${items.length} regulations checked` });
+            }
+            setIsScanning(false);
+            return;
+          }
+        } catch (e) { console.error('Failed to parse AI compliance response:', e); }
+      }
+      
+      // Fallback to local generation if AI fails
       const items = getIndustryRegulations(selectedIndustry, selectedRegions);
       setComplianceItems(items);
       setIsScanning(false);
-
-      const critical = items.filter(i => i.status === 'non_compliant').length;
-      const partial = items.filter(i => i.status === 'partial').length;
-
-      if (critical > 0) {
-        toast.error(`${critical} non-compliant items found`, { description: `${partial} partial compliance areas need attention` });
-      } else {
-        toast.success('Compliance scan complete!', { description: `${items.length} regulations checked` });
-      }
-    }, 3200);
+      toast.success('Compliance scan complete!', { description: `${items.length} regulations checked` });
+    } catch (error) {
+      clearInterval(interval);
+      setComplianceProgress(100);
+      // Fallback
+      const items = getIndustryRegulations(selectedIndustry, selectedRegions);
+      setComplianceItems(items);
+      setIsScanning(false);
+      toast.success('Compliance scan complete (offline mode)', { description: `${items.length} regulations checked` });
+    }
   }, [selectedIndustry, selectedRegions]);
 
   const runRiskAssessment = useCallback(() => {

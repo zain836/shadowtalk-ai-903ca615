@@ -4,16 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Trophy,
-  Leaf,
-  Droplets,
-  Zap,
-  TrendingUp,
-  Medal,
-  Crown,
-  Star,
-  Users
+  Trophy, Leaf, Droplets, Zap, TrendingUp, Medal, Crown, Star, Users, Loader2
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LeaderboardEntry {
   id: string;
@@ -39,38 +32,100 @@ interface EcoLeaderboardProps {
 const EcoLeaderboard: React.FC<EcoLeaderboardProps> = ({ currentUserId }) => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [timeframe, setTimeframe] = useState<'weekly' | 'monthly' | 'alltime'>('weekly');
+  const [loading, setLoading] = useState(true);
 
-  // Simulated leaderboard data
   useEffect(() => {
-    const generateLeaderboard = (): LeaderboardEntry[] => {
-      const names = [
-        'EcoWarrior', 'GreenHero', 'PlanetSaver', 'ClimateChamp', 
-        'EarthGuardian', 'NatureNinja', 'SustainaStar', 'BioBoss',
-        'EcoElite', 'GreenGuru', 'You', 'CleanCrusader'
-      ];
-      
-      const multiplier = timeframe === 'weekly' ? 1 : timeframe === 'monthly' ? 4 : 12;
-      
-      return names.map((name, index) => ({
-        id: `user-${index}`,
-        username: name,
-        avatar: name.slice(0, 2).toUpperCase(),
-        level: Math.max(1, 15 - index + Math.floor(Math.random() * 3)),
-        totalImpact: {
-          co2Saved: Math.round((200 - index * 15 + Math.random() * 20) * multiplier * 10) / 10,
-          waterSaved: Math.round((500 - index * 35 + Math.random() * 50) * multiplier),
-          energySaved: Math.round((100 - index * 8 + Math.random() * 10) * multiplier * 10) / 10,
-          moneySaved: Math.round((50 - index * 4 + Math.random() * 5) * multiplier * 100) / 100,
-          actionsCompleted: Math.round((30 - index * 2 + Math.random() * 5) * multiplier),
-        },
-        streak: Math.max(1, 20 - index + Math.floor(Math.random() * 5)),
-        badges: ['🌱', '💧', '⚡', '🏆', '🌍'].slice(0, Math.max(1, 5 - Math.floor(index / 2))),
-        rank: index + 1,
-      })).sort((a, b) => b.totalImpact.co2Saved - a.totalImpact.co2Saved);
+    const loadLeaderboard = async () => {
+      setLoading(true);
+      try {
+        // Calculate date range based on timeframe
+        const now = new Date();
+        let startDate: string | null = null;
+        if (timeframe === 'weekly') {
+          startDate = new Date(now.getTime() - 7 * 86400000).toISOString();
+        } else if (timeframe === 'monthly') {
+          startDate = new Date(now.getTime() - 30 * 86400000).toISOString();
+        }
+
+        // Fetch eco_stats for leaderboard rankings
+        const { data: stats, error } = await supabase
+          .from('eco_stats')
+          .select('*')
+          .order('co2_saved', { ascending: false })
+          .limit(20);
+
+        if (error) throw error;
+
+        if (!stats || stats.length === 0) {
+          setLeaderboard([]);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch display names for all users
+        const userIds = stats.map(s => s.user_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, display_name')
+          .in('id', userIds);
+
+        const profileMap = new Map(profiles?.map(p => [p.id, p.display_name]) || []);
+
+        // Also fetch actions count filtered by timeframe
+        let actionCounts = new Map<string, number>();
+        if (startDate) {
+          for (const stat of stats) {
+            const { count } = await supabase
+              .from('eco_actions')
+              .select('id', { count: 'exact', head: true })
+              .eq('user_id', stat.user_id)
+              .gte('completed_at', startDate);
+            actionCounts.set(stat.user_id, count || 0);
+          }
+        }
+
+        const entries: LeaderboardEntry[] = stats.map((stat, index) => {
+          const displayName = profileMap.get(stat.user_id) || 'Anonymous';
+          const isCurrentUser = stat.user_id === currentUserId;
+          const actionsForPeriod = startDate ? (actionCounts.get(stat.user_id) || 0) : stat.actions_completed;
+
+          // Determine badges based on stats
+          const badges: string[] = [];
+          if (stat.co2_saved > 100) badges.push('🌱');
+          if (stat.water_saved > 500) badges.push('💧');
+          if (stat.energy_saved > 50) badges.push('⚡');
+          if (stat.streak > 7) badges.push('🔥');
+          if (stat.level >= 10) badges.push('🏆');
+
+          return {
+            id: stat.user_id,
+            username: isCurrentUser ? 'You' : displayName,
+            avatar: displayName.slice(0, 2).toUpperCase(),
+            level: stat.level,
+            totalImpact: {
+              co2Saved: Number(stat.co2_saved),
+              waterSaved: Number(stat.water_saved),
+              energySaved: Number(stat.energy_saved),
+              moneySaved: Number(stat.money_saved),
+              actionsCompleted: actionsForPeriod,
+            },
+            streak: stat.streak,
+            badges,
+            rank: index + 1,
+          };
+        });
+
+        setLeaderboard(entries);
+      } catch (e) {
+        console.error('Failed to load leaderboard:', e);
+        setLeaderboard([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setLeaderboard(generateLeaderboard());
-  }, [timeframe]);
+    loadLeaderboard();
+  }, [timeframe, currentUserId]);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -146,66 +201,69 @@ const EcoLeaderboard: React.FC<EcoLeaderboardProps> = ({ currentUserId }) => {
           </TabsList>
 
           <TabsContent value={timeframe} className="mt-3 space-y-2">
-            {leaderboard.slice(0, 10).map((entry, index) => (
-              <div 
-                key={entry.id}
-                className={`flex items-center gap-3 p-2 rounded-lg border transition-all hover:scale-[1.02] ${
-                  getRankStyle(entry.rank)
-                } ${entry.username === 'You' ? 'ring-2 ring-primary' : ''}`}
-              >
-                {/* Rank */}
-                <div className="w-8 flex justify-center">
-                  {getRankIcon(entry.rank)}
-                </div>
-
-                {/* Avatar */}
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className={`text-xs ${
-                    entry.rank === 1 ? 'bg-yellow-500 text-yellow-950' :
-                    entry.rank === 2 ? 'bg-gray-300 text-gray-800' :
-                    entry.rank === 3 ? 'bg-amber-600 text-amber-50' :
-                    'bg-primary/20'
-                  }`}>
-                    {entry.avatar}
-                  </AvatarFallback>
-                </Avatar>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className={`text-sm font-medium truncate ${
-                      entry.username === 'You' ? 'text-primary' : ''
-                    }`}>
-                      {entry.username}
-                    </p>
-                    <Badge variant="secondary" className="text-[10px] px-1 h-4">
-                      Lv.{entry.level}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                    <span className="flex items-center gap-0.5">
-                      <Leaf className="h-3 w-3 text-success" />
-                      {entry.totalImpact.co2Saved}kg
-                    </span>
-                    <span>•</span>
-                    <span>{entry.streak}🔥</span>
-                    <span className="flex gap-0.5">
-                      {entry.badges.slice(0, 3).map((b, i) => (
-                        <span key={i}>{b}</span>
-                      ))}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Score */}
-                <div className="text-right">
-                  <p className="text-sm font-bold text-success">
-                    {entry.totalImpact.actionsCompleted}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">actions</p>
-                </div>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ))}
+            ) : leaderboard.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-8">
+                No eco-actions recorded yet. Be the first!
+              </p>
+            ) : (
+              leaderboard.slice(0, 10).map((entry) => (
+                <div 
+                  key={entry.id}
+                  className={`flex items-center gap-3 p-2 rounded-lg border transition-all hover:scale-[1.02] ${
+                    getRankStyle(entry.rank)
+                  } ${entry.username === 'You' ? 'ring-2 ring-primary' : ''}`}
+                >
+                  <div className="w-8 flex justify-center">
+                    {getRankIcon(entry.rank)}
+                  </div>
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className={`text-xs ${
+                      entry.rank === 1 ? 'bg-yellow-500 text-yellow-950' :
+                      entry.rank === 2 ? 'bg-gray-300 text-gray-800' :
+                      entry.rank === 3 ? 'bg-amber-600 text-amber-50' :
+                      'bg-primary/20'
+                    }`}>
+                      {entry.avatar}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className={`text-sm font-medium truncate ${
+                        entry.username === 'You' ? 'text-primary' : ''
+                      }`}>
+                        {entry.username}
+                      </p>
+                      <Badge variant="secondary" className="text-[10px] px-1 h-4">
+                        Lv.{entry.level}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <span className="flex items-center gap-0.5">
+                        <Leaf className="h-3 w-3 text-success" />
+                        {entry.totalImpact.co2Saved}kg
+                      </span>
+                      <span>•</span>
+                      <span>{entry.streak}🔥</span>
+                      <span className="flex gap-0.5">
+                        {entry.badges.slice(0, 3).map((b, i) => (
+                          <span key={i}>{b}</span>
+                        ))}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-success">
+                      {entry.totalImpact.actionsCompleted}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">actions</p>
+                  </div>
+                </div>
+              ))
+            )}
           </TabsContent>
         </Tabs>
 
