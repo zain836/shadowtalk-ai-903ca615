@@ -60,6 +60,8 @@ const SovereignWalletPage = lazy(() => import("./pages/SovereignWalletPage"));
 const GhostAdsPage = lazy(() => import("./pages/GhostAdsPage"));
 const EnterpriseLicensePage = lazy(() => import("./pages/EnterpriseLicensePage"));
 const DataInsightsPage = lazy(() => import("./pages/DataInsightsPage"));
+const TransparencyPage = lazy(() => import("./pages/TransparencyPage"));
+const SecurityAuditPage = lazy(() => import("./pages/SecurityAuditPage"));
 const PWABanner = lazy(() => import("./components/PWABanner"));
 const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
@@ -154,6 +156,8 @@ const AnimatedRoutes = () => {
           <Route path="/ghost-ads" element={<PageTransition><GhostAdsPage /></PageTransition>} />
           <Route path="/offline-license" element={<PageTransition><EnterpriseLicensePage /></PageTransition>} />
           <Route path="/data-insights" element={<PageTransition><DataInsightsPage /></PageTransition>} />
+          <Route path="/transparency" element={<PageTransition><TransparencyPage /></PageTransition>} />
+          <Route path="/security-audit" element={<PageTransition><SecurityAuditPage /></PageTransition>} />
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
         </Routes>
       </AnimatePresence>
