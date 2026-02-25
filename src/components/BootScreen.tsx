@@ -29,19 +29,19 @@ const BootScreen = ({ onComplete }: BootScreenProps) => {
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase('emerge'), 200),
-      setTimeout(() => setPhase('reveal'), 500),
-      setTimeout(() => setPhase('loading'), 800),
-      setTimeout(() => setPhase('ascend'), 1800),
-      setTimeout(onComplete, 2100),
+      setTimeout(() => setPhase('emerge'), 400),
+      setTimeout(() => setPhase('reveal'), 1000),
+      setTimeout(() => setPhase('loading'), 1600),
+      setTimeout(() => setPhase('ascend'), 4200),
+      setTimeout(onComplete, 4800),
     ];
 
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) { clearInterval(progressInterval); return 100; }
-        return prev + Math.random() * 12 + 4;
+        return prev + Math.random() * 3 + 1.5;
       });
-    }, 120);
+    }, 80);
 
     // Glitch text cycle
     const glitchInterval = setInterval(() => {
@@ -73,8 +73,8 @@ const BootScreen = ({ onComplete }: BootScreenProps) => {
         className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden select-none"
         style={{ background: "#000" }}
         initial={{ opacity: 1 }}
-        exit={{ opacity: 0, scale: 1.15, filter: "blur(20px)" }}
-        transition={{ duration: 0.6, ease: "easeInOut" }}
+        exit={{ opacity: 0, scale: 1.08, filter: "blur(12px)" }}
+        transition={{ duration: 1.0, ease: [0.4, 0, 0.2, 1] }}
       >
         {/* ── Grid overlay ── */}
         <div
@@ -156,7 +156,7 @@ const BootScreen = ({ onComplete }: BootScreenProps) => {
           <motion.div
             initial={{ scale: 0, rotate: -180, opacity: 0 }}
             animate={{ scale: 1, rotate: 0, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 180, damping: 14, delay: 0.15 }}
+            transition={{ type: "spring", stiffness: 100, damping: 18, delay: 0.3 }}
             className="relative mb-12"
           >
             {/* Pulsing outer rings */}
@@ -257,10 +257,11 @@ const BootScreen = ({ onComplete }: BootScreenProps) => {
                       initial={{ opacity: 0, y: 60, rotateX: -90, filter: "blur(8px)" }}
                       animate={{ opacity: 1, y: 0, rotateX: 0, filter: "blur(0px)" }}
                       transition={{
-                        delay: i * 0.04 + 0.1,
-                        duration: 0.5,
+                        delay: i * 0.07 + 0.2,
+                        duration: 0.7,
                         type: "spring",
-                        stiffness: 150,
+                        stiffness: 100,
+                        damping: 15,
                       }}
                       className="text-4xl md:text-6xl font-black tracking-[0.15em]"
                       style={{
@@ -277,7 +278,7 @@ const BootScreen = ({ onComplete }: BootScreenProps) => {
                   <motion.span
                     initial={{ opacity: 0, x: -30, scale: 0.3, filter: "blur(10px)" }}
                     animate={{ opacity: 1, x: 0, scale: 1, filter: "blur(0px)" }}
-                    transition={{ delay: 0.6, duration: 0.5, type: "spring" }}
+                    transition={{ delay: 1.2, duration: 0.8, type: "spring", damping: 15 }}
                     className="text-4xl md:text-6xl font-black ml-4 tracking-[0.15em]"
                     style={{
                       background: "linear-gradient(180deg, hsl(195 100% 65%), hsl(270 90% 60%), hsl(315 90% 55%))",
@@ -295,7 +296,7 @@ const BootScreen = ({ onComplete }: BootScreenProps) => {
                 <motion.p
                   initial={{ opacity: 0, y: 15, letterSpacing: "0.5em" }}
                   animate={{ opacity: 0.6, y: 0, letterSpacing: "0.35em" }}
-                  transition={{ delay: 0.9, duration: 0.6 }}
+                  transition={{ delay: 1.8, duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
                   className="mt-5 text-xs md:text-sm uppercase font-medium"
                   style={{ color: "hsl(195 60% 50%)" }}
                 >
@@ -312,7 +313,7 @@ const BootScreen = ({ onComplete }: BootScreenProps) => {
                 initial={{ opacity: 0, width: 0 }}
                 animate={{ opacity: 1, width: 360 }}
                 exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4 }}
+                transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
                 className="relative"
               >
                 {/* Progress bar */}
