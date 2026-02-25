@@ -1214,7 +1214,8 @@ const ChatbotPage = () => {
         if (isResearchMode) {
           requestBody = { deepResearch: true, researchQuery: messageToSend, businessMemory: combinedMemory };
         } else {
-          requestBody = { messages: chatMessages, personality, mode: chatMode, modePrompt: getModePrompt(chatMode), businessMemory: combinedMemory };
+          const storedIndustry = localStorage.getItem('shadowtalk-industry') || undefined;
+          requestBody = { messages: chatMessages, personality, mode: chatMode, modePrompt: getModePrompt(chatMode), businessMemory: combinedMemory, industry: storedIndustry };
         }
 
         // Save search to history if in research mode

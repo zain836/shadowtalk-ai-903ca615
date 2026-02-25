@@ -62,6 +62,7 @@ const EnterpriseLicensePage = lazy(() => import("./pages/EnterpriseLicensePage")
 const DataInsightsPage = lazy(() => import("./pages/DataInsightsPage"));
 const TransparencyPage = lazy(() => import("./pages/TransparencyPage"));
 const SecurityAuditPage = lazy(() => import("./pages/SecurityAuditPage"));
+const CommandCenterPage = lazy(() => import("./pages/CommandCenterPage"));
 const PWABanner = lazy(() => import("./components/PWABanner"));
 const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
@@ -158,6 +159,7 @@ const AnimatedRoutes = () => {
           <Route path="/data-insights" element={<PageTransition><DataInsightsPage /></PageTransition>} />
           <Route path="/transparency" element={<PageTransition><TransparencyPage /></PageTransition>} />
           <Route path="/security-audit" element={<PageTransition><SecurityAuditPage /></PageTransition>} />
+          <Route path="/command-center" element={<PageTransition><CommandCenterPage /></PageTransition>} />
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
         </Routes>
       </AnimatePresence>
