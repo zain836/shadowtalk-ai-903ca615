@@ -70,14 +70,14 @@ const planHierarchy: Record<PlanTier, number> = {
 };
 
 // Special access email that gets all features
-const SPECIAL_ACCESS_EMAIL = 'j3451500@gmail.com';
+const SPECIAL_ACCESS_EMAILS = ['j3451500@gmail.com', 'almadadali00@gmail.com'];
 
 export const useFeatureGating = () => {
   const { userPlan, user } = useAuth();
   const { toast } = useToast();
 
   // Check if user has special access
-  const hasSpecialAccess = user?.email?.toLowerCase() === SPECIAL_ACCESS_EMAIL.toLowerCase();
+  const hasSpecialAccess = SPECIAL_ACCESS_EMAILS.some(e => e.toLowerCase() === user?.email?.toLowerCase());
 
   // Get effective plan level (handle the type correctly)
   const getEffectivePlanLevel = (): number => {

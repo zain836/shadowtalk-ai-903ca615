@@ -43,14 +43,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Special email that gets all features free
-  const SPECIAL_ACCESS_EMAIL = 'j3451500@gmail.com';
+  const SPECIAL_ACCESS_EMAILS = ['j3451500@gmail.com', 'almadadali00@gmail.com'];
 
   const checkSubscription = async () => {
     if (!session) return;
 
     // Check for special access email first
     const userEmail = session.user?.email?.toLowerCase();
-    if (userEmail === SPECIAL_ACCESS_EMAIL.toLowerCase()) {
+    if (SPECIAL_ACCESS_EMAILS.some(e => e.toLowerCase() === userEmail)) {
       setSubscribed(true);
       setUserPlan('elite');
       setSubscriptionEnd(null);

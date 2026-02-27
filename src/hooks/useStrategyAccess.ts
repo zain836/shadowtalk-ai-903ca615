@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 
+const SPECIAL_ACCESS_EMAILS = ['j3451500@gmail.com', 'almadadali00@gmail.com'];
+
 export function useStrategyAccess() {
   const { user } = useAuth();
   const [monthlyUsage, setMonthlyUsage] = useState(0);
@@ -9,6 +11,7 @@ export function useStrategyAccess() {
   const [loading, setLoading] = useState(true);
 
   const FREE_REPORTS_PER_MONTH = 1;
+  const isSpecialAccess = SPECIAL_ACCESS_EMAILS.some(e => e.toLowerCase() === user?.email?.toLowerCase());
 
   const checkAccess = useCallback(async () => {
     if (!user) {
@@ -55,6 +58,7 @@ export function useStrategyAccess() {
 
   const canUseStrategy = (): boolean => {
     if (!user) return false;
+    if (isSpecialAccess) return true;
     if (hasActiveDayPass) return true;
     if (monthlyUsage < FREE_REPORTS_PER_MONTH) return true;
     return false;
