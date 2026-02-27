@@ -1,58 +1,43 @@
 project_id = "axsudmhjpfzffcicfvuj"
 
-[functions.chat]
-verify_jwt = false
-
-[functions.stripe-checkout]
-verify_jwt = false
-
-[functions.stripe-subscription]
-verify_jwt = false
-
-[functions.stripe-portal]
-verify_jwt = false
-
-[functions.assign-admin-role]
-verify_jwt = false
-
-[functions.send-feedback-notification]
-verify_jwt = false
-
-[functions.web-search]
-verify_jwt = false
-
-[functions.gemini-load-balancer]
-verify_jwt = false
-
-[functions.reset-gemini-keys]
-verify_jwt = false
-
-[functions.test-gemini-key]
-verify_jwt = false
-
-[functions.gemini-key-alert]
-verify_jwt = false
-
-[functions.save-custom-model]
-verify_jwt = false
-
-[functions.save-workspace-branding]
-verify_jwt = false
-
-[functions.sso-configure]
-verify_jwt = false
-
-[functions.send-broadcast]
-verify_jwt = false
-
-[functions.auto-broadcast]
-verify_jwt = false
-
-[functions.proactive-ai]
-verify_jwt = false
-
-[functions.whatsapp-webhook]
-verify_jwt = false
-
-[functions.generate-presentation]
-verify_jwt = false
+[functions]
+  [functions.assign-admin-role]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.auto-broadcast]
+    verify_jwt = false
+  [functions.chat]
+    verify_jwt = false
+  [functions.gemini-key-alert]
+    verify_jwt = false
+  [functions.gemini-load-balancer]
+    verify_jwt = false
+  [functions.generate-presentation]
+    verify_jwt = false
+  [functions.proactive-ai]
+    verify_jwt = false
+  [functions.reset-gemini-keys]
+    verify_jwt = false
+  [functions.save-custom-model]
+    verify_jwt = false
+  [functions.save-workspace-branding]
+    verify_jwt = false
+  [functions.send-broadcast]
+    verify_jwt = false
+  [functions.send-feedback-notification]
+    verify_jwt = false
+  [functions.sso-configure]
+    verify_jwt = false
+  [functions.stripe-checkout]
+    verify_jwt = false
+  [functions.stripe-portal]
+    verify_jwt = false
+  [functions.stripe-subscription]
+    verify_jwt = false
+  [functions.test-gemini-key]
+    verify_jwt = false
+  [functions.web-search]
+    verify_jwt = false
+  [functions.whatsapp-webhook]
+    verify_jwt = false
