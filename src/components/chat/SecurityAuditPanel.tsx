@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -125,6 +126,9 @@ const SecurityAuditPanel: React.FC<SecurityAuditPanelProps> = ({
   const [sortBy, setSortBy] = useState<'severity' | 'location'>('severity');
   const [projectName, setProjectName] = useState<string>('');
   const [scanMode, setScanMode] = useState<'quick' | 'deep' | 'full'>('deep');
+  const [inputMode, setInputMode] = useState<'url' | 'code' | 'files'>('url');
+  const [urlInput, setUrlInput] = useState('');
+  const [isUrlScanning, setIsUrlScanning] = useState(false);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
   // Local pattern-based vulnerability detection
@@ -482,7 +486,165 @@ const SecurityAuditPanel: React.FC<SecurityAuditPanelProps> = ({
     });
   };
 
+  const handleUrlScan = async () => {
+    if (!urlInput.trim()) {
+      toast.error('Please enter a website URL to scan');
+      return;
+    }
+
+    setIsUrlScanning(true);
+    setScanProgress({
+      phase: 'Connecting to target website...',
+      progress: 5,
+      filesScanned: 0,
+      totalFiles: 0,
+      vulnerabilitiesFound: 0,
+    });
+
+    try {
+      setScanProgress(prev => ({ ...prev!, phase: 'Fetching website source code & assets...', progress: 15 }));
+      
+      const { data, error } = await supabase.functions.invoke('website-security-scan', {
+        body: { url: urlInput.trim(), scanDepth: scanMode === 'full' ? 'deep' : 'standard' },
+      });
+
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'Scan failed');
+
+      const scannedFiles: ProjectFile[] = data.files.map((f: any) => ({
+        name: f.name,
+        path: f.path,
+        content: f.content,
+        size: f.size || f.content.length,
+        type: 'file' as const,
+        language: f.language || 'text',
+      }));
+
+      setUploadedFiles(scannedFiles);
+      setProjectTree(buildFileTree(scannedFiles));
+      setProjectName(new URL(urlInput.startsWith('http') ? urlInput : `https://${urlInput}`).hostname);
+
+      toast.success(`Fetched ${scannedFiles.length} files from ${data.metadata?.url}`, {
+        description: `Server: ${data.metadata?.serverInfo || 'Unknown'}`,
+      });
+
+      setScanProgress(prev => ({ ...prev!, phase: 'Running security analysis on fetched code...', progress: 40, totalFiles: scannedFiles.length }));
+
+      // Now run the same analysis pipeline
+      await runAnalysisPipeline(scannedFiles);
+    } catch (err) {
+      console.error('[WebSecScan] Error:', err);
+      toast.error('URL scan failed', { description: err instanceof Error ? err.message : 'Unknown error' });
+      setScanProgress(null);
+    } finally {
+      setIsUrlScanning(false);
+    }
+  };
+
+  const runAnalysisPipeline = async (filesToAnalyze: ProjectFile[]) => {
+    try {
+      const localVulns = detectLocalVulnerabilities(filesToAnalyze);
+      console.log('[SecurityAudit] Local detection found:', localVulns.length, 'issues');
+
+      const phases = [
+        { name: 'Analyzing code structure', duration: 300 },
+        { name: 'Sending to AI for deep analysis', duration: 400 },
+        { name: 'Processing AI findings', duration: 300 },
+      ];
+
+      for (let i = 0; i < phases.length; i++) {
+        const phase = phases[i];
+        setScanProgress(prev => ({
+          ...prev!,
+          phase: phase.name,
+          progress: 50 + Math.round((i / phases.length) * 40),
+          currentFile: filesToAnalyze[Math.min(i, filesToAnalyze.length - 1)]?.name,
+          filesScanned: Math.min(i + 1, filesToAnalyze.length),
+          vulnerabilitiesFound: localVulns.length,
+        }));
+        await new Promise(resolve => setTimeout(resolve, phase.duration));
+      }
+
+      const combinedCode = filesToAnalyze
+        .map(f => `// === File: ${f.path} ===\n// Language: ${f.language || 'unknown'}\n${f.content}`)
+        .join('\n\n');
+
+      let aiVulns: Vulnerability[] = [];
+      let aiSummary = '';
+      let aiRiskScore = 0;
+
+      try {
+        const result = await onAnalyze(combinedCode);
+        const resultAny = result as any;
+        if (result && !resultAny.error) {
+          aiVulns = Array.isArray(result.vulnerabilities) ? result.vulnerabilities : [];
+          aiSummary = result.summary || '';
+          aiRiskScore = typeof result.riskScore === 'number' ? result.riskScore : 0;
+        }
+      } catch (aiError) {
+        console.warn('[SecurityAudit] AI analysis failed, using local results only:', aiError);
+      }
+
+      const aiEnhancedVulns = aiVulns.map((v: Vulnerability) => ({
+        ...v,
+        id: v.id || `ai-${Math.random().toString(36).substr(2, 9)}`,
+        affectedFiles: filesToAnalyze
+          .filter(f => (v.location && v.location.includes(f.name)) || (v.description && v.description.toLowerCase().includes(f.name.toLowerCase())))
+          .map(f => f.path),
+      }));
+
+      const allVulns = [...localVulns, ...aiEnhancedVulns];
+      const uniqueVulns = allVulns.filter((v, index, self) =>
+        index === self.findIndex(t => t.title === v.title && t.location === v.location)
+      );
+
+      const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+      uniqueVulns.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+
+      const localRiskContribution = localVulns.length > 0
+        ? Math.min(50, localVulns.filter(v => v.severity === 'critical').length * 15 +
+          localVulns.filter(v => v.severity === 'high').length * 10 +
+          localVulns.filter(v => v.severity === 'medium').length * 5)
+        : 0;
+      const finalRiskScore = Math.min(100, Math.max(aiRiskScore, localRiskContribution));
+
+      const finalSummary = aiSummary ||
+        `Found ${uniqueVulns.length} potential security issues: ` +
+        `${uniqueVulns.filter(v => v.severity === 'critical').length} critical, ` +
+        `${uniqueVulns.filter(v => v.severity === 'high').length} high, ` +
+        `${uniqueVulns.filter(v => v.severity === 'medium').length} medium, ` +
+        `${uniqueVulns.filter(v => v.severity === 'low').length} low.`;
+
+      setVulnerabilities(uniqueVulns);
+      setSummary(finalSummary);
+      setRiskScore(finalRiskScore);
+
+      if (uniqueVulns.length > 0) {
+        setSelectedVuln(uniqueVulns[0]);
+      }
+
+      setScanProgress(prev => ({
+        ...prev!,
+        phase: 'Complete',
+        progress: 100,
+        vulnerabilitiesFound: uniqueVulns.length,
+      }));
+
+      toast.success(`Security audit complete`, {
+        description: `Found ${uniqueVulns.length} vulnerabilities (${localVulns.length} local + ${aiEnhancedVulns.length} AI-detected)`,
+      });
+    } catch (error) {
+      console.error('[SecurityAudit] Analysis error:', error);
+      toast.error('Failed to analyze code', { description: error instanceof Error ? error.message : 'Unknown error' });
+      setScanProgress(null);
+    }
+  };
+
   const handleAnalyze = async () => {
+    if (inputMode === 'url') {
+      return handleUrlScan();
+    }
+
     const filesToAnalyze = uploadedFiles.length > 0 
       ? uploadedFiles 
       : codeInput.trim() ? [{ name: 'input.txt', path: 'input.txt', content: codeInput, size: codeInput.length, type: 'file' as const }] : [];
@@ -767,8 +929,9 @@ const SecurityAuditPanel: React.FC<SecurityAuditPanelProps> = ({
                 The Hyper-Security Contextual Auditor (HSCA) is designed for <strong>authorized security testing only</strong>.
               </p>
               <ul className="list-disc list-inside space-y-1 text-sm">
-                <li>Only analyze code you own or have explicit permission to test</li>
+                <li>Only analyze code or scan websites you own or have explicit permission to test</li>
                 <li>Never use generated exploits against systems without authorization</li>
+                <li>URL scanning fetches publicly accessible resources only</li>
                 <li>This tool is for educational and defensive purposes only</li>
                 <li>Misuse may violate computer fraud and abuse laws</li>
               </ul>
@@ -879,57 +1042,133 @@ const SecurityAuditPanel: React.FC<SecurityAuditPanelProps> = ({
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <FolderUp className="h-4 w-4" />
-                Project Files
+                Scan Target
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {/* Drag and Drop Zone */}
-              <div
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
-                  isDragging 
-                    ? 'border-primary bg-primary/10' 
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <input
-                  type="file"
-                  id="file-upload"
-                  multiple
-                  onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
-                  className="hidden"
-                />
-                <input
-                  type="file"
-                  ref={folderInputRef}
-                  // @ts-ignore
-                  webkitdirectory=""
-                  directory=""
-                  multiple
-                  onChange={handleFolderUpload}
-                  className="hidden"
-                />
-                <div className="flex flex-col items-center gap-2">
-                  <FolderUp className={`h-8 w-8 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
-                  <div className="space-x-2">
-                    <label htmlFor="file-upload" className="text-sm font-medium text-primary cursor-pointer hover:underline">
-                      Upload files
-                    </label>
-                    <span className="text-sm text-muted-foreground">or</span>
-                    <button 
-                      onClick={() => folderInputRef.current?.click()}
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      Upload folder
-                    </button>
+              {/* Input Mode Tabs */}
+              <div className="flex gap-1 bg-muted/50 rounded-lg p-1">
+                <Button
+                  variant={inputMode === 'url' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="flex-1 text-xs"
+                  onClick={() => setInputMode('url')}
+                >
+                  <Globe className="h-3 w-3 mr-1" />
+                  URL Scan
+                </Button>
+                <Button
+                  variant={inputMode === 'files' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="flex-1 text-xs"
+                  onClick={() => setInputMode('files')}
+                >
+                  <FolderUp className="h-3 w-3 mr-1" />
+                  Files
+                </Button>
+                <Button
+                  variant={inputMode === 'code' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="flex-1 text-xs"
+                  onClick={() => setInputMode('code')}
+                >
+                  <Code className="h-3 w-3 mr-1" />
+                  Code
+                </Button>
+              </div>
+
+              {/* URL Input Mode */}
+              {inputMode === 'url' && (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Input
+                      type="url"
+                      placeholder="https://example.com"
+                      value={urlInput}
+                      onChange={(e) => setUrlInput(e.target.value)}
+                      className="flex-1 font-mono text-sm"
+                      disabled={isUrlScanning}
+                    />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Drop entire projects, ZIP files, or folders
+                  <div className="rounded-lg bg-muted/30 border border-border/50 p-3 space-y-2">
+                    <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                      <Shield className="h-3 w-3 text-primary" />
+                      What URL Scan analyzes:
+                    </p>
+                    <ul className="text-xs text-muted-foreground space-y-1 pl-5 list-disc">
+                      <li>Security headers (HSTS, CSP, X-Frame-Options)</li>
+                      <li>Exposed sensitive files (.env, .git/config)</li>
+                      <li>Inline & external JavaScript vulnerabilities</li>
+                      <li>HTML security (CSRF, mixed content, forms)</li>
+                      <li>Information disclosure & outdated libraries</li>
+                      <li>Cookie security flags analysis</li>
+                    </ul>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    ⚠️ Only scan websites you own or have explicit authorization to test.
                   </p>
                 </div>
-              </div>
+              )}
+
+              {/* File Upload Mode */}
+              {inputMode === 'files' && (
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+                    isDragging 
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <input
+                    type="file"
+                    id="file-upload"
+                    multiple
+                    onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+                    className="hidden"
+                  />
+                  <input
+                    type="file"
+                    ref={folderInputRef}
+                    // @ts-ignore
+                    webkitdirectory=""
+                    directory=""
+                    multiple
+                    onChange={handleFolderUpload}
+                    className="hidden"
+                  />
+                  <div className="flex flex-col items-center gap-2">
+                    <FolderUp className={`h-8 w-8 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <div className="space-x-2">
+                      <label htmlFor="file-upload" className="text-sm font-medium text-primary cursor-pointer hover:underline">
+                        Upload files
+                      </label>
+                      <span className="text-sm text-muted-foreground">or</span>
+                      <button 
+                        onClick={() => folderInputRef.current?.click()}
+                        className="text-sm font-medium text-primary hover:underline"
+                      >
+                        Upload folder
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Drop entire projects, ZIP files, or folders
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Code Input Mode */}
+              {inputMode === 'code' && (
+                <Textarea
+                  placeholder="Paste code directly for analysis..."
+                  value={codeInput}
+                  onChange={(e) => setCodeInput(e.target.value)}
+                  className="min-h-[150px] font-mono text-sm"
+                />
+              )}
 
               {/* Scan Mode Selector */}
               <div className="flex gap-2">
@@ -966,38 +1205,21 @@ const SecurityAuditPanel: React.FC<SecurityAuditPanelProps> = ({
                 </ScrollArea>
               )}
 
-              {/* Code Input (if no files) */}
-              {uploadedFiles.length === 0 && (
-                <>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="text-xs text-muted-foreground">OR</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                  <Textarea
-                    placeholder="Paste code directly..."
-                    value={codeInput}
-                    onChange={(e) => setCodeInput(e.target.value)}
-                    className="min-h-[100px] font-mono text-sm"
-                  />
-                </>
-              )}
-
               {/* Analyze Button */}
               <Button 
                 onClick={handleAnalyze} 
-                disabled={isAnalyzing || scanProgress?.phase !== undefined && scanProgress.phase !== 'Complete'}
+                disabled={isAnalyzing || isUrlScanning || (scanProgress !== null && scanProgress.phase !== 'Complete')}
                 className="w-full"
               >
-                {isAnalyzing || (scanProgress && scanProgress.phase !== 'Complete') ? (
+                {isAnalyzing || isUrlScanning || (scanProgress && scanProgress.phase !== 'Complete') ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Analyzing...
+                    {isUrlScanning ? 'Scanning Website...' : 'Analyzing...'}
                   </>
                 ) : (
                   <>
                     <Zap className="h-4 w-4 mr-2" />
-                    Run Security Audit
+                    {inputMode === 'url' ? 'Scan Website' : 'Run Security Audit'}
                   </>
                 )}
               </Button>
