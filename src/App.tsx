@@ -8,6 +8,7 @@ import { AnimatePresence } from "framer-motion";
 import { PageTransition } from "@/components/PageTransition";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/AuthProvider";
+import { ShadowMemoryProvider } from "@/contexts/ShadowMemoryContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import BootScreen from "@/components/BootScreen";
  // Critical path pages - loaded immediately
@@ -63,9 +64,11 @@ const DataInsightsPage = lazy(() => import("./pages/DataInsightsPage"));
 const TransparencyPage = lazy(() => import("./pages/TransparencyPage"));
 const SecurityAuditPage = lazy(() => import("./pages/SecurityAuditPage"));
 const CommandCenterPage = lazy(() => import("./pages/CommandCenterPage"));
+const ShadowMemoryPage = lazy(() => import("./pages/ShadowMemoryPage"));
 const PWABanner = lazy(() => import("./components/PWABanner"));
 const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
+const ShadowMemoryTracker = lazy(() => import("./components/ShadowMemoryTracker"));
 const JourneyTracker = lazy(() => import("./components/JourneyTracker").then(m => ({ default: m.JourneyTracker })));
 import { useReferralCapture } from "./hooks/useReferralTracking";
 // ElevenLabs Agent ID is now configured via the backend secret ELEVENLABS_AGENT_ID
@@ -160,6 +163,7 @@ const AnimatedRoutes = () => {
           <Route path="/transparency" element={<PageTransition><TransparencyPage /></PageTransition>} />
           <Route path="/security-audit" element={<PageTransition><SecurityAuditPage /></PageTransition>} />
           <Route path="/command-center" element={<PageTransition><CommandCenterPage /></PageTransition>} />
+          <Route path="/shadow-memory" element={<PageTransition><ShadowMemoryPage /></PageTransition>} />
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
         </Routes>
       </AnimatePresence>
@@ -192,6 +196,7 @@ const App = () => {
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <TooltipProvider>
             <AuthProvider>
+              <ShadowMemoryProvider>
               {showBootScreen && !hasBooted && (
                 <BootScreen onComplete={handleBootComplete} />
               )}
@@ -200,12 +205,14 @@ const App = () => {
                <BrowserRouter>
                  <AnimatedRoutes />
                  <Suspense fallback={null}>
+                   <ShadowMemoryTracker />
                    <JourneyTracker />
                    <PWABanner />
                    <CookieConsent />
                    <CustomerSupportWidget />
                  </Suspense>
                </BrowserRouter>
+              </ShadowMemoryProvider>
             </AuthProvider>
           </TooltipProvider>
         </ThemeProvider>
