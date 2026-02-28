@@ -84,6 +84,7 @@ import { useLocalVectorStore } from "@/hooks/useLocalVectorStore";
 import { useKnowledgeSnapshot } from "@/hooks/useKnowledgeSnapshot";
 import { useServerSyncQueue } from "@/hooks/useServerSyncQueue";
 import { useGhostAds } from "@/hooks/useGhostAds";
+import { useShadowMemoryContext } from "@/contexts/ShadowMemoryContext";
 
 // Types
 interface SpeechRecognitionEvent extends Event {
@@ -239,6 +240,7 @@ const ChatbotPage = () => {
   const offlineChatHistory = useOfflineChatHistory();
   const { getMemoryContext, getActiveMemories } = useBusinessMemory();
   const guestUsage = useGuestUsage(); // Guest usage tracking
+  const shadowMemory = useShadowMemoryContext();
   const toolOrchestrator = useToolOrchestrator(); // Intelligent tool detection
   const thinkingSteps = useThinkingSteps(); // Claude-style thinking transparency
   // proactiveAI removed from main chatbot — runs on 24/7 support widget only
@@ -645,6 +647,7 @@ const ChatbotPage = () => {
       setCurrentConversationId(data.id);
       setMessages([{ id: 'welcome', type: 'ai', content: getWelcomeMessage(), timestamp: new Date() }]);
       trackConversationCreated();
+      shadowMemory.log('chat', 'Created conversation', data.title || 'New conversation');
     }
   };
 
@@ -1083,6 +1086,14 @@ const ChatbotPage = () => {
       !!attachmentToSend,
       attachmentToSend?.mimeType
     );
+
+    // Shadow Memory — on-device activity log
+    shadowMemory.log('chat', 'Sent message', messageToSend.slice(0, 120), {
+      mode: chatMode,
+      personality,
+      hasAttachment: !!attachmentToSend,
+      length: messageToSend.length,
+    });
 
     abortControllerRef.current = new AbortController();
     await saveMessage(messageToSend, 'user');
@@ -1526,7 +1537,8 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             chatMode={chatMode}
              onModeChange={(mode) => { 
                setChatMode(mode); 
-               trackModeSwitch(mode);
+                trackModeSwitch(mode);
+                shadowMemory.log('feature', 'Switched chat mode', mode);
                // Open dedicated UI for advanced modes
                if (mode === 'camera') {
                  setShowCameraCapture(true);

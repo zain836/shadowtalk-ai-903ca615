@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Menu, X, Bot, Shield, BookOpen, Users, History, User, Code, BarChart3, Building2, Settings, UserCircle, Brain, Sparkles, ChevronDown, MoreHorizontal, Download, Share, Smartphone, MessageSquare, CreditCard, Rocket, Tag, ShieldCheck, Presentation, Target, Store, Terminal } from "lucide-react";
+import { Menu, X, Bot, Shield, BookOpen, Users, History, User, Code, BarChart3, Building2, Settings, UserCircle, Brain, Sparkles, ChevronDown, MoreHorizontal, Download, Share, Smartphone, MessageSquare, CreditCard, Rocket, Tag, ShieldCheck, Presentation, Target, Store, Terminal, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { FeedbackForm } from "@/components/FeedbackForm";
@@ -96,6 +96,7 @@ const Navigation = () => {
     { name: t("nav.analytics"), href: "/analytics", icon: BarChart3, isLink: true },
     { name: "Enterprise", href: "/enterprise", icon: Building2, isLink: true },
     { name: "About", href: "/about", icon: UserCircle, isLink: true },
+    { name: "Shadow Memory", href: "/shadow-memory", icon: Eye, isLink: true },
     { name: "Admin", href: "/admin", icon: Settings, isLink: true },
     { name: t("nav.profile"), href: "/profile", icon: User, isLink: true },
   ];
