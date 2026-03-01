@@ -74,6 +74,7 @@ const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
 const ShadowMemoryTracker = lazy(() => import("./components/ShadowMemoryTracker"));
 const JourneyTracker = lazy(() => import("./components/JourneyTracker").then(m => ({ default: m.JourneyTracker })));
+const VoiceCommandSystem = lazy(() => import("./components/VoiceCommandSystem"));
 import { useReferralCapture } from "./hooks/useReferralTracking";
 // ElevenLabs Agent ID is now configured via the backend secret ELEVENLABS_AGENT_ID
 
@@ -212,6 +213,7 @@ const App = () => {
                  <AnimatedRoutes />
                  <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
                  <Suspense fallback={null}>
+                   <VoiceCommandSystem />
                    <ShadowMemoryTracker />
                    <JourneyTracker />
                    <PWABanner />

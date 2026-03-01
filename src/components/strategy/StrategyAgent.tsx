@@ -358,14 +358,7 @@ Be realistic and specific to ${businessIdea.industry} in ${businessIdea.location
 
   const PhaseIcon = phaseInfo[phase].icon;
 
-  // Show paywall if access exhausted
-  if (!accessLoading && user && !canUseStrategy) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4 md:p-8">
-        <StrategyPaywall monthlyUsage={monthlyUsage} hasActiveDayPass={hasActiveDayPass} />
-      </div>
-    );
-  }
+  // No paywall — strategy agent is free for all logged-in users
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4 md:p-8">
