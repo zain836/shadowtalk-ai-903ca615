@@ -1,10 +1,11 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Shield, Zap, ArrowRight } from "lucide-react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { MessageCircle, Shield, Zap, ArrowRight, Search } from "lucide-react";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import heroImg from "@/assets/hero-bg.jpg";
 import { useNavigate } from "react-router-dom";
+import { CommandPaletteContext } from "@/App";
 
 const floatingOrbAnim = {
   y: [0, -20, 0],
@@ -47,7 +48,18 @@ const scaleFadeIn = {
 
 const HeroSection = () => {
   const navigate = useNavigate();
+  const { open: openCommandPalette } = useContext(CommandPaletteContext);
+  const [showDemo, setShowDemo] = useState(false);
 
+  useEffect(() => {
+    const dismissed = localStorage.getItem('shadowtalk-demo-dismissed');
+    if (!dismissed) setShowDemo(true);
+  }, []);
+
+  const handleDismissDemo = () => {
+    localStorage.setItem('shadowtalk-demo-dismissed', 'true');
+    setShowDemo(false);
+  };
   const [liveStats, setLiveStats] = useState({ users: 45000, reviews: 11000, rating: 4.9, dealsLeft: 30 });
 
   useEffect(() => {
@@ -277,6 +289,43 @@ const HeroSection = () => {
             ))}
           </motion.div>
         </motion.div>
+
+          {/* Demo Button - First Visit Only */}
+          <AnimatePresence>
+            {showDemo && (
+              <motion.div
+                initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                transition={{ delay: 1.5, duration: 0.5, type: "spring", stiffness: 300 }}
+                className="fixed bottom-8 right-8 z-50 flex items-center gap-3"
+              >
+                <motion.button
+                  onClick={() => { openCommandPalette(); handleDismissDemo(); }}
+                  className="group flex items-center gap-3 bg-primary text-primary-foreground px-5 py-3.5 rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{ y: { duration: 3, repeat: Infinity, ease: "easeInOut" } }}
+                >
+                  <Search className="h-5 w-5" />
+                  <span className="font-semibold text-sm">Explore ShadowTalk</span>
+                  <kbd className="hidden sm:inline-flex items-center gap-0.5 bg-primary-foreground/20 text-primary-foreground/90 text-xs px-2 py-0.5 rounded-md font-mono">
+                    ⌘K
+                  </kbd>
+                </motion.button>
+                <motion.button
+                  onClick={handleDismissDemo}
+                  className="text-muted-foreground hover:text-foreground bg-muted/80 backdrop-blur-sm rounded-full p-1.5 transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  title="Dismiss"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
       </motion.div>
     </section>
   );

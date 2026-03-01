@@ -11,6 +11,10 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { ShadowMemoryProvider } from "@/contexts/ShadowMemoryContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import BootScreen from "@/components/BootScreen";
+import CommandPalette from "@/components/CommandPalette";
+import { createContext, useContext } from "react";
+
+export const CommandPaletteContext = createContext<{ open: () => void }>({ open: () => {} });
  // Critical path pages - loaded immediately
  import Index from "./pages/Index";
  import AuthPage from "./pages/AuthPage";
@@ -174,6 +178,7 @@ const AnimatedRoutes = () => {
 const App = () => {
   const [showBootScreen, setShowBootScreen] = useState(true);
   const [hasBooted, setHasBooted] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
 
   useEffect(() => {
     // Check if user has seen boot screen this session
@@ -197,6 +202,7 @@ const App = () => {
           <TooltipProvider>
             <AuthProvider>
               <ShadowMemoryProvider>
+              <CommandPaletteContext.Provider value={{ open: () => setCmdOpen(true) }}>
               {showBootScreen && !hasBooted && (
                 <BootScreen onComplete={handleBootComplete} />
               )}
@@ -204,6 +210,7 @@ const App = () => {
               <Sonner />
                <BrowserRouter>
                  <AnimatedRoutes />
+                 <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
                  <Suspense fallback={null}>
                    <ShadowMemoryTracker />
                    <JourneyTracker />
@@ -212,6 +219,7 @@ const App = () => {
                    <CustomerSupportWidget />
                  </Suspense>
                </BrowserRouter>
+              </CommandPaletteContext.Provider>
               </ShadowMemoryProvider>
             </AuthProvider>
           </TooltipProvider>
