@@ -69,12 +69,16 @@ const TransparencyPage = lazy(() => import("./pages/TransparencyPage"));
 const SecurityAuditPage = lazy(() => import("./pages/SecurityAuditPage"));
 const CommandCenterPage = lazy(() => import("./pages/CommandCenterPage"));
 const ShadowMemoryPage = lazy(() => import("./pages/ShadowMemoryPage"));
+const CompetitivePage = lazy(() => import("./pages/CompetitivePage"));
+const AgentArchitecturePage = lazy(() => import("./pages/AgentArchitecturePage"));
+const ComplianceDashboardPage = lazy(() => import("./pages/ComplianceDashboardPage"));
 const PWABanner = lazy(() => import("./components/PWABanner"));
 const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
 const ShadowMemoryTracker = lazy(() => import("./components/ShadowMemoryTracker"));
 const JourneyTracker = lazy(() => import("./components/JourneyTracker").then(m => ({ default: m.JourneyTracker })));
 const VoiceCommandSystem = lazy(() => import("./components/VoiceCommandSystem"));
+const OnboardingFlow = lazy(() => import("./components/OnboardingFlow"));
 import { useReferralCapture } from "./hooks/useReferralTracking";
 // ElevenLabs Agent ID is now configured via the backend secret ELEVENLABS_AGENT_ID
 
@@ -169,6 +173,9 @@ const AnimatedRoutes = () => {
           <Route path="/security-audit" element={<PageTransition><SecurityAuditPage /></PageTransition>} />
           <Route path="/command-center" element={<PageTransition><CommandCenterPage /></PageTransition>} />
           <Route path="/shadow-memory" element={<PageTransition><ShadowMemoryPage /></PageTransition>} />
+          <Route path="/competitive" element={<PageTransition><CompetitivePage /></PageTransition>} />
+          <Route path="/agents" element={<PageTransition><AgentArchitecturePage /></PageTransition>} />
+          <Route path="/compliance" element={<PageTransition><ComplianceDashboardPage /></PageTransition>} />
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
         </Routes>
       </AnimatePresence>
@@ -212,9 +219,10 @@ const App = () => {
                <BrowserRouter>
                  <AnimatedRoutes />
                  <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
-                 <Suspense fallback={null}>
-                   <VoiceCommandSystem />
-                   <ShadowMemoryTracker />
+                  <Suspense fallback={null}>
+                    <OnboardingFlow />
+                    <VoiceCommandSystem />
+                    <ShadowMemoryTracker />
                    <JourneyTracker />
                    <PWABanner />
                    <CookieConsent />

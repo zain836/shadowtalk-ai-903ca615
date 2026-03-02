@@ -97,6 +97,9 @@ const Navigation = () => {
     { name: "Enterprise", href: "/enterprise", icon: Building2, isLink: true },
     { name: "About", href: "/about", icon: UserCircle, isLink: true },
     { name: "Shadow Memory", href: "/shadow-memory", icon: Eye, isLink: true },
+    { name: "Agents", href: "/agents", icon: Bot, isLink: true },
+    { name: "Compliance", href: "/compliance", icon: ShieldCheck, isLink: true },
+    { name: "Competitive", href: "/competitive", icon: BarChart3, isLink: true },
     { name: "Admin", href: "/admin", icon: Settings, isLink: true },
     { name: t("nav.profile"), href: "/profile", icon: User, isLink: true },
   ];

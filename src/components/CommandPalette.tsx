@@ -63,6 +63,9 @@ const pages = [
   { name: "Terms of Service", href: "/terms", icon: Scale, desc: "Terms of service" },
   { name: "GDPR", href: "/gdpr", icon: Shield, desc: "GDPR compliance" },
   { name: "Transparency", href: "/transparency", icon: Eye, desc: "Transparency report" },
+  { name: "Competitive Analysis", href: "/competitive", icon: BarChart3, desc: "ShadowTalk vs competitors" },
+  { name: "Agent Architecture", href: "/agents", icon: Target, desc: "Distributed AI agents" },
+  { name: "Compliance Dashboard", href: "/compliance", icon: ShieldCheck, desc: "Privacy compliance" },
 ];
 
 interface CommandPaletteProps {

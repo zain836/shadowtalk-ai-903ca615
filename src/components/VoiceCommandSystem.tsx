@@ -48,6 +48,9 @@ const VOICE_ROUTES = [
   { path: "/blog", names: ["blog", "articles", "posts"] },
   { path: "/referral", names: ["referral", "referrals", "refer a friend"] },
   { path: "/auth", names: ["login", "sign in", "sign up", "register", "authentication"] },
+  { path: "/competitive", names: ["competitive", "comparison", "versus", "vs kimi", "vs macron"] },
+  { path: "/agents", names: ["agents", "agent architecture", "distributed agents", "spawn agents"] },
+  { path: "/compliance", names: ["compliance", "compliance dashboard", "gdpr", "privacy compliance"] },
 ];
 
 // Special voice commands
