@@ -4,7 +4,8 @@ import {
   Presentation, Plus, Download, Wand2, ChevronLeft, ChevronRight, 
   Trash2, Copy, Type, BarChart3, Quote, Layout, 
   Clock, GitCompare, List, Image, Loader2, Maximize, Minimize,
-  SlidersHorizontal, FileText, Eye, Search, ListTree, Palette, Sparkles
+  SlidersHorizontal, FileText, Eye, Search, ListTree, Palette, Sparkles,
+  Globe, CheckCircle2, Edit3, ArrowRight, ExternalLink, Shield, Target, TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,6 @@ import SlideRenderer from "@/components/presentation/SlideRenderer";
 import GenerationProgress, { GenerationPhase } from "@/components/presentation/GenerationProgress";
 import { Slide, PresentationData, ThemeKey, THEMES } from "@/components/presentation/types";
 
-// Re-export for backward compatibility
 export type { Slide, ThemeKey };
 export { THEMES };
 
@@ -42,8 +42,48 @@ const LAYOUT_ICONS: Record<string, React.ReactNode> = {
   process: <List className="w-4 h-4" />,
 };
 
+type InputMode = "topic" | "url";
+type UrlWorkflowStep = "idle" | "analyzing" | "plan_ready" | "generating";
+
+interface WebsitePlan {
+  companyName: string;
+  tagline: string;
+  industry: string;
+  websiteAnalysis: {
+    overallScore: number;
+    strengths: string[];
+    weaknesses: string[];
+    uniqueSellingPoints: string[];
+    targetAudience: string;
+    competitivePosition: string;
+  };
+  presentationPlan: {
+    recommendedTitle: string;
+    narrativeArc: string;
+    slides: Array<{
+      slideNumber: number;
+      purpose: string;
+      title: string;
+      keyPoints: string[];
+      dataToInclude: string;
+      visualStyle: string;
+    }>;
+    recommendedTheme: string;
+    estimatedSlideCount: number;
+  };
+  researchInsights: {
+    marketSize: string;
+    growthRate: string;
+    keyCompetitors: string[];
+    trendingTopics: string[];
+    relevantStatistics: string[];
+  };
+  qualityChecklist: Record<string, boolean | string>;
+}
+
 const PresentationBuilderPage = () => {
   const [topic, setTopic] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [additionalContext, setAdditionalContext] = useState("");
   const [slideCount, setSlideCount] = useState("10");
   const [style, setStyle] = useState<ThemeKey>("corporate");
@@ -56,6 +96,116 @@ const PresentationBuilderPage = () => {
   const [generationPhase, setGenerationPhase] = useState<GenerationPhase>("idle");
   const fullscreenRef = useRef<HTMLDivElement>(null);
 
+  // URL workflow state
+  const [inputMode, setInputMode] = useState<InputMode>("topic");
+  const [urlWorkflowStep, setUrlWorkflowStep] = useState<UrlWorkflowStep>("idle");
+  const [websitePlan, setWebsitePlan] = useState<WebsitePlan | null>(null);
+  const [editablePlanTitle, setEditablePlanTitle] = useState("");
+  const [editablePlanContext, setEditablePlanContext] = useState("");
+
+  const analyzeWebsite = useCallback(async () => {
+    if (!websiteUrl.trim()) {
+      toast.error("Please enter a website URL");
+      return;
+    }
+    setUrlWorkflowStep("analyzing");
+    setGenerationPhase("researching");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-website", {
+        body: { url: websiteUrl, action: "analyze" },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setWebsitePlan(data.plan);
+      setEditablePlanTitle(data.plan.presentationPlan?.recommendedTitle || data.plan.companyName || "");
+      
+      // Build rich context from plan
+      const plan = data.plan;
+      const contextParts = [
+        `Company: ${plan.companyName}`,
+        `Tagline: ${plan.tagline}`,
+        `Industry: ${plan.industry}`,
+        `Target Audience: ${plan.websiteAnalysis?.targetAudience || ''}`,
+        `USPs: ${(plan.websiteAnalysis?.uniqueSellingPoints || []).join(', ')}`,
+        `Market Size: ${plan.researchInsights?.marketSize || ''}`,
+        `Growth Rate: ${plan.researchInsights?.growthRate || ''}`,
+        `Key Competitors: ${(plan.researchInsights?.keyCompetitors || []).join(', ')}`,
+        `Key Stats: ${(plan.researchInsights?.relevantStatistics || []).join('; ')}`,
+        `Strengths: ${(plan.websiteAnalysis?.strengths || []).join(', ')}`,
+        `Competitive Position: ${plan.websiteAnalysis?.competitivePosition || ''}`,
+      ].filter(p => !p.endsWith(': '));
+      setEditablePlanContext(contextParts.join('\n'));
+
+      // Set recommended theme
+      const recTheme = plan.presentationPlan?.recommendedTheme;
+      if (recTheme && recTheme in THEMES) {
+        setStyle(recTheme as ThemeKey);
+      }
+
+      setUrlWorkflowStep("plan_ready");
+      setGenerationPhase("idle");
+      toast.success("Website analyzed! Review the plan below.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to analyze website");
+      setUrlWorkflowStep("idle");
+      setGenerationPhase("idle");
+    }
+  }, [websiteUrl]);
+
+  const generateFromPlan = useCallback(async () => {
+    if (!editablePlanTitle.trim()) {
+      toast.error("Please provide a presentation title");
+      return;
+    }
+    setUrlWorkflowStep("generating");
+    setIsGenerating(true);
+    setGenerationPhase("researching");
+
+    const phaseTimers: ReturnType<typeof setTimeout>[] = [];
+    phaseTimers.push(setTimeout(() => setGenerationPhase("structuring"), 5000));
+    phaseTimers.push(setTimeout(() => setGenerationPhase("designing"), 12000));
+    phaseTimers.push(setTimeout(() => setGenerationPhase("polishing"), 22000));
+
+    try {
+      const planSlides = websitePlan?.presentationPlan?.slides || [];
+      const slideInstructions = planSlides.map(s => 
+        `Slide ${s.slideNumber} (${s.purpose}): "${s.title}" — Key points: ${s.keyPoints.join(', ')}. Data: ${s.dataToInclude}. Visual: ${s.visualStyle}`
+      ).join('\n');
+
+      const enrichedContext = `${editablePlanContext}\n\nDETAILED SLIDE PLAN:\n${slideInstructions}\n\nWebsite URL: ${websiteUrl}\nNarrative Arc: ${websitePlan?.presentationPlan?.narrativeArc || ''}`;
+
+      const { data, error } = await supabase.functions.invoke("generate-presentation", {
+        body: { 
+          topic: editablePlanTitle, 
+          slideCount: websitePlan?.presentationPlan?.estimatedSlideCount || parseInt(slideCount), 
+          style, 
+          additionalContext: enrichedContext,
+        },
+      });
+
+      phaseTimers.forEach(clearTimeout);
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setGenerationPhase("done");
+      const slides = (data.slides || []).map((s: Slide, i: number) => ({ ...s, id: `slide-${i}-${Date.now()}` }));
+      setPresentation({ ...data, slides });
+      setCurrentSlide(0);
+      setActiveTab("editor");
+      setUrlWorkflowStep("idle");
+      toast.success(`Generated ${slides.length} elite slides from website analysis!`);
+    } catch (err) {
+      phaseTimers.forEach(clearTimeout);
+      toast.error(err instanceof Error ? err.message : "Failed to generate");
+      setUrlWorkflowStep("plan_ready");
+    } finally {
+      setIsGenerating(false);
+      setGenerationPhase("idle");
+    }
+  }, [editablePlanTitle, editablePlanContext, websitePlan, websiteUrl, slideCount, style]);
+
   const generatePresentation = useCallback(async () => {
     if (!topic.trim()) {
       toast.error("Please enter a topic");
@@ -64,7 +214,6 @@ const PresentationBuilderPage = () => {
     setIsGenerating(true);
     setGenerationPhase("researching");
 
-    // Manus-style phased progress (single powerful AI call with internal phases)
     const phaseTimers: ReturnType<typeof setTimeout>[] = [];
     phaseTimers.push(setTimeout(() => setGenerationPhase("structuring"), 5000));
     phaseTimers.push(setTimeout(() => setGenerationPhase("designing"), 12000));
@@ -74,12 +223,9 @@ const PresentationBuilderPage = () => {
       const { data, error } = await supabase.functions.invoke("generate-presentation", {
         body: { topic, slideCount: parseInt(slideCount), style, additionalContext },
       });
-
       phaseTimers.forEach(clearTimeout);
-
       if (error) throw error;
       if (data.error) throw new Error(data.error);
-
       setGenerationPhase("done");
       const slides = (data.slides || []).map((s: Slide, i: number) => ({ ...s, id: `slide-${i}-${Date.now()}` }));
       setPresentation({ ...data, slides });
@@ -100,7 +246,8 @@ const PresentationBuilderPage = () => {
     setIsExporting(true);
     try {
       const pptxgenjs = await import("pptxgenjs");
-      const pptx = new pptxgenjs.default();
+      const PptxGenJS = pptxgenjs.default;
+      const pptx = new PptxGenJS();
       const t = THEMES[style];
 
       pptx.author = "ShadowTalk AI";
@@ -118,11 +265,9 @@ const PresentationBuilderPage = () => {
 
         if (slide.layout === "title" || slide.layout === "closing") {
           pptSlide.background = { fill: accentClean };
-          // Decorative shapes
-          pptSlide.addShape(pptxgenjs.default.ShapeType.ellipse, { x: -1, y: -1, w: 4, h: 4, fill: { color: "FFFFFF", transparency: 92 } });
-          pptSlide.addShape(pptxgenjs.default.ShapeType.ellipse, { x: 7.5, y: 3, w: 5, h: 5, fill: { color: "FFFFFF", transparency: 94 } });
-          // Top line
-          pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: 4, y: 1, w: 2, h: 0.04, fill: { color: "FFFFFF", transparency: 60 } });
+          pptSlide.addShape(pptx.ShapeType.ellipse, { x: -1, y: -1, w: 4, h: 4, fill: { color: "FFFFFF", transparency: 92 } });
+          pptSlide.addShape(pptx.ShapeType.ellipse, { x: 7.5, y: 3, w: 5, h: 5, fill: { color: "FFFFFF", transparency: 94 } });
+          pptSlide.addShape(pptx.ShapeType.rect, { x: 4, y: 1, w: 2, h: 0.04, fill: { color: "FFFFFF", transparency: 60 } });
 
           pptSlide.addText(slide.title, { x: 1, y: 1.5, w: 8, h: 1.6, fontSize: 36, bold: true, color: "FFFFFF", align: "center", fontFace: "Arial" });
           if (slide.subtitle) pptSlide.addText(slide.subtitle, { x: 1.5, y: 3.2, w: 7, h: 0.8, fontSize: 18, color: "FFFFFF", align: "center", transparency: 15 });
@@ -133,30 +278,26 @@ const PresentationBuilderPage = () => {
             const presenterDate = [(content as any).presenter, (content as any).date].filter(Boolean).join("  |  ");
             if (presenterDate) pptSlide.addText(presenterDate, { x: 2, y: 5, w: 6, h: 0.4, fontSize: 11, color: "FFFFFF", align: "center", transparency: 45 });
           } else {
-            // Closing
             const heading = (content as any).heading;
             if (heading) pptSlide.addText(heading, { x: 1.5, y: 3.2, w: 7, h: 0.6, fontSize: 16, color: "FFFFFF", align: "center", transparency: 15 });
             const nextSteps = (content as any).nextSteps || [];
             nextSteps.forEach((ns: string, i: number) => {
-              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: 2.8, y: 4 + i * 0.5, w: 0.35, h: 0.3, fill: { color: "FFFFFF", transparency: 80 }, rectRadius: 0.05 });
+              pptSlide.addShape(pptx.ShapeType.roundRect, { x: 2.8, y: 4 + i * 0.5, w: 0.35, h: 0.3, fill: { color: "FFFFFF", transparency: 80 }, rectRadius: 0.05 });
               pptSlide.addText(`${i + 1}`, { x: 2.8, y: 4 + i * 0.5, w: 0.35, h: 0.3, fontSize: 9, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
               pptSlide.addText(ns, { x: 3.3, y: 4 + i * 0.5, w: 5, h: 0.3, fontSize: 12, color: "FFFFFF", transparency: 15 });
             });
             const cta = (content as any).cta;
             if (cta) {
               const yPos = 4 + nextSteps.length * 0.5 + 0.4;
-              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: 3, y: yPos, w: 4, h: 0.5, fill: { color: "FFFFFF", transparency: 85 }, rectRadius: 0.25, line: { color: "FFFFFF", width: 1.5, transparency: 70 } });
+              pptSlide.addShape(pptx.ShapeType.roundRect, { x: 3, y: yPos, w: 4, h: 0.5, fill: { color: "FFFFFF", transparency: 85 }, rectRadius: 0.25, line: { color: "FFFFFF", width: 1.5, transparency: 70 } });
               pptSlide.addText(cta, { x: 3, y: yPos, w: 4, h: 0.5, fontSize: 13, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
             }
           }
         } else {
           pptSlide.background = { fill: bgClean };
-          // Accent bar at bottom
-          pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: 0, y: 7.3, w: 13.33, h: 0.12, fill: { color: accentClean } });
-          // Corner accent
-          pptSlide.addShape(pptxgenjs.default.ShapeType.ellipse, { x: 10.5, y: -0.8, w: 3.5, h: 3.5, fill: { color: accentClean, transparency: 94 } });
-          // Title bar indicator
-          pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: 0.5, y: 0.38, w: 0.08, h: 0.6, fill: { color: accentClean }, rectRadius: 0.04 });
+          pptSlide.addShape(pptx.ShapeType.rect, { x: 0, y: 7.3, w: 13.33, h: 0.12, fill: { color: accentClean } });
+          pptSlide.addShape(pptx.ShapeType.ellipse, { x: 10.5, y: -0.8, w: 3.5, h: 3.5, fill: { color: accentClean, transparency: 94 } });
+          pptSlide.addShape(pptx.ShapeType.rect, { x: 0.5, y: 0.38, w: 0.08, h: 0.6, fill: { color: accentClean }, rectRadius: 0.04 });
           pptSlide.addText(slide.title, { x: 0.75, y: 0.3, w: 9, h: 0.7, fontSize: 24, bold: true, color: accentClean, fontFace: "Arial" });
           if (slide.subtitle) pptSlide.addText(slide.subtitle, { x: 0.75, y: 0.95, w: 9, h: 0.35, fontSize: 11, color: textClean, italic: true, transparency: 50 });
 
@@ -165,8 +306,7 @@ const PresentationBuilderPage = () => {
           if (slide.layout === "bullets") {
             const bullets = (content as any).bullets || [];
             bullets.forEach((b: string, i: number) => {
-              // Numbered badge
-              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: 0.7, y: yStart + i * 0.65, w: 0.35, h: 0.35, fill: { color: accentClean }, rectRadius: 0.05 });
+              pptSlide.addShape(pptx.ShapeType.roundRect, { x: 0.7, y: yStart + i * 0.65, w: 0.35, h: 0.35, fill: { color: accentClean }, rectRadius: 0.05 });
               pptSlide.addText(`${i + 1}`, { x: 0.7, y: yStart + i * 0.65, w: 0.35, h: 0.35, fontSize: 10, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
               pptSlide.addText(b, { x: 1.2, y: yStart + i * 0.65, w: 8.5, h: 0.55, fontSize: 13, color: textClean });
             });
@@ -174,22 +314,19 @@ const PresentationBuilderPage = () => {
             const stats = (content as any).stats || [];
             stats.forEach((s: any, i: number) => {
               const xPos = 0.5 + i * 3;
-              // Card background
-              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: xPos, y: yStart + 0.5, w: 2.7, h: 2.2, fill: { color: secondaryClean }, rectRadius: 0.15, line: { color: accentClean, width: 0.5, transparency: 85 } });
-              // Top accent line
-              pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: xPos, y: yStart + 0.5, w: 2.7, h: 0.06, fill: { color: accentClean, transparency: 40 } });
+              pptSlide.addShape(pptx.ShapeType.roundRect, { x: xPos, y: yStart + 0.5, w: 2.7, h: 2.2, fill: { color: secondaryClean }, rectRadius: 0.15, line: { color: accentClean, width: 0.5, transparency: 85 } });
+              pptSlide.addShape(pptx.ShapeType.rect, { x: xPos, y: yStart + 0.5, w: 2.7, h: 0.06, fill: { color: accentClean, transparency: 40 } });
               pptSlide.addText(s.value, { x: xPos, y: yStart + 0.8, w: 2.7, h: 0.8, fontSize: 28, bold: true, color: accentClean, align: "center" });
               pptSlide.addText(s.label, { x: xPos + 0.15, y: yStart + 1.5, w: 2.4, h: 0.4, fontSize: 10, color: textClean, align: "center", transparency: 40 });
               if (s.change) {
-                pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: xPos + 0.6, y: yStart + 1.9, w: 1.5, h: 0.3, fill: { color: accentClean, transparency: 88 }, rectRadius: 0.15 });
+                pptSlide.addShape(pptx.ShapeType.roundRect, { x: xPos + 0.6, y: yStart + 1.9, w: 1.5, h: 0.3, fill: { color: accentClean, transparency: 88 }, rectRadius: 0.15 });
                 pptSlide.addText(s.change, { x: xPos + 0.6, y: yStart + 1.9, w: 1.5, h: 0.3, fontSize: 9, bold: true, color: accentClean, align: "center", valign: "middle" });
               }
             });
           } else if (slide.layout === "quote") {
-            // Giant quote marks
             pptSlide.addText('"', { x: 0.8, y: 1, w: 2, h: 2, fontSize: 120, color: accentClean, transparency: 90, fontFace: "Georgia" });
             pptSlide.addText((content as any).quote || "", { x: 1.5, y: 2, w: 7.5, h: 2.5, fontSize: 20, italic: true, color: textClean, align: "center" });
-            pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: 4.5, y: 4.8, w: 1.5, h: 0.04, fill: { color: accentClean } });
+            pptSlide.addShape(pptx.ShapeType.rect, { x: 4.5, y: 4.8, w: 1.5, h: 0.04, fill: { color: accentClean } });
             pptSlide.addText(`${(content as any).author || ""}`, { x: 2, y: 5, w: 6, h: 0.4, fontSize: 15, bold: true, color: accentClean, align: "center" });
             if ((content as any).role) pptSlide.addText((content as any).role, { x: 2, y: 5.4, w: 6, h: 0.3, fontSize: 11, color: textClean, align: "center", transparency: 50 });
           } else if (slide.layout === "two_column") {
@@ -197,9 +334,8 @@ const PresentationBuilderPage = () => {
               const col = (content as any)[side];
               if (!col) return;
               const xOff = idx === 0 ? 0.5 : 5.5;
-              // Card bg
-              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: xOff, y: yStart, w: 4.5, h: 4.8, fill: { color: secondaryClean }, rectRadius: 0.15, line: { color: accentClean, width: 0.5, transparency: 88 } });
-              pptSlide.addShape(pptxgenjs.default.ShapeType.ellipse, { x: xOff + 0.2, y: yStart + 0.2, w: 0.15, h: 0.15, fill: { color: accentClean } });
+              pptSlide.addShape(pptx.ShapeType.roundRect, { x: xOff, y: yStart, w: 4.5, h: 4.8, fill: { color: secondaryClean }, rectRadius: 0.15, line: { color: accentClean, width: 0.5, transparency: 88 } });
+              pptSlide.addShape(pptx.ShapeType.ellipse, { x: xOff + 0.2, y: yStart + 0.2, w: 0.15, h: 0.15, fill: { color: accentClean } });
               pptSlide.addText(col.heading || "", { x: xOff + 0.5, y: yStart + 0.1, w: 3.8, h: 0.4, fontSize: 14, bold: true, color: accentClean });
               (col.points || []).forEach((p: string, j: number) => {
                 pptSlide.addText(`• ${p}`, { x: xOff + 0.4, y: yStart + 0.7 + j * 0.6, w: 3.8, h: 0.5, fontSize: 11, color: textClean });
@@ -213,7 +349,7 @@ const PresentationBuilderPage = () => {
               { key: "threats", label: "THREATS", color: "D97706", x: 5.2, y: yStart + 2.8 },
             ];
             quads.forEach(({ key, label, color, x, y }) => {
-              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x, y, w: 4.5, h: 2.5, fill: { color, transparency: 94 }, rectRadius: 0.15, line: { color, width: 0.8, transparency: 75 } });
+              pptSlide.addShape(pptx.ShapeType.roundRect, { x, y, w: 4.5, h: 2.5, fill: { color, transparency: 94 }, rectRadius: 0.15, line: { color, width: 0.8, transparency: 75 } });
               pptSlide.addText(label, { x: x + 0.2, y: y + 0.1, w: 3, h: 0.3, fontSize: 9, bold: true, color });
               ((content as any)[key] || []).forEach((item: string, i: number) => {
                 pptSlide.addText(`• ${item}`, { x: x + 0.3, y: y + 0.5 + i * 0.45, w: 3.9, h: 0.4, fontSize: 10, color: textClean });
@@ -221,11 +357,10 @@ const PresentationBuilderPage = () => {
             });
           } else if (slide.layout === "timeline") {
             const events = (content as any).events || [];
-            // Timeline line
-            pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: 0.8, y: yStart + 1.5, w: 9.5, h: 0.03, fill: { color: accentClean, transparency: 80 } });
+            pptSlide.addShape(pptx.ShapeType.rect, { x: 0.8, y: yStart + 1.5, w: 9.5, h: 0.03, fill: { color: accentClean, transparency: 80 } });
             events.forEach((e: any, i: number) => {
               const xPos = 0.8 + (i * (9.5 / events.length));
-              pptSlide.addShape(pptxgenjs.default.ShapeType.ellipse, { x: xPos + 0.3, y: yStart + 1.35, w: 0.3, h: 0.3, fill: { color: bgClean }, line: { color: accentClean, width: 2 } });
+              pptSlide.addShape(pptx.ShapeType.ellipse, { x: xPos + 0.3, y: yStart + 1.35, w: 0.3, h: 0.3, fill: { color: bgClean }, line: { color: accentClean, width: 2 } });
               pptSlide.addText(e.year, { x: xPos, y: yStart + 0.5, w: 1.5, h: 0.4, fontSize: 14, bold: true, color: accentClean, align: "center" });
               pptSlide.addText(e.title, { x: xPos, y: yStart + 1.8, w: 1.5, h: 0.3, fontSize: 10, bold: true, color: textClean, align: "center" });
               pptSlide.addText(e.description, { x: xPos - 0.1, y: yStart + 2.2, w: 1.7, h: 0.8, fontSize: 8, color: textClean, align: "center", transparency: 40 });
@@ -240,8 +375,8 @@ const PresentationBuilderPage = () => {
               const yPos = yStart + row * 2.5;
               const statusColors: Record<string, string> = { on_track: "16A34A", at_risk: "D97706", behind: "DC2626" };
               const sc = statusColors[kpi.status] || accentClean;
-              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: xPos, y: yPos, w: 3.2, h: 2.2, fill: { color: secondaryClean }, rectRadius: 0.15 });
-              pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: xPos, y: yPos, w: 0.06, h: 2.2, fill: { color: sc } });
+              pptSlide.addShape(pptx.ShapeType.roundRect, { x: xPos, y: yPos, w: 3.2, h: 2.2, fill: { color: secondaryClean }, rectRadius: 0.15 });
+              pptSlide.addShape(pptx.ShapeType.rect, { x: xPos, y: yPos, w: 0.06, h: 2.2, fill: { color: sc } });
               pptSlide.addText(kpi.name, { x: xPos + 0.2, y: yPos + 0.15, w: 2.8, h: 0.25, fontSize: 8, bold: true, color: textClean, transparency: 50 });
               pptSlide.addText(kpi.value, { x: xPos + 0.2, y: yPos + 0.5, w: 2.8, h: 0.7, fontSize: 24, bold: true, color: accentClean });
               pptSlide.addText(`Target: ${kpi.target}`, { x: xPos + 0.2, y: yPos + 1.3, w: 1.5, h: 0.25, fontSize: 8, color: textClean, transparency: 50 });
@@ -254,8 +389,8 @@ const PresentationBuilderPage = () => {
               const xPos = 0.5 + i * (phaseWidth + 0.5);
               const statusColors: Record<string, string> = { done: "16A34A", active: "2563EB", upcoming: "94A3B8" };
               const sc = statusColors[phase.status] || accentClean;
-              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: xPos, y: yStart, w: phaseWidth, h: 5, fill: { color: secondaryClean }, rectRadius: 0.15 });
-              pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: xPos, y: yStart, w: phaseWidth, h: 0.08, fill: { color: sc } });
+              pptSlide.addShape(pptx.ShapeType.roundRect, { x: xPos, y: yStart, w: phaseWidth, h: 5, fill: { color: secondaryClean }, rectRadius: 0.15 });
+              pptSlide.addShape(pptx.ShapeType.rect, { x: xPos, y: yStart, w: phaseWidth, h: 0.08, fill: { color: sc } });
               pptSlide.addText(phase.name, { x: xPos + 0.15, y: yStart + 0.2, w: phaseWidth - 0.3, h: 0.3, fontSize: 11, bold: true, color: textClean });
               pptSlide.addText(phase.timeline || "", { x: xPos + 0.15, y: yStart + 0.5, w: phaseWidth - 0.3, h: 0.2, fontSize: 8, color: textClean, transparency: 55 });
               (phase.items || []).forEach((item: string, j: number) => {
@@ -267,14 +402,12 @@ const PresentationBuilderPage = () => {
             steps.forEach((step: any, i: number) => {
               const xPos = 0.4 + i * (10 / steps.length);
               const w = (10 / steps.length) - 0.4;
-              // Circle number
-              pptSlide.addShape(pptxgenjs.default.ShapeType.ellipse, { x: xPos + w / 2 - 0.25, y: yStart + 0.5, w: 0.5, h: 0.5, fill: { color: accentClean } });
+              pptSlide.addShape(pptx.ShapeType.ellipse, { x: xPos + w / 2 - 0.25, y: yStart + 0.5, w: 0.5, h: 0.5, fill: { color: accentClean } });
               pptSlide.addText(`${step.number || i + 1}`, { x: xPos + w / 2 - 0.25, y: yStart + 0.5, w: 0.5, h: 0.5, fontSize: 14, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
               pptSlide.addText(step.title, { x: xPos, y: yStart + 1.2, w: w, h: 0.35, fontSize: 11, bold: true, color: textClean, align: "center" });
               pptSlide.addText(step.description, { x: xPos, y: yStart + 1.6, w: w, h: 1, fontSize: 9, color: textClean, align: "center", transparency: 40 });
-              // Arrow
               if (i < steps.length - 1) {
-                pptSlide.addShape(pptxgenjs.default.ShapeType.rect, { x: xPos + w - 0.05, y: yStart + 0.7, w: 0.4, h: 0.03, fill: { color: accentClean, transparency: 75 } });
+                pptSlide.addShape(pptx.ShapeType.rect, { x: xPos + w - 0.05, y: yStart + 0.7, w: 0.4, h: 0.03, fill: { color: accentClean, transparency: 75 } });
               }
             });
           } else if (slide.layout === "funnel") {
@@ -282,16 +415,15 @@ const PresentationBuilderPage = () => {
             stages.forEach((stage: any, i: number) => {
               const indent = i * 0.5;
               const w = 10 - indent * 2;
-              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: 0.5 + indent, y: yStart + i * 0.9, w, h: 0.7, fill: { color: accentClean, transparency: 15 + i * 10 }, rectRadius: 0.1 });
+              pptSlide.addShape(pptx.ShapeType.roundRect, { x: 0.5 + indent, y: yStart + i * 0.9, w, h: 0.7, fill: { color: accentClean, transparency: 15 + i * 10 }, rectRadius: 0.1 });
               pptSlide.addText(`${stage.name}${stage.value ? ' — ' + stage.value : ''}`, { x: 0.5 + indent + 0.3, y: yStart + i * 0.9, w: w - 0.6, h: 0.7, fontSize: 13, bold: true, color: "FFFFFF", valign: "middle" });
             });
           } else if (slide.layout === "comparison") {
             const items = (content as any).items || [];
             items.forEach((item: any, i: number) => {
               const xPos = 0.5 + i * 5;
-              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: xPos, y: yStart, w: 4.5, h: 5, fill: { color: secondaryClean }, rectRadius: 0.15 });
-              // Header bar
-              pptSlide.addShape(pptxgenjs.default.ShapeType.roundRect, { x: xPos + 0.2, y: yStart + 0.2, w: 4.1, h: 0.5, fill: { color: accentClean }, rectRadius: 0.1 });
+              pptSlide.addShape(pptx.ShapeType.roundRect, { x: xPos, y: yStart, w: 4.5, h: 5, fill: { color: secondaryClean }, rectRadius: 0.15 });
+              pptSlide.addShape(pptx.ShapeType.roundRect, { x: xPos + 0.2, y: yStart + 0.2, w: 4.1, h: 0.5, fill: { color: accentClean }, rectRadius: 0.1 });
               pptSlide.addText(item.name, { x: xPos + 0.2, y: yStart + 0.2, w: 4.1, h: 0.5, fontSize: 14, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
               if (item.pros) {
                 pptSlide.addText("ADVANTAGES", { x: xPos + 0.3, y: yStart + 0.9, w: 3, h: 0.25, fontSize: 8, bold: true, color: "16A34A" });
@@ -308,7 +440,6 @@ const PresentationBuilderPage = () => {
               }
             });
           } else {
-            // Content / default
             const heading = (content as any).heading;
             if (heading) pptSlide.addText(heading, { x: 0.75, y: yStart, w: 9, h: 0.4, fontSize: 16, bold: true, color: textClean, transparency: 20 });
             const paragraphs = (content as any).paragraphs || [];
@@ -321,13 +452,12 @@ const PresentationBuilderPage = () => {
         if (slide.speakerNotes) pptSlide.addNotes(slide.speakerNotes);
       }
 
-      // Add branding footer to all non-title slides
       const filename = `${presentation.title.replace(/[^a-zA-Z0-9]/g, '_')}.pptx`;
       await pptx.writeFile({ fileName: filename });
       toast.success("Professional PPTX downloaded!");
     } catch (err) {
-      console.error(err);
-      toast.error("Export failed");
+      console.error("PPTX export error:", err);
+      toast.error("Export failed: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setIsExporting(false);
     }
@@ -374,6 +504,134 @@ const PresentationBuilderPage = () => {
 
   const currentSlideData = presentation?.slides[currentSlide];
 
+  // Render URL Plan Review UI
+  const renderPlanReview = () => {
+    if (!websitePlan) return null;
+    const plan = websitePlan;
+    const analysis = plan.websiteAnalysis;
+    const research = plan.researchInsights;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-4xl mx-auto space-y-6"
+      >
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <div className="flex items-center justify-center gap-2">
+            <CheckCircle2 className="w-6 h-6 text-green-500" />
+            <h2 className="text-2xl font-bold">Website Analysis Complete</h2>
+          </div>
+          <p className="text-muted-foreground text-sm">Review and edit the plan before generating your presentation</p>
+        </div>
+
+        {/* Score Card */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="p-4 text-center border-primary/20">
+            <div className="text-3xl font-black text-primary">{analysis?.overallScore || 85}/100</div>
+            <div className="text-xs text-muted-foreground mt-1">Website Score</div>
+          </Card>
+          <Card className="p-4 text-center">
+            <div className="text-lg font-bold">{plan.companyName}</div>
+            <div className="text-xs text-muted-foreground mt-1">{plan.industry}</div>
+          </Card>
+          <Card className="p-4 text-center">
+            <div className="text-sm font-medium">{plan.tagline}</div>
+            <div className="text-xs text-muted-foreground mt-1">Value Proposition</div>
+          </Card>
+        </div>
+
+        {/* Analysis Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="p-4">
+            <h3 className="text-sm font-bold mb-2 flex items-center gap-2"><Shield className="w-4 h-4 text-green-500" /> Strengths</h3>
+            <ul className="space-y-1">
+              {(analysis?.strengths || []).map((s: string, i: number) => (
+                <li key={i} className="text-xs flex items-start gap-2"><CheckCircle2 className="w-3 h-3 text-green-500 mt-0.5 shrink-0" />{s}</li>
+              ))}
+            </ul>
+          </Card>
+          <Card className="p-4">
+            <h3 className="text-sm font-bold mb-2 flex items-center gap-2"><Target className="w-4 h-4 text-blue-500" /> Unique Selling Points</h3>
+            <ul className="space-y-1">
+              {(analysis?.uniqueSellingPoints || []).map((s: string, i: number) => (
+                <li key={i} className="text-xs flex items-start gap-2"><ArrowRight className="w-3 h-3 text-blue-500 mt-0.5 shrink-0" />{s}</li>
+              ))}
+            </ul>
+          </Card>
+          <Card className="p-4">
+            <h3 className="text-sm font-bold mb-2 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-purple-500" /> Market Research</h3>
+            <div className="space-y-1 text-xs">
+              <p><strong>Market Size:</strong> {research?.marketSize || 'N/A'}</p>
+              <p><strong>Growth Rate:</strong> {research?.growthRate || 'N/A'}</p>
+              <p><strong>Competitors:</strong> {(research?.keyCompetitors || []).join(', ')}</p>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <h3 className="text-sm font-bold mb-2 flex items-center gap-2"><ListTree className="w-4 h-4 text-orange-500" /> Slide Plan ({plan.presentationPlan?.slides?.length || 10} slides)</h3>
+            <div className="space-y-0.5 max-h-32 overflow-y-auto">
+              {(plan.presentationPlan?.slides || []).map((s: any) => (
+                <div key={s.slideNumber} className="text-xs flex gap-2">
+                  <span className="text-muted-foreground w-4 shrink-0">{s.slideNumber}.</span>
+                  <span className="font-medium">{s.title}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+
+        {/* Editable Fields */}
+        <Card className="p-4 space-y-4 border-primary/30">
+          <h3 className="text-sm font-bold flex items-center gap-2"><Edit3 className="w-4 h-4" /> Edit Before Generating</h3>
+          <div>
+            <label className="text-xs font-medium mb-1 block">Presentation Title</label>
+            <Input value={editablePlanTitle} onChange={(e) => setEditablePlanTitle(e.target.value)} className="h-10" />
+          </div>
+          <div>
+            <label className="text-xs font-medium mb-1 block">Context & Research Data (AI will use this)</label>
+            <Textarea value={editablePlanContext} onChange={(e) => setEditablePlanContext(e.target.value)} rows={6} className="text-xs" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium mb-1 block">Theme</label>
+              <Select value={style} onValueChange={(v) => setStyle(v as ThemeKey)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(THEMES).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: v.accent }} />
+                        {v.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1 block">Slides</label>
+              <Select value={String(websitePlan?.presentationPlan?.estimatedSlideCount || slideCount)} onValueChange={setSlideCount}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {["5", "8", "10", "15", "20"].map(n => <SelectItem key={n} value={n}>{n} slides</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Button onClick={generateFromPlan} className="flex-1 h-12 text-base gap-2">
+              <Sparkles className="w-5 h-5" /> Approve & Generate Presentation
+            </Button>
+            <Button variant="outline" onClick={() => { setUrlWorkflowStep("idle"); setWebsitePlan(null); }} className="h-12">
+              Start Over
+            </Button>
+          </div>
+        </Card>
+      </motion.div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -412,26 +670,18 @@ const PresentationBuilderPage = () => {
           </div>
 
           <TabsContent value="generate" className="m-0 h-full">
-            <div className="flex items-center justify-center h-full p-8">
+            <div className="flex items-center justify-center h-full p-8 overflow-y-auto">
               <AnimatePresence mode="wait">
-                {isGenerating ? (
-                  <motion.div
-                    key="progress"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="w-full flex justify-center"
-                  >
-                    <GenerationProgress phase={generationPhase} topic={topic} />
+                {(isGenerating || generationPhase !== "idle") ? (
+                  <motion.div key="progress" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full flex justify-center">
+                    <GenerationProgress phase={generationPhase} topic={inputMode === "url" ? websiteUrl : topic} />
+                  </motion.div>
+                ) : urlWorkflowStep === "plan_ready" ? (
+                  <motion.div key="plan" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full flex justify-center">
+                    {renderPlanReview()}
                   </motion.div>
                 ) : (
-                  <motion.div
-                    key="form"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="w-full flex justify-center"
-                  >
+                  <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full flex justify-center">
                     <Card className="w-full max-w-2xl p-8 space-y-6">
                       <div className="text-center space-y-2">
                         <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
@@ -444,55 +694,120 @@ const PresentationBuilderPage = () => {
                         </div>
                       </div>
 
+                      {/* Input Mode Toggle */}
+                      <div className="flex items-center gap-2 p-1 bg-muted rounded-lg">
+                        <button
+                          onClick={() => setInputMode("topic")}
+                          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                            inputMode === "topic" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <Type className="w-4 h-4" /> Topic / Title
+                        </button>
+                        <button
+                          onClick={() => setInputMode("url")}
+                          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all ${
+                            inputMode === "url" ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <Globe className="w-4 h-4" /> Website URL
+                        </button>
+                      </div>
+
                       <div className="space-y-4">
-                        <div>
-                          <label className="text-sm font-medium mb-1.5 block">Topic / Title</label>
-                          <Input 
-                            placeholder="e.g. Q4 Revenue Growth Strategy for SaaS Startups" 
-                            value={topic} 
-                            onChange={(e) => setTopic(e.target.value)}
-                            className="h-12 text-base"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium mb-1.5 block">Additional Context (optional)</label>
-                          <Textarea 
-                            placeholder="Key points, data, audience info, specific requirements..." 
-                            value={additionalContext} 
-                            onChange={(e) => setAdditionalContext(e.target.value)}
-                            rows={3}
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium mb-1.5 block">Slides</label>
-                            <Select value={slideCount} onValueChange={setSlideCount}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {["5", "8", "10", "15", "20"].map(n => <SelectItem key={n} value={n}>{n} slides</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium mb-1.5 block">Theme</label>
-                            <Select value={style} onValueChange={(v) => setStyle(v as ThemeKey)}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {Object.entries(THEMES).map(([k, v]) => (
-                                  <SelectItem key={k} value={k}>
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: v.accent }} />
-                                      {v.name}
-                                    </div>
-                                  </SelectItem>
+                        {inputMode === "topic" ? (
+                          <>
+                            <div>
+                              <label className="text-sm font-medium mb-1.5 block">Topic / Title</label>
+                              <Input 
+                                placeholder="e.g. Q4 Revenue Growth Strategy for SaaS Startups" 
+                                value={topic} 
+                                onChange={(e) => setTopic(e.target.value)}
+                                className="h-12 text-base"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium mb-1.5 block">Additional Context (optional)</label>
+                              <Textarea 
+                                placeholder="Key points, data, audience info, specific requirements..." 
+                                value={additionalContext} 
+                                onChange={(e) => setAdditionalContext(e.target.value)}
+                                rows={3}
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm font-medium mb-1.5 block">Slides</label>
+                                <Select value={slideCount} onValueChange={setSlideCount}>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    {["5", "8", "10", "15", "20"].map(n => <SelectItem key={n} value={n}>{n} slides</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium mb-1.5 block">Theme</label>
+                                <Select value={style} onValueChange={(v) => setStyle(v as ThemeKey)}>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    {Object.entries(THEMES).map(([k, v]) => (
+                                      <SelectItem key={k} value={k}>
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: v.accent }} />
+                                          {v.name}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <Button onClick={generatePresentation} disabled={isGenerating} className="w-full h-12 text-base gap-2">
+                              <Wand2 className="w-5 h-5" /> Generate Research-Backed Presentation
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <div>
+                              <label className="text-sm font-medium mb-1.5 block">Website URL</label>
+                              <div className="relative">
+                                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                                <Input 
+                                  placeholder="https://example.com" 
+                                  value={websiteUrl} 
+                                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                                  className="h-12 text-base pl-10"
+                                />
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1.5">
+                                ShadowTalk will analyze the website, generate a strategic plan, and create a professional presentation
+                              </p>
+                            </div>
+                            <div className="bg-muted/50 rounded-xl p-4 space-y-2">
+                              <h4 className="text-sm font-bold">What happens next:</h4>
+                              <div className="space-y-1.5">
+                                {[
+                                  { icon: <Search className="w-3.5 h-3.5" />, text: "AI crawls & analyzes website content, structure, and metadata" },
+                                  { icon: <FileText className="w-3.5 h-3.5" />, text: "Generates strategic plan with market research & competitive analysis" },
+                                  { icon: <Edit3 className="w-3.5 h-3.5" />, text: "You review, edit, and approve the plan" },
+                                  { icon: <Sparkles className="w-3.5 h-3.5" />, text: "AI generates elite bespoke HTML/CSS slides from approved plan" },
+                                ].map((step, i) => (
+                                  <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">{step.icon}</div>
+                                    {step.text}
+                                  </div>
                                 ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <Button onClick={generatePresentation} disabled={isGenerating} className="w-full h-12 text-base gap-2">
-                          <Wand2 className="w-5 h-5" /> Generate Research-Backed Presentation
-                        </Button>
+                              </div>
+                            </div>
+                            <Button onClick={analyzeWebsite} disabled={urlWorkflowStep === "analyzing"} className="w-full h-12 text-base gap-2">
+                              {urlWorkflowStep === "analyzing" ? (
+                                <><Loader2 className="w-5 h-5 animate-spin" /> Analyzing Website...</>
+                              ) : (
+                                <><Globe className="w-5 h-5" /> Analyze Website & Create Plan</>
+                              )}
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </Card>
                   </motion.div>
