@@ -159,7 +159,7 @@ For "content" field (PPTX fallback):
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Create a MANUS-QUALITY coded presentation about: ${topic}${additionalContext ? `\n\nContext: ${additionalContext}` : ''}\n\nIMPORTANT PROCESS:\n1. First RESEARCH the topic — gather real market data, statistics, company names, growth rates. Use precise numbers.\n2. Then STRUCTURE a compelling narrative arc with tension and resolution.\n3. Then CODE every slide as unique bespoke HTML with inline SVG icons, data visualizations, gradient cards, and cinematic layouts.\n4. Each slide MUST be visually distinct. No two slides should use the same layout pattern.\n\nGenerate exactly ${count} slides. Every slide must have complete custom HTML.` },
@@ -186,15 +186,13 @@ For "content" field (PPTX fallback):
 
     const data = await response.json();
     let raw = data.choices?.[0]?.message?.content || '';
+    if (!raw) throw new Error("Empty response from AI model");
     raw = raw.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-    // Fix control characters inside JSON string values (newlines/tabs the AI puts in HTML)
+    // Fix control characters inside JSON string values
+    raw = raw.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    // Replace unescaped newlines/tabs inside strings
     raw = raw.replace(/(?<=":[ ]*")((?:[^"\\]|\\.)*)(?=")/g, (match) => {
-      return match.replace(/[\x00-\x1F\x7F]/g, (ch) => {
-        if (ch === '\n') return '\\n';
-        if (ch === '\r') return '\\r';
-        if (ch === '\t') return '\\t';
-        return '';
-      });
+      return match.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
     });
     
     console.log("AI response length:", raw.length);
