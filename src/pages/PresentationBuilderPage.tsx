@@ -115,8 +115,11 @@ const PresentationBuilderPage = () => {
       const { data, error } = await supabase.functions.invoke("analyze-website", {
         body: { url: websiteUrl, action: "analyze" },
       });
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (error) {
+        const errMsg = data?.error || (error instanceof Error ? error.message : "Analysis failed");
+        throw new Error(errMsg);
+      }
+      if (data?.error) throw new Error(data.error);
 
       setWebsitePlan(data.plan);
       setEditablePlanTitle(data.plan.presentationPlan?.recommendedTitle || data.plan.companyName || "");
@@ -148,7 +151,8 @@ const PresentationBuilderPage = () => {
       setGenerationPhase("idle");
       toast.success("Website analyzed! Review the plan below.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to analyze website");
+      const msg = err instanceof Error ? err.message : "Failed to analyze website";
+      toast.error(msg.includes("Rate limit") ? "Rate limited — please wait 30 seconds and try again" : msg);
       setUrlWorkflowStep("idle");
       setGenerationPhase("idle");
     }
@@ -186,8 +190,12 @@ const PresentationBuilderPage = () => {
       });
 
       phaseTimers.forEach(clearTimeout);
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (error) {
+        const errMsg = data?.error || (error instanceof Error ? error.message : "Generation failed");
+        throw new Error(errMsg);
+      }
+      if (data?.error) throw new Error(data.error);
+      if (!data?.slides || data.slides.length === 0) throw new Error("No slides generated. Please try again.");
 
       setGenerationPhase("done");
       const slides = (data.slides || []).map((s: Slide, i: number) => ({ ...s, id: `slide-${i}-${Date.now()}` }));
@@ -198,7 +206,8 @@ const PresentationBuilderPage = () => {
       toast.success(`Generated ${slides.length} elite slides from website analysis!`);
     } catch (err) {
       phaseTimers.forEach(clearTimeout);
-      toast.error(err instanceof Error ? err.message : "Failed to generate");
+      const msg = err instanceof Error ? err.message : "Failed to generate";
+      toast.error(msg.includes("Rate limit") ? "Rate limited — please wait 30 seconds and try again" : msg);
       setUrlWorkflowStep("plan_ready");
     } finally {
       setIsGenerating(false);
@@ -224,8 +233,13 @@ const PresentationBuilderPage = () => {
         body: { topic, slideCount: parseInt(slideCount), style, additionalContext },
       });
       phaseTimers.forEach(clearTimeout);
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (error) {
+        // Extract error message from response body if available
+        const errMsg = data?.error || (error instanceof Error ? error.message : "Generation failed");
+        throw new Error(errMsg);
+      }
+      if (data?.error) throw new Error(data.error);
+      if (!data?.slides || data.slides.length === 0) throw new Error("No slides generated. Please try again.");
       setGenerationPhase("done");
       const slides = (data.slides || []).map((s: Slide, i: number) => ({ ...s, id: `slide-${i}-${Date.now()}` }));
       setPresentation({ ...data, slides });
@@ -234,7 +248,8 @@ const PresentationBuilderPage = () => {
       toast.success(`Generated ${slides.length} Manus-quality slides with real research!`);
     } catch (err) {
       phaseTimers.forEach(clearTimeout);
-      toast.error(err instanceof Error ? err.message : "Failed to generate");
+      const msg = err instanceof Error ? err.message : "Failed to generate";
+      toast.error(msg.includes("Rate limit") ? "Rate limited — please wait 30 seconds and try again" : msg);
     } finally {
       setIsGenerating(false);
       setGenerationPhase("idle");

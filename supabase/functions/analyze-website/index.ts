@@ -133,7 +133,7 @@ Return ONLY valid JSON. No markdown fences.`;
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: "You are a world-class business analyst. Return ONLY valid JSON." },
             { role: "user", content: analyzePrompt },
