@@ -53,10 +53,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   thinkingStage,
 }) => {
   const STAGE_INFO = {
-    understanding: { text: 'Understanding your query', icon: '🧠', color: 'text-blue-400' },
-    reasoning: { text: 'Deep reasoning', icon: '⚡', color: 'text-amber-400' },
-    generating: { text: 'Generating response', icon: '✨', color: 'text-violet-400' },
-    refining: { text: 'Refining answer', icon: '🎯', color: 'text-emerald-400' },
+    understanding: { text: 'Parsing intent & context', icon: '🧠', color: 'text-blue-400', glow: 'shadow-blue-500/20' },
+    reasoning: { text: 'Chain-of-thought reasoning', icon: '⚡', color: 'text-amber-400', glow: 'shadow-amber-500/20' },
+    generating: { text: 'Synthesizing response', icon: '✨', color: 'text-violet-400', glow: 'shadow-violet-500/20' },
+    refining: { text: 'Polishing & validating', icon: '🎯', color: 'text-emerald-400', glow: 'shadow-emerald-500/20' },
   };
 
   return (
