@@ -67,6 +67,11 @@ const PROACTIVE_AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proa
 const aiMessageCache = new Map<string, { message: string; timestamp: number }>();
 const AI_CACHE_TTL = 120000; // 2 min cache per trigger type
 
+// Global rate limiter: max 1 API call per 30 seconds
+let lastApiCallTimestamp = 0;
+const MIN_API_INTERVAL = 30000; // 30 seconds between API calls
+let consecutiveRateLimits = 0;
+
 async function generateAIMessage(context: {
   triggerType: string;
   currentPage: string;
@@ -82,7 +87,15 @@ async function generateAIMessage(context: {
     return cached.message;
   }
 
+  // Global rate limit: skip if called too recently
+  const now = Date.now();
+  const backoff = MIN_API_INTERVAL * Math.pow(2, Math.min(consecutiveRateLimits, 4));
+  if (now - lastApiCallTimestamp < backoff) {
+    return null;
+  }
+
   try {
+    lastApiCallTimestamp = now;
     const resp = await fetch(PROACTIVE_AI_URL, {
       method: 'POST',
       headers: {
@@ -92,7 +105,12 @@ async function generateAIMessage(context: {
       },
       body: JSON.stringify(context),
     });
+    if (resp.status === 429) {
+      consecutiveRateLimits++;
+      return null;
+    }
     if (!resp.ok) return null;
+    consecutiveRateLimits = 0;
     const data = await resp.json();
     const message = data.message;
     if (message) {
@@ -393,7 +411,7 @@ export function useProactiveAI(isChatOpen: boolean) {
         }
       }
       if (now % 10000 < 3000) rapidClickRef.current = 0;
-    }, 1500);
+    }, 10000);
     return () => clearInterval(interval);
   }, [detectedMood, enqueueMessage, location.pathname]);
 
