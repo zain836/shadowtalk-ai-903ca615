@@ -1363,9 +1363,8 @@ When a user asks you to write, create, draft, or generate any document (email, a
       systemPrompt += `\n\n## Current Mode: ${mode?.toUpperCase() || 'GENERAL'}\n${modePrompt}`;
     }
 
-    // === SPEED OPTIMIZATION: Smart model selection ===
-    // Flash for speed (3x faster), Pro only for complex/image queries
-    const model = useProModel ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview";
+    // === INTELLIGENCE UPGRADE: GPT-5.2 for complex, Gemini 3 Pro for standard ===
+    const model = useProModel ? "openai/gpt-5.2" : "google/gemini-3-pro-preview";
 
     console.log("[CHAT] Using model:", model, "complex:", useProModel, "hasImages:", hasImageContent, "msgs:", trimmedMessages.length);
 
