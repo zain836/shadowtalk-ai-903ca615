@@ -67,6 +67,11 @@ const PROACTIVE_AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proa
 const aiMessageCache = new Map<string, { message: string; timestamp: number }>();
 const AI_CACHE_TTL = 120000; // 2 min cache per trigger type
 
+// Global rate limiter: max 1 API call per 30 seconds
+let lastApiCallTimestamp = 0;
+const MIN_API_INTERVAL = 30000; // 30 seconds between API calls
+let consecutiveRateLimits = 0;
+
 async function generateAIMessage(context: {
   triggerType: string;
   currentPage: string;
