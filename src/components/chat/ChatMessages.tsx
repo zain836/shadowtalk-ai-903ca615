@@ -53,10 +53,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   thinkingStage,
 }) => {
   const STAGE_INFO = {
-    understanding: { text: 'Understanding your query', icon: '🧠', color: 'text-blue-400' },
-    reasoning: { text: 'Deep reasoning', icon: '⚡', color: 'text-amber-400' },
-    generating: { text: 'Generating response', icon: '✨', color: 'text-violet-400' },
-    refining: { text: 'Refining answer', icon: '🎯', color: 'text-emerald-400' },
+    understanding: { text: 'Parsing intent & context', icon: '🧠', color: 'text-blue-400', glow: 'shadow-blue-500/20' },
+    reasoning: { text: 'Chain-of-thought reasoning', icon: '⚡', color: 'text-amber-400', glow: 'shadow-amber-500/20' },
+    generating: { text: 'Synthesizing response', icon: '✨', color: 'text-violet-400', glow: 'shadow-violet-500/20' },
+    refining: { text: 'Polishing & validating', icon: '🎯', color: 'text-emerald-400', glow: 'shadow-emerald-500/20' },
   };
 
   return (
@@ -90,7 +90,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
           />
         ))}
 
-        {/* Loading indicator */}
+        {/* Premium thinking indicator */}
         {isLoading && (
           <motion.div 
             initial={{ opacity: 0, y: 12 }}
@@ -99,15 +99,13 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             className="flex items-start gap-3"
           >
             <motion.div 
-              animate={{ 
-                scale: [1, 1.06, 1],
-              }}
+              animate={{ scale: [1, 1.08, 1] }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-md shadow-primary/10"
+              className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary via-primary/80 to-secondary flex items-center justify-center shadow-lg shadow-primary/20"
             >
               <motion.div
                 animate={{ rotate: 360 }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
               >
                 <Sparkles className="h-4 w-4 text-primary-foreground" />
               </motion.div>
@@ -116,45 +114,61 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             <div className="relative">
               <AIResponseGlow isActive={true} />
               <motion.div 
-                className="bg-card/80 backdrop-blur-sm border border-border/30 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm"
+                className="bg-card/90 backdrop-blur-md border border-border/40 rounded-2xl rounded-tl-md px-4 py-3 shadow-lg"
               >
-                <div className="flex items-center gap-3">
-                  {/* Typing dots */}
-                  <div className="flex gap-1">
-                    {[0, 1, 2].map((i) => (
-                      <motion.div
-                        key={i}
-                        animate={{ 
-                          y: [0, -5, 0],
-                          opacity: [0.3, 1, 0.3]
-                        }}
-                        transition={{ 
-                          duration: 0.8, 
-                          repeat: Infinity, 
-                          delay: i * 0.15,
-                          ease: 'easeInOut'
-                        }}
-                        className="w-1.5 h-1.5 bg-primary/70 rounded-full" 
-                      />
-                    ))}
+                <div className="flex flex-col gap-2">
+                  {/* Progress bar */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1">
+                      {[0, 1, 2].map((i) => (
+                        <motion.div
+                          key={i}
+                          animate={{ y: [0, -6, 0], opacity: [0.3, 1, 0.3] }}
+                          transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+                          className="w-1.5 h-1.5 bg-primary rounded-full" 
+                        />
+                      ))}
+                    </div>
+                    
+                    {/* Thinking stage with enhanced animation */}
+                    <AnimatePresence mode="wait">
+                      {thinkingStage && (
+                        <motion.div
+                          key={thinkingStage}
+                          initial={{ opacity: 0, x: -10, filter: 'blur(4px)' }}
+                          animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                          exit={{ opacity: 0, x: 10, filter: 'blur(4px)' }}
+                          transition={{ duration: 0.3 }}
+                          className={`flex items-center gap-1.5 text-xs font-medium ${STAGE_INFO[thinkingStage].color}`}
+                        >
+                          <motion.span 
+                            animate={{ scale: [1, 1.3, 1] }}
+                            transition={{ duration: 1, repeat: Infinity }}
+                            className="text-sm"
+                          >
+                            {STAGE_INFO[thinkingStage].icon}
+                          </motion.span>
+                          <span>{STAGE_INFO[thinkingStage].text}</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                  
-                  {/* Thinking stage */}
-                  <AnimatePresence mode="wait">
-                    {thinkingStage && (
+
+                  {/* Animated progress track */}
+                  {thinkingStage && (
+                    <motion.div 
+                      initial={{ opacity: 0, scaleX: 0 }}
+                      animate={{ opacity: 1, scaleX: 1 }}
+                      className="h-0.5 bg-muted rounded-full overflow-hidden origin-left"
+                    >
                       <motion.div
-                        key={thinkingStage}
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 8 }}
-                        transition={{ duration: 0.2 }}
-                        className={`flex items-center gap-1.5 text-xs ${STAGE_INFO[thinkingStage].color}`}
-                      >
-                        <span className="text-xs">{STAGE_INFO[thinkingStage].icon}</span>
-                        <span className="font-medium">{STAGE_INFO[thinkingStage].text}</span>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                        className="h-full bg-gradient-to-r from-primary via-primary/60 to-primary rounded-full"
+                        animate={{ x: ['-100%', '100%'] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{ width: '50%' }}
+                      />
+                    </motion.div>
+                  )}
                 </div>
               </motion.div>
             </div>
