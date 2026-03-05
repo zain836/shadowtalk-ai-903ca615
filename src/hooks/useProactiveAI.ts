@@ -411,7 +411,7 @@ export function useProactiveAI(isChatOpen: boolean) {
         }
       }
       if (now % 10000 < 3000) rapidClickRef.current = 0;
-    }, 1500);
+    }, 10000);
     return () => clearInterval(interval);
   }, [detectedMood, enqueueMessage, location.pathname]);
 
