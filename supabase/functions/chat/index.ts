@@ -1115,8 +1115,7 @@ Return ONLY valid JSON in this exact format:
 
     console.log("[CHAT] Processing request with", messages.length, "messages, personality:", personality, "mode:", mode);
 
-    // === SPEED OPTIMIZATION: Smart model routing ===
-    // Detect complex queries that benefit from Pro model
+    // === INTELLIGENCE UPGRADE: Adaptive model routing for Kimi K2.5-tier reasoning ===
     const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user');
     const lastUserText = typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : 
       (Array.isArray(lastUserMsg?.content) ? lastUserMsg.content.find((c: any) => c.type === 'text')?.text || '' : '');
@@ -1127,20 +1126,25 @@ Return ONLY valid JSON in this exact format:
         /\b(write|create|build|design|architect)\s+(a|an|the)?\s*(full|complete|comprehensive|detailed|production)/i,
         /\b(explain|describe)\s+(in detail|thoroughly|comprehensively|step.by.step)/i,
         /\b(debug|troubleshoot|diagnose)\b.*\b(error|issue|problem|bug)\b/i,
-        /```[\s\S]{200,}/,  // Large code blocks
+        /\b(strategy|plan|roadmap|framework|architecture)\b/i,
+        /\b(math|calcul|equation|theorem|proof|algorithm)\b/i,
+        /\b(research|investigate|deep.dive|comprehensive)\b/i,
+        /```[\s\S]{200,}/,
       ];
-      return text.length > 500 || complexIndicators.some(r => r.test(text));
+      return text.length > 300 || complexIndicators.some(r => r.test(text));
     };
     
     const hasImageContent = messages.some((m: any) => 
       Array.isArray(m.content) && m.content.some((c: any) => c.type === 'image_url')
     );
     
-    const useProModel = isComplexQuery(lastUserText) || hasImageContent;
+    const isDeepReasoning = lastUserText.length > 800 || 
+      /\b(think|reason|step.by.step|chain.of.thought|why|how does|prove|derive)\b/i.test(lastUserText);
+    
+    const useProModel = isComplexQuery(lastUserText) || hasImageContent || isDeepReasoning;
 
-    // === SPEED OPTIMIZATION: Trim conversation history ===
-    // Keep system context manageable - last 20 messages max for speed
-    const MAX_HISTORY = 20;
+    // === MEMORY UPGRADE: Extended context window — 50 messages for deep coherence ===
+    const MAX_HISTORY = 50;
     const trimmedMessages = messages.length > MAX_HISTORY 
       ? messages.slice(-MAX_HISTORY) 
       : messages;
