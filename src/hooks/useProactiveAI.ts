@@ -87,7 +87,15 @@ async function generateAIMessage(context: {
     return cached.message;
   }
 
+  // Global rate limit: skip if called too recently
+  const now = Date.now();
+  const backoff = MIN_API_INTERVAL * Math.pow(2, Math.min(consecutiveRateLimits, 4));
+  if (now - lastApiCallTimestamp < backoff) {
+    return null;
+  }
+
   try {
+    lastApiCallTimestamp = now;
     const resp = await fetch(PROACTIVE_AI_URL, {
       method: 'POST',
       headers: {
@@ -97,7 +105,12 @@ async function generateAIMessage(context: {
       },
       body: JSON.stringify(context),
     });
+    if (resp.status === 429) {
+      consecutiveRateLimits++;
+      return null;
+    }
     if (!resp.ok) return null;
+    consecutiveRateLimits = 0;
     const data = await resp.json();
     const message = data.message;
     if (message) {
