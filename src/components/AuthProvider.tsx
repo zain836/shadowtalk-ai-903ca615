@@ -30,8 +30,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userPlan, setUserPlan] = useState<UserPlan>('free');
-  const [subscribed, setSubscribed] = useState(false);
+  // PAYMENT SYSTEM DISABLED: All users get elite access by default
+  const [userPlan, setUserPlan] = useState<UserPlan>('elite');
+  const [subscribed, setSubscribed] = useState(true);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
 
   // Stripe product IDs mapped to plan names (kept in sync with supabase/functions/_shared/plans.ts)

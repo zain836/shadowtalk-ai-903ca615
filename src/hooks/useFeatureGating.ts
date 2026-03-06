@@ -127,7 +127,8 @@ export const useFeatureGating = () => {
     return FEATURES.dailyMessages.freeLimit || 50;
   };
 
-  const effectivePlan = hasSpecialAccess ? 'enterprise' : userPlan;
+  // PAYMENT SYSTEM DISABLED: All users treated as enterprise
+  const effectivePlan = 'enterprise' as PlanTier;
   const effectiveLevel = getEffectivePlanLevel();
 
   return {
