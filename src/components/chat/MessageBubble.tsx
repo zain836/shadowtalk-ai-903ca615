@@ -9,6 +9,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { CodeBlock } from './CodeBlock';
 import { useToast } from '@/hooks/use-toast';
+import { DocumentArtifact, detectDocumentArtifact } from './DocumentArtifact';
 
 const extractUrls = (text: string): string[] => {
   const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
@@ -63,6 +64,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const { toast } = useToast();
   const isUser = message.type === 'user';
   const isWelcome = message.id === 'welcome';
+
+  // Detect document artifacts in AI responses
+  const documentArtifact = useMemo(() => {
+    if (isUser || isWelcome) return null;
+    return detectDocumentArtifact(message.content);
+  }, [message.content, isUser, isWelcome]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -220,6 +227,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             </div>
           )}
         </div>
+
+        {/* Document Artifact - auto-detected from AI response */}
+        {documentArtifact && (
+          <DocumentArtifact
+            title={documentArtifact.title}
+            content={documentArtifact.documentContent}
+            type={documentArtifact.type}
+          />
+        )}
 
         {/* Extracted URLs */}
         {!isUser && !isWelcome && (() => {
