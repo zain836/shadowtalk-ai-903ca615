@@ -65,6 +65,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const isUser = message.type === 'user';
   const isWelcome = message.id === 'welcome';
 
+  // Detect document artifacts in AI responses
+  const documentArtifact = useMemo(() => {
+    if (isUser || isWelcome) return null;
+    return detectDocumentArtifact(message.content);
+  }, [message.content, isUser, isWelcome]);
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
     toast({ title: 'Copied to clipboard' });
