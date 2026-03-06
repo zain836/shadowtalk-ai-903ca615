@@ -228,6 +228,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           )}
         </div>
 
+        {/* Document Artifact - auto-detected from AI response */}
+        {documentArtifact && (
+          <DocumentArtifact
+            title={documentArtifact.title}
+            content={documentArtifact.documentContent}
+            type={documentArtifact.type}
+          />
+        )}
+
         {/* Extracted URLs */}
         {!isUser && !isWelcome && (() => {
           const urls = extractUrls(message.content);
