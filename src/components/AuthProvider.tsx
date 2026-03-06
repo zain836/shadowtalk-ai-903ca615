@@ -30,8 +30,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userPlan, setUserPlan] = useState<UserPlan>('free');
-  const [subscribed, setSubscribed] = useState(false);
+  // PAYMENT SYSTEM DISABLED: All users get elite access by default
+  const [userPlan, setUserPlan] = useState<UserPlan>('elite');
+  const [subscribed, setSubscribed] = useState(true);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
 
   // Stripe product IDs mapped to plan names (kept in sync with supabase/functions/_shared/plans.ts)
@@ -45,70 +46,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Special email that gets all features free
   const SPECIAL_ACCESS_EMAILS = ['j3451500@gmail.com', 'almadadali00@gmail.com'];
 
+  // PAYMENT SYSTEM DISABLED: Skip subscription checks, all users get full access
   const checkSubscription = async () => {
-    if (!session) return;
-
-    // Check for special access email first
-    const userEmail = session.user?.email?.toLowerCase();
-    if (SPECIAL_ACCESS_EMAILS.some(e => e.toLowerCase() === userEmail)) {
-      setSubscribed(true);
-      setUserPlan('elite');
-      setSubscriptionEnd(null);
-      return;
-    }
-
-    try {
-      // 1) Primary source of truth: LemonSqueezy/webhook-backed subscribers table
-      const { data: lemonData, error: lemonError } = await supabase.functions.invoke('check-lemonsqueezy-subscription');
-
-      if (lemonError) {
-        logClientError(lemonError, {
-          feature: 'billing',
-          action: 'check-lemonsqueezy-subscription',
-          userId: session.user?.id,
-          severity: 'warning',
-        });
-      }
-
-      if (lemonData?.subscribed) {
-        setSubscribed(true);
-        setUserPlan((lemonData.plan as UserPlan) || 'pro');
-        setSubscriptionEnd(lemonData.subscription_end || null);
-        return;
-      }
-
-      // 2) Fallback to Stripe subscription lookup
-      const { data: stripeData, error: stripeError } = await supabase.functions.invoke('stripe-subscription');
-
-      if (stripeError) {
-        logClientError(stripeError, {
-          feature: 'billing',
-          action: 'stripe-subscription',
-          userId: session.user?.id,
-          severity: 'warning',
-        });
-        return;
-      }
-
-      if (stripeData?.subscribed) {
-        setSubscribed(true);
-        const productId = stripeData.product_id as string | null | undefined;
-        const plan = productId ? (PRODUCT_PLANS[productId] || 'pro') : 'pro';
-        setUserPlan(plan);
-        setSubscriptionEnd(stripeData.subscription_end || null);
-      } else {
-        setSubscribed(false);
-        setUserPlan('free');
-        setSubscriptionEnd(null);
-      }
-    } catch (error) {
-      logClientError(error, {
-        feature: 'billing',
-        action: 'checkSubscription',
-        userId: session.user?.id,
-        severity: 'error',
-      });
-    }
+    setSubscribed(true);
+    setUserPlan('elite');
+    setSubscriptionEnd(null);
   };
 
   const checkAndAssignAdminRole = async () => {
@@ -134,8 +76,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             checkAndAssignAdminRole();
           }, 100);
         } else {
-          setUserPlan('free');
-          setSubscribed(false);
+          // PAYMENT DISABLED: Keep elite even when logged out
+          setUserPlan('elite');
+          setSubscribed(true);
           setSubscriptionEnd(null);
         }
 
@@ -175,8 +118,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
-    setUserPlan('free');
-    setSubscribed(false);
+    // PAYMENT DISABLED: Keep elite access state
+    setUserPlan('elite');
+    setSubscribed(true);
     setSubscriptionEnd(null);
   };
 
