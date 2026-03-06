@@ -118,8 +118,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
-    setUserPlan('free');
-    setSubscribed(false);
+    // PAYMENT DISABLED: Keep elite access state
+    setUserPlan('elite');
+    setSubscribed(true);
     setSubscriptionEnd(null);
   };
 
