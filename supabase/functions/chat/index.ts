@@ -1374,8 +1374,9 @@ When a user asks you to write, create, draft, or generate any document (email, a
       systemPrompt += `\n\n## Current Mode: ${mode?.toUpperCase() || 'GENERAL'}\n${modePrompt}`;
     }
 
-    // === INTELLIGENCE UPGRADE: GPT-5.2 for complex, Gemini 3 Pro for standard ===
+    // === KIMI K2.5-BEATING: GPT-5.2 for complex/swarm/visual, Gemini 3 Pro for standard ===
     const model = useProModel ? "openai/gpt-5.2" : "google/gemini-3-pro-preview";
+    console.log("[CHAT] Agent Swarm:", isSwarmQuery, "Visual Coding:", isVisualCoding, "Deep Reasoning:", isDeepReasoning);
 
     console.log("[CHAT] Using model:", model, "complex:", useProModel, "hasImages:", hasImageContent, "msgs:", trimmedMessages.length);
 
