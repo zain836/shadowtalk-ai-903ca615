@@ -76,8 +76,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             checkAndAssignAdminRole();
           }, 100);
         } else {
-          setUserPlan('free');
-          setSubscribed(false);
+          // PAYMENT DISABLED: Keep elite even when logged out
+          setUserPlan('elite');
+          setSubscribed(true);
           setSubscriptionEnd(null);
         }
 
