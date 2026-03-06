@@ -79,10 +79,9 @@ export const useFeatureGating = () => {
   // Check if user has special access
   const hasSpecialAccess = SPECIAL_ACCESS_EMAILS.some(e => e.toLowerCase() === user?.email?.toLowerCase());
 
-  // Get effective plan level (handle the type correctly)
+  // PAYMENT SYSTEM DISABLED: All users get full enterprise-level access
   const getEffectivePlanLevel = (): number => {
-    if (hasSpecialAccess) return planHierarchy.enterprise;
-    return planHierarchy[userPlan as PlanTier] ?? 0;
+    return planHierarchy.enterprise;
   };
 
   const canAccess = (featureKey: string): boolean => {
