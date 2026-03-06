@@ -9,6 +9,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { CodeBlock } from './CodeBlock';
 import { useToast } from '@/hooks/use-toast';
+import { DocumentArtifact, detectDocumentArtifact } from './DocumentArtifact';
 
 const extractUrls = (text: string): string[] => {
   const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
