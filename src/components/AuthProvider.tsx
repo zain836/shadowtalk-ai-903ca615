@@ -30,27 +30,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  // PAYMENT SYSTEM DISABLED: All users get elite access by default
-  const [userPlan, setUserPlan] = useState<UserPlan>('elite');
-  const [subscribed, setSubscribed] = useState(true);
+  const [userPlan, setUserPlan] = useState<UserPlan>('free');
+  const [subscribed, setSubscribed] = useState(false);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
 
-  // Stripe product IDs mapped to plan names (kept in sync with supabase/functions/_shared/plans.ts)
+  // Stripe product IDs mapped to plan names
   const PRODUCT_PLANS: Record<string, UserPlan> = {
-    'prod_TZocSSpPddFCH1': 'pro',      // ShadowTalk Pro
-    'prod_TbiuwlUUg3F17C': 'premium',  // ShadowTalk Premium
-    'prod_TbhEVUPSLMSF53': 'elite',    // ShadowTalk Elite
-    'prod_TbivJcOChrAcvq': 'enterprise', // ShadowTalk Enterprise
+    'prod_TZocSSpPddFCH1': 'pro',
+    'prod_TbiuwlUUg3F17C': 'premium',
+    'prod_TbhEVUPSLMSF53': 'elite',
+    'prod_TbivJcOChrAcvq': 'enterprise',
   };
 
-  // Special email that gets all features free
+  // Special emails that get all features free
   const SPECIAL_ACCESS_EMAILS = ['j3451500@gmail.com', 'almadadali00@gmail.com'];
 
-  // PAYMENT SYSTEM DISABLED: Skip subscription checks, all users get full access
   const checkSubscription = async () => {
-    setSubscribed(true);
-    setUserPlan('elite');
-    setSubscriptionEnd(null);
+    if (!session?.user) {
+      setSubscribed(false);
+      setUserPlan('free');
+      setSubscriptionEnd(null);
+      return;
+    }
+
+    // Special access emails get elite for free
+    if (SPECIAL_ACCESS_EMAILS.some(e => e.toLowerCase() === session.user.email?.toLowerCase())) {
+      setSubscribed(true);
+      setUserPlan('elite');
+      setSubscriptionEnd(null);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('check-subscription');
+      
+      if (error) {
+        console.error('Subscription check error:', error);
+        setSubscribed(false);
+        setUserPlan('free');
+        return;
+      }
+
+      if (data?.subscribed && data?.product_id) {
+        const plan = PRODUCT_PLANS[data.product_id] || 'pro';
+        setSubscribed(true);
+        setUserPlan(plan);
+        setSubscriptionEnd(data.subscription_end || null);
+      } else {
+        setSubscribed(false);
+        setUserPlan('free');
+        setSubscriptionEnd(null);
+      }
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+      setSubscribed(false);
+      setUserPlan('free');
+    }
   };
 
   const checkAndAssignAdminRole = async () => {
@@ -59,7 +94,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await supabase.functions.invoke('assign-admin-role');
     } catch (error) {
-      // Silent fail - not critical
       console.error('Error checking admin role:', error);
     }
   };
@@ -76,9 +110,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             checkAndAssignAdminRole();
           }, 100);
         } else {
-          // PAYMENT DISABLED: Keep elite even when logged out
-          setUserPlan('elite');
-          setSubscribed(true);
+          setUserPlan('free');
+          setSubscribed(false);
           setSubscriptionEnd(null);
         }
 
@@ -118,9 +151,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
-    // PAYMENT DISABLED: Keep elite access state
-    setUserPlan('elite');
-    setSubscribed(true);
+    setUserPlan('free');
+    setSubscribed(false);
     setSubscriptionEnd(null);
   };
 
