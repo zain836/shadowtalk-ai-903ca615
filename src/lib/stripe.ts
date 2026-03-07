@@ -2,9 +2,9 @@
 
 export const STRIPE_CONFIG = {
   prices: {
-    pro: "price_1ScezZInnwEWcho15wMKeOMU", // $9.99/month
-    premium: "price_1SeVSbInnwEWcho1EILyNsK4", // $29.99/month
-    elite: "price_1SeTpoInnwEWcho1ETYh5Udy", // $49.99/month
+    pro: "price_1ScezZInnwEWcho15wMKeOMU", // $5/month
+    premium: "price_1SeVSbInnwEWcho1EILyNsK4", // $15/month
+    elite: "price_1SeTpoInnwEWcho1ETYh5Udy", // $20/month
   },
   products: {
     pro: "prod_TZocSSpPddFCH1",
@@ -31,36 +31,48 @@ export const getPlanFromProductId = (productId: string): PlanName | 'free' => {
   return entry ? (entry[0] as PlanName) : 'free';
 };
 
-// Plan display information - BETTER THAN CHATGPT!
-// ChatGPT: Free=limited, Go=$5/mo, Plus=$20/mo, Pro=$200/mo
-// ShadowTalk: More features at every tier!
+// Plan display information
+// Strategy: FREE plan includes ALL features with daily limits
+// Paid plans = remove limits + better models + priority
+// ChatGPT: Free=crippled, Go=$10, Plus=$20, Pro=$200
+// ShadowTalk: Free=EVERYTHING with limits, Pro=$5, Premium=$15, Elite=$20
 export const PLAN_DETAILS = {
   free: {
     name: "Free",
     price: 0,
     features: [
+      "✅ ALL features unlocked (no paywalls!)",
       "50 messages per day",
-      "🖼️ 4 image generations/day (ChatGPT: ~3)",
-      "🔬 5 Deep Research queries/day (ChatGPT: ~3)",
-      "Basic code generation",
-      "10+ language translation",
-      "Community support",
+      "🖼️ 5 image generations/day",
+      "🎙️ 3 voice sessions/day",
+      "🔬 3 Deep Research queries/day",
+      "📄 Canvas & document editing",
+      "🔍 Web search & browsing",
+      "📁 File uploads & analysis",
+      "🧠 AI Memory across sessions",
+      "💻 Code generation & execution",
+      "🌐 10+ language translation",
+      "3 S.E.E. missions/month",
+      "Basic models (Gemini Flash)",
     ],
-    comparison: "More generous than ChatGPT Free!",
+    comparison: "ChatGPT Free blocks features. We unlock ALL!",
   },
   pro: {
     name: "Pro",
     price: 5,
     features: [
-      "Unlimited messages",
+      "Everything in Free, PLUS:",
+      "♾️ Unlimited messages",
       "🖼️ 20 image generations/day",
+      "🎙️ Unlimited voice sessions",
       "🔬 20 Deep Research queries/day",
-      "Advanced code generation & debugging",
-      "Chat export & full history",
+      "⚡ Pro models (GPT-5, Gemini Pro)",
+      "🚀 Priority queue (2x faster)",
+      "📤 Chat export & full history",
       "100+ language translation",
       "No advertisements",
+      "15 S.E.E. missions/month",
       "Priority support (< 4h)",
-      "📍 Geographic insights dashboard",
     ],
     comparison: "Half the price of ChatGPT Plus ($20)!",
   },
@@ -68,16 +80,16 @@ export const PLAN_DETAILS = {
     name: "Premium",
     price: 15,
     features: [
-      "Everything in Pro",
+      "Everything in Pro, PLUS:",
       "🖼️ 50 image generations/day",
       "🔬 50 Deep Research queries/day",
-      "Proactive Context Engine (PCE)",
-      "Multi-Step Workflow Executor",
-      "Document generation (contracts, NDAs)",
-      "Real-time collaboration",
+      "🧠 Extended context (500 msg history)",
+      "📄 Proactive Context Engine (PCE)",
+      "⚙️ Multi-Step Workflow Executor",
+      "📝 Document generation (contracts, NDAs)",
+      "👥 Real-time collaboration rooms",
+      "30 S.E.E. missions/month",
       "Priority support (< 2h)",
-      "🗺️ User journey tracking",
-      "📊 Export analytics (CSV/JSON)",
     ],
     comparison: "Premium features at ChatGPT Plus price!",
   },
@@ -85,16 +97,17 @@ export const PLAN_DETAILS = {
     name: "Elite",
     price: 20,
     features: [
-      "Everything in Premium",
-      "🖼️ Unlimited image generations",
-      "🔬 Unlimited Deep Research",
-      "✈️ Offline mode (works anywhere)",
+      "Everything in Premium, PLUS:",
+      "♾️ Unlimited image generations",
+      "♾️ Unlimited Deep Research",
+      "✈️ Full offline mode (works anywhere!)",
       "🔒 Stealth Vault (E2E encrypted)",
-      "AI agents & workflow automation",
-      "Custom model fine-tuning",
-      "White-label solutions",
+      "🤖 AI agents & workflow automation",
+      "🎨 Custom model fine-tuning",
+      "🏷️ White-label solutions",
+      "50 S.E.E. missions/month",
       "24/7 phone support",
-      "🌍 Global analytics & heatmaps",
+      "⚡ Fastest models + highest priority",
     ],
     comparison: "75% cheaper than ChatGPT Pro ($200)!",
   },
