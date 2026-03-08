@@ -122,33 +122,32 @@ const DocsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const features = [
-    { icon: Brain, title: "Proactive AI Intelligence", description: "Real AI-generated contextual suggestions based on your behavior — no mock data", badge: "New" },
-    { icon: Compass, title: "ShadowBrowser", description: "Built-in AI-powered browser with Browse Together mode", badge: "Free" },
-    { icon: Eye, title: "Browse Together", description: "AI assists while you browse - summaries, insights, Q&A", badge: "Free" },
-    { icon: MessageSquare, title: "AI Chat", description: "Engage in natural conversations with advanced AI models — powered by real Gemini AI", badge: "Free" },
-    { icon: Image, title: "Image Generation", description: "Create stunning images from text descriptions", badge: "Pro" },
-    { icon: Mic, title: "Voice Input", description: "Speak to the AI using voice recognition", badge: "Free" },
-    { icon: Code, title: "Code Generation", description: "Generate and debug code in multiple languages", badge: "Pro" },
-    { icon: Brain, title: "Model Fine-Tuning", description: "Train personalized AI responses", badge: "Elite" },
-    { icon: Palette, title: "White-Label", description: "Customize branding and appearance", badge: "Elite" },
-    { icon: Users, title: "Collaborative Rooms", description: "Chat with AI together in real-time", badge: "Pro" },
-    { icon: Shield, title: "Stealth Mode", description: "Encrypted vault for sensitive data", badge: "Elite" },
+    { icon: Brain, title: "Multi-Model AI Engine", description: "Powered by Gemini & GPT-5 with adaptive model routing for optimal responses", badge: "Core" },
+    { icon: Compass, title: "ShadowBrowser", description: "Built-in AI-powered browser with Browse Together mode for real-time assistance", badge: "Free" },
+    { icon: Eye, title: "Browse Together", description: "AI assists while you browse — summaries, insights, and contextual Q&A", badge: "Free" },
+    { icon: MessageSquare, title: "AI Chat", description: "Natural conversations with context memory, personality modes, and streaming responses", badge: "Free" },
+    { icon: Shield, title: "Cyber Command Center", description: "Full security operations suite — threat intel, OSINT, pentest copilot, bug bounty tracker", badge: "New" },
+    { icon: Mic, title: "Voice Input & TTS", description: "Speak to AI with voice recognition and ElevenLabs text-to-speech output", badge: "Free" },
+    { icon: Code, title: "Code Generation", description: "Generate, debug, and explain code in multiple languages with Code Canvas", badge: "Pro" },
+    { icon: Brain, title: "AI Memory System", description: "Persistent memory that learns your preferences and business context over time", badge: "Core" },
+    { icon: Palette, title: "White-Label Branding", description: "Full workspace customization — logos, colors, fonts, and custom domains", badge: "Elite" },
+    { icon: Users, title: "Collaborative Rooms", description: "Real-time multi-user AI chat rooms with document collaboration", badge: "Pro" },
+    { icon: Lock, title: "Stealth Vault", description: "AES-256-GCM encrypted storage for sensitive data — never leaves your device", badge: "Elite" },
   ];
 
   const quickStartSteps = [
-    { step: 1, title: "Create an Account", description: "Sign up with your email or social login to get started. No credit card required for the free tier.", icon: Users },
-    { step: 2, title: "Start Chatting", description: "Open the chatbot and start typing your questions or prompts. The AI will respond in real-time with helpful answers.", icon: MessageSquare },
-    { step: 3, title: "Explore Features", description: "Try different modes, voice input, and file uploads for enhanced interactions. Each mode is optimized for specific tasks.", icon: Zap },
-    { step: 4, title: "Upgrade for More", description: "Unlock advanced features with Pro or Elite plans. Get image generation, collaborative rooms, and more.", icon: Crown },
+    { step: 1, title: "Create an Account", description: "Sign up with email. No credit card required for the free tier.", icon: Users },
+    { step: 2, title: "Start Chatting", description: "Open the chatbot and start typing. AI responds in real-time with streaming.", icon: MessageSquare },
+    { step: 3, title: "Explore Tools", description: "Try Cyber Command Center, ShadowBrowser, voice input, and mission control.", icon: Zap },
+    { step: 4, title: "Upgrade for More", description: "Unlock image generation, collaborative rooms, stealth vault, and API access.", icon: Crown },
   ];
 
   const apiEndpoints = [
-    { method: "POST", endpoint: "/v1/chat", description: "Send a message and receive AI response", example: `{\n  "messages": [{"role": "user", "content": "Hello!"}],\n  "model": "gemini-2.5-flash",\n  "personality": "friendly"\n}` },
-    { method: "POST", endpoint: "/v1/images/generate", description: "Generate an image from text prompt", example: `{\n  "prompt": "A sunset over mountains",\n  "size": "1024x1024"\n}` },
-    { method: "GET", endpoint: "/v1/conversations", description: "List user conversations", example: null },
-    { method: "POST", endpoint: "/v1/rooms", description: "Create a collaborative room", example: `{\n  "name": "Team Brainstorm",\n  "is_public": true\n}` },
-    { method: "GET", endpoint: "/v1/rooms/:id/messages", description: "Get messages from a room", example: null },
-    { method: "POST", endpoint: "/v1/transcribe", description: "Transcribe audio to text", example: `{\n  "audio": "base64_encoded_audio",\n  "language": "en"\n}` },
+    { method: "POST", endpoint: "/functions/v1/chat", description: "Send a message and receive streaming AI response", example: `{\n  "messages": [{"role": "user", "content": "Hello!"}],\n  "personality": "friendly"\n}` },
+    { method: "POST", endpoint: "/functions/v1/cyber-ai-copilot", description: "Security-focused AI assistant with specialized modes", example: `{\n  "messages": [{"role": "user", "content": "Analyze CVE-2026-0217"}],\n  "mode": "exploit"\n}` },
+    { method: "POST", endpoint: "/functions/v1/website-security-scan", description: "Scan a website for security headers and vulnerabilities", example: `{\n  "url": "https://example.com",\n  "scanDepth": "standard"\n}` },
+    { method: "POST", endpoint: "/functions/v1/web-search", description: "AI-powered web search with summarization", example: `{\n  "query": "latest CVE vulnerabilities 2026"\n}` },
+    { method: "POST", endpoint: "/functions/v1/generate-blog", description: "Generate AI-written blog posts", example: null },
   ];
 
   const chatModes = [
