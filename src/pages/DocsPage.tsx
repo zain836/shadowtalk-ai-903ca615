@@ -670,13 +670,13 @@ const DocsPage = () => {
               <DocSection title="Frequently Asked Questions">
                 <Accordion type="single" collapsible className="space-y-3">
                   {[
-                    { q: "How do I get started with ShadowTalk AI?", a: "Sign up for a free account using your email or social login. No credit card required for the free tier. Once signed up, you can immediately start chatting with our AI assistant." },
-                    { q: "What AI models does ShadowTalk use?", a: "We primarily use Google's Gemini models (gemini-2.5-pro and gemini-2.5-flash) for text and multimodal capabilities. For image generation, we use gemini-2.5-flash-image-preview." },
-                    { q: "Is my data secure and private?", a: "Absolutely. We use end-to-end encryption, and our offline mode processes everything locally. We don't train on your data and offer a Stealth Vault for sensitive conversations." },
-                    { q: "Can I use ShadowTalk in my own application?", a: "Yes! Our API allows you to integrate ShadowTalk AI into your applications. Available on Elite plans with comprehensive documentation and SDKs." },
-                    { q: "What makes ShadowTalk different from other AI chatbots?", a: "We offer unique features like offline AI, ShadowBrowser, real-time proactive intelligence, collaborative rooms, and a privacy-first approach with local AI processing." },
+                    { q: "How do I get started with ShadowTalk AI?", a: "Sign up for a free account using your email. No credit card required. Once signed up, you can immediately start chatting with our AI assistant." },
+                    { q: "What AI models does ShadowTalk use?", a: "We use Google's Gemini models (Gemini 3 Flash Preview, Gemini 2.5 Pro/Flash) and OpenAI GPT-5 family through adaptive model routing that picks the best model for each query." },
+                    { q: "Is my data secure and private?", a: "Yes. We use end-to-end encryption, and our Stealth Vault processes everything locally with AES-256-GCM. We don't train on your data." },
+                    { q: "What is the Cyber Command Center?", a: "It's a full security operations platform with AI Pentest Copilot, live threat intelligence (CVE feeds), OSINT tools, bug bounty tracker, and incident response war room — all connected to real backends." },
+                    { q: "Can I use ShadowTalk in my own application?", a: "Yes! Our API provides access to chat, security scanning, and AI capabilities. Available on Elite plans with full documentation." },
                     { q: "How does offline mode work?", a: "We use WebLLM technology to run AI models directly in your browser. No internet needed, and your data never leaves your device. Available on Elite plans." },
-                    { q: "Can I collaborate with my team?", a: "Yes! Our collaborative rooms feature lets multiple users interact with AI together in real-time. Available on Pro and Elite plans." },
+                    { q: "Does the blog use AI-generated content?", a: "Yes! Our blog is automatically updated daily with fresh, AI-generated articles covering cybersecurity, AI technology, tutorials, and industry insights." },
                   ].map((faq, i) => (
                     <AccordionItem key={i} value={`faq-${i}`} className="card-glass px-5 border-border/30">
                       <AccordionTrigger className="text-left hover:no-underline hover:text-primary transition-colors font-medium">{faq.q}</AccordionTrigger>
