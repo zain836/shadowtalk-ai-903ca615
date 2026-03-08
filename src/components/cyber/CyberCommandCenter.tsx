@@ -7,15 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Shield, Crosshair, Radio, FlaskConical, AlertTriangle, Search,
   Activity, Bug, Terminal, Globe, Clock, Zap, Eye, Lock,
   Server, Wifi, ChevronRight, ExternalLink, Target, Skull,
   FileWarning, Radar, Flame, Database, Network, ShieldAlert,
   ShieldCheck, ArrowUpRight, Play, Pause, RotateCcw, Download,
-  Copy, CheckCircle2, XCircle, Info, TrendingUp, Layers, BookOpen
+  Copy, CheckCircle2, XCircle, Info, TrendingUp, Layers, BookOpen,
+  RefreshCw, History, AlertCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLiveCVEs, useThreatActors, useWebsiteScan, useScanHistory, useRealtimeCVEs } from "@/hooks/useThreatIntel";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
 
 // ── Threat Intelligence Data ──────────────────────────────
 const liveCVEs = [
