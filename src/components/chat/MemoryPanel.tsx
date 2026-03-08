@@ -101,8 +101,8 @@ export const MemoryPanel = ({ onMemoryUpdate }: MemoryPanelProps) => {
     }
   };
 
-  const addMemory = () => {
-    if (!newMemory.trim()) return;
+  const addMemory = async () => {
+    if (!newMemory.trim() || !user) return;
     
     const memory: Memory = {
       id: crypto.randomUUID(),
@@ -114,12 +114,28 @@ export const MemoryPanel = ({ onMemoryUpdate }: MemoryPanelProps) => {
     const updated = [...memories, memory];
     saveMemories(updated);
     setNewMemory("");
+
+    // Sync to backend
+    await supabase.from('ai_memories').insert({
+      id: memory.id,
+      user_id: user.id,
+      content: memory.content,
+      category: memory.category,
+      source: 'manual',
+    });
+
     toast({ title: "Memory added", description: "I'll remember this for future conversations." });
   };
 
-  const deleteMemory = (id: string) => {
+  const deleteMemory = async (id: string) => {
     const updated = memories.filter(m => m.id !== id);
     saveMemories(updated);
+
+    // Delete from backend
+    if (user) {
+      await supabase.from('ai_memories').delete().eq('id', id).eq('user_id', user.id);
+    }
+
     toast({ title: "Memory deleted" });
   };
 
