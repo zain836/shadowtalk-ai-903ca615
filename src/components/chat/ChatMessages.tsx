@@ -59,9 +59,18 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     refining: { text: 'Polishing & validating', icon: '🎯', color: 'text-emerald-400', glow: 'shadow-emerald-500/20' },
   };
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to top when suggestions are shown (initial state)
+  useEffect(() => {
+    if (showSuggestions && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [showSuggestions]);
+
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth">
-      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-8 space-y-6 sm:space-y-7">
+    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth">
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-6 sm:space-y-7">
         {/* Suggested prompts */}
         {showSuggestions && (
           <SuggestedPrompts 
