@@ -16,6 +16,7 @@ import { PersonalIDE } from "@/components/chat/PersonalIDE";
 import { Canvas } from "@/components/chat/Canvas";
 import { ImageGenerator } from "@/components/chat/ImageGenerator";
 import { ImageDecoder } from "@/components/chat/ImageDecoder";
+import { MusicGenerator } from "@/components/chat/MusicGenerator";
 
 import { EditMessageDialog } from "@/components/chat/EditMessageDialog";
 import { AdBanner } from "@/components/chat/AdBanner";
