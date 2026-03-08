@@ -234,13 +234,21 @@ const AuthPage = () => {
         if (error) throw error;
         if (data.user) await saveCredentialsForOffline(cleanEmail, cleanPassword, data.user.id);
         toast({ title: "Success", description: "Logged in successfully!" });
+        setLoading(false);
+        await playWelcomeVoice(cleanEmail);
         navigate('/chatbot');
       } else {
         const { data, error } = await supabase.auth.signUp({ email: cleanEmail, password: cleanPassword, options: { emailRedirectTo: `${window.location.origin}/` } });
         if (error) throw error;
-        if (data.user && data.session) await saveCredentialsForOffline(cleanEmail, cleanPassword, data.user.id);
-        toast({ title: "Success", description: data.session ? "Account created!" : "Check your email to confirm!" });
-        if (data.session) navigate('/chatbot');
+        if (data.user && data.session) {
+          await saveCredentialsForOffline(cleanEmail, cleanPassword, data.user.id);
+          toast({ title: "Success", description: "Account created!" });
+          setLoading(false);
+          await playWelcomeVoice(cleanEmail);
+          navigate('/chatbot');
+        } else {
+          toast({ title: "Success", description: "Check your email to confirm!" });
+        }
       }
     } catch (error: any) {
       toast({ title: "Authentication Failed", description: error.message, variant: "destructive" });
