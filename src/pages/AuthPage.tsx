@@ -495,14 +495,32 @@ const AuthPage = () => {
           ))}
         </div>
 
-        {/* Robot image with animations */}
+        {/* Robot image with cursor-tracking reactions */}
         <motion.div
+          ref={robotContainerRef}
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1, delay: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-          className="relative z-10 cursor-pointer group/robot"
+          className="relative z-10 cursor-pointer"
+          onMouseMove={(e) => {
+            if (!robotContainerRef.current) return;
+            const rect = robotContainerRef.current.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const deltaX = (e.clientX - centerX) / (rect.width / 2);
+            const deltaY = (e.clientY - centerY) / (rect.height / 2);
+            setRobotTilt({ rotateY: deltaX * 15, rotateX: -deltaY * 10 });
+            setMousePos({ x: deltaX, y: deltaY });
+            const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            setEyeGlow(Math.max(0.3, 1 - dist * 0.5));
+          }}
           onMouseEnter={() => setRobotReacting(true)}
-          onMouseLeave={() => { setRobotReacting(false); setRobotMessage(""); }}
+          onMouseLeave={() => {
+            setRobotReacting(false);
+            setRobotMessage("");
+            setRobotTilt({ rotateX: 0, rotateY: 0 });
+            setEyeGlow(0.3);
+          }}
           onClick={() => {
             const msgs = [
               "🔒 Your secrets are safe with me.",
@@ -511,84 +529,142 @@ const AuthPage = () => {
               "🛡️ Encrypting everything. Always.",
               "🤖 I guard. You create.",
               "🔐 AES-256-GCM active.",
+              "🧠 Processing... threat level: zero.",
+              "⚔️ 600,000 PBKDF2 iterations. Try me.",
             ];
             setRobotMessage(msgs[Math.floor(Math.random() * msgs.length)]);
+            setTimeout(() => setRobotMessage(""), 3000);
           }}
+          style={{ perspective: 800 }}
         >
-          {/* Glow ring behind robot — speeds up on hover */}
+          {/* Outer scanning ring */}
           <motion.div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] rounded-full border border-primary/10 transition-all duration-500 group-hover/robot:border-primary/40"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px] rounded-full"
+            style={{
+              border: `1px solid hsl(var(--primary) / ${robotReacting ? 0.3 : 0.08})`,
+              transition: "border-color 0.5s",
+            }}
             animate={{ rotate: 360 }}
-            transition={{ duration: robotReacting ? 8 : 30, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: robotReacting ? 6 : 30, repeat: Infinity, ease: "linear" }}
           >
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary/50 transition-all duration-300 group-hover/robot:w-3 group-hover/robot:h-3 group-hover/robot:bg-primary" />
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-1.5 h-1.5 rounded-full bg-secondary/40 transition-all duration-300 group-hover/robot:w-2.5 group-hover/robot:h-2.5 group-hover/robot:bg-secondary" />
+            <motion.div
+              className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary"
+              animate={robotReacting ? { width: [6, 10, 6], height: [6, 10, 6], opacity: [0.6, 1, 0.6] } : { width: 6, height: 6, opacity: 0.4 }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+            <motion.div
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rounded-full bg-secondary"
+              animate={robotReacting ? { width: [4, 8, 4], height: [4, 8, 4], opacity: [0.4, 1, 0.4] } : { width: 4, height: 4, opacity: 0.3 }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
           </motion.div>
 
+          {/* Inner ring */}
           <motion.div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] rounded-full border border-primary/5 transition-all duration-500 group-hover/robot:border-primary/20"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] h-[360px] rounded-full"
+            style={{
+              border: `1px solid hsl(var(--primary) / ${robotReacting ? 0.2 : 0.05})`,
+              transition: "border-color 0.5s",
+            }}
             animate={{ rotate: -360 }}
-            transition={{ duration: robotReacting ? 6 : 20, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: robotReacting ? 8 : 25, repeat: Infinity, ease: "linear" }}
           >
-            <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-accent/40 transition-all duration-300 group-hover/robot:w-2.5 group-hover/robot:h-2.5 group-hover/robot:bg-accent" />
+            <motion.div
+              className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 rounded-full bg-accent"
+              animate={robotReacting ? { width: [4, 7, 4], height: [4, 7, 4] } : { width: 4, height: 4 }}
+              transition={{ duration: 1.8, repeat: Infinity }}
+            />
           </motion.div>
 
-          {/* Eye glow overlay — appears on hover */}
+          {/* The robot — 3D tilts toward cursor */}
+          <motion.div
+            animate={{
+              rotateX: robotTilt.rotateX,
+              rotateY: robotTilt.rotateY,
+            }}
+            transition={{ type: "spring", stiffness: 150, damping: 15, mass: 0.5 }}
+            style={{ transformStyle: "preserve-3d" }}
+          >
+            <motion.img
+              src={shadowRobotImg}
+              alt="ShadowTalk AI Guardian"
+              className="w-[380px] h-[380px] object-contain relative z-10"
+              animate={robotReacting ? { y: [0, -6, 0] } : { y: [0, -14, 0] }}
+              transition={robotReacting ? {
+                duration: 2, repeat: Infinity, ease: "easeInOut",
+              } : {
+                duration: 5, repeat: Infinity, ease: "easeInOut",
+              }}
+              style={{
+                filter: `drop-shadow(0 0 ${robotReacting ? 80 : 40}px hsl(var(--primary) / ${eyeGlow}))`,
+                transition: "filter 0.3s",
+              }}
+            />
+          </motion.div>
+
+          {/* Dynamic eye glow that follows cursor */}
           <AnimatePresence>
             {robotReacting && (
               <motion.div
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                animate={{ opacity: eyeGlow * 0.6 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] h-[340px] z-20 pointer-events-none"
-              >
-                <div className="absolute inset-0 rounded-full bg-gradient-radial from-primary/20 via-transparent to-transparent animate-pulse" />
-              </motion.div>
+                className="absolute z-20 pointer-events-none"
+                style={{
+                  top: `calc(38% + ${mousePos.y * 8}px)`,
+                  left: `calc(50% + ${mousePos.x * 12}px)`,
+                  transform: "translate(-50%, -50%)",
+                  width: 120,
+                  height: 40,
+                  background: `radial-gradient(ellipse, hsl(var(--primary) / 0.5) 0%, transparent 70%)`,
+                  borderRadius: "50%",
+                  transition: "top 0.1s, left 0.1s",
+                }}
+              />
             )}
           </AnimatePresence>
 
-          {/* The robot */}
-          <motion.img
-            src={shadowRobotImg}
-            alt="ShadowTalk AI Guardian"
-            className="w-[340px] h-[340px] object-contain relative z-10 transition-all duration-500"
-            animate={robotReacting ? {
-              y: [0, -8, 0],
-              scale: [1, 1.08, 1.04],
-              filter: [
-                "drop-shadow(0 0 60px hsl(var(--primary) / 0.3))",
-                "drop-shadow(0 0 100px hsl(var(--primary) / 0.6))",
-                "drop-shadow(0 0 80px hsl(var(--primary) / 0.5))",
-              ],
-            } : {
-              y: [0, -12, 0],
-              scale: 1,
-              filter: "drop-shadow(0 0 60px hsl(var(--primary) / 0.3))",
-            }}
-            transition={robotReacting ? {
-              duration: 1.2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            } : {
-              duration: 5,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
+          {/* Scan line effect on hover */}
+          <AnimatePresence>
+            {robotReacting && (
+              <motion.div
+                initial={{ top: "10%", opacity: 0 }}
+                animate={{ top: ["10%", "85%", "10%"], opacity: [0, 0.4, 0] }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                className="absolute left-[15%] right-[15%] h-[2px] z-20 pointer-events-none"
+                style={{
+                  background: `linear-gradient(90deg, transparent, hsl(var(--primary) / 0.6), transparent)`,
+                  boxShadow: `0 0 20px 4px hsl(var(--primary) / 0.3)`,
+                }}
+              />
+            )}
+          </AnimatePresence>
 
-          {/* Reaction speech bubble */}
+          {/* Speech bubble */}
           <AnimatePresence>
             {robotMessage && (
               <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                initial={{ opacity: 0, y: 15, scale: 0.7 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.8 }}
-                transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                className="absolute -top-4 left-1/2 -translate-x-1/2 z-30 bg-card/90 backdrop-blur-md border border-primary/30 rounded-xl px-4 py-2 shadow-lg shadow-primary/10 whitespace-nowrap"
+                exit={{ opacity: 0, y: -15, scale: 0.7 }}
+                transition={{ type: "spring", damping: 18, stiffness: 350 }}
+                className="absolute -top-6 left-1/2 -translate-x-1/2 z-30 backdrop-blur-xl rounded-2xl px-5 py-3 whitespace-nowrap"
+                style={{
+                  background: "hsl(var(--card) / 0.85)",
+                  border: "1px solid hsl(var(--primary) / 0.4)",
+                  boxShadow: "0 8px 32px hsl(var(--primary) / 0.15), 0 0 60px hsl(var(--primary) / 0.1)",
+                }}
               >
-                <span className="text-sm font-medium text-foreground">{robotMessage}</span>
-                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-card/90 border-b border-r border-primary/30" />
+                <span className="text-sm font-semibold text-foreground tracking-wide">{robotMessage}</span>
+                <div
+                  className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rotate-45"
+                  style={{
+                    background: "hsl(var(--card) / 0.85)",
+                    borderBottom: "1px solid hsl(var(--primary) / 0.4)",
+                    borderRight: "1px solid hsl(var(--primary) / 0.4)",
+                  }}
+                />
               </motion.div>
             )}
           </AnimatePresence>
@@ -597,12 +673,13 @@ const AuthPage = () => {
           <AnimatePresence>
             {robotReacting && !robotMessage && (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: [0.4, 0.8, 0.4], y: 0 }}
                 exit={{ opacity: 0 }}
-                className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-30 text-[10px] text-primary/60 font-mono"
+                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-30 text-[11px] text-primary font-mono tracking-widest"
               >
-                click me
+                [ CLICK TO INTERACT ]
               </motion.div>
             )}
           </AnimatePresence>
