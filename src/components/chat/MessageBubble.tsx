@@ -129,10 +129,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
 
         {/* Message bubble */}
-        <div className={`rounded-2xl px-4 py-3 w-full overflow-hidden transition-all duration-200 ${
+        <div className={`rounded-2xl px-4 py-3 w-full overflow-hidden transition-all duration-300 ${
           isUser 
-            ? 'bg-primary text-primary-foreground rounded-tr-md shadow-md shadow-primary/10' 
-            : 'bg-card/60 backdrop-blur-sm border border-border/30 rounded-tl-md hover:border-border/50'
+            ? 'bg-primary text-primary-foreground rounded-tr-md shadow-lg shadow-primary/15' 
+            : 'bg-card/50 backdrop-blur-md border border-border/20 rounded-tl-md hover:border-border/40 hover:bg-card/60'
         }`}>
           {isUser ? (
             <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{typeof message.content === 'string' ? message.content : String(message.content || '')}</p>
