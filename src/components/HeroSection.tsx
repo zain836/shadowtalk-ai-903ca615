@@ -60,26 +60,28 @@ const HeroSection = () => {
     localStorage.setItem('shadowtalk-demo-dismissed', 'true');
     setShowDemo(false);
   };
-  const [liveStats, setLiveStats] = useState({ users: 45000, reviews: 11000, rating: 4.9, dealsLeft: 30 });
+  const [liveStats, setLiveStats] = useState({ users: 0, reviews: 0, rating: 0, dealsLeft: 0 });
 
   useEffect(() => {
     const fetchStats = async () => {
-      const [profilesRes, feedbackRes] = await Promise.all([
+      const [profilesRes, feedbackRes, dealsRes] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('feedback').select('rating').not('rating', 'is', null),
+        supabase.from('manual_payments').select('id', { count: 'exact', head: true }).eq('plan_type', 'lifetime').eq('status', 'verified'),
       ]);
       
       const userCount = profilesRes.count || 0;
       const reviews = feedbackRes.data || [];
       const avgRating = reviews.length > 0 
         ? reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length 
-        : 4.9;
+        : 0;
+      const lifetimeSold = dealsRes.count || 0;
       
       setLiveStats({
-        users: Math.max(userCount, 100), // Show at least base count
+        users: userCount,
         reviews: reviews.length,
         rating: Math.round(avgRating * 10) / 10,
-        dealsLeft: 30, // This can be managed via admin later
+        dealsLeft: Math.max(50 - lifetimeSold, 0),
       });
     };
     fetchStats();
@@ -271,7 +273,7 @@ const HeroSection = () => {
             variants={scaleFadeIn}
             className="mt-16 flex items-center justify-center gap-3"
           >
-            {["🛡️ Anti-Spyware AI", "⚡ Zero Cloud Dependency", "🧠 $102B Edge AI Market", "🚀 Product Hunt #1"].map((badge, i) => (
+            {["🛡️ Anti-Spyware AI", "⚡ Zero Cloud Dependency", "🧠 Edge AI Powered", "🚀 Built for Privacy"].map((badge, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}

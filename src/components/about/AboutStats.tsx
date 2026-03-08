@@ -1,15 +1,7 @@
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { BarChart3, Users, Code2, Globe, Zap, Clock } from "lucide-react";
-
-const stats = [
-  { icon: Users, label: "Businesses Served", value: 23, suffix: "+", color: "text-primary" },
-  { icon: Code2, label: "Lines of Code", value: 150, suffix: "K+", color: "text-secondary" },
-  { icon: Globe, label: "Countries Reached", value: 12, suffix: "+", color: "text-accent" },
-  { icon: Zap, label: "AI Queries Processed", value: 500, suffix: "K+", color: "text-success" },
-  { icon: Clock, label: "Hours of Building", value: 4000, suffix: "+", color: "text-warning" },
-  { icon: BarChart3, label: "Engagement Increase", value: 12, suffix: "%", color: "text-primary" },
-];
+import { supabase } from "@/integrations/supabase/client";
 
 function AnimatedCounter({ value, suffix }: { value: number; suffix: string }) {
   const [displayed, setDisplayed] = useState(0);
@@ -47,6 +39,43 @@ function AnimatedCounter({ value, suffix }: { value: number; suffix: string }) {
 }
 
 const AboutStats = () => {
+  const [stats, setStats] = useState([
+    { icon: Users, label: "Registered Users", value: 0, suffix: "", color: "text-primary" },
+    { icon: Zap, label: "AI Conversations", value: 0, suffix: "", color: "text-success" },
+    { icon: Globe, label: "Scans Completed", value: 0, suffix: "", color: "text-accent" },
+    { icon: Code2, label: "Bug Reports Tracked", value: 0, suffix: "", color: "text-secondary" },
+    { icon: Clock, label: "Feedback Received", value: 0, suffix: "", color: "text-warning" },
+    { icon: BarChart3, label: "Avg Rating", value: 0, suffix: "", color: "text-primary" },
+  ]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const [usersRes, convsRes, scansRes, bugsRes, feedbackRes, ratingsRes] = await Promise.all([
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("conversations").select("id", { count: "exact", head: true }),
+        supabase.from("cyber_scan_results").select("id", { count: "exact", head: true }),
+        supabase.from("bug_bounty_submissions").select("id", { count: "exact", head: true }),
+        supabase.from("feedback").select("id", { count: "exact", head: true }),
+        supabase.from("feedback").select("rating").not("rating", "is", null),
+      ]);
+
+      const ratings = ratingsRes.data || [];
+      const avgRating = ratings.length > 0
+        ? Math.round((ratings.reduce((s, r) => s + (r.rating || 0), 0) / ratings.length) * 10) / 10
+        : 0;
+
+      setStats([
+        { icon: Users, label: "Registered Users", value: usersRes.count || 0, suffix: "", color: "text-primary" },
+        { icon: Zap, label: "AI Conversations", value: convsRes.count || 0, suffix: "", color: "text-success" },
+        { icon: Globe, label: "Scans Completed", value: scansRes.count || 0, suffix: "", color: "text-accent" },
+        { icon: Code2, label: "Bug Reports Tracked", value: bugsRes.count || 0, suffix: "", color: "text-secondary" },
+        { icon: Clock, label: "Feedback Received", value: feedbackRes.count || 0, suffix: "", color: "text-warning" },
+        { icon: BarChart3, label: "Avg Rating", value: avgRating, suffix: "/5", color: "text-primary" },
+      ]);
+    };
+    fetchStats();
+  }, []);
+
   return (
     <section className="py-20 px-4">
       <div className="container mx-auto max-w-5xl">
@@ -62,10 +91,10 @@ const AboutStats = () => {
             <span className="text-sm text-muted-foreground font-medium">By the Numbers</span>
           </motion.div>
           <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-3xl md:text-4xl font-bold mb-3 tracking-tight">
-            Impact Metrics
+            Live Platform Metrics
           </motion.h2>
           <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="text-muted-foreground">
-            Real numbers from real work — no vanity metrics.
+            Real-time numbers pulled directly from our backend.
           </motion.p>
         </div>
 
