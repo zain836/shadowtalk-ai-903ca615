@@ -1,9 +1,9 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Mic, MicOff, Volume2, VolumeX,
   Phone, PhoneOff, MessageSquare, Sparkles, Loader2, AudioLines, AlertCircle,
-  Download, Zap, Shield, Clock
+  Download, Zap, Shield, Clock, Waves, Radio, Settings2, ChevronRight, Signal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,93 +14,196 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useConversation } from "@elevenlabs/react";
 
-/* ── Orbital Ring Visualizer ─────────────────────────────── */
-const OrbitalVisualizer: React.FC<{ isActive: boolean; isSpeaking: boolean }> = ({ isActive, isSpeaking }) => {
-  const ringCount = 3;
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   AURORA NEBULA VISUALIZER — Legendary Cinematic Core
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const AuroraVisualizer: React.FC<{ isActive: boolean; isSpeaking: boolean }> = ({ isActive, isSpeaking }) => {
   return (
-    <div className="relative w-56 h-56 flex items-center justify-center">
-      {/* Particle field */}
-      {isActive && Array.from({ length: 20 }).map((_, i) => (
-        <motion.div
-          key={`p-${i}`}
-          className="absolute w-1 h-1 rounded-full bg-violet-400/60"
-          animate={{
-            x: [0, Math.cos(i * 0.3) * (80 + i * 3), 0],
-            y: [0, Math.sin(i * 0.3) * (80 + i * 3), 0],
-            opacity: [0, 0.8, 0],
-            scale: [0, 1.5, 0],
-          }}
-          transition={{ duration: 3 + i * 0.2, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
-        />
-      ))}
+    <div className="relative w-72 h-72 md:w-80 md:h-80 flex items-center justify-center">
+      
+      {/* Aurora backdrop layers */}
+      <motion.div
+        className="absolute inset-0 rounded-full"
+        animate={{
+          background: isSpeaking
+            ? [
+                "radial-gradient(circle, hsla(280,90%,50%,0.15) 0%, transparent 70%)",
+                "radial-gradient(circle, hsla(320,90%,50%,0.2) 0%, transparent 70%)",
+                "radial-gradient(circle, hsla(280,90%,50%,0.15) 0%, transparent 70%)",
+              ]
+            : "radial-gradient(circle, hsla(260,60%,40%,0.08) 0%, transparent 70%)",
+        }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+      />
 
-      {/* Orbital rings */}
-      {Array.from({ length: ringCount }).map((_, i) => (
+      {/* Nebula cloud particles */}
+      {isActive && Array.from({ length: 40 }).map((_, i) => {
+        const angle = (i / 40) * Math.PI * 2;
+        const radius = 90 + Math.sin(i * 0.7) * 40;
+        const size = 1 + Math.random() * 2;
+        const hue = isSpeaking ? 310 + i * 3 : 260 + i * 2;
+        return (
+          <motion.div
+            key={`nebula-${i}`}
+            className="absolute rounded-full"
+            style={{
+              width: size,
+              height: size,
+              background: `hsla(${hue}, 80%, 70%, 0.6)`,
+              filter: `blur(${size > 2 ? 1 : 0}px)`,
+            }}
+            animate={{
+              x: [
+                Math.cos(angle) * radius * 0.3,
+                Math.cos(angle + 0.5) * radius,
+                Math.cos(angle + 1) * radius * 0.5,
+                Math.cos(angle) * radius * 0.3,
+              ],
+              y: [
+                Math.sin(angle) * radius * 0.3,
+                Math.sin(angle + 0.5) * radius,
+                Math.sin(angle + 1) * radius * 0.5,
+                Math.sin(angle) * radius * 0.3,
+              ],
+              opacity: [0, 0.8, 0.4, 0],
+              scale: [0.5, 1.5, 1, 0.5],
+            }}
+            transition={{
+              duration: 4 + i * 0.1,
+              repeat: Infinity,
+              delay: i * 0.08,
+              ease: "easeInOut",
+            }}
+          />
+        );
+      })}
+
+      {/* Orbital rings — 5 rings with varying angles */}
+      {Array.from({ length: 5 }).map((_, i) => (
         <motion.div
-          key={`ring-${i}`}
+          key={`orbital-${i}`}
           className="absolute rounded-full border"
           style={{
-            width: 140 + i * 40,
-            height: 140 + i * 40,
+            width: 120 + i * 30,
+            height: 120 + i * 30,
             borderColor: isSpeaking
-              ? `hsla(${280 + i * 20}, 80%, 65%, ${0.4 - i * 0.1})`
-              : `hsla(${260 + i * 15}, 60%, 50%, ${0.2 - i * 0.05})`,
+              ? `hsla(${300 + i * 15}, 80%, 65%, ${0.35 - i * 0.06})`
+              : `hsla(${260 + i * 10}, 60%, 50%, ${0.15 - i * 0.02})`,
+            transform: `rotateX(${60 + i * 5}deg) rotateZ(${i * 30}deg)`,
           }}
           animate={{
             rotate: [0, i % 2 === 0 ? 360 : -360],
-            scale: isSpeaking ? [1, 1.08, 1] : [1, 1.02, 1],
+            scale: isSpeaking ? [1, 1.06, 1] : [1, 1.02, 1],
           }}
           transition={{
-            rotate: { duration: 8 + i * 4, repeat: Infinity, ease: "linear" },
-            scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
+            rotate: { duration: 6 + i * 3, repeat: Infinity, ease: "linear" },
+            scale: { duration: 1.2, repeat: Infinity, ease: "easeInOut" },
           }}
         >
-          {/* Ring dot */}
+          {/* Orbiting dot */}
           <motion.div
-            className="absolute w-2 h-2 rounded-full -top-1 left-1/2 -ml-1"
+            className="absolute w-1.5 h-1.5 rounded-full -top-[3px] left-1/2 -ml-[3px]"
             style={{
-              background: `hsl(${280 + i * 20}, 80%, 65%)`,
-              boxShadow: `0 0 8px hsl(${280 + i * 20}, 80%, 65%)`,
+              background: `hsl(${300 + i * 15}, 90%, 70%)`,
+              boxShadow: `0 0 12px hsl(${300 + i * 15}, 90%, 70%), 0 0 24px hsl(${300 + i * 15}, 80%, 60%)`,
             }}
           />
         </motion.div>
       ))}
 
-      {/* Core orb */}
+      {/* Pulsing energy waves — expand outward when speaking */}
+      {isSpeaking && Array.from({ length: 3 }).map((_, i) => (
+        <motion.div
+          key={`wave-${i}`}
+          className="absolute rounded-full border border-fuchsia-400/20"
+          style={{ width: 110, height: 110 }}
+          animate={{
+            scale: [1, 2.5],
+            opacity: [0.4, 0],
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            delay: i * 0.6,
+            ease: "easeOut",
+          }}
+        />
+      ))}
+
+      {/* Core orb — multi-layered with depth */}
       <motion.div
-        className="relative z-10 w-28 h-28 rounded-full flex items-center justify-center"
+        className="relative z-10 w-32 h-32 md:w-36 md:h-36 rounded-full flex items-center justify-center"
         animate={{
-          scale: isSpeaking ? [1, 1.1, 1] : [1, 1.03, 1],
+          scale: isSpeaking ? [1, 1.08, 1] : [1, 1.03, 1],
         }}
-        transition={{ duration: isSpeaking ? 0.5 : 2.5, repeat: Infinity }}
+        transition={{ duration: isSpeaking ? 0.6 : 3, repeat: Infinity, ease: "easeInOut" }}
       >
-        {/* Glow layer */}
+        {/* Outer glow corona */}
+        <motion.div
+          className="absolute -inset-6 rounded-full blur-2xl"
+          animate={{
+            opacity: isSpeaking ? [0.4, 0.7, 0.4] : [0.2, 0.3, 0.2],
+          }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          style={{
+            background: isSpeaking
+              ? "radial-gradient(circle, hsla(310,90%,60%,0.5) 0%, hsla(280,80%,40%,0.2) 50%, transparent 100%)"
+              : "radial-gradient(circle, hsla(260,70%,50%,0.3) 0%, hsla(260,60%,30%,0.1) 50%, transparent 100%)",
+          }}
+        />
+
+        {/* Inner glow */}
         <div
           className={cn(
-            "absolute inset-0 rounded-full blur-xl transition-all duration-500",
+            "absolute -inset-2 rounded-full blur-xl transition-all duration-700",
             isSpeaking
-              ? "bg-gradient-to-br from-fuchsia-500/50 to-rose-500/50"
-              : "bg-gradient-to-br from-violet-500/30 to-purple-500/30"
+              ? "bg-gradient-to-br from-fuchsia-500/40 via-rose-500/30 to-violet-500/40"
+              : "bg-gradient-to-br from-violet-500/25 to-purple-500/25"
           )}
         />
-        {/* Surface */}
+
+        {/* Glass surface */}
         <div
           className={cn(
-            "absolute inset-0 rounded-full transition-all duration-500 shadow-2xl",
+            "absolute inset-0 rounded-full transition-all duration-700 shadow-2xl overflow-hidden",
             isSpeaking
               ? "bg-gradient-to-br from-fuchsia-500 via-pink-500 to-rose-500"
               : "bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-500"
           )}
-        />
-        {/* Icon */}
+        >
+          {/* Shimmer sweep */}
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
+            animate={{ x: ["-150%", "150%"] }}
+            transition={{ duration: 3, repeat: Infinity, repeatDelay: 4, ease: "easeInOut" }}
+          />
+
+          {/* Specular highlight */}
+          <div className="absolute top-2 left-4 w-12 h-6 bg-white/15 rounded-full blur-md" />
+        </div>
+
+        {/* Center icon */}
         <div className="relative z-10">
           {isSpeaking ? (
-            <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 0.4, repeat: Infinity }}>
-              <AudioLines className="h-12 w-12 text-white drop-shadow-lg" />
+            <motion.div
+              animate={{ scale: [1, 1.15, 1] }}
+              transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <AudioLines className="h-12 w-12 md:h-14 md:w-14 text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]" />
+            </motion.div>
+          ) : isActive ? (
+            <motion.div
+              animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.05, 1] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Waves className="h-12 w-12 md:h-14 md:w-14 text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]" />
             </motion.div>
           ) : (
-            <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 4, repeat: Infinity }}>
-              <Sparkles className="h-12 w-12 text-white drop-shadow-lg" />
+            <motion.div
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+            >
+              <Sparkles className="h-12 w-12 md:h-14 md:w-14 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]" />
             </motion.div>
           )}
         </div>
@@ -109,33 +212,35 @@ const OrbitalVisualizer: React.FC<{ isActive: boolean; isSpeaking: boolean }> = 
   );
 };
 
-/* ── Waveform Bar Visualizer ─────────────────────────────── */
-const WaveformBars: React.FC<{ isActive: boolean; isSpeaking: boolean }> = ({ isActive, isSpeaking }) => {
-  const barCount = 32;
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SPECTRAL WAVEFORM — 48-bar HD equalizer
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const SpectralWaveform: React.FC<{ isActive: boolean; isSpeaking: boolean }> = ({ isActive, isSpeaking }) => {
+  const barCount = 48;
   return (
-    <div className="flex items-end justify-center gap-[2px] h-12 w-full max-w-xs mx-auto">
+    <div className="flex items-end justify-center gap-[2px] h-16 w-full max-w-sm mx-auto px-4">
       {Array.from({ length: barCount }).map((_, i) => {
         const center = barCount / 2;
         const distFromCenter = Math.abs(i - center) / center;
-        const maxH = (1 - distFromCenter * 0.6) * 40;
+        const maxH = (1 - distFromCenter * 0.7) * 55;
+        const hue = isSpeaking ? 310 + (i / barCount) * 40 : 260 + (i / barCount) * 30;
         return (
           <motion.div
             key={i}
-            className={cn(
-              "w-[3px] rounded-full",
-              isSpeaking
-                ? "bg-gradient-to-t from-fuchsia-500 to-pink-300"
-                : "bg-gradient-to-t from-violet-500/60 to-violet-300/40"
-            )}
+            className="rounded-full"
+            style={{
+              width: 3,
+              background: `linear-gradient(to top, hsla(${hue}, 80%, 55%, 0.8), hsla(${hue + 20}, 90%, 75%, 0.6))`,
+            }}
             animate={
               isActive
-                ? { height: [4, maxH, 6, maxH * 0.6, 4] }
-                : { height: 4 }
+                ? { height: [3, maxH, 5, maxH * 0.7, 3] }
+                : { height: 3 }
             }
             transition={{
-              duration: 0.9 + Math.random() * 0.3,
+              duration: 0.8 + Math.sin(i * 0.3) * 0.3,
               repeat: isActive ? Infinity : 0,
-              delay: i * 0.02,
+              delay: i * 0.015,
               ease: "easeInOut",
             }}
           />
@@ -145,7 +250,9 @@ const WaveformBars: React.FC<{ isActive: boolean; isSpeaking: boolean }> = ({ is
   );
 };
 
-/* ── Types ────────────────────────────────────────────────── */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TYPES
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 interface ShadowTalkLiveProps {
   isOpen: boolean;
   onClose: () => void;
@@ -160,7 +267,9 @@ interface TranscriptItem {
   isInterrupted?: boolean;
 }
 
-/* ── Main Component ──────────────────────────────────────── */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   MAIN COMPONENT
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLiveProps) => {
   const { toast } = useToast();
 
@@ -183,7 +292,7 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
   const conversation = useConversation({
     onConnect: () => {
       setConnectionError(null);
-      toast({ title: "Connected", description: "ShadowTalk Live is ready" });
+      toast({ title: "🎙️ Connected", description: "ShadowTalk Live is ready — speak naturally" });
     },
     onDisconnect: () => {
       setCurrentUserSpeech("");
@@ -289,7 +398,7 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
     setTranscript([]);
     lastUserTranscriptRef.current = "";
     lastAgentResponseRef.current = "";
-    toast({ title: "Disconnected" });
+    toast({ title: "Session ended" });
   }, [conversation, toast]);
 
   const toggleMic = useCallback(() => setIsMicOn(v => !v), []);
@@ -306,7 +415,7 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
       `[${t.timestamp.toLocaleTimeString()}] ${t.role === 'user' ? 'You' : 'ShadowTalk'}: ${t.text}`
     ).join('\n\n');
     if (onInsertToChat) {
-      onInsertToChat(`## ShadowTalk Live Transcript\n\n${content}`);
+      onInsertToChat(`## 🎙️ ShadowTalk Live Transcript\n\n${content}`);
       toast({ title: "Transcript exported to chat" });
     }
   };
@@ -324,54 +433,85 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        transition={{ duration: 0.4 }}
         className="fixed inset-0 z-50"
       >
-        {/* Cinematic background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a12] via-[#0d0b1a] to-[#090814]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_hsla(270,60%,30%,0.15)_0%,_transparent_70%)]" />
-        {/* Subtle grid */}
-        <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: "linear-gradient(hsla(0,0%,100%,0.1) 1px, transparent 1px), linear-gradient(90deg, hsla(0,0%,100%,0.1) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
+        {/* ── Cinematic Background ────────────────────── */}
+        <div className="absolute inset-0 bg-[#060610]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_-10%,_hsla(270,80%,20%,0.25)_0%,_transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_110%,_hsla(300,60%,15%,0.15)_0%,_transparent_60%)]" />
+        
+        {/* Floating ambient particles */}
+        {Array.from({ length: 15 }).map((_, i) => (
+          <motion.div
+            key={`ambient-${i}`}
+            className="absolute w-1 h-1 rounded-full bg-violet-400/20"
+            style={{
+              left: `${10 + (i * 6) % 80}%`,
+              top: `${5 + (i * 7) % 90}%`,
+            }}
+            animate={{
+              y: [0, -30, 0],
+              opacity: [0.1, 0.4, 0.1],
+            }}
+            transition={{ duration: 5 + i * 0.5, repeat: Infinity, delay: i * 0.3 }}
+          />
+        ))}
+
+        {/* Subtle grid overlay */}
+        <div className="absolute inset-0 opacity-[0.02]" style={{
+          backgroundImage: "linear-gradient(hsla(0,0%,100%,0.08) 1px, transparent 1px), linear-gradient(90deg, hsla(0,0%,100%,0.08) 1px, transparent 1px)",
+          backgroundSize: "80px 80px",
         }} />
 
         <div className="relative h-full flex flex-col">
-          {/* ── Header ────────────────────────────────────── */}
+          {/* ━━━━━ HEADER ━━━━━ */}
           <motion.div
-            initial={{ y: -20, opacity: 0 }}
+            initial={{ y: -30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]"
+            transition={{ delay: 0.1, type: "spring", damping: 25 }}
+            className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04] bg-white/[0.01] backdrop-blur-xl"
           >
             <div className="flex items-center gap-4">
               <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
+                <motion.div
+                  className="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500 flex items-center justify-center shadow-xl shadow-violet-500/25"
+                  animate={isConnected ? { boxShadow: ["0 10px 25px -5px hsla(270,80%,50%,0.2)", "0 10px 25px -5px hsla(310,80%,50%,0.3)", "0 10px 25px -5px hsla(270,80%,50%,0.2)"] } : {}}
+                  transition={{ duration: 3, repeat: Infinity }}
+                >
                   <Zap className="h-5 w-5 text-white" />
-                </div>
+                </motion.div>
                 {isConnected && (
                   <motion.div
-                    className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#0a0a12]"
-                    animate={{ scale: [1, 1.2, 1] }}
+                    className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-[#060610]"
+                    animate={{ scale: [1, 1.3, 1], boxShadow: ["0 0 0 0 hsla(155,70%,55%,0.4)", "0 0 0 6px hsla(155,70%,55%,0)", "0 0 0 0 hsla(155,70%,55%,0)"] }}
                     transition={{ duration: 2, repeat: Infinity }}
                   />
                 )}
               </div>
               <div>
-                <h2 className="font-semibold text-white/90 text-lg tracking-tight">ShadowTalk Live</h2>
-                <div className="flex items-center gap-2 mt-0.5">
+                <h2 className="font-bold text-white/90 text-lg tracking-tight">ShadowTalk Live</h2>
+                <div className="flex items-center gap-2.5 mt-0.5">
                   <div className={cn(
-                    "w-1.5 h-1.5 rounded-full",
-                    isConnected ? "bg-emerald-400" : isConnecting ? "bg-amber-400 animate-pulse" : "bg-white/20"
+                    "w-1.5 h-1.5 rounded-full transition-colors duration-500",
+                    isConnected ? "bg-emerald-400 shadow-[0_0_8px_hsla(155,70%,55%,0.5)]" 
+                      : isConnecting ? "bg-amber-400 animate-pulse" 
+                      : "bg-white/15"
                   )} />
-                  <span className="text-xs text-white/40">
-                    {isConnecting ? "Connecting..." : isConnected ? "Connected" : "Ready"}
+                  <span className="text-[11px] text-white/35 font-medium">
+                    {isConnecting ? "Initializing..." : isConnected ? "Live Session" : "Ready"}
                   </span>
                   {isConnected && (
                     <>
                       <span className="text-white/10">·</span>
-                      <span className="text-xs text-white/30 font-mono flex items-center gap-1">
+                      <span className="text-[11px] text-white/25 font-mono flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {formatTime(elapsed)}
+                      </span>
+                      <span className="text-white/10">·</span>
+                      <span className="text-[11px] text-emerald-400/50 flex items-center gap-1">
+                        <Signal className="h-3 w-3" />
+                        WebRTC
                       </span>
                     </>
                   )}
@@ -379,13 +519,13 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {isConnected && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={exportTranscript}
-                  className="text-white/40 hover:text-white hover:bg-white/5 gap-2 text-xs"
+                  className="text-white/30 hover:text-white hover:bg-white/[0.04] gap-2 text-xs rounded-xl h-9 px-3"
                 >
                   <Download className="h-3.5 w-3.5" />
                   Export
@@ -395,127 +535,169 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
                 variant="ghost"
                 size="icon"
                 onClick={handleClose}
-                className="text-white/30 hover:text-white hover:bg-white/5 rounded-lg"
+                className="text-white/20 hover:text-white hover:bg-white/[0.04] rounded-xl w-9 h-9"
               >
                 <X className="h-5 w-5" />
               </Button>
             </div>
           </motion.div>
 
-          {/* ── Main Content ──────────────────────────────── */}
+          {/* ━━━━━ MAIN CONTENT ━━━━━ */}
           <div className="flex-1 flex overflow-hidden">
             {/* Center: Visualization */}
             <div className="flex-1 flex items-center justify-center relative">
               {!isConnected ? (
-                /* ── Start Screen ──────────────────────────── */
+                /* ── START SCREEN ────────────────────────── */
                 <motion.div
                   className="text-center max-w-lg px-6"
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.2, type: "spring", damping: 20 }}
+                  transition={{ delay: 0.15, type: "spring", damping: 22 }}
                 >
-                  {/* Idle orbital */}
-                  <div className="flex justify-center mb-8">
-                    <OrbitalVisualizer isActive={false} isSpeaking={false} />
+                  <div className="flex justify-center mb-10">
+                    <AuroraVisualizer isActive={false} isSpeaking={false} />
                   </div>
 
-                  <h3 className="text-3xl font-bold text-white mb-3 tracking-tight">
-                    Start a Live Conversation
-                  </h3>
-                  <p className="text-white/40 mb-2 text-sm leading-relaxed max-w-sm mx-auto">
-                    Real-time voice powered by neural synthesis. Speak naturally, interrupt anytime.
-                  </p>
+                  <motion.h3
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-4xl font-bold text-white mb-4 tracking-tight"
+                  >
+                    Start a Live Session
+                  </motion.h3>
+                  <motion.p
+                    initial={{ y: 15, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="text-white/30 mb-3 text-sm leading-relaxed max-w-xs mx-auto"
+                  >
+                    Real-time voice interaction with neural synthesis. Speak naturally, interrupt anytime.
+                  </motion.p>
 
-                  {/* Feature badges */}
-                  <div className="flex items-center justify-center gap-3 mb-8 mt-4">
+                  {/* Premium feature chips */}
+                  <motion.div
+                    initial={{ y: 12, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="flex items-center justify-center gap-2 mb-10 mt-5"
+                  >
                     {[
-                      { icon: Zap, label: "Low Latency" },
-                      { icon: Shield, label: "Private" },
-                      { icon: AudioLines, label: "HD Voice" },
-                    ].map(({ icon: Icon, label }) => (
-                      <div key={label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.06]">
-                        <Icon className="h-3 w-3 text-violet-400" />
-                        <span className="text-[11px] text-white/50">{label}</span>
+                      { icon: Zap, label: "Ultra-Low Latency", color: "text-amber-400/60" },
+                      { icon: Shield, label: "E2E Encrypted", color: "text-emerald-400/60" },
+                      { icon: Radio, label: "Neural HD Voice", color: "text-violet-400/60" },
+                    ].map(({ icon: Icon, label, color }) => (
+                      <div key={label} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] backdrop-blur-sm">
+                        <Icon className={cn("h-3 w-3", color)} />
+                        <span className="text-[10px] text-white/35 font-medium">{label}</span>
                       </div>
                     ))}
-                  </div>
+                  </motion.div>
 
                   {connectionError && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-left"
+                      className="mb-6 p-4 rounded-2xl bg-red-500/8 border border-red-500/15 text-left backdrop-blur-sm"
                     >
                       <div className="flex items-start gap-3">
                         <AlertCircle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
                         <div>
                           <p className="text-sm text-red-300 font-medium">Connection Error</p>
-                          <p className="text-xs text-red-400/60 mt-1">{connectionError}</p>
+                          <p className="text-xs text-red-400/50 mt-1">{connectionError}</p>
                         </div>
                       </div>
                     </motion.div>
                   )}
 
-                  <Button
-                    size="lg"
-                    onClick={startConnection}
-                    disabled={isConnecting}
-                    className="gap-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 shadow-xl shadow-violet-500/20 px-8 h-12 text-sm font-medium rounded-xl border-0"
+                  {/* Start button — legendary */}
+                  <motion.div
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.6 }}
                   >
-                    {isConnecting ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Connecting...</>
-                    ) : (
-                      <><Phone className="h-4 w-4" /> Begin Session</>
-                    )}
-                  </Button>
+                    <Button
+                      size="lg"
+                      onClick={startConnection}
+                      disabled={isConnecting}
+                      className="relative gap-3 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-rose-600 hover:from-violet-500 hover:via-fuchsia-500 hover:to-rose-500 shadow-2xl shadow-violet-500/25 hover:shadow-violet-500/40 px-10 h-14 text-sm font-semibold rounded-2xl border-0 transition-all duration-300 hover:scale-105 active:scale-95 group"
+                    >
+                      {/* Shimmer effect */}
+                      <div className="absolute inset-0 rounded-2xl overflow-hidden">
+                        <motion.div
+                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12"
+                          animate={{ x: ["-200%", "200%"] }}
+                          transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
+                        />
+                      </div>
+                      {isConnecting ? (
+                        <><Loader2 className="h-5 w-5 animate-spin" /> Initializing...</>
+                      ) : (
+                        <><Phone className="h-5 w-5 group-hover:rotate-12 transition-transform" /> Begin Session</>
+                      )}
+                    </Button>
+                  </motion.div>
 
-                  <p className="text-white/20 text-[10px] mt-4">Press Shift+L to toggle · Esc to close</p>
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.8 }}
+                    className="text-white/12 text-[10px] mt-5 font-mono"
+                  >
+                    Shift+L to toggle · Esc to close
+                  </motion.p>
                 </motion.div>
               ) : (
-                /* ── Connected Visualizer ─────────────────── */
+                /* ── CONNECTED VISUALIZER ─────────────────── */
                 <motion.div
                   className="flex flex-col items-center gap-6 w-full"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", damping: 20 }}
                 >
-                  <OrbitalVisualizer isActive={isConnected} isSpeaking={isSpeaking} />
+                  <AuroraVisualizer isActive={isConnected} isSpeaking={isSpeaking} />
 
                   {/* Status label */}
-                  <motion.div
-                    className="text-center"
-                    animate={{ opacity: [0.7, 1, 0.7] }}
-                    transition={{ duration: 3, repeat: Infinity }}
-                  >
-                    <p className={cn(
-                      "text-sm font-medium tracking-wide",
-                      isSpeaking ? "text-fuchsia-400" : "text-violet-400/80"
-                    )}>
-                      {isSpeaking ? "Speaking" : "Listening"}
-                    </p>
-                    <p className="text-[11px] text-white/20 mt-1">
-                      {canInterrupt ? "Interrupt anytime" : "Processing..."}
+                  <motion.div className="text-center">
+                    <motion.p
+                      className={cn(
+                        "text-base font-semibold tracking-wide",
+                        isSpeaking ? "text-fuchsia-400" : "text-violet-400/70"
+                      )}
+                      animate={{ opacity: [0.8, 1, 0.8] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      {isSpeaking ? "✦ Speaking" : "⦿ Listening"}
+                    </motion.p>
+                    <p className="text-[11px] text-white/15 mt-1 font-mono">
+                      {canInterrupt ? "interrupt anytime" : "processing..."}
                     </p>
                   </motion.div>
 
-                  {/* Waveform */}
-                  <div className="w-full px-12">
-                    <WaveformBars isActive={isSpeaking || !!currentUserSpeech} isSpeaking={isSpeaking} />
+                  {/* Spectral waveform */}
+                  <div className="w-full px-8 md:px-16">
+                    <SpectralWaveform isActive={isSpeaking || !!currentUserSpeech} isSpeaking={isSpeaking} />
                   </div>
 
                   {/* Live speech bubble */}
                   <AnimatePresence>
                     {currentUserSpeech && (
                       <motion.div
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
+                        initial={{ opacity: 0, y: 16, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
                         className="max-w-md"
                       >
-                        <div className="bg-white/[0.06] backdrop-blur-xl rounded-2xl px-5 py-3 text-white/80 text-sm border border-white/[0.08]">
-                          <span className="text-violet-400 mr-2 text-xs font-medium">You</span>
+                        <div className="bg-white/[0.04] backdrop-blur-2xl rounded-2xl px-5 py-3 text-white/75 text-sm border border-white/[0.06] shadow-xl shadow-violet-500/5">
+                          <span className="text-violet-400/80 mr-2 text-[11px] font-semibold uppercase tracking-wider">You</span>
                           {currentUserSpeech}
-                          <motion.span animate={{ opacity: [1, 0] }} transition={{ duration: 0.5, repeat: Infinity }} className="text-violet-400">|</motion.span>
+                          <motion.span
+                            animate={{ opacity: [1, 0] }}
+                            transition={{ duration: 0.5, repeat: Infinity }}
+                            className="text-violet-400 ml-0.5"
+                          >
+                            ▊
+                          </motion.span>
                         </div>
                       </motion.div>
                     )}
@@ -524,20 +706,28 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
               )}
             </div>
 
-            {/* ── Transcript Panel ────────────────────────── */}
+            {/* ━━━━━ TRANSCRIPT PANEL ━━━━━ */}
             <AnimatePresence>
               {isConnected && showTranscript && (
                 <motion.div
                   initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 340, opacity: 1 }}
+                  animate={{ width: 360, opacity: 1 }}
                   exit={{ width: 0, opacity: 0 }}
-                  transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                  className="border-l border-white/[0.06] flex flex-col bg-white/[0.02] overflow-hidden"
+                  transition={{ type: "spring", damping: 28, stiffness: 200 }}
+                  className="border-l border-white/[0.04] flex flex-col bg-white/[0.01] backdrop-blur-sm overflow-hidden"
                 >
-                  <div className="p-4 border-b border-white/[0.06] flex items-center justify-between shrink-0">
-                    <h3 className="text-sm font-medium text-white/70">Transcript</h3>
+                  <div className="p-4 border-b border-white/[0.04] flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-white/30">Auto-interrupt</span>
+                      <MessageSquare className="h-4 w-4 text-white/25" />
+                      <h3 className="text-sm font-semibold text-white/60">Transcript</h3>
+                      {transcript.length > 0 && (
+                        <span className="text-[10px] text-white/20 bg-white/[0.04] px-1.5 py-0.5 rounded-md font-mono">
+                          {transcript.length}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-[10px] text-white/20">Auto-interrupt</span>
                       <Switch
                         checked={canInterrupt}
                         onCheckedChange={setCanInterrupt}
@@ -546,49 +736,57 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
                   </div>
 
                   <ScrollArea className="flex-1">
-                    <div className="p-4 space-y-3">
+                    <div className="p-4 space-y-2.5">
                       {transcript.length === 0 ? (
-                        <div className="text-center py-12">
-                          <Mic className="h-8 w-8 text-white/10 mx-auto mb-3" />
-                          <p className="text-white/20 text-sm">Start speaking...</p>
-                          <p className="text-white/10 text-xs mt-1">Your conversation will appear here</p>
+                        <div className="text-center py-16">
+                          <motion.div
+                            animate={{ y: [0, -5, 0] }}
+                            transition={{ duration: 3, repeat: Infinity }}
+                          >
+                            <Mic className="h-10 w-10 text-white/[0.06] mx-auto mb-4" />
+                          </motion.div>
+                          <p className="text-white/15 text-sm font-medium">Start speaking...</p>
+                          <p className="text-white/[0.08] text-xs mt-1.5">Your conversation will appear here</p>
                         </div>
                       ) : (
-                        transcript.map((item, i) => (
+                        transcript.map((item) => (
                           <motion.div
                             key={item.id}
-                            initial={{ opacity: 0, x: item.role === "user" ? 12 : -12 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.05 }}
+                            initial={{ opacity: 0, x: item.role === "user" ? 16 : -16, scale: 0.95 }}
+                            animate={{ opacity: 1, x: 0, scale: 1 }}
+                            transition={{ type: "spring", damping: 25 }}
                             className={cn(
-                              "rounded-xl p-3",
+                              "rounded-2xl p-3.5 transition-all duration-300",
                               item.role === "user"
-                                ? "bg-violet-500/10 border border-violet-500/10 ml-6"
-                                : "bg-white/[0.04] border border-white/[0.06] mr-6"
+                                ? "bg-violet-500/8 border border-violet-500/10 ml-6"
+                                : "bg-white/[0.03] border border-white/[0.05] mr-6"
                             )}
                           >
-                            <div className="flex items-center gap-2 mb-1.5">
+                            <div className="flex items-center gap-2 mb-2">
                               <div className={cn(
-                                "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold",
+                                "w-6 h-6 rounded-lg flex items-center justify-center",
                                 item.role === "user"
-                                  ? "bg-violet-500/20 text-violet-400"
-                                  : "bg-fuchsia-500/20 text-fuchsia-400"
+                                  ? "bg-violet-500/15 text-violet-400"
+                                  : "bg-gradient-to-br from-fuchsia-500/20 to-rose-500/20 text-fuchsia-400"
                               )}>
-                                {item.role === "user" ? "Y" : "S"}
+                                {item.role === "user"
+                                  ? <Mic className="h-3 w-3" />
+                                  : <Sparkles className="h-3 w-3" />
+                                }
                               </div>
-                              <span className="text-[11px] font-medium text-white/40">
+                              <span className="text-[11px] font-semibold text-white/35 uppercase tracking-wider">
                                 {item.role === "user" ? "You" : "ShadowTalk"}
                               </span>
-                              <span className="text-[10px] text-white/15 ml-auto">
-                                {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              <span className="text-[10px] text-white/10 ml-auto font-mono">
+                                {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                               </span>
                               {item.isInterrupted && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-400/70 border-amber-400/20">
-                                  cut
+                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 text-amber-400/60 border-amber-400/15 rounded-md">
+                                  interrupted
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-[13px] text-white/75 leading-relaxed">{item.text}</p>
+                            <p className="text-[13px] text-white/65 leading-relaxed pl-8">{item.text}</p>
                           </motion.div>
                         ))
                       )}
@@ -600,72 +798,83 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
             </AnimatePresence>
           </div>
 
-          {/* ── Bottom Controls ───────────────────────────── */}
+          {/* ━━━━━ BOTTOM CONTROLS ━━━━━ */}
           {isConnected && (
             <motion.div
-              initial={{ y: 20, opacity: 0 }}
+              initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="px-6 py-5 border-t border-white/[0.06]"
+              transition={{ delay: 0.3, type: "spring", damping: 22 }}
+              className="px-6 py-5 border-t border-white/[0.04] bg-white/[0.01] backdrop-blur-xl"
             >
               <div className="flex items-center justify-center gap-3">
-                {/* Mic */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleMic}
-                  className={cn(
-                    "w-12 h-12 rounded-xl transition-all",
-                    isMicOn
-                      ? "bg-white/[0.06] hover:bg-white/[0.1] text-white/80"
-                      : "bg-red-500/20 hover:bg-red-500/30 text-red-400 ring-1 ring-red-500/30"
-                  )}
-                >
-                  {isMicOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-                </Button>
+                {/* Mic button */}
+                <motion.div whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleMic}
+                    className={cn(
+                      "w-14 h-14 rounded-2xl transition-all duration-300",
+                      isMicOn
+                        ? "bg-white/[0.05] hover:bg-white/[0.08] text-white/70 border border-white/[0.06]"
+                        : "bg-red-500/15 hover:bg-red-500/25 text-red-400 ring-1 ring-red-500/25"
+                    )}
+                  >
+                    {isMicOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+                  </Button>
+                </motion.div>
 
-                {/* Speaker */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleSpeaker}
-                  className={cn(
-                    "w-12 h-12 rounded-xl transition-all",
-                    isSpeakerOn
-                      ? "bg-white/[0.06] hover:bg-white/[0.1] text-white/80"
-                      : "bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 ring-1 ring-amber-500/30"
-                  )}
-                >
-                  {isSpeakerOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-                </Button>
+                {/* Speaker button */}
+                <motion.div whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleSpeaker}
+                    className={cn(
+                      "w-14 h-14 rounded-2xl transition-all duration-300",
+                      isSpeakerOn
+                        ? "bg-white/[0.05] hover:bg-white/[0.08] text-white/70 border border-white/[0.06]"
+                        : "bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 ring-1 ring-amber-500/25"
+                    )}
+                  >
+                    {isSpeakerOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                  </Button>
+                </motion.div>
 
                 {/* Transcript toggle */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowTranscript(!showTranscript)}
-                  className={cn(
-                    "w-12 h-12 rounded-xl transition-all",
-                    showTranscript
-                      ? "bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 ring-1 ring-violet-500/30"
-                      : "bg-white/[0.06] hover:bg-white/[0.1] text-white/80"
-                  )}
-                >
-                  <MessageSquare className="h-5 w-5" />
-                </Button>
+                <motion.div whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.05 }}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowTranscript(!showTranscript)}
+                    className={cn(
+                      "w-14 h-14 rounded-2xl transition-all duration-300",
+                      showTranscript
+                        ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-400 ring-1 ring-violet-500/25"
+                        : "bg-white/[0.05] hover:bg-white/[0.08] text-white/70 border border-white/[0.06]"
+                    )}
+                  >
+                    <MessageSquare className="h-5 w-5" />
+                  </Button>
+                </motion.div>
 
-                {/* Divider */}
-                <div className="w-px h-8 bg-white/[0.06] mx-1" />
+                {/* Separator */}
+                <div className="w-px h-10 bg-white/[0.04] mx-2" />
 
-                {/* End call */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={endConnection}
-                  className="w-14 h-14 rounded-2xl bg-red-500/15 hover:bg-red-500/25 text-red-400 ring-1 ring-red-500/20 transition-all hover:scale-105"
+                {/* End call — premium red */}
+                <motion.div
+                  whileTap={{ scale: 0.85 }}
+                  whileHover={{ scale: 1.08 }}
                 >
-                  <PhoneOff className="h-6 w-6" />
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={endConnection}
+                    className="w-16 h-16 rounded-[20px] bg-red-500/12 hover:bg-red-500/20 text-red-400 ring-1 ring-red-500/15 transition-all duration-300 shadow-lg shadow-red-500/10 hover:shadow-red-500/20"
+                  >
+                    <PhoneOff className="h-6 w-6" />
+                  </Button>
+                </motion.div>
               </div>
             </motion.div>
           )}
