@@ -28,14 +28,14 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   return (
-    <div className="flex flex-col items-center justify-center py-4 md:py-8 px-4 select-none">
+    <div className="flex flex-col items-center justify-center py-2 md:py-4 px-4 select-none">
       
       {/* Central Orb + Orbiting Actions */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
-        className="relative w-[300px] h-[300px] md:w-[340px] md:h-[340px] mb-4"
+        className="relative w-[260px] h-[260px] md:w-[300px] md:h-[300px] mb-2"
       >
         {/* Central Core */}
         <div className="absolute inset-0 flex items-center justify-center">
