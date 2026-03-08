@@ -258,7 +258,7 @@ const ErrorOverlay = ({ error, url, onRetry, onOpenExternal, onGoHome, onViewVia
           <Button onClick={onOpenExternal} variant="outline" className="gap-2"><ExternalLink className="h-4 w-4" />Open in New Tab</Button>
           <Button variant="ghost" onClick={onGoHome} className="gap-2 text-muted-foreground"><Home className="h-4 w-4" />Go Home</Button>
         </div>
-        {error.type === "blocked" && <p className="text-xs text-muted-foreground mt-4">Proxy fetches the page server-side to bypass iframe restrictions.</p>}
+        {error.type === "blocked" && <p className="text-xs text-muted-foreground mt-4">Cloud Browser renders the page server-side with a full headless browser — like Manus AI.</p>}
       </div>
     </motion.div>
   );
