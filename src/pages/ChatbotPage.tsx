@@ -1567,6 +1567,23 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             personality={personality}
           />
         </div>
+
+        {/* Manus-style Browse Activity Panel - Right Side */}
+        <BrowseActivityPanel
+          isOpen={!!autoBrowse.browseSession}
+          onClose={autoBrowse.closeBrowseSession}
+          session={autoBrowse.browseSession}
+          onResultReady={(result, sources) => {
+            setMessages(prev => [...prev, {
+              id: crypto.randomUUID(),
+              type: 'ai',
+              content: `🔍 **Browse Results**\n\n${result}\n\n**Sources:**\n${sources.map(s => `- [${s.title}](${s.url})`).join('\n')}`,
+              timestamp: new Date()
+            }]);
+          }}
+        />
+        </div>
+        </div>
       </div>
 
       {/* Modals */}
