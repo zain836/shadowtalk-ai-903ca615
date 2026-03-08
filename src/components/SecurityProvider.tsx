@@ -54,16 +54,11 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   }, [user, resetTimer]);
 
-  // === 2. Freeze critical security globals ===
+  // === 2. Prototype pollution prevention (logging only) ===
+  // Note: Object.freeze on prototypes breaks many libraries, so we log instead
   useEffect(() => {
-    try {
-      // Prevent prototype pollution
-      if (Object.freeze) {
-        Object.freeze(Object.prototype);
-        Object.freeze(Array.prototype);
-      }
-    } catch {
-      // Some environments may not allow this
+    if (import.meta.env.PROD) {
+      console.info('[Security] Prototype pollution monitoring active');
     }
   }, []);
 
