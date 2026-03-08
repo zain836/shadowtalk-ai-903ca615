@@ -35,6 +35,23 @@ const statVariants = {
 const FeaturesSection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
+  const [liveStats, setLiveStats] = useState({ users: 0, tasks: 0, uptime: "99.9%", responseTime: "<2s" });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const [usersRes, convsRes] = await Promise.all([
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("conversations").select("id", { count: "exact", head: true }),
+      ]);
+      setLiveStats({
+        users: usersRes.count || 0,
+        tasks: convsRes.count || 0,
+        uptime: "99.9%",
+        responseTime: "<2s",
+      });
+    };
+    fetchStats();
+  }, []);
 
   const features = [
     {
