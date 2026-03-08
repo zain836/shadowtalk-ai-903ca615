@@ -458,6 +458,7 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
 
   const navigateTo = useCallback((url: string) => {
     setProxyHtml(null);
+    setFirecrawlData(null);
     const formattedUrl = formatUrl(url);
 
     if (isBlockedDomain(formattedUrl)) {
