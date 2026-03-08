@@ -171,7 +171,7 @@ export const useHardwareCapabilities = () => {
         gpuAdapterLower.includes('snapdragon') || gpuAdapterLower.includes('ai boost');
       caps.hasNPU = hasNPUHints;
       caps.npuType = hasNPUHints ? (gpuAdapterLower.includes('snapdragon') ? 'Snapdragon NPU' : 'Intel AI Boost') : null;
-      caps.turboAvailable = hasNPUHints || (caps.hasWebGPU && (caps.estimatedVRAM || 0) >= 4);
+      caps.turboAvailable = hasNPUHints || (!!caps.hasWebGPU && (caps.estimatedVRAM ?? 0) >= 4);
 
       // Detect storage
       if ('storage' in navigator && 'estimate' in navigator.storage) {
