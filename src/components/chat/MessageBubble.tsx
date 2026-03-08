@@ -137,7 +137,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           {isUser ? (
             <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{typeof message.content === 'string' ? message.content : String(message.content || '')}</p>
           ) : (
-            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2.5 prose-headings:mt-5 prose-headings:mb-2 prose-headings:first:mt-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-hr:my-4 prose-hr:border-border/40 [&_.katex]:text-foreground [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto overflow-hidden">
+            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2.5 prose-headings:mt-5 prose-headings:mb-2 prose-headings:first:mt-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-hr:my-4 prose-hr:border-border/30 [&_.katex]:text-foreground [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto overflow-hidden">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
@@ -146,7 +146,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     const match = /language-(\w+)/.exec(className || '');
                     const codeString = String(children).replace(/\n$/, '');
                     
-                    // Treat as inline if: explicitly inline, or no language AND single line with < 80 chars
                     const isShortSnippet = !match && !codeString.includes('\n') && codeString.length < 80;
                     
                     if (!inline && match) {
@@ -154,28 +153,60 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     }
                     if (inline || isShortSnippet) {
                       return (
-                        <code className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-md text-[13px] font-mono font-medium" {...props}>
+                        <code className="bg-primary/8 text-primary border border-primary/10 px-1.5 py-0.5 rounded-md text-[13px] font-mono font-medium" {...props}>
                           {children}
                         </code>
                       );
                     }
                     return <CodeBlock code={codeString} language="text" onOpenCanvas={onOpenCodeCanvas} onOpenIDE={onOpenIDE} onLaunchWebsite={onLaunchWebsite} />;
                   },
-                  ul({ children }) { return <ul className="list-disc pl-5 space-y-1 my-2.5">{children}</ul>; },
-                  ol({ children }) { return <ol className="list-decimal pl-5 space-y-1 my-2.5">{children}</ol>; },
-                  li({ children }) { 
+                  ul({ children }) { return <ul className="list-disc pl-5 space-y-1.5 my-3 marker:text-primary/30">{children}</ul>; },
+                  ol({ children }) { return <ol className="list-decimal pl-5 space-y-1.5 my-3 marker:text-primary/40 marker:font-semibold">{children}</ol>; },
+                  li({ children, ...props }: any) {
+                    // Task list checkbox support
+                    const text = String(children);
+                    const isChecked = text.match(/^\[x\]/i);
+                    const isUnchecked = text.match(/^\[ \]/);
+                    
+                    if (isChecked || isUnchecked) {
+                      return (
+                        <li className="flex items-start gap-2 list-none -ml-5 my-1" {...props}>
+                          <span className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center text-[10px] shrink-0 ${
+                            isChecked ? 'bg-primary/20 border-primary/40 text-primary' : 'border-border/40'
+                          }`}>
+                            {isChecked && '✓'}
+                          </span>
+                          <span className={isChecked ? 'line-through text-muted-foreground/50' : ''}>
+                            {text.replace(/^\[[ x]\]\s*/i, '')}
+                          </span>
+                        </li>
+                      );
+                    }
                     return (
-                      <li className="text-sm leading-relaxed pl-1 marker:text-muted-foreground/60">{children}</li>
+                      <li className="text-sm leading-[1.75] pl-1" {...props}>{children}</li>
                     ); 
                   },
-                  h1({ children }) { return <h1 className="text-lg font-bold tracking-tight border-b border-border/30 pb-2 mb-3">{children}</h1>; },
-                  h2({ children }) { return <h2 className="text-[15px] font-bold tracking-tight mt-5 first:mt-0">{children}</h2>; },
-                  h3({ children }) { return <h3 className="text-sm font-semibold mt-4 first:mt-0">{children}</h3>; },
+                  h1({ children }) { 
+                    return (
+                      <h1 className="text-lg font-bold tracking-tight border-b border-border/20 pb-2.5 mb-3.5 text-foreground">
+                        {children}
+                      </h1>
+                    ); 
+                  },
+                  h2({ children }) { 
+                    return (
+                      <h2 className="text-[15px] font-bold tracking-tight mt-6 first:mt-0 mb-2 text-foreground flex items-center gap-2">
+                        <span className="w-1 h-4 bg-primary/40 rounded-full" />
+                        {children}
+                      </h2>
+                    ); 
+                  },
+                  h3({ children }) { return <h3 className="text-sm font-semibold mt-4 first:mt-0 text-foreground/90">{children}</h3>; },
                   h4({ children }) { return <h4 className="text-sm font-medium text-muted-foreground mt-3">{children}</h4>; },
-                  p({ children }) { return <p className="text-sm leading-[1.75] mb-2.5 last:mb-0">{children}</p>; },
+                  p({ children }) { return <p className="text-sm leading-[1.8] mb-3 last:mb-0 text-foreground/85">{children}</p>; },
                   strong({ children }) { return <strong className="font-semibold text-foreground">{children}</strong>; },
-                  em({ children }) { return <em className="italic text-muted-foreground">{children}</em>; },
-                  hr() { return <hr className="my-4 border-border/40" />; },
+                  em({ children }) { return <em className="italic text-foreground/70">{children}</em>; },
+                  hr() { return <hr className="my-5 border-border/30" />; },
                   a({ children, href }) { 
                     return (
                       <a 
@@ -183,7 +214,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                         target="_blank" 
                         rel="noopener noreferrer" 
                         onClick={(e) => { e.preventDefault(); if (href) openInBrowser(href); }}
-                        className="text-primary font-medium underline underline-offset-2 decoration-primary/30 hover:decoration-primary cursor-pointer inline-flex items-center gap-0.5 transition-colors"
+                        className="text-primary font-medium underline underline-offset-3 decoration-primary/30 hover:decoration-primary/80 cursor-pointer inline-flex items-center gap-0.5 transition-all duration-200"
                       >
                         {children}
                         <ExternalLink className="h-3 w-3 inline-block ml-0.5 opacity-40" />
@@ -192,33 +223,44 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   },
                   blockquote({ children }) { 
                     return (
-                      <blockquote className="border-l-[3px] border-primary/40 pl-4 py-1 my-3 bg-primary/5 rounded-r-lg text-muted-foreground not-italic [&_p]:mb-1 [&_p]:last:mb-0">
+                      <blockquote className="border-l-[3px] border-primary/30 pl-4 py-2 my-4 bg-primary/[0.03] rounded-r-xl text-foreground/70 not-italic [&_p]:mb-1.5 [&_p]:last:mb-0 [&_p]:text-[13px] [&_p]:leading-relaxed">
                         {children}
                       </blockquote>
                     ); 
                   },
                   table({ children }) { 
                     return (
-                      <div className="overflow-x-auto my-3 rounded-lg border border-border/40 shadow-sm">
-                        <table className="min-w-full divide-y divide-border/30">{children}</table>
+                      <div className="overflow-x-auto my-4 rounded-xl border border-border/30 shadow-sm bg-card/30">
+                        <table className="min-w-full divide-y divide-border/20">{children}</table>
                       </div>
                     ); 
                   },
                   thead({ children }) {
-                    return <thead className="bg-muted/40">{children}</thead>;
+                    return <thead className="bg-muted/30">{children}</thead>;
                   },
                   th({ children }) { 
                     return (
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      <th className="px-3.5 py-2.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                         {children}
                       </th>
                     ); 
                   },
                   td({ children }) { 
-                    return <td className="border-t border-border/20 px-3 py-2 text-sm">{children}</td>; 
+                    return <td className="border-t border-border/15 px-3.5 py-2.5 text-sm text-foreground/80">{children}</td>; 
                   },
                   tr({ children }) {
-                    return <tr className="hover:bg-muted/20 transition-colors">{children}</tr>;
+                    return <tr className="hover:bg-muted/10 transition-colors duration-150">{children}</tr>;
+                  },
+                  // Enhanced image rendering
+                  img({ src, alt }) {
+                    return (
+                      <img 
+                        src={src} 
+                        alt={alt || ''} 
+                        className="rounded-xl border border-border/20 shadow-lg max-w-full h-auto my-4"
+                        loading="lazy"
+                      />
+                    );
                   },
                 }}
               >
