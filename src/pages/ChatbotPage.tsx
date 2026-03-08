@@ -36,6 +36,7 @@ import PlanetaryActionPanel from "@/components/chat/PlanetaryActionPanel";
 import SecurityAuditPanel from "@/components/chat/SecurityAuditPanel";
 import { OfflineAIIndicator } from "@/components/chat/OfflineAIIndicator";
 import { ShadowBrowser } from "@/components/chat/ShadowBrowser";
+import { ScreenAgent } from "@/components/chat/ScreenAgent";
 import { WelcomeDialog } from "@/components/chat/WelcomeDialog";
 import { MultiModelOrchestrator } from "@/components/chat/MultiModelOrchestrator";
 import { APIMarketplace } from "@/components/chat/APIMarketplace";
@@ -172,6 +173,7 @@ const ChatbotPage = () => {
   const [showCreativeSynthesis, setShowCreativeSynthesis] = useState(false);
   const [showShadowTalkLive, setShowShadowTalkLive] = useState(false);
   const [showShadowBrowser, setShowShadowBrowser] = useState(false);
+  const [showScreenAgent, setShowScreenAgent] = useState(false);
   const [browserInitialUrl, setBrowserInitialUrl] = useState<string | undefined>(undefined);
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   const [showMultiModel, setShowMultiModel] = useState(false);
@@ -479,6 +481,10 @@ const ChatbotPage = () => {
           break;
          case 'o': // Pakistan Compliance (Shift+O for 🇵🇰)
            // Already handled elsewhere, but we can also use 'o' for offline
+           break;
+         case 'w': // Screen Watch & Clone (Kimi-style)
+           e.preventDefault();
+           setShowScreenAgent(true);
            break;
       }
     };
@@ -1833,6 +1839,20 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         initialPrompt={musicGeneratorPrompt}
         autoGenerate={musicGeneratorAutoGenerate}
         onInsertToChat={(content) => {
+          setMessages(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'ai',
+            content,
+            timestamp: new Date()
+          }]);
+        }}
+      />
+
+      {/* Screen Agent - Kimi K2.5-style Screen Watch & Clone */}
+      <ScreenAgent
+        isOpen={showScreenAgent}
+        onClose={() => setShowScreenAgent(false)}
+        onSendToChat={(content) => {
           setMessages(prev => [...prev, {
             id: crypto.randomUUID(),
             type: 'ai',
