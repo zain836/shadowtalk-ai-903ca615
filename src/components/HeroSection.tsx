@@ -273,7 +273,7 @@ const HeroSection = () => {
             variants={scaleFadeIn}
             className="mt-16 flex items-center justify-center gap-3"
           >
-            {["🛡️ Anti-Spyware AI", "⚡ Zero Cloud Dependency", "🧠 $102B Edge AI Market", "🚀 Product Hunt #1"].map((badge, i) => (
+            {["🛡️ Anti-Spyware AI", "⚡ Zero Cloud Dependency", "🧠 Edge AI Powered", "🚀 Built for Privacy"].map((badge, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
