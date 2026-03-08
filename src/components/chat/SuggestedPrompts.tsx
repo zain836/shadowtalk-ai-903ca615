@@ -121,8 +121,8 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
           const Icon = action.icon;
           const total = orbitActions.length;
           const angle = (i / total) * 2 * Math.PI - Math.PI / 2;
-          const radius = 110;
-          const mdRadius = 130;
+          const radius = 95;
+          const mdRadius = 115;
           const x = Math.cos(angle) * radius;
           const y = Math.sin(angle) * radius;
           const mdX = Math.cos(angle) * mdRadius;
