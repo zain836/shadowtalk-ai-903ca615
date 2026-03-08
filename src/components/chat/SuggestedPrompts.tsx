@@ -59,17 +59,61 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
             transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
             className="relative"
           >
-            {/* Core glow */}
-            <div className="absolute -inset-8 rounded-full bg-gradient-to-br from-primary/20 via-secondary/10 to-transparent blur-3xl" />
-            <div className="absolute -inset-4 rounded-full bg-primary/10 blur-xl animate-pulse" />
-            
+            {/* Outer pulse rings */}
+            <motion.div
+              animate={{ scale: [1, 1.8, 1.8], opacity: [0.4, 0, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeOut" }}
+              className="absolute -inset-4 rounded-full border border-primary/40"
+            />
+            <motion.div
+              animate={{ scale: [1, 2.2, 2.2], opacity: [0.3, 0, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeOut", delay: 0.8 }}
+              className="absolute -inset-4 rounded-full border border-primary/30"
+            />
+            <motion.div
+              animate={{ scale: [1, 2.6, 2.6], opacity: [0.2, 0, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeOut", delay: 1.6 }}
+              className="absolute -inset-4 rounded-full border border-primary/20"
+            />
+
+            {/* Breathing glow */}
+            <motion.div
+              animate={{ scale: [1, 1.3, 1], opacity: [0.15, 0.35, 0.15] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute -inset-10 rounded-full bg-gradient-to-br from-primary/25 via-accent/15 to-transparent blur-3xl"
+            />
+            <motion.div
+              animate={{ scale: [1.1, 0.9, 1.1], opacity: [0.1, 0.25, 0.1] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+              className="absolute -inset-6 rounded-full bg-primary/15 blur-2xl"
+            />
+
+            {/* Spinning accent ring */}
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+              className="absolute -inset-2 rounded-full"
+              style={{
+                background: "conic-gradient(from 0deg, transparent, hsl(var(--primary) / 0.4), transparent, transparent)",
+              }}
+            />
+
             {/* Core body */}
-            <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary/30 via-background to-secondary/20 border border-primary/20 flex items-center justify-center shadow-2xl shadow-primary/10 backdrop-blur-xl">
+            <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary/30 via-background to-secondary/20 border border-primary/30 flex items-center justify-center shadow-2xl shadow-primary/20 backdrop-blur-xl overflow-hidden">
+              {/* Inner shimmer */}
               <motion.div
-                animate={{ rotate: [0, 360] }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                animate={{ x: ["-100%", "100%"] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", repeatDelay: 2 }}
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent skew-x-12"
+              />
+              <motion.div
+                animate={{ rotate: [0, 360], scale: [1, 1.1, 1] }}
+                transition={{ 
+                  rotate: { duration: 20, repeat: Infinity, ease: "linear" },
+                  scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                }}
               >
-                <Sparkles className="h-8 w-8 md:h-10 md:w-10 text-primary" />
+                <Sparkles className="h-8 w-8 md:h-10 md:w-10 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]" />
               </motion.div>
             </div>
           </motion.div>
