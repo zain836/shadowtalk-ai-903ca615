@@ -101,7 +101,7 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
       <motion.div
         initial="hidden"
         animate="visible"
-        variants={{ visible: { transition: { staggerChildren: 0.07 } } }}
+        variants={{ visible: { transition: { staggerChildren: 0.1, delayChildren: 0.2 } } }}
         className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 w-full mb-5"
       >
         {capabilities.map((cap, i) => {
@@ -110,35 +110,55 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
             <motion.button
               key={cap.label}
               variants={{
-                hidden: { opacity: 0, y: 24, scale: 0.92 },
+                hidden: { opacity: 0, y: 30, scale: 0.85, filter: "blur(8px)" },
                 visible: {
                   opacity: 1,
                   y: 0,
                   scale: 1,
-                  transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
+                  filter: "blur(0px)",
+                  transition: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
                 },
               }}
-              whileHover={{ scale: 1.04, y: -2 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={{
+                scale: 1.05,
+                y: -4,
+                transition: { type: "spring", stiffness: 400, damping: 15 },
+              }}
+              whileTap={{ scale: 0.96 }}
               onClick={() => onSelect(cap.prompt)}
-              className={`group relative flex flex-col items-start gap-2.5 p-3.5 rounded-xl border ${cap.border} bg-card/30 backdrop-blur-sm cursor-pointer transition-all duration-300 hover:bg-card/50 shadow-lg shadow-transparent ${cap.glow}`}
+              className={`group relative flex flex-col items-start gap-2.5 p-3.5 rounded-xl border ${cap.border} bg-card/30 backdrop-blur-sm cursor-pointer transition-colors duration-300 hover:bg-card/50 shadow-lg shadow-transparent ${cap.glow} overflow-hidden`}
             >
-              {/* Animated gradient accent top bar */}
+              {/* Scanning line effect */}
+              <motion.div
+                className="absolute inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent pointer-events-none"
+                initial={{ top: 0, opacity: 0 }}
+                animate={{ top: ["0%", "100%", "0%"], opacity: [0, 0.6, 0] }}
+                transition={{ duration: 4 + i * 0.5, repeat: Infinity, ease: "easeInOut", delay: i * 0.8 }}
+              />
+
+              {/* Animated gradient accent top bar - sweeps in */}
               <motion.div
                 className={`absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r ${cap.accent} rounded-t-xl`}
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ delay: 0.3 + i * 0.07, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] }}
+                initial={{ scaleX: 0, opacity: 0 }}
+                animate={{ scaleX: 1, opacity: 1 }}
+                transition={{ delay: 0.5 + i * 0.1, duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] }}
                 style={{ originX: 0 }}
               />
 
-              {/* Icon with subtle float */}
+              {/* Corner glow pulse */}
               <motion.div
-                animate={{ y: [0, -2, 0] }}
-                transition={{ duration: 3 + i * 0.5, repeat: Infinity, ease: "easeInOut", delay: i * 0.3 }}
+                className={`absolute -top-4 -right-4 w-12 h-12 rounded-full bg-gradient-to-br ${cap.accent} blur-xl pointer-events-none`}
+                animate={{ opacity: [0, 0.4, 0], scale: [0.8, 1.2, 0.8] }}
+                transition={{ duration: 3 + i * 0.3, repeat: Infinity, ease: "easeInOut", delay: i * 0.5 }}
+              />
+
+              {/* Icon with breathing float */}
+              <motion.div
+                animate={{ y: [0, -3, 0], rotate: [0, 1, -1, 0] }}
+                transition={{ duration: 3.5 + i * 0.4, repeat: Infinity, ease: "easeInOut", delay: i * 0.2 }}
                 className="w-8 h-8 rounded-lg bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center"
               >
-                <Icon className="w-4 h-4 text-foreground/70 group-hover:text-foreground transition-colors" />
+                <Icon className="w-4 h-4 text-foreground/70 group-hover:text-foreground transition-colors duration-200" />
               </motion.div>
 
               <div className="flex items-center justify-between w-full">
@@ -146,8 +166,8 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
                   {cap.label}
                 </span>
                 <motion.div
-                  initial={{ x: 0, opacity: 0.3 }}
-                  whileHover={{ x: 3, opacity: 0.7 }}
+                  animate={{ x: [0, 2, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1 + i * 0.2 }}
                 >
                   <ArrowRight className="w-3 h-3 text-muted-foreground/30 group-hover:text-foreground/50 transition-all" />
                 </motion.div>
