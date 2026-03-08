@@ -216,6 +216,7 @@ const App = () => {
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <TooltipProvider>
             <AuthProvider>
+              <SecurityProvider>
               <ShadowMemoryProvider>
               <CommandPaletteContext.Provider value={{ open: () => setCmdOpen(true) }}>
               {showBootScreen && !hasBooted && (
