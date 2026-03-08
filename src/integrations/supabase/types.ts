@@ -701,6 +701,122 @@ export type Database = {
         }
         Relationships: []
       }
+      cyber_incident_events: {
+        Row: {
+          created_at: string
+          event_description: string
+          event_time: string
+          id: string
+          incident_id: string
+          mitre_tactic: string | null
+          severity: string
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_description: string
+          event_time: string
+          id?: string
+          incident_id: string
+          mitre_tactic?: string | null
+          severity?: string
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_description?: string
+          event_time?: string
+          id?: string
+          incident_id?: string
+          mitre_tactic?: string | null
+          severity?: string
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cyber_incident_events_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "cyber_incidents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cyber_incidents: {
+        Row: {
+          created_at: string
+          id: string
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cyber_research_projects: {
+        Row: {
+          created_at: string
+          estimated_bounty: number | null
+          id: string
+          notes: string | null
+          progress: number | null
+          project_code: string
+          status: string
+          target: string
+          updated_at: string
+          user_id: string
+          vulnerability_type: string
+        }
+        Insert: {
+          created_at?: string
+          estimated_bounty?: number | null
+          id?: string
+          notes?: string | null
+          progress?: number | null
+          project_code: string
+          status?: string
+          target: string
+          updated_at?: string
+          user_id: string
+          vulnerability_type: string
+        }
+        Update: {
+          created_at?: string
+          estimated_bounty?: number | null
+          id?: string
+          notes?: string | null
+          progress?: number | null
+          project_code?: string
+          status?: string
+          target?: string
+          updated_at?: string
+          user_id?: string
+          vulnerability_type?: string
+        }
+        Relationships: []
+      }
       cyber_scan_results: {
         Row: {
           completed_at: string | null

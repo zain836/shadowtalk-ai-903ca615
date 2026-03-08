@@ -8,6 +8,10 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Shield, Crosshair, Radio, FlaskConical, AlertTriangle, Search,
   Activity, Bug, Terminal, Globe, Clock, Zap, Eye, Lock,
@@ -15,10 +19,15 @@ import {
   FileWarning, Radar, Flame, Database, Network, ShieldAlert,
   ShieldCheck, ArrowUpRight, Play, Pause, RotateCcw, Download,
   Copy, CheckCircle2, XCircle, Info, TrendingUp, Layers, BookOpen,
-  RefreshCw, History, AlertCircle, Brain, Trophy, BookMarked, Scan
+  RefreshCw, History, AlertCircle, Brain, Trophy, BookMarked, Scan, Plus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLiveCVEs, useThreatActors, useWebsiteScan, useScanHistory, useRealtimeCVEs } from "@/hooks/useThreatIntel";
+import {
+  useIncidents, useIncidentEvents, useCreateIncident, useAddIncidentEvent,
+  useResearchProjects, useCreateResearchProject, useUpdateResearchProject,
+  useCyberStats,
+} from "@/hooks/useCyberData";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
@@ -37,7 +46,7 @@ const TabLoader = () => (
   </div>
 );
 
-// ── Static data ───────────────────────────────────────────
+// ── Static reference data ─────────────────────────────────
 const pentestModules = [
   { id: "recon", name: "Reconnaissance", icon: Eye, desc: "OSINT gathering, subdomain enumeration, technology fingerprinting", tools: ["subfinder", "amass", "httpx", "nuclei"], status: "ready" },
   { id: "scan", name: "Vulnerability Scan", icon: Radar, desc: "Automated vulnerability detection across web, network, and cloud", tools: ["nmap", "nikto", "sqlmap", "burpsuite"], status: "ready" },
@@ -69,30 +78,6 @@ const mitreTactics = [
   { id: "TA0040", name: "Impact", techniques: 13, color: "hsl(var(--destructive))" },
 ];
 
-const incidentTimeline = [
-  { time: "14:32:07", event: "Phishing email received by finance@corp.com", severity: "info", tactic: "TA0001" },
-  { time: "14:33:42", event: "Macro-enabled .xlsm opened — PowerShell spawned", severity: "critical", tactic: "TA0002" },
-  { time: "14:34:01", event: "Registry key added: HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", severity: "high", tactic: "TA0003" },
-  { time: "14:35:18", event: "LSASS memory dumped via Mimikatz", severity: "critical", tactic: "TA0006" },
-  { time: "14:36:45", event: "Lateral movement to DC01 via Pass-the-Hash", severity: "critical", tactic: "TA0008" },
-  { time: "14:38:22", event: "Active Directory enumeration — BloodHound-style queries", severity: "high", tactic: "TA0007" },
-  { time: "14:42:10", event: "Data staged in C:\\Windows\\Temp\\export.7z", severity: "high", tactic: "TA0009" },
-  { time: "14:45:33", event: "DNS tunneling C2 established — beacon interval 60s", severity: "critical", tactic: "TA0011" },
-  { time: "14:48:01", event: "7z archive exfiltrated over DNS to attacker domain", severity: "critical", tactic: "TA0010" },
-];
-
-const researchEntries = [
-  { id: "ZD-2026-001", target: "Chrome V8 Engine", type: "Type Confusion", status: "analyzing", bounty: "$50,000", progress: 65 },
-  { id: "ZD-2026-002", target: "Windows RPC", type: "Use-After-Free", status: "poc-ready", bounty: "$100,000", progress: 90 },
-  { id: "ZD-2026-003", target: "iOS WebKit", type: "JIT Optimization Bug", status: "fuzzing", bounty: "$250,000", progress: 35 },
-  { id: "ZD-2026-004", target: "Linux io_uring", type: "Race Condition", status: "disclosed", bounty: "$25,000", progress: 100 },
-];
-
-const fuzzingStats = {
-  totalExecutions: 847_293_102, crashesFound: 247, uniqueCrashes: 18,
-  coverage: 73.4, runtime: "14d 7h 32m", corpusSize: 12_847,
-};
-
 // ── Helpers ───────────────────────────────────────────────
 const sevColor = (s: string) =>
   s === "critical" ? "bg-destructive/15 text-destructive border-destructive/30" :
@@ -112,8 +97,6 @@ const LivePulse = ({ className }: { className?: string }) => (
 );
 
 // ═══════════════════════════════════════════════════════════
-// MAIN COMPONENT
-// ═══════════════════════════════════════════════════════════
 const CyberCommandCenter = () => {
   const [activeTab, setActiveTab] = useState("ai-copilot");
   const [searchQuery, setSearchQuery] = useState("");
@@ -121,6 +104,14 @@ const CyberCommandCenter = () => {
   const [scanTarget, setScanTarget] = useState("");
   const [copiedPayload, setCopiedPayload] = useState<string | null>(null);
   const [selectedTactic, setSelectedTactic] = useState<string | null>(null);
+  const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
+  const [showAddIncident, setShowAddIncident] = useState(false);
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [showAddResearch, setShowAddResearch] = useState(false);
+  const [newIncident, setNewIncident] = useState({ title: "", severity: "medium" });
+  const [newEvent, setNewEvent] = useState({ event_time: "", event_description: "", severity: "info", mitre_tactic: "" });
+  const [newResearch, setNewResearch] = useState({ project_code: "", target: "", vulnerability_type: "", status: "analyzing", estimated_bounty: 0, progress: 0 });
+
   const [terminalOutput, setTerminalOutput] = useState<string[]>([
     "shadowtalk@cyber:~$ ",
     "╔══════════════════════════════════════════════════╗",
@@ -130,13 +121,26 @@ const CyberCommandCenter = () => {
     "", "[*] Initializing...", "shadowtalk@cyber:~$ "
   ]);
 
+  // Data hooks
   const { data: liveCVEs = [], isLoading: cvesLoading, refetch: refetchCVEs, isError: cvesError } = useLiveCVEs();
   const { data: threatActors = [], isLoading: actorsLoading } = useThreatActors();
   const { data: scanHistory = [] } = useScanHistory();
+  const { data: heroStats } = useCyberStats();
   const websiteScan = useWebsiteScan();
   const { subscribe } = useRealtimeCVEs((newCve) => {
     toast.info(`New CVE: ${newCve.cve_id}`, { description: `${newCve.severity.toUpperCase()} - ${newCve.product}` });
   });
+
+  // Incidents
+  const { data: incidents = [] } = useIncidents();
+  const { data: incidentEvents = [] } = useIncidentEvents(selectedIncident);
+  const createIncident = useCreateIncident();
+  const addEvent = useAddIncidentEvent();
+
+  // Research
+  const { data: researchProjects = [] } = useResearchProjects();
+  const createResearch = useCreateResearchProject();
+  const updateResearch = useUpdateResearchProject();
 
   useEffect(() => { const unsub = subscribe(); return unsub; }, []);
 
@@ -149,7 +153,12 @@ const CyberCommandCenter = () => {
     }
   }, [liveCVEs, threatActors, cvesLoading]);
 
-  const cveCount = liveCVEs.length > 0 ? 247_832 + liveCVEs.length : 247_832;
+  // Auto-select first incident
+  useEffect(() => {
+    if (incidents.length > 0 && !selectedIncident) {
+      setSelectedIncident(incidents[0].id);
+    }
+  }, [incidents, selectedIncident]);
 
   const startScan = useCallback(() => {
     if (!scanTarget.trim()) { toast.error("Enter a target URL"); return; }
@@ -165,6 +174,43 @@ const CyberCommandCenter = () => {
     setTimeout(() => setCopiedPayload(null), 2000);
   };
 
+  const handleCreateIncident = () => {
+    if (!newIncident.title) return;
+    createIncident.mutate(newIncident, {
+      onSuccess: (data) => {
+        setSelectedIncident(data.id);
+        setShowAddIncident(false);
+        setNewIncident({ title: "", severity: "medium" });
+        toast.success("Incident created");
+      },
+      onError: (e: Error) => toast.error(e.message),
+    });
+  };
+
+  const handleAddEvent = () => {
+    if (!selectedIncident || !newEvent.event_description) return;
+    addEvent.mutate({ ...newEvent, incident_id: selectedIncident, mitre_tactic: newEvent.mitre_tactic || undefined }, {
+      onSuccess: () => {
+        setShowAddEvent(false);
+        setNewEvent({ event_time: "", event_description: "", severity: "info", mitre_tactic: "" });
+        toast.success("Event added to timeline");
+      },
+      onError: (e: Error) => toast.error(e.message),
+    });
+  };
+
+  const handleCreateResearch = () => {
+    if (!newResearch.target || !newResearch.vulnerability_type) return;
+    createResearch.mutate(newResearch, {
+      onSuccess: () => {
+        setShowAddResearch(false);
+        setNewResearch({ project_code: "", target: "", vulnerability_type: "", status: "analyzing", estimated_bounty: 0, progress: 0 });
+        toast.success("Research project created");
+      },
+      onError: (e: Error) => toast.error(e.message),
+    });
+  };
+
   const tabConfig = [
     { id: "ai-copilot", label: "AI Copilot", icon: Brain, color: "text-primary" },
     { id: "threat-intel", label: "Threat Intel", icon: Radio, color: "text-destructive" },
@@ -178,7 +224,7 @@ const CyberCommandCenter = () => {
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8">
-      {/* HERO */}
+      {/* HERO — real stats */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
         <div className="inline-flex items-center gap-2 rounded-full border border-destructive/30 bg-destructive/5 px-4 py-1.5 mb-6">
           <LivePulse />
@@ -193,10 +239,10 @@ const CyberCommandCenter = () => {
         </p>
         <div className="flex flex-wrap items-center justify-center gap-4 mt-8">
           {[
-            { label: "CVEs Tracked", value: cveCount.toLocaleString(), icon: Bug, color: "text-destructive" },
-            { label: "Threat Actors", value: "412", icon: Skull, color: "text-warning" },
+            { label: "CVEs Tracked", value: (heroStats?.cveCount || liveCVEs.length).toLocaleString(), icon: Bug, color: "text-destructive" },
+            { label: "Threat Actors", value: (heroStats?.actorCount || threatActors.length).toLocaleString(), icon: Skull, color: "text-warning" },
             { label: "MITRE Techniques", value: "201", icon: Layers, color: "text-accent" },
-            { label: "Exploits in DB", value: "52,847", icon: Flame, color: "text-secondary" },
+            { label: "Scans Run", value: (heroStats?.scanCount || 0).toLocaleString(), icon: Scan, color: "text-secondary" },
           ].map((stat, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-card">
               <stat.icon className={cn("h-4 w-4", stat.color)} />
@@ -236,7 +282,10 @@ const CyberCommandCenter = () => {
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="flex items-center gap-2 text-lg"><Bug className="h-5 w-5 text-destructive" /> Live CVE Feed <LivePulse className="ml-1" /></CardTitle>
-                      <Badge variant="outline" className="font-mono text-[10px]">{cveCount.toLocaleString()} total</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-mono text-[10px]">{(heroStats?.cveCount || liveCVEs.length).toLocaleString()} total</Badge>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => refetchCVEs()}><RefreshCw className="h-3 w-3" /></Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="p-0">
@@ -304,6 +353,8 @@ const CyberCommandCenter = () => {
                   <CardContent className="space-y-3">
                     {actorsLoading ? (
                       <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
+                    ) : threatActors.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-6">No threat actors tracked yet.</p>
                     ) : threatActors.map((actor, i) => (
                       <motion.div key={actor.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.06 }}
                         className="p-3 rounded-xl border border-border hover:border-warning/30 transition-colors cursor-pointer"
@@ -327,11 +378,21 @@ const CyberCommandCenter = () => {
                 <Card className="border-destructive/20 bg-gradient-to-br from-destructive/5 to-card">
                   <CardContent className="py-6 text-center">
                     <Globe className="h-8 w-8 text-destructive mx-auto mb-3" />
-                    <h3 className="font-bold text-foreground mb-1">Global Threat Level</h3>
-                    <div className="text-3xl font-black font-mono text-destructive mb-2">ELEVATED</div>
-                    <p className="text-xs text-muted-foreground">3 active campaigns targeting critical infrastructure</p>
+                    <h3 className="font-bold text-foreground mb-1">Threat Summary</h3>
+                    <div className="text-3xl font-black font-mono text-destructive mb-2">
+                      {liveCVEs.filter(c => c.severity === "critical").length}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Critical CVEs in the last 7 days</p>
                     <div className="flex justify-center gap-1 mt-3">
-                      {[...Array(5)].map((_, i) => <div key={i} className={cn("h-2 w-8 rounded-full", i < 4 ? "bg-destructive" : "bg-muted")} />)}
+                      {["critical", "high", "medium", "low"].map(sev => {
+                        const count = liveCVEs.filter(c => c.severity === sev).length;
+                        return (
+                          <div key={sev} className="text-center px-2">
+                            <div className={cn("text-sm font-bold font-mono", sev === "critical" ? "text-destructive" : sev === "high" ? "text-warning" : sev === "medium" ? "text-primary" : "text-muted-foreground")}>{count}</div>
+                            <div className="text-[9px] text-muted-foreground uppercase">{sev}</div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
@@ -442,7 +503,7 @@ const CyberCommandCenter = () => {
           <Suspense fallback={<TabLoader />}><OSINTDashboard /></Suspense>
         </TabsContent>
 
-        {/* TAB: WAR ROOM */}
+        {/* TAB: WAR ROOM — Real Data */}
         <TabsContent value="incident-response">
           <div className="space-y-6">
             <Card className="border-border bg-card">
@@ -456,72 +517,118 @@ const CyberCommandCenter = () => {
                     >
                       <div className="text-[9px] font-mono text-muted-foreground mb-1">{tactic.id}</div>
                       <div className="text-[10px] font-bold text-foreground leading-tight mb-1">{tactic.name}</div>
-                      <div className="text-[10px] font-mono" style={{ color: tactic.color }}>{tactic.techniques} techniques</div>
+                      <div className="text-[10px] font-mono" style={{ color: tactic.color }}>{tactic.techniques}t</div>
                     </motion.div>
                   ))}
                 </div>
               </CardContent>
             </Card>
 
+            {/* Incident Selector + Add */}
+            <div className="flex items-center gap-3">
+              <Select value={selectedIncident || ""} onValueChange={setSelectedIncident}>
+                <SelectTrigger className="flex-1 h-10 bg-card border-border">
+                  <SelectValue placeholder="Select incident..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {incidents.map(inc => (
+                    <SelectItem key={inc.id} value={inc.id}>
+                      <span className="font-mono text-xs">{inc.title}</span>
+                      <Badge className={cn("ml-2 text-[8px]", sevColor(inc.severity))}>{inc.severity}</Badge>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Dialog open={showAddIncident} onOpenChange={setShowAddIncident}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1 h-10"><Plus className="h-3 w-3" /> New Incident</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader><DialogTitle>Create Incident</DialogTitle></DialogHeader>
+                  <div className="space-y-3">
+                    <div><Label className="text-xs">Title</Label><Input value={newIncident.title} onChange={e => setNewIncident(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Phishing campaign targeting finance" className="mt-1" /></div>
+                    <div><Label className="text-xs">Severity</Label>
+                      <Select value={newIncident.severity} onValueChange={v => setNewIncident(p => ({ ...p, severity: v }))}>
+                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>{["critical", "high", "medium", "low"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={handleCreateIncident} disabled={!newIncident.title || createIncident.isPending} className="w-full">
+                      {createIncident.isPending ? "Creating..." : "Create Incident"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Forensic Timeline — from DB */}
             <Card className="border-border bg-card">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5 text-secondary" /> Forensic Timeline — Active Incident</CardTitle>
-                  <div className="flex items-center gap-2"><LivePulse /><Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[10px]">SEVERITY: CRITICAL</Badge></div>
+                  <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5 text-secondary" /> Forensic Timeline</CardTitle>
+                  <Dialog open={showAddEvent} onOpenChange={setShowAddEvent}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="gap-1 h-7 text-xs" disabled={!selectedIncident}><Plus className="h-3 w-3" /> Add Event</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader><DialogTitle>Add Timeline Event</DialogTitle></DialogHeader>
+                      <div className="space-y-3">
+                        <div><Label className="text-xs">Time (e.g. 14:32:07)</Label><Input value={newEvent.event_time} onChange={e => setNewEvent(p => ({ ...p, event_time: e.target.value }))} placeholder="HH:MM:SS" className="mt-1 font-mono" /></div>
+                        <div><Label className="text-xs">Description</Label><Textarea value={newEvent.event_description} onChange={e => setNewEvent(p => ({ ...p, event_description: e.target.value }))} placeholder="What happened..." className="mt-1" rows={2} /></div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div><Label className="text-xs">Severity</Label>
+                            <Select value={newEvent.severity} onValueChange={v => setNewEvent(p => ({ ...p, severity: v }))}>
+                              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                              <SelectContent>{["critical", "high", "medium", "info"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                          <div><Label className="text-xs">MITRE Tactic</Label>
+                            <Select value={newEvent.mitre_tactic} onValueChange={v => setNewEvent(p => ({ ...p, mitre_tactic: v }))}>
+                              <SelectTrigger className="mt-1"><SelectValue placeholder="Optional" /></SelectTrigger>
+                              <SelectContent>{mitreTactics.map(t => <SelectItem key={t.id} value={t.id}>{t.id}: {t.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <Button onClick={handleAddEvent} disabled={!newEvent.event_description || addEvent.isPending} className="w-full">
+                          {addEvent.isPending ? "Adding..." : "Add Event"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="relative">
-                  <div className="absolute left-[72px] top-0 bottom-0 w-px bg-border" />
-                  <div className="space-y-1">
-                    {incidentTimeline.map((event, i) => {
-                      const matchedTactic = mitreTactics.find(t => t.id === event.tactic);
-                      return (
-                        <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
-                          className={cn("flex items-start gap-4 p-3 rounded-xl transition-colors hover:bg-muted/30", selectedTactic && event.tactic !== selectedTactic && "opacity-30")}
-                        >
-                          <code className="text-xs font-mono text-muted-foreground w-14 shrink-0 pt-0.5">{event.time}</code>
-                          <div className="relative z-10 shrink-0 mt-1"><div className={cn("h-3 w-3 rounded-full ring-2 ring-background", sevDot(event.severity))} /></div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-foreground">{event.event}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge className={cn("text-[9px] px-1.5 py-0", sevColor(event.severity))}>{event.severity}</Badge>
-                              {matchedTactic && <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono" style={{ borderColor: matchedTactic.color + "60", color: matchedTactic.color }}>{matchedTactic.id}: {matchedTactic.name}</Badge>}
+                {!selectedIncident ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">Create or select an incident to view its forensic timeline.</p>
+                ) : incidentEvents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No events yet. Add the first event to start the timeline.</p>
+                ) : (
+                  <div className="relative">
+                    <div className="absolute left-[72px] top-0 bottom-0 w-px bg-border" />
+                    <div className="space-y-1">
+                      {incidentEvents.map((event, i) => {
+                        const matchedTactic = mitreTactics.find(t => t.id === event.mitre_tactic);
+                        return (
+                          <motion.div key={event.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
+                            className={cn("flex items-start gap-4 p-3 rounded-xl transition-colors hover:bg-muted/30", selectedTactic && event.mitre_tactic !== selectedTactic && "opacity-30")}
+                          >
+                            <code className="text-xs font-mono text-muted-foreground w-14 shrink-0 pt-0.5">{event.event_time}</code>
+                            <div className="relative z-10 shrink-0 mt-1"><div className={cn("h-3 w-3 rounded-full ring-2 ring-background", sevDot(event.severity))} /></div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-foreground">{event.event_description}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge className={cn("text-[9px] px-1.5 py-0", sevColor(event.severity))}>{event.severity}</Badge>
+                                {matchedTactic && <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono" style={{ borderColor: matchedTactic.color + "60", color: matchedTactic.color }}>{matchedTactic.id}: {matchedTactic.name}</Badge>}
+                              </div>
                             </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
+                          </motion.div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { name: "Containment", icon: Shield, desc: "Isolate systems, block C2 IPs, revoke credentials", status: "executing", progress: 60 },
-                { name: "Eradication", icon: XCircle, desc: "Remove malware, patch vulns, reset credentials", status: "pending", progress: 0 },
-                { name: "Recovery", icon: RotateCcw, desc: "Restore from backups, monitor re-infection", status: "pending", progress: 0 },
-              ].map((playbook, i) => (
-                <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}>
-                  <Card className={cn("border-border bg-card h-full", playbook.status === "executing" && "border-accent/40")}>
-                    <CardContent className="p-5">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className={cn("p-2 rounded-xl", playbook.status === "executing" ? "bg-accent/10" : "bg-muted")}>
-                          <playbook.icon className={cn("h-5 w-5", playbook.status === "executing" ? "text-accent" : "text-muted-foreground")} />
-                        </div>
-                        <div><h3 className="font-bold text-foreground text-sm">{playbook.name}</h3><Badge variant="outline" className="text-[9px]">{playbook.status}</Badge></div>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-3">{playbook.desc}</p>
-                      {playbook.status === "executing" && <Progress value={playbook.progress} className="h-1.5" />}
-                      <Button size="sm" variant={playbook.status === "executing" ? "default" : "outline"} className="w-full mt-3 text-xs h-8">
-                        {playbook.status === "executing" ? "View Progress" : "Execute Playbook"}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
           </div>
         </TabsContent>
 
@@ -535,58 +642,78 @@ const CyberCommandCenter = () => {
           <Suspense fallback={<TabLoader />}><SecurityCheatSheets /></Suspense>
         </TabsContent>
 
-        {/* TAB: ZERO-DAY LAB */}
+        {/* TAB: ZERO-DAY LAB — Real Data */}
         <TabsContent value="zero-day">
           <div className="space-y-6">
             <Card className="border-border bg-card">
-              <CardHeader><CardTitle className="flex items-center gap-2"><FlaskConical className="h-5 w-5 text-secondary" /> Active Research Projects</CardTitle></CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {researchEntries.map((entry, i) => (
-                    <motion.div key={entry.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="p-4 rounded-xl border border-border hover:border-secondary/40 transition-colors">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <code className="text-xs font-mono font-bold text-secondary">{entry.id}</code>
-                          <Badge className={cn("text-[9px]", entry.status === "poc-ready" ? "bg-success/15 text-success border-success/30" : entry.status === "analyzing" ? "bg-warning/15 text-warning border-warning/30" : entry.status === "fuzzing" ? "bg-primary/15 text-primary border-primary/30" : "bg-muted text-muted-foreground")}>{entry.status}</Badge>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2"><FlaskConical className="h-5 w-5 text-secondary" /> Research Projects</CardTitle>
+                  <Dialog open={showAddResearch} onOpenChange={setShowAddResearch}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="gap-1 h-7 text-xs"><Plus className="h-3 w-3" /> New Project</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader><DialogTitle>Create Research Project</DialogTitle></DialogHeader>
+                      <div className="space-y-3">
+                        <div><Label className="text-xs">Project Code</Label><Input value={newResearch.project_code} onChange={e => setNewResearch(p => ({ ...p, project_code: e.target.value }))} placeholder="e.g. ZD-2026-005" className="mt-1 font-mono" /></div>
+                        <div><Label className="text-xs">Target</Label><Input value={newResearch.target} onChange={e => setNewResearch(p => ({ ...p, target: e.target.value }))} placeholder="e.g. Chrome V8 Engine" className="mt-1" /></div>
+                        <div><Label className="text-xs">Vulnerability Type</Label><Input value={newResearch.vulnerability_type} onChange={e => setNewResearch(p => ({ ...p, vulnerability_type: e.target.value }))} placeholder="e.g. Type Confusion" className="mt-1" /></div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div><Label className="text-xs">Status</Label>
+                            <Select value={newResearch.status} onValueChange={v => setNewResearch(p => ({ ...p, status: v }))}>
+                              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                              <SelectContent>{["fuzzing", "analyzing", "poc-ready", "disclosed"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                          <div><Label className="text-xs">Est. Bounty ($)</Label><Input type="number" value={newResearch.estimated_bounty} onChange={e => setNewResearch(p => ({ ...p, estimated_bounty: Number(e.target.value) }))} className="mt-1" /></div>
                         </div>
-                        <span className="text-sm font-bold text-success font-mono">{entry.bounty}</span>
+                        <Button onClick={handleCreateResearch} disabled={!newResearch.target || !newResearch.vulnerability_type || createResearch.isPending} className="w-full">
+                          {createResearch.isPending ? "Creating..." : "Create Project"}
+                        </Button>
                       </div>
-                      <h4 className="text-sm font-semibold text-foreground">{entry.target}</h4>
-                      <p className="text-xs text-muted-foreground mb-3">{entry.type}</p>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1"><span>Progress</span><span className="font-mono">{entry.progress}%</span></div>
-                      <Progress value={entry.progress} className="h-1.5" />
-                    </motion.div>
-                  ))}
+                    </DialogContent>
+                  </Dialog>
                 </div>
+              </CardHeader>
+              <CardContent>
+                {researchProjects.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No research projects yet. Start your first zero-day hunt!</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {researchProjects.map((entry, i) => (
+                      <motion.div key={entry.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="p-4 rounded-xl border border-border hover:border-secondary/40 transition-colors">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <code className="text-xs font-mono font-bold text-secondary">{entry.project_code}</code>
+                            <Badge className={cn("text-[9px]", entry.status === "poc-ready" ? "bg-success/15 text-success border-success/30" : entry.status === "analyzing" ? "bg-warning/15 text-warning border-warning/30" : entry.status === "fuzzing" ? "bg-primary/15 text-primary border-primary/30" : "bg-muted text-muted-foreground")}>{entry.status}</Badge>
+                          </div>
+                          <span className="text-sm font-bold text-success font-mono">${Number(entry.estimated_bounty).toLocaleString()}</span>
+                        </div>
+                        <h4 className="text-sm font-semibold text-foreground">{entry.target}</h4>
+                        <p className="text-xs text-muted-foreground mb-3">{entry.vulnerability_type}</p>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1"><span>Progress</span><span className="font-mono">{entry.progress}%</span></div>
+                        <Progress value={entry.progress} className="h-1.5" />
+                        <div className="flex gap-2 mt-3">
+                          {entry.progress < 100 && (
+                            <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={() => updateResearch.mutate({ id: entry.id, progress: Math.min(entry.progress + 10, 100) })}>
+                              +10%
+                            </Button>
+                          )}
+                          {entry.status !== "disclosed" && entry.progress >= 90 && (
+                            <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={() => updateResearch.mutate({ id: entry.id, status: "disclosed", progress: 100 })}>
+                              Mark Disclosed
+                            </Button>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="border-border bg-card">
-                <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Zap className="h-5 w-5 text-primary" /> Fuzzing Engine — AFL++</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { label: "Total Executions", value: fuzzingStats.totalExecutions.toLocaleString(), color: "text-primary" },
-                      { label: "Crashes Found", value: fuzzingStats.crashesFound.toString(), color: "text-destructive" },
-                      { label: "Unique Crashes", value: fuzzingStats.uniqueCrashes.toString(), color: "text-warning" },
-                      { label: "Code Coverage", value: `${fuzzingStats.coverage}%`, color: "text-success" },
-                      { label: "Runtime", value: fuzzingStats.runtime, color: "text-foreground" },
-                      { label: "Corpus Size", value: fuzzingStats.corpusSize.toLocaleString(), color: "text-secondary" },
-                    ].map((stat, i) => (
-                      <div key={i} className="p-3 rounded-xl bg-muted/30 border border-border">
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{stat.label}</span>
-                        <p className={cn("text-lg font-black font-mono mt-1", stat.color)}>{stat.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-4 flex gap-2">
-                    <Button size="sm" className="flex-1 gap-1.5 text-xs h-9"><Play className="h-3 w-3" /> Resume Fuzzer</Button>
-                    <Button size="sm" variant="outline" className="gap-1.5 text-xs h-9"><Download className="h-3 w-3" /> Export Crashes</Button>
-                  </div>
-                </CardContent>
-              </Card>
-
               <Card className="border-secondary/20 bg-gradient-to-br from-secondary/5 to-card">
                 <CardHeader><CardTitle className="flex items-center gap-2 text-base"><BookOpen className="h-5 w-5 text-secondary" /> Responsible Disclosure</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
@@ -606,6 +733,28 @@ const CyberCommandCenter = () => {
                     ))}
                   </div>
                   <Button variant="outline" className="w-full gap-2 text-xs"><Shield className="h-3.5 w-3.5" /> Generate Disclosure Report</Button>
+                </CardContent>
+              </Card>
+
+              {/* Research Stats — computed from real data */}
+              <Card className="border-border bg-card">
+                <CardHeader><CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-5 w-5 text-primary" /> Research Summary</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { label: "Total Projects", value: researchProjects.length.toString(), color: "text-primary" },
+                      { label: "PoC Ready", value: researchProjects.filter(r => r.status === "poc-ready").length.toString(), color: "text-success" },
+                      { label: "Analyzing", value: researchProjects.filter(r => r.status === "analyzing").length.toString(), color: "text-warning" },
+                      { label: "Disclosed", value: researchProjects.filter(r => r.status === "disclosed").length.toString(), color: "text-muted-foreground" },
+                      { label: "Avg Progress", value: researchProjects.length > 0 ? `${Math.round(researchProjects.reduce((s, r) => s + r.progress, 0) / researchProjects.length)}%` : "0%", color: "text-accent" },
+                      { label: "Total Bounty Est.", value: `$${researchProjects.reduce((s, r) => s + Number(r.estimated_bounty), 0).toLocaleString()}`, color: "text-success" },
+                    ].map((stat, i) => (
+                      <div key={i} className="p-3 rounded-xl bg-muted/30 border border-border">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{stat.label}</span>
+                        <p className={cn("text-lg font-black font-mono mt-1", stat.color)}>{stat.value}</p>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             </div>
