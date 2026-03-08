@@ -37,83 +37,78 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
         transition={{ duration: 0.8 }}
         className="relative w-[320px] h-[320px] md:w-[380px] md:h-[380px] mb-8"
       >
-        {/* Ambient rings */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-            className="absolute w-[280px] h-[280px] md:w-[340px] md:h-[340px] rounded-full border border-border/[0.06]"
-          />
-          <motion.div
-            animate={{ rotate: -360 }}
-            transition={{ duration: 45, repeat: Infinity, ease: "linear" }}
-            className="absolute w-[220px] h-[220px] md:w-[260px] md:h-[260px] rounded-full border border-border/[0.04] border-dashed"
-          />
-        </div>
-
         {/* Central Core */}
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.div
             initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
-            className="relative"
+            className="relative flex items-center justify-center"
           >
-            {/* Outer pulse rings */}
+            {/* Hexagonal grid pulse */}
+            {[0, 1, 2].map(i => (
+              <motion.div
+                key={`hex-${i}`}
+                animate={{ scale: [1, 2.4 + i * 0.4], opacity: [0.3 - i * 0.08, 0] }}
+                transition={{ duration: 3.5, repeat: Infinity, ease: "easeOut", delay: i * 0.7 }}
+                className="absolute w-20 h-20 md:w-24 md:h-24 rounded-full border border-primary/30"
+                style={{ clipPath: "polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)" }}
+              />
+            ))}
+
+            {/* Rotating double orbit */}
             <motion.div
-              animate={{ scale: [1, 1.8, 1.8], opacity: [0.4, 0, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeOut" }}
-              className="absolute -inset-4 rounded-full border border-primary/40"
-            />
+              animate={{ rotate: 360 }}
+              transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+              className="absolute w-36 h-36 md:w-44 md:h-44"
+            >
+              <div className="absolute inset-0 rounded-full border border-dashed border-primary/10" />
+              {/* Orbit dot 1 */}
+              <motion.div
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.6)]"
+              />
+              {/* Orbit dot 2 */}
+              <motion.div
+                animate={{ opacity: [1, 0.4, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_hsl(var(--accent)/0.6)]"
+              />
+            </motion.div>
+
             <motion.div
-              animate={{ scale: [1, 2.2, 2.2], opacity: [0.3, 0, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeOut", delay: 0.8 }}
-              className="absolute -inset-4 rounded-full border border-primary/30"
-            />
-            <motion.div
-              animate={{ scale: [1, 2.6, 2.6], opacity: [0.2, 0, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeOut", delay: 1.6 }}
-              className="absolute -inset-4 rounded-full border border-primary/20"
-            />
+              animate={{ rotate: -360 }}
+              transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+              className="absolute w-28 h-28 md:w-32 md:h-32"
+            >
+              <div className="absolute inset-0 rounded-full border border-secondary/8" />
+              <motion.div
+                animate={{ opacity: [0.6, 1, 0.6] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="absolute top-1/2 -right-1 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-secondary shadow-[0_0_6px_hsl(var(--secondary)/0.5)]"
+              />
+            </motion.div>
 
             {/* Breathing glow */}
             <motion.div
-              animate={{ scale: [1, 1.3, 1], opacity: [0.15, 0.35, 0.15] }}
+              animate={{ scale: [1, 1.4, 1], opacity: [0.1, 0.3, 0.1] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute -inset-10 rounded-full bg-gradient-to-br from-primary/25 via-accent/15 to-transparent blur-3xl"
+              className="absolute -inset-10 rounded-full bg-gradient-to-br from-primary/20 via-accent/10 to-transparent blur-3xl"
             />
-            <motion.div
-              animate={{ scale: [1.1, 0.9, 1.1], opacity: [0.1, 0.25, 0.1] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-              className="absolute -inset-6 rounded-full bg-primary/15 blur-2xl"
-            />
-
-            {/* Spinning accent ring */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                className="w-24 h-24 md:w-28 md:h-28 rounded-full"
-                style={{
-                  background: "conic-gradient(from 0deg, transparent, hsl(var(--primary) / 0.4), transparent, transparent)",
-                }}
-              />
-            </div>
 
             {/* Core body */}
             <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary/30 via-background to-secondary/20 border border-primary/30 flex items-center justify-center shadow-2xl shadow-primary/20 backdrop-blur-xl overflow-hidden">
-              {/* Inner shimmer */}
+              {/* Sweeping shimmer */}
               <motion.div
-                animate={{ x: ["-100%", "100%"] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", repeatDelay: 2 }}
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent skew-x-12"
+                animate={{ rotate: [0, 360] }}
+                transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0"
+                style={{ background: "conic-gradient(from 0deg, transparent 0%, hsl(var(--primary) / 0.12) 10%, transparent 20%)" }}
               />
               <motion.div
-                animate={{ rotate: [0, 360], scale: [1, 1.1, 1] }}
-                transition={{ 
-                  rotate: { duration: 20, repeat: Infinity, ease: "linear" },
-                  scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                }}
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
               >
                 <Sparkles className="h-8 w-8 md:h-10 md:w-10 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]" />
               </motion.div>
