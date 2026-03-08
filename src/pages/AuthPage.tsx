@@ -116,6 +116,73 @@ const AuthPage = () => {
 
   const sanitizeInput = (input: string) => input.trim().slice(0, 255);
 
+  const playWelcomeVoice = useCallback(async (userName: string) => {
+    try {
+      setRobotReacting(true);
+      setRobotSpeaking(true);
+      const displayName = userName.split('@')[0];
+      const welcomeMessages = [
+        `Welcome back, ${displayName}. Your secure workspace is ready.`,
+        `Hello ${displayName}. All systems encrypted and operational.`,
+        `${displayName}, welcome to ShadowTalk. Your data fortress awaits.`,
+      ];
+      const msg = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+      setRobotMessage(msg);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ 
+            text: msg,
+            voiceId: "onwK4e9ZLuTAKqWW03F9" // Daniel - deep, authoritative
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.audioContent) {
+          const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
+          const audio = new Audio(audioUrl);
+          audio.volume = 0.8;
+          
+          return new Promise<void>((resolve) => {
+            audio.onended = () => {
+              setRobotSpeaking(false);
+              setRobotReacting(false);
+              setRobotMessage("");
+              resolve();
+            };
+            audio.onerror = () => {
+              setRobotSpeaking(false);
+              setRobotReacting(false);
+              setRobotMessage("");
+              resolve();
+            };
+            audio.play().catch(() => {
+              setRobotSpeaking(false);
+              setRobotReacting(false);
+              setRobotMessage("");
+              resolve();
+            });
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Voice welcome error:", err);
+    } finally {
+      setRobotSpeaking(false);
+      setRobotReacting(false);
+      setRobotMessage("");
+    }
+  }, []);
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setRateLimitMsg("");
