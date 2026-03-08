@@ -331,6 +331,18 @@ export const useMemoryGraph = () => {
 
     await dbRef.current.put('semantic', newNode);
     await updateStats();
+
+    // Sync to cloud
+    try {
+      await supabase.from('knowledge_entries').insert({
+        user_id: user.id,
+        title: newNode.label,
+        content: JSON.stringify(newNode.properties),
+        entry_type: 'semantic',
+        tags: [newNode.type, ...newNode.sources],
+      });
+    } catch { /* best-effort */ }
+
     return newNode;
   }, [user, updateStats]);
 
