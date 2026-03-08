@@ -73,6 +73,7 @@ const CompetitivePage = lazy(() => import("./pages/CompetitivePage"));
 const AgentArchitecturePage = lazy(() => import("./pages/AgentArchitecturePage"));
 const ComplianceDashboardPage = lazy(() => import("./pages/ComplianceDashboardPage"));
 const TrustPage = lazy(() => import("./pages/TrustPage"));
+const CreativeStudioPage = lazy(() => import("./pages/CreativeStudioPage"));
 const PWABanner = lazy(() => import("./components/PWABanner"));
 const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
