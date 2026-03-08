@@ -1538,9 +1538,9 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
             <AnimatePresence>
               {activeTab.error && (
                 <ErrorOverlay error={activeTab.error} url={activeTab.url}
-                  onRetry={() => { setProxyHtml(null); navigateTo(activeTab.url); }}
+                  onRetry={() => { setProxyHtml(null); setFirecrawlData(null); navigateTo(activeTab.url); }}
                   onOpenExternal={() => window.open(activeTab.url, "_blank")}
-                  onGoHome={() => { setProxyHtml(null); navigateTo(DEFAULT_HOME); }}
+                  onGoHome={() => { setProxyHtml(null); setFirecrawlData(null); navigateTo(DEFAULT_HOME); }}
                   onViewViaProxy={fetchViaProxy}
                   isProxyLoading={isProxyLoading}
                 />
