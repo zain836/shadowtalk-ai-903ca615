@@ -489,7 +489,6 @@ export const useMemoryGraph = () => {
 
     const tx = dbRef.current.transaction(['episodic', 'semantic', 'procedural', 'relationships'], 'readwrite');
 
-    // Delete only user's data
     const stores = ['episodic', 'semantic', 'procedural'] as const;
     for (const storeName of stores) {
       const store = tx.objectStore(storeName);
@@ -501,6 +500,15 @@ export const useMemoryGraph = () => {
 
     await tx.done;
     await updateStats();
+
+    // Also clear cloud knowledge entries from memory graph
+    try {
+      await supabase
+        .from('knowledge_entries')
+        .delete()
+        .eq('user_id', user.id)
+        .in('entry_type', ['episodic', 'semantic']);
+    } catch { /* best-effort */ }
   }, [user, updateStats]);
 
   return {
