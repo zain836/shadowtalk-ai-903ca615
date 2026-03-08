@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { DAILY_LIMITS } from '@/lib/monetization';
+import { supabase } from '@/integrations/supabase/client';
 
 type ActionType = keyof typeof DAILY_LIMITS.free;
 

@@ -1,9 +1,12 @@
+import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { BookOpen, Calendar, Clock, Sparkles, Code, Shield, Zap } from "lucide-react";
+import { BookOpen, Calendar, Clock, Sparkles, Code, Shield, Zap, Loader2 } from "lucide-react";
+import { useBlogPosts } from "@/hooks/useCMSContent";
+import { format } from "date-fns";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30, filter: "blur(6px)" },
@@ -13,26 +16,34 @@ const fadeUp = {
   }),
 };
 
+const ICON_MAP: Record<string, any> = {
+  "Product Updates": Zap,
+  "Tutorials": Code,
+  "Security": Shield,
+  "AI & Technology": Sparkles,
+  "Vision": Sparkles,
+};
+
+// Fallback posts when DB is empty
+const FALLBACK_POSTS = [
+  { id: "1", title: "The Future of AI: Building Sovereign Intelligence", excerpt: "Exploring how offline AI capabilities are reshaping the landscape of artificial intelligence.", author: "Zain Ahmed", published_at: "2026-01-18", read_time_minutes: 8, category: "AI & Technology", is_featured: true },
+  { id: "2", title: "Introducing Offline Mode: AI Without Internet", excerpt: "Learn how ShadowTalk AI's offline capabilities let you run powerful LLMs directly in your browser.", author: "Zain Ahmed", published_at: "2026-01-15", read_time_minutes: 5, category: "Product Updates" },
+  { id: "3", title: "Best Practices for Prompt Engineering", excerpt: "Master the art of crafting effective prompts to get the best results from AI assistants.", author: "ShadowTalk Team", published_at: "2026-01-12", read_time_minutes: 7, category: "Tutorials" },
+  { id: "4", title: "Enterprise Security: How We Protect Your Data", excerpt: "A deep dive into our security infrastructure, encryption standards, and compliance certifications.", author: "ShadowTalk Team", published_at: "2026-01-08", read_time_minutes: 6, category: "Security" },
+  { id: "5", title: "Multi-Model AI: Choosing the Right Brain for Your Task", excerpt: "Understanding the strengths of different AI models and when to use each one.", author: "Zain Ahmed", published_at: "2026-01-05", read_time_minutes: 9, category: "AI & Technology" },
+  { id: "6", title: "Building a Tech-Independent Pakistan", excerpt: "Our vision for democratizing AI access and building sovereign technology solutions.", author: "Zain Ahmed", published_at: "2026-01-01", read_time_minutes: 10, category: "Vision" },
+];
+
 const BlogPage = () => {
-  const featuredPost = {
-    title: "The Future of AI: Building Sovereign Intelligence",
-    excerpt: "Exploring how offline AI capabilities are reshaping the landscape of artificial intelligence and empowering users with true data sovereignty.",
-    author: "Zain Ahmed",
-    date: "January 18, 2026",
-    readTime: "8 min read",
-    category: "AI & Technology",
-  };
+  const { posts: dbPosts, isLoading } = useBlogPosts();
+  const [activeCategory, setActiveCategory] = useState("All");
 
-  const blogPosts = [
-    { title: "Introducing Offline Mode: AI Without Internet", excerpt: "Learn how ShadowTalk AI's offline capabilities let you run powerful LLMs directly in your browser.", author: "Zain Ahmed", date: "January 15, 2026", readTime: "5 min read", category: "Product Updates", icon: Zap },
-    { title: "Best Practices for Prompt Engineering", excerpt: "Master the art of crafting effective prompts to get the best results from AI assistants.", author: "ShadowTalk Team", date: "January 12, 2026", readTime: "7 min read", category: "Tutorials", icon: Code },
-    { title: "Enterprise Security: How We Protect Your Data", excerpt: "A deep dive into our security infrastructure, encryption standards, and compliance certifications.", author: "ShadowTalk Team", date: "January 8, 2026", readTime: "6 min read", category: "Security", icon: Shield },
-    { title: "Multi-Model AI: Choosing the Right Brain for Your Task", excerpt: "Understanding the strengths of different AI models and when to use each one.", author: "Zain Ahmed", date: "January 5, 2026", readTime: "9 min read", category: "AI & Technology", icon: Sparkles },
-    { title: "Building a Tech-Independent Pakistan", excerpt: "Our vision for democratizing AI access and building sovereign technology solutions.", author: "Zain Ahmed", date: "January 1, 2026", readTime: "10 min read", category: "Vision", icon: Sparkles },
-    { title: "ShadowTalk API: Getting Started Guide", excerpt: "Step-by-step tutorial for integrating ShadowTalk AI into your applications.", author: "ShadowTalk Team", date: "December 28, 2025", readTime: "12 min read", category: "Tutorials", icon: Code },
-  ];
+  const posts = dbPosts.length > 0 ? dbPosts : FALLBACK_POSTS;
+  const featuredPost = posts[0];
+  const gridPosts = posts.slice(1);
 
-  const categories = ["All", "Product Updates", "Tutorials", "AI & Technology", "Security", "Vision"];
+  const categories = ["All", ...Array.from(new Set(posts.map(p => p.category)))];
+  const filteredPosts = activeCategory === "All" ? gridPosts : gridPosts.filter(p => p.category === activeCategory);
 
   return (
     <div className="min-h-screen bg-background">
@@ -60,7 +71,12 @@ const BlogPage = () => {
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="flex flex-wrap justify-center gap-2 mb-12">
             {categories.map((category, i) => (
-              <Badge key={i} variant={i === 0 ? "default" : "outline"} className={`cursor-pointer transition-all ${i === 0 ? 'btn-glow' : 'hover:bg-primary/10 hover:border-primary/30'}`}>
+              <Badge 
+                key={i} 
+                variant={category === activeCategory ? "default" : "outline"} 
+                className={`cursor-pointer transition-all ${category === activeCategory ? 'btn-glow' : 'hover:bg-primary/10 hover:border-primary/30'}`}
+                onClick={() => setActiveCategory(category)}
+              >
                 {category}
               </Badge>
             ))}
@@ -68,69 +84,91 @@ const BlogPage = () => {
         </div>
       </section>
 
-      {/* Featured */}
-      <section className="py-8 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <Card className="card-glass overflow-hidden group cursor-pointer">
-              <div className="grid md:grid-cols-2">
-                <div className="aspect-video md:aspect-auto bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 flex items-center justify-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-grid-dense opacity-20" />
-                  <Sparkles className="h-24 w-24 text-primary/30 relative z-10" />
-                </div>
-                <CardContent className="p-8 flex flex-col justify-center relative z-10">
-                  <Badge className="w-fit mb-4 bg-primary/10 text-primary border-primary/20">{featuredPost.category}</Badge>
-                  <h2 className="text-2xl md:text-3xl font-bold mb-4 group-hover:text-primary transition-colors tracking-tight">
-                    {featuredPost.title}
-                  </h2>
-                  <p className="text-muted-foreground mb-6">{featuredPost.excerpt}</p>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{featuredPost.author}</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1"><Calendar className="h-4 w-4" />{featuredPost.date}</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{featuredPost.readTime}</span>
-                  </div>
-                </CardContent>
-              </div>
-            </Card>
-          </motion.div>
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </section>
-
-      {/* Grid */}
-      <section className="py-16 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <motion.h2 initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-2xl font-bold mb-8 tracking-tight">
-            Latest Articles
-          </motion.h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {blogPosts.map((post, i) => (
-              <motion.div key={i} custom={i} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
-                whileHover={{ y: -6, transition: { type: "spring", stiffness: 400 } }}
-              >
-                <Card className="card-glass h-full group cursor-pointer overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <CardContent className="p-6 relative z-10">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                        <post.icon className="h-4 w-4 text-primary" />
+      ) : (
+        <>
+          {/* Featured */}
+          {featuredPost && (
+            <section className="py-8 px-4">
+              <div className="container mx-auto max-w-6xl">
+                <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+                  <Card className="card-glass overflow-hidden group cursor-pointer">
+                    <div className="grid md:grid-cols-2">
+                      <div className="aspect-video md:aspect-auto bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 flex items-center justify-center relative overflow-hidden">
+                        <div className="absolute inset-0 bg-grid-dense opacity-20" />
+                        {featuredPost.cover_image_url ? (
+                          <img src={featuredPost.cover_image_url} alt={featuredPost.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <Sparkles className="h-24 w-24 text-primary/30 relative z-10" />
+                        )}
                       </div>
-                      <Badge variant="outline" className="border-border/50 text-xs">{post.category}</Badge>
+                      <CardContent className="p-8 flex flex-col justify-center relative z-10">
+                        <Badge className="w-fit mb-4 bg-primary/10 text-primary border-primary/20">{featuredPost.category}</Badge>
+                        <h2 className="text-2xl md:text-3xl font-bold mb-4 group-hover:text-primary transition-colors tracking-tight">
+                          {featuredPost.title}
+                        </h2>
+                        <p className="text-muted-foreground mb-6">{featuredPost.excerpt}</p>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>{featuredPost.author}</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            {featuredPost.published_at ? format(new Date(featuredPost.published_at), 'MMMM d, yyyy') : ''}
+                          </span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />{featuredPost.read_time_minutes} min read
+                          </span>
+                        </div>
+                      </CardContent>
                     </div>
-                    <h3 className="font-bold text-lg mb-3 group-hover:text-primary transition-colors line-clamp-2">{post.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{post.excerpt}</p>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{post.author}</span>
-                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{post.readTime}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+                  </Card>
+                </motion.div>
+              </div>
+            </section>
+          )}
+
+          {/* Grid */}
+          <section className="py-16 px-4">
+            <div className="container mx-auto max-w-6xl">
+              <motion.h2 initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-2xl font-bold mb-8 tracking-tight">
+                Latest Articles
+              </motion.h2>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredPosts.map((post, i) => {
+                  const Icon = ICON_MAP[post.category] || Sparkles;
+                  return (
+                    <motion.div key={post.id || i} custom={i} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
+                      whileHover={{ y: -6, transition: { type: "spring", stiffness: 400 } }}
+                    >
+                      <Card className="card-glass h-full group cursor-pointer overflow-hidden">
+                        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <CardContent className="p-6 relative z-10">
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                              <Icon className="h-4 w-4 text-primary" />
+                            </div>
+                            <Badge variant="outline" className="border-border/50 text-xs">{post.category}</Badge>
+                          </div>
+                          <h3 className="font-bold text-lg mb-3 group-hover:text-primary transition-colors line-clamp-2">{post.title}</h3>
+                          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{post.excerpt}</p>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{post.author}</span>
+                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{post.read_time_minutes} min read</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        </>
+      )}
 
       {/* Newsletter */}
       <section className="py-20 px-4">
