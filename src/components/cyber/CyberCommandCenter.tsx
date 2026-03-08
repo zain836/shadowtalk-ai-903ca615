@@ -350,6 +350,7 @@ const CyberCommandCenter = () => {
                           </motion.div>
                         ))}
                       </div>
+                      )}
                     </ScrollArea>
                   </CardContent>
                 </Card>
