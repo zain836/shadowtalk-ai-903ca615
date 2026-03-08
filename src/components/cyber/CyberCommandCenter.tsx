@@ -445,19 +445,43 @@ const CyberCommandCenter = () => {
                 </div>
                 {/* Scan controls */}
                 <div className="mt-6 flex items-center gap-4">
-                  <Input placeholder="Target: IP, domain, or CIDR range..." className="flex-1 h-11 font-mono text-sm bg-muted/30 border-border" />
-                  <Button onClick={startScan} disabled={isScanning} className="h-11 px-6 gap-2 bg-warning hover:bg-warning/90 text-warning-foreground font-bold">
-                    {isScanning ? <><RotateCcw className="h-4 w-4 animate-spin" /> Scanning...</> : <><Play className="h-4 w-4" /> Launch Scan</>}
+                  <Input placeholder="Target: https://example.com" value={scanTarget} onChange={e => setScanTarget(e.target.value)} className="flex-1 h-11 font-mono text-sm bg-muted/30 border-border" />
+                  <Button onClick={startScan} disabled={websiteScan.isPending} className="h-11 px-6 gap-2 bg-warning hover:bg-warning/90 text-warning-foreground font-bold">
+                    {websiteScan.isPending ? <><RotateCcw className="h-4 w-4 animate-spin" /> Scanning...</> : <><Play className="h-4 w-4" /> Launch Scan</>}
                   </Button>
                 </div>
-                {isScanning && (
+                {websiteScan.isPending && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
                     <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                      <span className="font-mono">Scanning targets...</span>
-                      <span className="font-mono">{Math.round(scanProgress)}%</span>
+                      <span className="font-mono">Scanning target website...</span>
+                      <span className="font-mono animate-pulse">In progress</span>
                     </div>
-                    <Progress value={scanProgress} className="h-2" />
+                    <Progress value={undefined} className="h-2" />
                   </motion.div>
+                )}
+                {/* Scan History */}
+                {scanHistory.length > 0 && (
+                  <div className="mt-4 border-t border-border pt-4">
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+                      <History className="h-3 w-3" /> Recent Scans
+                    </h4>
+                    <div className="space-y-2">
+                      {scanHistory.slice(0, 5).map(scan => (
+                        <div key={scan.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 text-xs">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className={cn("text-[9px]", scan.status === 'completed' ? 'text-success border-success/30' : scan.status === 'failed' ? 'text-destructive border-destructive/30' : 'text-warning border-warning/30')}>
+                              {scan.status}
+                            </Badge>
+                            <span className="font-mono text-foreground">{scan.target_url}</span>
+                          </div>
+                          <div className="flex items-center gap-3 text-muted-foreground">
+                            <span>Risk: <span className="font-bold text-foreground">{scan.risk_score}</span></span>
+                            <span>{formatDistanceToNow(new Date(scan.created_at), { addSuffix: true })}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
