@@ -195,6 +195,17 @@ export const useMemoryGraph = () => {
     // Auto-extract semantic knowledge from episode
     await extractSemanticKnowledge(newEpisode);
 
+    // Sync to cloud knowledge_entries
+    try {
+      await supabase.from('knowledge_entries').insert({
+        user_id: user.id,
+        title: `Episode: ${episode.context}`,
+        content: `User: ${episode.userInput}\nAI: ${episode.aiResponse}`,
+        entry_type: 'episodic',
+        tags: [episode.context, episode.outcome],
+      });
+    } catch { /* best-effort */ }
+
     return newEpisode;
   }, [user, updateStats]);
 
