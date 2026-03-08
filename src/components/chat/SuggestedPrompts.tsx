@@ -43,6 +43,7 @@ const fadeUp = {
 export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
   const [greeting] = useState(() => greetings[Math.floor(Math.random() * greetings.length)]);
   const [typedText, setTypedText] = useState("");
+  const [gridHovered, setGridHovered] = useState(false);
 
   useEffect(() => {
     let i = 0;
