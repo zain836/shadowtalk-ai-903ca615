@@ -249,9 +249,9 @@ const ErrorOverlay = ({ error, url, onRetry, onOpenExternal, onGoHome, onViewVia
         <p className="text-xs text-muted-foreground/70 mb-6 font-mono truncate max-w-xs mx-auto">{getDomainFromUrl(url)}</p>
         <div className="flex flex-col gap-3">
           {(error.type === "blocked" || error.type === "cors") && onViewViaProxy && (
-            <Button onClick={onViewViaProxy} disabled={isProxyLoading} className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70">
-              {isProxyLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
-              {isProxyLoading ? "Fetching page..." : "View via Proxy"}
+            <Button onClick={onViewViaProxy} disabled={isProxyLoading} className="gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white">
+              {isProxyLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {isProxyLoading ? "Loading via cloud..." : "View via Cloud Browser"}
             </Button>
           )}
           {error.retryable && <Button onClick={onRetry} variant="outline" className="gap-2"><RefreshCw className="h-4 w-4" />Try Again</Button>}
