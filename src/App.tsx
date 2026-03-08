@@ -73,6 +73,7 @@ const CompetitivePage = lazy(() => import("./pages/CompetitivePage"));
 const AgentArchitecturePage = lazy(() => import("./pages/AgentArchitecturePage"));
 const ComplianceDashboardPage = lazy(() => import("./pages/ComplianceDashboardPage"));
 const TrustPage = lazy(() => import("./pages/TrustPage"));
+const CreativeStudioPage = lazy(() => import("./pages/CreativeStudioPage"));
 const PWABanner = lazy(() => import("./components/PWABanner"));
 const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
@@ -171,6 +172,7 @@ const AnimatedRoutes = () => {
           <Route path="/offline-license" element={<PageTransition><EnterpriseLicensePage /></PageTransition>} />
           <Route path="/data-insights" element={<PageTransition><DataInsightsPage /></PageTransition>} />
           <Route path="/transparency" element={<PageTransition><TransparencyPage /></PageTransition>} />
+          <Route path="/studio" element={<PageTransition><CreativeStudioPage /></PageTransition>} />
           <Route path="/security-audit" element={<PageTransition><SecurityAuditPage /></PageTransition>} />
           <Route path="/command-center" element={<PageTransition><CommandCenterPage /></PageTransition>} />
           <Route path="/shadow-memory" element={<PageTransition><ShadowMemoryPage /></PageTransition>} />
