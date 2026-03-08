@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { MessageCircle, Shield, Cpu, Sparkles, ArrowRight, Check, X, Rocket, Brain, Target } from "lucide-react";
