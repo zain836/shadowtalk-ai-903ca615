@@ -94,7 +94,7 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
             <motion.div
               animate={{ scale: [1, 1.4, 1], opacity: [0.1, 0.3, 0.1] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute -inset-10 rounded-full bg-gradient-to-br from-primary/20 via-accent/10 to-transparent blur-3xl"
+              className="absolute -inset-6 rounded-full bg-gradient-to-br from-primary/20 via-accent/10 to-transparent blur-3xl"
             />
 
             {/* Core body */}
