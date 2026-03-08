@@ -10,6 +10,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { StealthKillSwitch } from "@/components/StealthKillSwitch";
 import { HardwarePassthrough } from "@/components/HardwarePassthrough";
+import { TrustBadge } from "@/components/TrustBadge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -176,6 +177,7 @@ const Navigation = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-1.5">
+            <TrustBadge />
             <StealthKillSwitch />
             <HardwarePassthrough />
             {!isInstalled && (
