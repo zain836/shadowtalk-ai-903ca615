@@ -201,6 +201,85 @@ const AuthPage = () => {
     } finally { setAppleLoading(false); }
   };
 
+  const handleSendPhoneOTP = async () => {
+    if (!phoneNumber || !/^\+\d{10,15}$/.test(phoneNumber)) {
+      toast({ title: "Error", description: "Enter a valid phone number with country code (e.g. +1234567890)", variant: "destructive" });
+      return;
+    }
+    const limit = checkLimit();
+    if (!limit.allowed) {
+      setRateLimitMsg(`Too many attempts. Try again in ${limit.waitSec}s`);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await supabase.functions.invoke('phone-otp', {
+        body: { action: 'send', phone: phoneNumber },
+      });
+      if (res.error || res.data?.error) throw new Error(res.data?.error || 'Failed to send OTP');
+      setOtpSent(true);
+      toast({ title: "OTP Sent", description: "Check your phone for the verification code" });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally { setLoading(false); }
+  };
+
+  const handleVerifyPhoneOTP = async () => {
+    if (!otpCode || otpCode.length !== 6) {
+      toast({ title: "Error", description: "Enter the 6-digit code", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await supabase.functions.invoke('phone-otp', {
+        body: { action: 'verify', phone: phoneNumber, code: otpCode },
+      });
+      if (res.error || res.data?.error) throw new Error(res.data?.error || 'Verification failed');
+      if (res.data?.verified) {
+        toast({ title: "Verified!", description: res.data.user_exists 
+          ? "Phone verified! Sign in with your email to continue." 
+          : "Phone verified! Create an account with your email." 
+        });
+        setAuthMode('email');
+        setOtpSent(false);
+        setOtpCode("");
+      }
+    } catch (error: any) {
+      toast({ title: "Verification Failed", description: error.message, variant: "destructive" });
+    } finally { setLoading(false); }
+  };
+
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = sanitizeInput(email);
+    if (!cleanEmail) {
+      toast({ title: "Error", description: "Enter your email address", variant: "destructive" });
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      toast({ title: "Error", description: "Enter a valid email address", variant: "destructive" });
+      return;
+    }
+    const limit = checkLimit();
+    if (!limit.allowed) {
+      setRateLimitMsg(`Too many attempts. Try again in ${limit.waitSec}s`);
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ 
+        email: cleanEmail,
+        options: { emailRedirectTo: `${window.location.origin}/chatbot` }
+      });
+      if (error) throw error;
+      setMagicLinkSent(true);
+      toast({ title: "Magic Link Sent", description: "Check your email for the sign-in link" });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally { setLoading(false); }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col lg:flex-row relative overflow-hidden">
       {/* Left side — Login Form */}
