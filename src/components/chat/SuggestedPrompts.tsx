@@ -213,7 +213,7 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="text-center mb-6"
+        className="text-center mb-3"
       >
         <h2 className="text-lg md:text-xl font-semibold tracking-tight text-foreground/90 mb-1">
           What shall we build?
