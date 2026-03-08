@@ -325,15 +325,15 @@ const CyberCommandCenter = () => {
                                   <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-3 gap-3 text-xs">
                                     <div className="p-2 rounded-lg bg-muted/50">
                                       <span className="text-muted-foreground">Vector</span>
-                                      <p className="font-mono text-foreground mt-0.5">NETWORK</p>
+                                      <p className="font-mono text-foreground mt-0.5">{cve.attack_vector || 'NETWORK'}</p>
                                     </div>
                                     <div className="p-2 rounded-lg bg-muted/50">
                                       <span className="text-muted-foreground">Complexity</span>
-                                      <p className="font-mono text-foreground mt-0.5">LOW</p>
+                                      <p className="font-mono text-foreground mt-0.5">{cve.attack_complexity || 'LOW'}</p>
                                     </div>
                                     <div className="p-2 rounded-lg bg-muted/50">
                                       <span className="text-muted-foreground">Auth Required</span>
-                                      <p className="font-mono text-foreground mt-0.5">NONE</p>
+                                      <p className="font-mono text-foreground mt-0.5">{cve.auth_required || 'NONE'}</p>
                                     </div>
                                   </div>
                                   <div className="flex gap-2 mt-3">
