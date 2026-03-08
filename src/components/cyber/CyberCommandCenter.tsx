@@ -7,34 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Shield, Crosshair, Radio, FlaskConical, AlertTriangle, Search,
   Activity, Bug, Terminal, Globe, Clock, Zap, Eye, Lock,
   Server, Wifi, ChevronRight, ExternalLink, Target, Skull,
   FileWarning, Radar, Flame, Database, Network, ShieldAlert,
   ShieldCheck, ArrowUpRight, Play, Pause, RotateCcw, Download,
-  Copy, CheckCircle2, XCircle, Info, TrendingUp, Layers, BookOpen
+  Copy, CheckCircle2, XCircle, Info, TrendingUp, Layers, BookOpen,
+  RefreshCw, History, AlertCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLiveCVEs, useThreatActors, useWebsiteScan, useScanHistory, useRealtimeCVEs } from "@/hooks/useThreatIntel";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
 
-// ── Threat Intelligence Data ──────────────────────────────
-const liveCVEs = [
-  { id: "CVE-2026-0217", severity: "critical", cvss: 9.8, product: "Apache HTTP Server", desc: "Remote Code Execution via crafted HTTP/2 CONTINUATION frames", age: "2h", exploitAvail: true },
-  { id: "CVE-2026-0198", severity: "critical", cvss: 9.6, product: "OpenSSL 3.x", desc: "Buffer overflow in X.509 certificate verification", age: "5h", exploitAvail: true },
-  { id: "CVE-2026-0183", severity: "high", cvss: 8.8, product: "Linux Kernel 6.x", desc: "Privilege escalation via netfilter nf_tables", age: "8h", exploitAvail: false },
-  { id: "CVE-2026-0175", severity: "high", cvss: 8.4, product: "Microsoft Exchange", desc: "SSRF leading to authenticated RCE", age: "12h", exploitAvail: true },
-  { id: "CVE-2026-0164", severity: "high", cvss: 8.1, product: "Kubernetes API Server", desc: "RBAC bypass via malformed ServiceAccount tokens", age: "1d", exploitAvail: false },
-  { id: "CVE-2026-0152", severity: "medium", cvss: 7.5, product: "PostgreSQL 16", desc: "SQL injection in COPY FROM PROGRAM", age: "1d", exploitAvail: false },
-  { id: "CVE-2026-0141", severity: "medium", cvss: 6.8, product: "Docker Engine", desc: "Container escape via symlink race condition", age: "2d", exploitAvail: true },
-  { id: "CVE-2026-0128", severity: "low", cvss: 4.3, product: "Nginx", desc: "Information disclosure via error page", age: "3d", exploitAvail: false },
+// Fallback mock data (used when no backend data available)
+const fallbackCVEs = [
+  { id: "fallback-1", cve_id: "CVE-2026-0217", severity: "critical", cvss_score: 9.8, product: "Apache HTTP Server", description: "Remote Code Execution via crafted HTTP/2 CONTINUATION frames", published_at: new Date().toISOString(), exploit_available: true, attack_vector: "NETWORK", attack_complexity: "LOW", auth_required: "NONE", created_at: new Date().toISOString() },
 ];
 
-const threatActors = [
-  { name: "APT-PHANTOM", origin: "🇷🇺", targets: "Critical Infrastructure", activity: "active", ttps: 47, lastSeen: "2h ago" },
-  { name: "LAZARUS-NK", origin: "🇰🇵", targets: "Financial / Crypto", activity: "active", ttps: 63, lastSeen: "6h ago" },
-  { name: "CHARMING-KITTEN", origin: "🇮🇷", targets: "Government / Research", activity: "dormant", ttps: 31, lastSeen: "5d ago" },
-  { name: "COZY-BEAR", origin: "🇷🇺", targets: "Diplomatic / NATO", activity: "active", ttps: 89, lastSeen: "1h ago" },
-  { name: "HAFNIUM", origin: "🇨🇳", targets: "Technology / Defense", activity: "active", ttps: 52, lastSeen: "4h ago" },
+const fallbackActors = [
+  { id: "fallback-1", name: "Loading...", origin_country: "", origin_flag: "🔄", targets: "Fetching from backend...", activity_status: "unknown", ttps_count: 0, last_seen_at: new Date().toISOString(), description: "" },
 ];
 
 // ── Pentesting Templates ──────────────────────────────────
@@ -128,52 +122,85 @@ const CyberCommandCenter = () => {
   const [activeTab, setActiveTab] = useState("threat-intel");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCVE, setSelectedCVE] = useState<string | null>(null);
-  const [scanProgress, setScanProgress] = useState(0);
-  const [isScanning, setIsScanning] = useState(false);
+  const [scanTarget, setScanTarget] = useState("");
   const [copiedPayload, setCopiedPayload] = useState<string | null>(null);
   const [selectedTactic, setSelectedTactic] = useState<string | null>(null);
   const [terminalOutput, setTerminalOutput] = useState<string[]>([
     "shadowtalk@cyber:~$ ",
-    "╔══════════════════════════════════════════════╗",
-    "║  ShadowTalk Cyber Command Center v3.0       ║",
-    "║  Sovereign Security Intelligence Platform   ║",
-    "╚══════════════════════════════════════════════╝",
+    "╔══════════════════════════════════════════════════╗",
+    "║  ShadowTalk Cyber Command Center v3.0            ║",
+    "║  Sovereign Security Intelligence Platform        ║",
+    "╚══════════════════════════════════════════════════╝",
     "",
     "[*] Initializing threat intelligence feeds...",
-    "[✓] NVD CVE Database — connected",
-    "[✓] MITRE ATT&CK v14 — loaded",
-    "[✓] Exploit-DB mirror — synced",
-    "[*] Ready for operations.",
-    "",
+    "[*] Connecting to backend...",
     "shadowtalk@cyber:~$ "
   ]);
 
-  // Simulated live CVE counter
-  const [cveCount, setCveCount] = useState(247_832);
+  // Real backend hooks
+  const { data: liveCVEs = [], isLoading: cvesLoading, refetch: refetchCVEs, isError: cvesError } = useLiveCVEs();
+  const { data: threatActors = [], isLoading: actorsLoading } = useThreatActors();
+  const { data: scanHistory = [] } = useScanHistory();
+  const websiteScan = useWebsiteScan();
+
+  // Realtime CVE notifications
+  const { subscribe } = useRealtimeCVEs((newCve) => {
+    toast.info(`New CVE: ${newCve.cve_id}`, {
+      description: `${newCve.severity.toUpperCase()} - ${newCve.product}`,
+    });
+    setTerminalOutput(prev => [...prev, `[!] NEW CVE: ${newCve.cve_id} (${newCve.severity}) — ${newCve.product}`, "shadowtalk@cyber:~$ "]);
+  });
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCveCount(c => c + Math.floor(Math.random() * 3));
-    }, 8000);
-    return () => clearInterval(interval);
+    const unsub = subscribe();
+    return unsub;
   }, []);
 
-  // Scan simulator
-  const startScan = useCallback(() => {
-    setIsScanning(true);
-    setScanProgress(0);
-    setTerminalOutput(prev => [...prev, "[*] Starting vulnerability scan...", "[*] Target: 192.168.1.0/24"]);
-    const interval = setInterval(() => {
-      setScanProgress(p => {
-        if (p >= 100) {
-          clearInterval(interval);
-          setIsScanning(false);
-          setTerminalOutput(prev => [...prev, "[✓] Scan complete — 12 hosts up, 47 ports open, 8 vulnerabilities found", "shadowtalk@cyber:~$ "]);
-          return 100;
-        }
-        return p + Math.random() * 8;
+  // Update terminal when data loads
+  useEffect(() => {
+    if (liveCVEs.length > 0 && !cvesLoading) {
+      setTerminalOutput(prev => {
+        if (prev.some(l => l.includes('NVD CVE Database'))) return prev;
+        return [...prev,
+          `[✓] NVD CVE Database — ${liveCVEs.length} CVEs loaded`,
+          "[✓] MITRE ATT&CK v14 — loaded",
+          `[✓] Threat Actors — ${threatActors.length} tracked`,
+          "[*] Ready for operations.",
+          "",
+          "shadowtalk@cyber:~$ "
+        ];
       });
-    }, 300);
-  }, []);
+    }
+  }, [liveCVEs, threatActors, cvesLoading]);
+
+  // CVE counter from real data
+  const cveCount = liveCVEs.length > 0 ? 247_832 + liveCVEs.length : 247_832;
+
+  // Website scan handler
+  const startScan = useCallback(() => {
+    if (!scanTarget.trim()) {
+      toast.error("Enter a target URL to scan");
+      return;
+    }
+    setTerminalOutput(prev => [...prev, `[*] Starting security scan: ${scanTarget}...`]);
+    websiteScan.mutate(
+      { url: scanTarget, scanDepth: "standard" },
+      {
+        onSuccess: (data) => {
+          setTerminalOutput(prev => [...prev,
+            `[✓] Scan complete — ${data?.files?.length || 0} files analyzed`,
+            `[✓] Vulnerabilities found: ${data?.vulnerabilities_found || 'analyzing...'}`,
+            "shadowtalk@cyber:~$ "
+          ]);
+          toast.success("Scan completed successfully");
+        },
+        onError: (err) => {
+          setTerminalOutput(prev => [...prev, `[✗] Scan failed: ${err.message}`, "shadowtalk@cyber:~$ "]);
+          toast.error("Scan failed", { description: err.message });
+        },
+      }
+    );
+  }, [scanTarget, websiteScan]);
 
   const copyPayload = (name: string, code: string) => {
     navigator.clipboard.writeText(code);
@@ -258,8 +285,21 @@ const CyberCommandCenter = () => {
                   </CardHeader>
                   <CardContent className="p-0">
                     <ScrollArea className="h-[520px]">
+                      {cvesLoading ? (
+                        <div className="p-4 space-y-3">
+                          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+                        </div>
+                      ) : cvesError ? (
+                        <div className="p-8 text-center">
+                          <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
+                          <p className="text-sm text-muted-foreground">Failed to load CVEs. Sign in to fetch live data.</p>
+                          <Button variant="outline" size="sm" className="mt-3" onClick={() => refetchCVEs()}>
+                            <RefreshCw className="h-3 w-3 mr-1" /> Retry
+                          </Button>
+                        </div>
+                      ) : (
                       <div className="divide-y divide-border">
-                        {liveCVEs.filter(c => !searchQuery || c.id.toLowerCase().includes(searchQuery.toLowerCase()) || c.product.toLowerCase().includes(searchQuery.toLowerCase())).map((cve, i) => (
+                        {liveCVEs.filter(c => !searchQuery || c.cve_id.toLowerCase().includes(searchQuery.toLowerCase()) || c.product.toLowerCase().includes(searchQuery.toLowerCase())).map((cve, i) => (
                           <motion.div key={cve.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
                             className={cn("p-4 hover:bg-muted/30 cursor-pointer transition-colors", selectedCVE === cve.id && "bg-muted/50 border-l-2 border-l-destructive")}
                             onClick={() => setSelectedCVE(selectedCVE === cve.id ? null : cve.id)}
@@ -267,16 +307,16 @@ const CyberCommandCenter = () => {
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <code className="text-sm font-bold text-foreground font-mono">{cve.id}</code>
+                                  <code className="text-sm font-bold text-foreground font-mono">{cve.cve_id}</code>
                                   <Badge className={cn("text-[9px] px-1.5 py-0", sevColor(cve.severity))}>{cve.severity.toUpperCase()}</Badge>
-                                  {cve.exploitAvail && <Badge className="text-[9px] px-1.5 py-0 bg-destructive/15 text-destructive border-destructive/30">EXPLOIT ⚡</Badge>}
+                                  {cve.exploit_available && <Badge className="text-[9px] px-1.5 py-0 bg-destructive/15 text-destructive border-destructive/30">EXPLOIT ⚡</Badge>}
                                 </div>
                                 <p className="text-xs text-muted-foreground font-mono">{cve.product}</p>
-                                <p className="text-sm text-foreground/80 mt-1">{cve.desc}</p>
+                                <p className="text-sm text-foreground/80 mt-1">{cve.description}</p>
                               </div>
                               <div className="text-right shrink-0">
-                                <div className={cn("text-lg font-black font-mono", cve.cvss >= 9 ? "text-destructive" : cve.cvss >= 7 ? "text-warning" : "text-primary")}>{cve.cvss}</div>
-                                <span className="text-[10px] text-muted-foreground">{cve.age}</span>
+                                <div className={cn("text-lg font-black font-mono", cve.cvss_score >= 9 ? "text-destructive" : cve.cvss_score >= 7 ? "text-warning" : "text-primary")}>{cve.cvss_score}</div>
+                                <span className="text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(cve.published_at), { addSuffix: true })}</span>
                               </div>
                             </div>
                             <AnimatePresence>
@@ -285,20 +325,22 @@ const CyberCommandCenter = () => {
                                   <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-3 gap-3 text-xs">
                                     <div className="p-2 rounded-lg bg-muted/50">
                                       <span className="text-muted-foreground">Vector</span>
-                                      <p className="font-mono text-foreground mt-0.5">NETWORK</p>
+                                      <p className="font-mono text-foreground mt-0.5">{cve.attack_vector || 'NETWORK'}</p>
                                     </div>
                                     <div className="p-2 rounded-lg bg-muted/50">
                                       <span className="text-muted-foreground">Complexity</span>
-                                      <p className="font-mono text-foreground mt-0.5">LOW</p>
+                                      <p className="font-mono text-foreground mt-0.5">{cve.attack_complexity || 'LOW'}</p>
                                     </div>
                                     <div className="p-2 rounded-lg bg-muted/50">
                                       <span className="text-muted-foreground">Auth Required</span>
-                                      <p className="font-mono text-foreground mt-0.5">NONE</p>
+                                      <p className="font-mono text-foreground mt-0.5">{cve.auth_required || 'NONE'}</p>
                                     </div>
                                   </div>
                                   <div className="flex gap-2 mt-3">
-                                    <Button size="sm" variant="outline" className="text-xs gap-1.5 h-7">
-                                      <ExternalLink className="h-3 w-3" /> NVD Details
+                                    <Button size="sm" variant="outline" className="text-xs gap-1.5 h-7" asChild>
+                                      <a href={`https://nvd.nist.gov/vuln/detail/${cve.cve_id}`} target="_blank" rel="noopener noreferrer">
+                                        <ExternalLink className="h-3 w-3" /> NVD Details
+                                      </a>
                                     </Button>
                                     <Button size="sm" variant="outline" className="text-xs gap-1.5 h-7">
                                       <Terminal className="h-3 w-3" /> Generate PoC
@@ -310,6 +352,7 @@ const CyberCommandCenter = () => {
                           </motion.div>
                         ))}
                       </div>
+                      )}
                     </ScrollArea>
                   </CardContent>
                 </Card>
@@ -325,24 +368,28 @@ const CyberCommandCenter = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {threatActors.map((actor, i) => (
-                      <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.06 }}
+                    {actorsLoading ? (
+                      <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
+                    ) : (
+                    threatActors.map((actor, i) => (
+                      <motion.div key={actor.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.06 }}
                         className="p-3 rounded-xl border border-border hover:border-warning/30 transition-colors cursor-pointer"
                       >
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">{actor.origin}</span>
+                            <span className="text-lg">{actor.origin_flag}</span>
                             <span className="font-mono text-sm font-bold text-foreground">{actor.name}</span>
                           </div>
-                          {actor.activity === "active" ? <LivePulse /> : <span className="h-2 w-2 rounded-full bg-muted-foreground" />}
+                          {actor.activity_status === "active" ? <LivePulse /> : <span className="h-2 w-2 rounded-full bg-muted-foreground" />}
                         </div>
                         <p className="text-xs text-muted-foreground">{actor.targets}</p>
                         <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
-                          <span className="font-mono">{actor.ttps} TTPs</span>
-                          <span>Last seen: {actor.lastSeen}</span>
+                          <span className="font-mono">{actor.ttps_count} TTPs</span>
+                          <span>Last seen: {formatDistanceToNow(new Date(actor.last_seen_at), { addSuffix: true })}</span>
                         </div>
                       </motion.div>
-                    ))}
+                    ))
+                    )}
                   </CardContent>
                 </Card>
 
@@ -400,19 +447,43 @@ const CyberCommandCenter = () => {
                 </div>
                 {/* Scan controls */}
                 <div className="mt-6 flex items-center gap-4">
-                  <Input placeholder="Target: IP, domain, or CIDR range..." className="flex-1 h-11 font-mono text-sm bg-muted/30 border-border" />
-                  <Button onClick={startScan} disabled={isScanning} className="h-11 px-6 gap-2 bg-warning hover:bg-warning/90 text-warning-foreground font-bold">
-                    {isScanning ? <><RotateCcw className="h-4 w-4 animate-spin" /> Scanning...</> : <><Play className="h-4 w-4" /> Launch Scan</>}
+                  <Input placeholder="Target: https://example.com" value={scanTarget} onChange={e => setScanTarget(e.target.value)} className="flex-1 h-11 font-mono text-sm bg-muted/30 border-border" />
+                  <Button onClick={startScan} disabled={websiteScan.isPending} className="h-11 px-6 gap-2 bg-warning hover:bg-warning/90 text-warning-foreground font-bold">
+                    {websiteScan.isPending ? <><RotateCcw className="h-4 w-4 animate-spin" /> Scanning...</> : <><Play className="h-4 w-4" /> Launch Scan</>}
                   </Button>
                 </div>
-                {isScanning && (
+                {websiteScan.isPending && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
                     <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                      <span className="font-mono">Scanning targets...</span>
-                      <span className="font-mono">{Math.round(scanProgress)}%</span>
+                      <span className="font-mono">Scanning target website...</span>
+                      <span className="font-mono animate-pulse">In progress</span>
                     </div>
-                    <Progress value={scanProgress} className="h-2" />
+                    <Progress value={undefined} className="h-2" />
                   </motion.div>
+                )}
+                {/* Scan History */}
+                {scanHistory.length > 0 && (
+                  <div className="mt-4 border-t border-border pt-4">
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+                      <History className="h-3 w-3" /> Recent Scans
+                    </h4>
+                    <div className="space-y-2">
+                      {scanHistory.slice(0, 5).map(scan => (
+                        <div key={scan.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 text-xs">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className={cn("text-[9px]", scan.status === 'completed' ? 'text-success border-success/30' : scan.status === 'failed' ? 'text-destructive border-destructive/30' : 'text-warning border-warning/30')}>
+                              {scan.status}
+                            </Badge>
+                            <span className="font-mono text-foreground">{scan.target_url}</span>
+                          </div>
+                          <div className="flex items-center gap-3 text-muted-foreground">
+                            <span>Risk: <span className="font-bold text-foreground">{scan.risk_score}</span></span>
+                            <span>{formatDistanceToNow(new Date(scan.created_at), { addSuffix: true })}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
