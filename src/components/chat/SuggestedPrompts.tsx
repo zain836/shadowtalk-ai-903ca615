@@ -98,7 +98,7 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
             />
 
             {/* Core body */}
-            <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary/30 via-background to-secondary/20 border border-primary/30 flex items-center justify-center shadow-2xl shadow-primary/20 backdrop-blur-xl overflow-hidden">
+            <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary/30 via-background to-secondary/20 flex items-center justify-center shadow-2xl shadow-primary/20 backdrop-blur-xl overflow-hidden">
               {/* Sweeping shimmer */}
               <motion.div
                 animate={{ rotate: [0, 360] }}
