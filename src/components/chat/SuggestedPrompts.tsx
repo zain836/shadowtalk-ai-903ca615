@@ -98,38 +98,64 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
       </motion.div>
 
       {/* Capability Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 w-full mb-5">
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{ visible: { transition: { staggerChildren: 0.07 } } }}
+        className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 w-full mb-5"
+      >
         {capabilities.map((cap, i) => {
           const Icon = cap.icon;
           return (
             <motion.button
               key={cap.label}
-              custom={i}
-              variants={fadeUp}
-              initial="hidden"
-              animate="visible"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              variants={{
+                hidden: { opacity: 0, y: 24, scale: 0.92 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
+                },
+              }}
+              whileHover={{ scale: 1.04, y: -2 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => onSelect(cap.prompt)}
               className={`group relative flex flex-col items-start gap-2.5 p-3.5 rounded-xl border ${cap.border} bg-card/30 backdrop-blur-sm cursor-pointer transition-all duration-300 hover:bg-card/50 shadow-lg shadow-transparent ${cap.glow}`}
             >
-              {/* Gradient accent top bar */}
-              <div className={`absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r ${cap.accent} rounded-t-xl`} />
+              {/* Animated gradient accent top bar */}
+              <motion.div
+                className={`absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r ${cap.accent} rounded-t-xl`}
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ delay: 0.3 + i * 0.07, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] }}
+                style={{ originX: 0 }}
+              />
 
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center">
+              {/* Icon with subtle float */}
+              <motion.div
+                animate={{ y: [0, -2, 0] }}
+                transition={{ duration: 3 + i * 0.5, repeat: Infinity, ease: "easeInOut", delay: i * 0.3 }}
+                className="w-8 h-8 rounded-lg bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center"
+              >
                 <Icon className="w-4 h-4 text-foreground/70 group-hover:text-foreground transition-colors" />
-              </div>
+              </motion.div>
 
               <div className="flex items-center justify-between w-full">
                 <span className="text-[13px] font-medium text-foreground/70 group-hover:text-foreground/90 transition-colors">
                   {cap.label}
                 </span>
-                <ArrowRight className="w-3 h-3 text-muted-foreground/30 group-hover:text-foreground/50 group-hover:translate-x-0.5 transition-all" />
+                <motion.div
+                  initial={{ x: 0, opacity: 0.3 }}
+                  whileHover={{ x: 3, opacity: 0.7 }}
+                >
+                  <ArrowRight className="w-3 h-3 text-muted-foreground/30 group-hover:text-foreground/50 transition-all" />
+                </motion.div>
               </div>
             </motion.button>
           );
         })}
-      </div>
+      </motion.div>
 
       {/* Quick action pills */}
       <motion.div
