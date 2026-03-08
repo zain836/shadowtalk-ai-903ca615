@@ -40,27 +40,28 @@ const NewsletterSubscription = () => {
 
     setIsLoading(true);
     try {
-      const { data: existingSubscriber } = await supabase
-        .from("subscribers")
-        .select("id, subscribed")
+      // Use the new newsletter_subscriptions table
+      const { data: existing } = await supabase
+        .from("newsletter_subscriptions")
+        .select("id, is_active")
         .eq("email", email)
         .maybeSingle();
 
-      if (existingSubscriber) {
-        if (existingSubscriber.subscribed) {
+      if (existing) {
+        if (existing.is_active) {
           toast.info("You're already subscribed to our newsletter!");
         } else {
           await supabase
-            .from("subscribers")
-            .update({ subscribed: true, updated_at: new Date().toISOString() })
-            .eq("id", existingSubscriber.id);
+            .from("newsletter_subscriptions")
+            .update({ is_active: true, unsubscribed_at: null })
+            .eq("id", existing.id);
           toast.success("Welcome back! You've been re-subscribed.");
           setIsSubscribed(true);
         }
       } else {
         const { error } = await supabase
-          .from("subscribers")
-          .insert({ email, subscribed: true });
+          .from("newsletter_subscriptions")
+          .insert({ email, is_active: true, source: 'website' });
         if (error) throw error;
         toast.success("Thanks for subscribing! 🎉");
         setIsSubscribed(true);
