@@ -16,6 +16,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/AuthProvider";
 import { Separator } from "@/components/ui/separator";
+import { useUserSettings } from "@/hooks/useUserSettings";
 
 interface CustomInstructions {
   systemPrompt: string;
