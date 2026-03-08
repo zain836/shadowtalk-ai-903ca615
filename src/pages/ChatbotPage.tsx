@@ -16,6 +16,7 @@ import { PersonalIDE } from "@/components/chat/PersonalIDE";
 import { Canvas } from "@/components/chat/Canvas";
 import { ImageGenerator } from "@/components/chat/ImageGenerator";
 import { ImageDecoder } from "@/components/chat/ImageDecoder";
+import { MusicGenerator } from "@/components/chat/MusicGenerator";
 
 import { EditMessageDialog } from "@/components/chat/EditMessageDialog";
 import { AdBanner } from "@/components/chat/AdBanner";
@@ -210,6 +211,9 @@ const ChatbotPage = () => {
   const [imageDecoderAutoAnalyze, setImageDecoderAutoAnalyze] = useState(false);
   const [documentGeneratorTopic, setDocumentGeneratorTopic] = useState<string | undefined>(undefined);
   const [documentGeneratorAutoGenerate, setDocumentGeneratorAutoGenerate] = useState(false);
+  const [showMusicGenerator, setShowMusicGenerator] = useState(false);
+  const [musicGeneratorPrompt, setMusicGeneratorPrompt] = useState<string | undefined>(undefined);
+  const [musicGeneratorAutoGenerate, setMusicGeneratorAutoGenerate] = useState(false);
   
   
   // Check if welcome dialog should be shown (after boot screen)
@@ -1013,6 +1017,14 @@ const ChatbotPage = () => {
           setMessage("");
           return;
 
+        case 'music_generator':
+          setMusicGeneratorPrompt(toolDetection.params?.prompt);
+          setMusicGeneratorAutoGenerate(toolDetection.autoExecute ?? false);
+          setShowMusicGenerator(true);
+          toast({ title: "🎵 Music Studio", description: toolDetection.autoExecute ? "Generating your audio..." : "Opening music studio..." });
+          setMessage("");
+          return;
+
         case 'referral':
           navigate('/profile');
           toast({ title: "🎁 Referral Program", description: "Opening referral dashboard..." });
@@ -1806,6 +1818,26 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         }}
       />
 
+      {/* AI Music Studio */}
+      <MusicGenerator
+        isOpen={showMusicGenerator}
+        onClose={() => {
+          setShowMusicGenerator(false);
+          setMusicGeneratorPrompt(undefined);
+          setMusicGeneratorAutoGenerate(false);
+        }}
+        initialPrompt={musicGeneratorPrompt}
+        autoGenerate={musicGeneratorAutoGenerate}
+        onInsertToChat={(content) => {
+          setMessages(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'ai',
+            content,
+            timestamp: new Date()
+          }]);
+        }}
+      />
+
       {/* ShadowBrowser - Integrated AI-Powered Browser */}
       <ShadowBrowser
         isOpen={showShadowBrowser}
@@ -2050,6 +2082,9 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
               break;
             case 'browser':
               setShowShadowBrowser(true);
+              break;
+            case 'music':
+              setShowMusicGenerator(true);
               break;
             case 'script-automation':
               setShowScriptAutomation(true);
