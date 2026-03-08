@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Cpu, Zap, Monitor, Settings2, ChevronDown, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
