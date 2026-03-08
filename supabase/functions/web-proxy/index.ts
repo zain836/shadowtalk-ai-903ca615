@@ -51,8 +51,12 @@ Deno.serve(async (req) => {
       if (!["http:", "https:"].includes(parsedUrl.protocol)) {
         throw new Error("Invalid protocol");
       }
+      // SSRF prevention: block internal/private IPs
+      if (isBlockedHost(parsedUrl.hostname)) {
+        throw new Error("Blocked host");
+      }
     } catch {
-      return new Response(JSON.stringify({ error: "Invalid URL" }), {
+      return new Response(JSON.stringify({ error: "Invalid or blocked URL" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
