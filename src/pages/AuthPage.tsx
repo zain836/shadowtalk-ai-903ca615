@@ -85,6 +85,8 @@ const AuthPage = () => {
   const { isOffline, hasOfflineCredentials, saveCredentialsForOffline, verifyOfflineCredentials, getOfflineSession } = useOfflineAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
+  const [robotReacting, setRobotReacting] = useState(false);
+  const [robotMessage, setRobotMessage] = useState("");
   const { checkLimit } = useRateLimiter(5, 60000);
 
   const strength = getPasswordStrength(password);
