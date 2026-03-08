@@ -38,16 +38,59 @@ export const MemoryPanel = ({ onMemoryUpdate }: MemoryPanelProps) => {
   const [editContent, setEditContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load memories from localStorage (could be moved to Supabase later)
+  // Load memories from backend, fallback to localStorage
   useEffect(() => {
-    if (user) {
-      const stored = localStorage.getItem(`memories_${user.id}`);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setMemories(parsed);
-        onMemoryUpdate?.(parsed);
+    if (!user) return;
+
+    const loadMemories = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('ai_memories')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true });
+
+        if (data && !error && data.length > 0) {
+          const mapped: Memory[] = data.map(m => ({
+            id: m.id,
+            content: m.content,
+            category: m.category as Memory['category'],
+            created_at: m.created_at,
+          }));
+          setMemories(mapped);
+          onMemoryUpdate?.(mapped);
+        } else {
+          // Migrate from localStorage
+          const stored = localStorage.getItem(`memories_${user.id}`);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            setMemories(parsed);
+            onMemoryUpdate?.(parsed);
+            // Migrate to backend
+            for (const m of parsed) {
+              await supabase.from('ai_memories').upsert({
+                id: m.id,
+                user_id: user.id,
+                content: m.content,
+                category: m.category,
+                source: 'manual',
+              }, { onConflict: 'id' });
+            }
+          }
+        }
+      } catch {
+        const stored = localStorage.getItem(`memories_${user.id}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setMemories(parsed);
+          onMemoryUpdate?.(parsed);
+        }
       }
-    }
+      setIsLoading(false);
+    };
+
+    loadMemories();
   }, [user]);
 
   const saveMemories = (newMemories: Memory[]) => {
