@@ -1026,7 +1026,33 @@ const AuthPage = () => {
                   boxShadow: "0 8px 32px hsl(var(--primary) / 0.15), 0 0 60px hsl(var(--primary) / 0.1)",
                 }}
               >
-                <span className="text-sm font-semibold text-foreground tracking-wide">{robotMessage}</span>
+                <div className="flex items-center gap-2">
+                  {robotSpeaking && (
+                    <div className="flex items-center gap-0.5">
+                      {[0, 1, 2, 3].map((i) => (
+                        <motion.div
+                          key={i}
+                          className="w-0.5 bg-primary rounded-full"
+                          animate={{ height: [4, 12, 4] }}
+                          transition={{ duration: 0.5, delay: i * 0.1, repeat: Infinity }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <span className="text-sm font-semibold text-foreground tracking-wide">{robotMessage}</span>
+                  {robotSpeaking && (
+                    <div className="flex items-center gap-0.5">
+                      {[0, 1, 2, 3].map((i) => (
+                        <motion.div
+                          key={i}
+                          className="w-0.5 bg-primary rounded-full"
+                          animate={{ height: [4, 12, 4] }}
+                          transition={{ duration: 0.5, delay: i * 0.15, repeat: Infinity }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div
                   className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rotate-45"
                   style={{
