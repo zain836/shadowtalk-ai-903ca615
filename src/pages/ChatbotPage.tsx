@@ -1097,6 +1097,11 @@ const ChatbotPage = () => {
       length: messageToSend.length,
     });
 
+    // Auto-browse detection (Manus-style)
+    if (!isOffline && autoBrowse.shouldBrowse(messageToSend)) {
+      autoBrowse.startBrowseSession(messageToSend);
+    }
+
     abortControllerRef.current = new AbortController();
     await saveMessage(messageToSend, 'user');
 
