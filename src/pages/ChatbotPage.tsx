@@ -55,6 +55,7 @@ import { CustomInstructions } from "@/components/chat/CustomInstructions";
 import { ConversationBranching } from "@/components/chat/ConversationBranching";
 import { BunkerModeToggle } from "@/components/chat/BunkerModeToggle";
 import { CognitiveLoopPanel } from "@/components/chat/CognitiveLoopPanel";
+import { BrowseActivityPanel, useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
 import { PluginsManager } from "@/components/chat/PluginsManager";
 import { ChatGPTBeaterIndicator } from "@/components/chat/ChatGPTBeaterIndicator";
 import { ClaudeBeaterIndicator } from "@/components/chat/ClaudeBeaterIndicator";
