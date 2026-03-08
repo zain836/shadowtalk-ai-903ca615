@@ -367,6 +367,7 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
   const [copied, setCopied] = useState(false);
   const [historySearch, setHistorySearch] = useState("");
   const [proxyHtml, setProxyHtml] = useState<string | null>(null);
+  const [firecrawlData, setFirecrawlData] = useState<{ screenshot?: string; markdown?: string; title?: string; links?: string[] } | null>(null);
   const [isProxyLoading, setIsProxyLoading] = useState(false);
 
   // AI Search state
