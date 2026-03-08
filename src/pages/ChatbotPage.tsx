@@ -211,6 +211,9 @@ const ChatbotPage = () => {
   const [imageDecoderAutoAnalyze, setImageDecoderAutoAnalyze] = useState(false);
   const [documentGeneratorTopic, setDocumentGeneratorTopic] = useState<string | undefined>(undefined);
   const [documentGeneratorAutoGenerate, setDocumentGeneratorAutoGenerate] = useState(false);
+  const [showMusicGenerator, setShowMusicGenerator] = useState(false);
+  const [musicGeneratorPrompt, setMusicGeneratorPrompt] = useState<string | undefined>(undefined);
+  const [musicGeneratorAutoGenerate, setMusicGeneratorAutoGenerate] = useState(false);
   
   
   // Check if welcome dialog should be shown (after boot screen)
