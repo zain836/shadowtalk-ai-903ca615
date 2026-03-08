@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/components/AuthProvider';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CachedConversation {
   id: string;
@@ -21,7 +22,6 @@ interface OfflineResponse {
 const CACHE_KEY = 'shadowtalk_offline_cache';
 const OFFLINE_RESPONSES_KEY = 'shadowtalk_offline_responses';
 
-// Pre-cached helpful responses for common queries when offline
 const DEFAULT_OFFLINE_RESPONSES: OfflineResponse[] = [
   {
     prompt: 'help',
@@ -51,6 +51,8 @@ export const useOfflineMode = () => {
     const handleOnline = () => {
       console.log('[OfflineMode] Network came online');
       setIsOffline(false);
+      // Sync queued messages to backend
+      if (user) syncOfflineQueue();
     };
     const handleOffline = () => {
       console.log('[OfflineMode] Network went offline');
@@ -64,9 +66,8 @@ export const useOfflineMode = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [user]);
 
-  // Load cached data on mount and when going offline
   useEffect(() => {
     if (isElite || isOffline) {
       loadCachedConversations();
@@ -81,7 +82,6 @@ export const useOfflineMode = () => {
       if (cached) {
         const parsed = JSON.parse(cached);
         setCachedConversations(parsed);
-        console.log('[OfflineMode] Loaded', parsed.length, 'cached conversations');
       }
     } catch (e) {
       console.error('[OfflineMode] Failed to load cached conversations:', e);
@@ -99,43 +99,66 @@ export const useOfflineMode = () => {
     }
   };
 
+  // Sync offline queue to backend when coming online
+  const syncOfflineQueue = async () => {
+    if (!user) return;
+    
+    try {
+      const queue = localStorage.getItem('shadowtalk_offline_queue');
+      if (!queue) return;
+      
+      const messages = JSON.parse(queue);
+      if (messages.length === 0) return;
+
+      // Store in offline_sync_queue table
+      for (const msg of messages) {
+        await supabase.from('offline_sync_queue').insert({
+          user_id: user.id,
+          operation_type: 'offline_message',
+          operation_data: { content: msg.content, timestamp: msg.timestamp },
+          status: 'pending',
+          priority: 1,
+        });
+      }
+
+      // Clear local queue after successful sync
+      localStorage.removeItem('shadowtalk_offline_queue');
+      setOfflineMessagesQueue([]);
+      console.log('[OfflineMode] Synced', messages.length, 'offline messages to cloud');
+    } catch (e) {
+      console.error('[OfflineMode] Failed to sync offline queue:', e);
+    }
+  };
+
   const cacheConversation = useCallback((conversation: CachedConversation) => {
     if (!isElite && !isOffline) return;
 
     const updated = [
       { ...conversation, cachedAt: new Date().toISOString() },
       ...cachedConversations.filter(c => c.id !== conversation.id)
-    ].slice(0, 100); // Keep last 100 conversations
+    ].slice(0, 100);
 
     setCachedConversations(updated);
     localStorage.setItem(CACHE_KEY, JSON.stringify(updated));
-    console.log('[OfflineMode] Cached conversation:', conversation.id);
   }, [isElite, isOffline, cachedConversations]);
 
   const getOfflineResponse = useCallback((prompt: string): string => {
     const normalizedPrompt = prompt.toLowerCase().trim();
     
-    // Check custom responses first
     const customResponses = localStorage.getItem(OFFLINE_RESPONSES_KEY);
     if (customResponses) {
       try {
         const parsed: OfflineResponse[] = JSON.parse(customResponses);
-        const match = parsed.find(r => 
-          normalizedPrompt.includes(r.prompt.toLowerCase())
-        );
+        const match = parsed.find(r => normalizedPrompt.includes(r.prompt.toLowerCase()));
         if (match) return match.response;
-      } catch (e) {
-        console.error('[OfflineMode] Failed to parse custom offline responses');
-      }
+      } catch { /* ignore */ }
     }
 
-    // Check default responses
     const defaultMatch = DEFAULT_OFFLINE_RESPONSES.find(r =>
       normalizedPrompt.includes(r.prompt.toLowerCase())
     );
     if (defaultMatch) return defaultMatch.response;
 
-    // Time/date responses
     if (normalizedPrompt.match(/\b(what time|current time)\b/i)) {
       return `The current time is: **${new Date().toLocaleTimeString()}**`;
     }
@@ -143,7 +166,6 @@ export const useOfflineMode = () => {
       return `Today is: **${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}**`;
     }
 
-    // Simple math
     const mathMatch = normalizedPrompt.match(/(\d+)\s*([+\-*/×÷])\s*(\d+)/);
     if (mathMatch) {
       const [, a, op, b] = mathMatch;
@@ -153,18 +175,13 @@ export const useOfflineMode = () => {
       switch (op) {
         case '+': result = num1 + num2; break;
         case '-': result = num1 - num2; break;
-        case '*':
-        case '×': result = num1 * num2; break;
-        case '/':
-        case '÷': result = num2 !== 0 ? num1 / num2 : NaN; break;
+        case '*': case '×': result = num1 * num2; break;
+        case '/': case '÷': result = num2 !== 0 ? num1 / num2 : NaN; break;
         default: result = NaN;
       }
-      if (!isNaN(result)) {
-        return `**${num1} ${op} ${num2} = ${result}**`;
-      }
+      if (!isNaN(result)) return `**${num1} ${op} ${num2} = ${result}**`;
     }
 
-    // Generic offline response
     return `🔌 **Offline Mode Active**\n\nI'm currently unable to process your request because you're offline. Your message has been saved and will be processed when you reconnect.\n\n**Your message:** "${prompt.slice(0, 100)}${prompt.length > 100 ? '...' : ''}"\n\nIn the meantime, you can:\n- Browse your cached conversations\n- View previously saved responses\n- Type "help" for offline capabilities`;
   }, []);
 
@@ -173,20 +190,17 @@ export const useOfflineMode = () => {
     const updated = [...offlineMessagesQueue, newMessage];
     setOfflineMessagesQueue(updated);
     localStorage.setItem('shadowtalk_offline_queue', JSON.stringify(updated));
-    console.log('[OfflineMode] Queued offline message');
   }, [offlineMessagesQueue]);
 
   const clearOfflineQueue = useCallback(() => {
     setOfflineMessagesQueue([]);
     localStorage.removeItem('shadowtalk_offline_queue');
-    console.log('[OfflineMode] Cleared offline queue');
   }, []);
 
   const getCachedConversation = useCallback((id: string) => {
     return cachedConversations.find(c => c.id === id);
   }, [cachedConversations]);
 
-  // Get all cached conversation IDs for quick lookup
   const getCachedConversationIds = useCallback(() => {
     return cachedConversations.map(c => c.id);
   }, [cachedConversations]);
@@ -203,5 +217,6 @@ export const useOfflineMode = () => {
     clearOfflineQueue,
     getCachedConversation,
     getCachedConversationIds,
+    syncOfflineQueue,
   };
 };

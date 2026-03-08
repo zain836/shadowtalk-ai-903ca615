@@ -24,12 +24,10 @@ export const useJourneyTracking = () => {
       const sessionId = getSessionId();
       const now = Date.now();
 
-      // Calculate duration on previous page
       const durationSeconds = lastPageRef.current
         ? Math.round((now - lastTimestampRef.current) / 1000)
         : null;
 
-      // Insert new page visit with duration from previous page included
       try {
         await supabase
           .from('user_journeys')
@@ -46,7 +44,6 @@ export const useJourneyTracking = () => {
         // Silently fail - analytics should never break UX
       }
 
-      // Update refs for next navigation
       lastPageRef.current = currentPath;
       lastTimestampRef.current = now;
     };

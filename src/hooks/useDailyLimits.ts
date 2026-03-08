@@ -12,15 +12,12 @@ interface DailyUsage {
   imageGenerations: number;
   webSearches: number;
   deepResearch: number;
-  lastResetDate: string; // YYYY-MM-DD format for reliable comparison
+  lastResetDate: string;
 }
 
-const STORAGE_KEY = 'shadowtalk-daily-usage-v2'; // v2 to force migration
+const STORAGE_KEY = 'shadowtalk-daily-usage-v2';
 
-// Get today's date in YYYY-MM-DD format (UTC for consistency)
-const getTodayKey = (): string => {
-  return new Date().toISOString().split('T')[0];
-};
+const getTodayKey = (): string => new Date().toISOString().split('T')[0];
 
 const getDefaultUsage = (): DailyUsage => ({
   messages: 0,
@@ -32,53 +29,109 @@ const getDefaultUsage = (): DailyUsage => ({
   lastResetDate: getTodayKey(),
 });
 
+// Maps local camelCase keys to DB snake_case columns
+const LOCAL_TO_DB: Record<string, string> = {
+  messages: 'messages',
+  fileUploads: 'file_uploads',
+  codeGenerations: 'code_generations',
+  imageGenerations: 'image_generations',
+  webSearches: 'web_searches',
+  deepResearch: 'deep_research',
+};
+
 export function useDailyLimits() {
-  const { userPlan } = useAuth();
+  const { user, userPlan } = useAuth();
   const [usage, setUsage] = useState<DailyUsage>(getDefaultUsage);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load usage from localStorage with proper date check
+  // Load usage from backend (authenticated) or localStorage (guest)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+    const load = async () => {
       const today = getTodayKey();
-      
-      if (stored) {
-        const parsed: DailyUsage = JSON.parse(stored);
-        
-        // Reset if it's a new day - use proper date comparison
-        if (parsed.lastResetDate !== today) {
-          console.log('[DailyLimits] New day detected, resetting usage');
-          const fresh = getDefaultUsage();
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
-          setUsage(fresh);
-        } else {
-          console.log('[DailyLimits] Loaded existing usage:', parsed);
-          setUsage(parsed);
+
+      if (user) {
+        try {
+          const { data } = await supabase
+            .from('daily_usage')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('usage_date', today)
+            .maybeSingle();
+
+          if (data) {
+            const loaded: DailyUsage = {
+              messages: data.messages,
+              fileUploads: data.file_uploads,
+              codeGenerations: data.code_generations,
+              imageGenerations: data.image_generations,
+              webSearches: data.web_searches,
+              deepResearch: data.deep_research,
+              lastResetDate: data.usage_date,
+            };
+            setUsage(loaded);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
+          } else {
+            // Migrate localStorage data or create fresh
+            const stored = localStorage.getItem(STORAGE_KEY);
+            const fresh = stored ? JSON.parse(stored) : getDefaultUsage();
+            const isToday = fresh.lastResetDate === today;
+            const usageToSave = isToday ? fresh : getDefaultUsage();
+
+            await supabase.from('daily_usage').upsert({
+              user_id: user.id,
+              usage_date: today,
+              messages: usageToSave.messages,
+              file_uploads: usageToSave.fileUploads,
+              code_generations: usageToSave.codeGenerations,
+              image_generations: usageToSave.imageGenerations,
+              web_searches: usageToSave.webSearches,
+              deep_research: usageToSave.deepResearch,
+            }, { onConflict: 'user_id,usage_date' });
+
+            setUsage(usageToSave);
+          }
+        } catch {
+          // Fallback to localStorage
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            setUsage(parsed.lastResetDate === today ? parsed : getDefaultUsage());
+          }
         }
       } else {
-        // First time - initialize
-        const fresh = getDefaultUsage();
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
-        setUsage(fresh);
+        // Guest: localStorage only
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.lastResetDate !== today) {
+              const fresh = getDefaultUsage();
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+              setUsage(fresh);
+            } else {
+              setUsage(parsed);
+            }
+          } else {
+            const fresh = getDefaultUsage();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+            setUsage(fresh);
+          }
+        } catch {
+          setUsage(getDefaultUsage());
+        }
       }
-    } catch (e) {
-      console.error('[DailyLimits] Error loading usage:', e);
-      const fresh = getDefaultUsage();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
-      setUsage(fresh);
-    }
-    setIsLoaded(true);
-  }, []);
+      setIsLoaded(true);
+    };
 
-  // Get limit for current plan
+    load();
+  }, [user]);
+
   const getLimit = useCallback((action: ActionType): number => {
     const plan = userPlan as keyof typeof DAILY_LIMITS;
     const limits = DAILY_LIMITS[plan] ?? DAILY_LIMITS.free;
     return (limits as Record<string, number>)[action] ?? 0;
   }, [userPlan]);
 
-  // Check if action is within limit
   const canPerform = useCallback((action: ActionType): boolean => {
     const limit = getLimit(action);
     if (limit === Infinity) return true;
@@ -86,7 +139,6 @@ export function useDailyLimits() {
     return current < limit;
   }, [usage, getLimit]);
 
-  // Get remaining count for action
   const getRemaining = useCallback((action: ActionType): number => {
     const limit = getLimit(action);
     if (limit === Infinity) return Infinity;
@@ -94,7 +146,6 @@ export function useDailyLimits() {
     return Math.max(0, limit - current);
   }, [usage, getLimit]);
 
-  // Get usage percentage
   const getPercentage = useCallback((action: ActionType): number => {
     const limit = getLimit(action);
     if (limit === Infinity) return 0;
@@ -102,23 +153,33 @@ export function useDailyLimits() {
     return Math.min((current / limit) * 100, 100);
   }, [usage, getLimit]);
 
-  // Increment usage for an action - PERSISTS TO LOCALSTORAGE
   const trackUsage = useCallback((action: ActionType, count: number = 1) => {
     setUsage(prev => {
       const currentValue = prev[action as keyof DailyUsage];
       const newValue = typeof currentValue === 'number' ? currentValue + count : count;
-      const updated: DailyUsage = {
-        ...prev,
-        [action]: newValue,
-      };
-      // Immediately persist to localStorage
+      const updated: DailyUsage = { ...prev, [action]: newValue };
+
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      console.log('[DailyLimits] Updated usage:', action, updated);
+
+      // Sync to backend if authenticated
+      if (user) {
+        const dbColumn = LOCAL_TO_DB[action];
+        if (dbColumn) {
+          supabase
+            .from('daily_usage')
+            .upsert({
+              user_id: user.id,
+              usage_date: getTodayKey(),
+              [dbColumn]: newValue,
+            }, { onConflict: 'user_id,usage_date' })
+            .then(() => {});
+        }
+      }
+
       return updated;
     });
-  }, []);
+  }, [user]);
 
-  // Reset all usage (for testing or manual reset)
   const resetUsage = useCallback(() => {
     const fresh = getDefaultUsage();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));

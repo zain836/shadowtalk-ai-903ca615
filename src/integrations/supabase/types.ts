@@ -612,6 +612,48 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_usage: {
+        Row: {
+          code_generations: number
+          created_at: string
+          deep_research: number
+          file_uploads: number
+          id: string
+          image_generations: number
+          messages: number
+          updated_at: string
+          usage_date: string
+          user_id: string
+          web_searches: number
+        }
+        Insert: {
+          code_generations?: number
+          created_at?: string
+          deep_research?: number
+          file_uploads?: number
+          id?: string
+          image_generations?: number
+          messages?: number
+          updated_at?: string
+          usage_date?: string
+          user_id: string
+          web_searches?: number
+        }
+        Update: {
+          code_generations?: number
+          created_at?: string
+          deep_research?: number
+          file_uploads?: number
+          id?: string
+          image_generations?: number
+          messages?: number
+          updated_at?: string
+          usage_date?: string
+          user_id?: string
+          web_searches?: number
+        }
+        Relationships: []
+      }
       docs_pages: {
         Row: {
           category: string
@@ -955,6 +997,39 @@ export type Database = {
           setting_key?: string
           setting_value?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      guest_usage: {
+        Row: {
+          chats: number
+          created_at: string
+          deep_research: number
+          id: string
+          images: number
+          ip_address: string | null
+          last_reset: string
+          session_id: string
+        }
+        Insert: {
+          chats?: number
+          created_at?: string
+          deep_research?: number
+          id?: string
+          images?: number
+          ip_address?: string | null
+          last_reset?: string
+          session_id: string
+        }
+        Update: {
+          chats?: number
+          created_at?: string
+          deep_research?: number
+          id?: string
+          images?: number
+          ip_address?: string | null
+          last_reset?: string
+          session_id?: string
         }
         Relationships: []
       }
