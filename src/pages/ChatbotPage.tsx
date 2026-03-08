@@ -36,6 +36,7 @@ import PlanetaryActionPanel from "@/components/chat/PlanetaryActionPanel";
 import SecurityAuditPanel from "@/components/chat/SecurityAuditPanel";
 import { OfflineAIIndicator } from "@/components/chat/OfflineAIIndicator";
 import { ShadowBrowser } from "@/components/chat/ShadowBrowser";
+import { ScreenAgent } from "@/components/chat/ScreenAgent";
 import { WelcomeDialog } from "@/components/chat/WelcomeDialog";
 import { MultiModelOrchestrator } from "@/components/chat/MultiModelOrchestrator";
 import { APIMarketplace } from "@/components/chat/APIMarketplace";
