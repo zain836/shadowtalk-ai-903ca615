@@ -1,5 +1,5 @@
 import { Code, Languages, FileText, Lightbulb, Image, Pen, Music, Search, Globe, Brain, Bug, ArrowRight } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 
 interface SuggestedPromptsProps {
