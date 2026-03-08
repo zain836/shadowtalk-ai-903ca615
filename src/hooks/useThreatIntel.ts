@@ -39,6 +39,7 @@ export interface ScanResult {
   risk_score: number;
   started_at: string;
   completed_at: string | null;
+  created_at: string;
 }
 
 export function useLiveCVEs() {
