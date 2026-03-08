@@ -276,6 +276,63 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_posts: {
+        Row: {
+          author: string
+          category: string
+          content: string
+          cover_image_url: string | null
+          created_at: string
+          created_by: string | null
+          excerpt: string | null
+          id: string
+          is_published: boolean
+          published_at: string | null
+          read_time_minutes: number | null
+          slug: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          views_count: number | null
+        }
+        Insert: {
+          author?: string
+          category?: string
+          content: string
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          excerpt?: string | null
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          read_time_minutes?: number | null
+          slug: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          views_count?: number | null
+        }
+        Update: {
+          author?: string
+          category?: string
+          content?: string
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          excerpt?: string | null
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          read_time_minutes?: number | null
+          slug?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          views_count?: number | null
+        }
+        Relationships: []
+      }
       business_intents: {
         Row: {
           country: string | null
@@ -342,6 +399,48 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      changelog_entries: {
+        Row: {
+          change_type: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          is_published: boolean
+          published_at: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          change_type?: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          change_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          version?: string
         }
         Relationships: []
       }
@@ -513,6 +612,53 @@ export type Database = {
         }
         Relationships: []
       }
+      docs_pages: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          id: string
+          is_published: boolean
+          parent_id: string | null
+          slug: string
+          sort_order: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          parent_id?: string | null
+          slug: string
+          sort_order?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          parent_id?: string | null
+          slug?: string
+          sort_order?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "docs_pages_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "docs_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eco_actions: {
         Row: {
           category: string
@@ -606,6 +752,39 @@ export type Database = {
           user_id?: string
           water_saved?: number
           xp?: number
+        }
+        Relationships: []
+      }
+      faq_items: {
+        Row: {
+          answer: string
+          category: string
+          created_at: string
+          id: string
+          is_published: boolean
+          question: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          question: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          question?: string
+          sort_order?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -776,6 +955,36 @@ export type Database = {
           setting_key?: string
           setting_value?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      journey_tracking: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          session_id: string | null
+          step_data: Json | null
+          step_name: string
+          user_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          session_id?: string | null
+          step_data?: Json | null
+          step_name: string
+          user_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          session_id?: string | null
+          step_data?: Json | null
+          step_name?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1155,6 +1364,33 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      newsletter_subscriptions: {
+        Row: {
+          email: string
+          id: string
+          is_active: boolean
+          source: string | null
+          subscribed_at: string
+          unsubscribed_at: string | null
+        }
+        Insert: {
+          email: string
+          id?: string
+          is_active?: boolean
+          source?: string | null
+          subscribed_at?: string
+          unsubscribed_at?: string | null
+        }
+        Update: {
+          email?: string
+          id?: string
+          is_active?: boolean
+          source?: string | null
+          subscribed_at?: string
+          unsubscribed_at?: string | null
         }
         Relationships: []
       }
@@ -1973,6 +2209,48 @@ export type Database = {
           },
         ]
       }
+      status_monitors: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          last_checked_at: string | null
+          last_incident_at: string | null
+          service_name: string
+          sort_order: number | null
+          status: string
+          updated_at: string
+          uptime_percentage: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          last_checked_at?: string | null
+          last_incident_at?: string | null
+          service_name: string
+          sort_order?: number | null
+          status?: string
+          updated_at?: string
+          uptime_percentage?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          last_checked_at?: string | null
+          last_incident_at?: string | null
+          service_name?: string
+          sort_order?: number | null
+          status?: string
+          updated_at?: string
+          uptime_percentage?: number | null
+        }
+        Relationships: []
+      }
       stealth_vault: {
         Row: {
           category: string | null
@@ -2358,6 +2636,33 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
