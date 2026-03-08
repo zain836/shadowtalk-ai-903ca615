@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import {
   CommandDialog,
