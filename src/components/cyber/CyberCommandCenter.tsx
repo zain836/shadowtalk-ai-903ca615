@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,23 +15,29 @@ import {
   FileWarning, Radar, Flame, Database, Network, ShieldAlert,
   ShieldCheck, ArrowUpRight, Play, Pause, RotateCcw, Download,
   Copy, CheckCircle2, XCircle, Info, TrendingUp, Layers, BookOpen,
-  RefreshCw, History, AlertCircle
+  RefreshCw, History, AlertCircle, Brain, Trophy, BookMarked, Scan
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLiveCVEs, useThreatActors, useWebsiteScan, useScanHistory, useRealtimeCVEs } from "@/hooks/useThreatIntel";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
-// Fallback mock data (used when no backend data available)
-const fallbackCVEs = [
-  { id: "fallback-1", cve_id: "CVE-2026-0217", severity: "critical", cvss_score: 9.8, product: "Apache HTTP Server", description: "Remote Code Execution via crafted HTTP/2 CONTINUATION frames", published_at: new Date().toISOString(), exploit_available: true, attack_vector: "NETWORK", attack_complexity: "LOW", auth_required: "NONE", created_at: new Date().toISOString() },
-];
+// Lazy load heavy sub-modules
+const CyberAICopilot = lazy(() => import("./CyberAICopilot"));
+const BugBountyTracker = lazy(() => import("./BugBountyTracker"));
+const SecurityCheatSheets = lazy(() => import("./SecurityCheatSheets"));
+const OSINTDashboard = lazy(() => import("./OSINTDashboard"));
 
-const fallbackActors = [
-  { id: "fallback-1", name: "Loading...", origin_country: "", origin_flag: "🔄", targets: "Fetching from backend...", activity_status: "unknown", ttps_count: 0, last_seen_at: new Date().toISOString(), description: "" },
-];
+const TabLoader = () => (
+  <div className="flex items-center justify-center h-64 text-muted-foreground">
+    <div className="text-center">
+      <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+      <span className="text-xs">Loading module...</span>
+    </div>
+  </div>
+);
 
-// ── Pentesting Templates ──────────────────────────────────
+// ── Static data ───────────────────────────────────────────
 const pentestModules = [
   { id: "recon", name: "Reconnaissance", icon: Eye, desc: "OSINT gathering, subdomain enumeration, technology fingerprinting", tools: ["subfinder", "amass", "httpx", "nuclei"], status: "ready" },
   { id: "scan", name: "Vulnerability Scan", icon: Radar, desc: "Automated vulnerability detection across web, network, and cloud", tools: ["nmap", "nikto", "sqlmap", "burpsuite"], status: "ready" },
@@ -48,7 +54,6 @@ const payloadTemplates = [
   { name: "SSRF Bypass", lang: "http", code: `http://127.0.0.1:80\nhttp://0x7f000001\nhttp://[::1]\nhttp://localhost.localdomain\nhttp://0177.0.0.1` },
 ];
 
-// ── MITRE ATT&CK Tactics ──────────────────────────────────
 const mitreTactics = [
   { id: "TA0001", name: "Initial Access", techniques: 9, color: "hsl(var(--destructive))" },
   { id: "TA0002", name: "Execution", techniques: 14, color: "hsl(var(--warning))" },
@@ -76,7 +81,6 @@ const incidentTimeline = [
   { time: "14:48:01", event: "7z archive exfiltrated over DNS to attacker domain", severity: "critical", tactic: "TA0010" },
 ];
 
-// ── Zero-Day Research ─────────────────────────────────────
 const researchEntries = [
   { id: "ZD-2026-001", target: "Chrome V8 Engine", type: "Type Confusion", status: "analyzing", bounty: "$50,000", progress: 65 },
   { id: "ZD-2026-002", target: "Windows RPC", type: "Use-After-Free", status: "poc-ready", bounty: "$100,000", progress: 90 },
@@ -85,15 +89,11 @@ const researchEntries = [
 ];
 
 const fuzzingStats = {
-  totalExecutions: 847_293_102,
-  crashesFound: 247,
-  uniqueCrashes: 18,
-  coverage: 73.4,
-  runtime: "14d 7h 32m",
-  corpusSize: 12_847,
+  totalExecutions: 847_293_102, crashesFound: 247, uniqueCrashes: 18,
+  coverage: 73.4, runtime: "14d 7h 32m", corpusSize: 12_847,
 };
 
-// ── Severity helpers ──────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────
 const sevColor = (s: string) =>
   s === "critical" ? "bg-destructive/15 text-destructive border-destructive/30" :
   s === "high" ? "bg-warning/15 text-warning border-warning/30" :
@@ -102,12 +102,8 @@ const sevColor = (s: string) =>
   "bg-muted text-muted-foreground border-border";
 
 const sevDot = (s: string) =>
-  s === "critical" ? "bg-destructive" :
-  s === "high" ? "bg-warning" :
-  s === "medium" ? "bg-primary" :
-  "bg-muted-foreground";
+  s === "critical" ? "bg-destructive" : s === "high" ? "bg-warning" : s === "medium" ? "bg-primary" : "bg-muted-foreground";
 
-// ── Live pulse animation ──────────────────────────────────
 const LivePulse = ({ className }: { className?: string }) => (
   <span className={cn("relative flex h-2 w-2", className)}>
     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
@@ -119,7 +115,7 @@ const LivePulse = ({ className }: { className?: string }) => (
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════
 const CyberCommandCenter = () => {
-  const [activeTab, setActiveTab] = useState("threat-intel");
+  const [activeTab, setActiveTab] = useState("ai-copilot");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCVE, setSelectedCVE] = useState<string | null>(null);
   const [scanTarget, setScanTarget] = useState("");
@@ -128,78 +124,39 @@ const CyberCommandCenter = () => {
   const [terminalOutput, setTerminalOutput] = useState<string[]>([
     "shadowtalk@cyber:~$ ",
     "╔══════════════════════════════════════════════════╗",
-    "║  ShadowTalk Cyber Command Center v3.0            ║",
-    "║  Sovereign Security Intelligence Platform        ║",
+    "║  ShadowTalk Cyber Command Center v4.0            ║",
+    "║  All-in-One Security Operations Platform          ║",
     "╚══════════════════════════════════════════════════╝",
-    "",
-    "[*] Initializing threat intelligence feeds...",
-    "[*] Connecting to backend...",
-    "shadowtalk@cyber:~$ "
+    "", "[*] Initializing...", "shadowtalk@cyber:~$ "
   ]);
 
-  // Real backend hooks
   const { data: liveCVEs = [], isLoading: cvesLoading, refetch: refetchCVEs, isError: cvesError } = useLiveCVEs();
   const { data: threatActors = [], isLoading: actorsLoading } = useThreatActors();
   const { data: scanHistory = [] } = useScanHistory();
   const websiteScan = useWebsiteScan();
-
-  // Realtime CVE notifications
   const { subscribe } = useRealtimeCVEs((newCve) => {
-    toast.info(`New CVE: ${newCve.cve_id}`, {
-      description: `${newCve.severity.toUpperCase()} - ${newCve.product}`,
-    });
-    setTerminalOutput(prev => [...prev, `[!] NEW CVE: ${newCve.cve_id} (${newCve.severity}) — ${newCve.product}`, "shadowtalk@cyber:~$ "]);
+    toast.info(`New CVE: ${newCve.cve_id}`, { description: `${newCve.severity.toUpperCase()} - ${newCve.product}` });
   });
 
-  useEffect(() => {
-    const unsub = subscribe();
-    return unsub;
-  }, []);
+  useEffect(() => { const unsub = subscribe(); return unsub; }, []);
 
-  // Update terminal when data loads
   useEffect(() => {
     if (liveCVEs.length > 0 && !cvesLoading) {
       setTerminalOutput(prev => {
         if (prev.some(l => l.includes('NVD CVE Database'))) return prev;
-        return [...prev,
-          `[✓] NVD CVE Database — ${liveCVEs.length} CVEs loaded`,
-          "[✓] MITRE ATT&CK v14 — loaded",
-          `[✓] Threat Actors — ${threatActors.length} tracked`,
-          "[*] Ready for operations.",
-          "",
-          "shadowtalk@cyber:~$ "
-        ];
+        return [...prev, `[✓] NVD CVE Database — ${liveCVEs.length} CVEs loaded`, `[✓] Threat Actors — ${threatActors.length} tracked`, "[*] Ready.", "", "shadowtalk@cyber:~$ "];
       });
     }
   }, [liveCVEs, threatActors, cvesLoading]);
 
-  // CVE counter from real data
   const cveCount = liveCVEs.length > 0 ? 247_832 + liveCVEs.length : 247_832;
 
-  // Website scan handler
   const startScan = useCallback(() => {
-    if (!scanTarget.trim()) {
-      toast.error("Enter a target URL to scan");
-      return;
-    }
-    setTerminalOutput(prev => [...prev, `[*] Starting security scan: ${scanTarget}...`]);
-    websiteScan.mutate(
-      { url: scanTarget, scanDepth: "standard" },
-      {
-        onSuccess: (data) => {
-          setTerminalOutput(prev => [...prev,
-            `[✓] Scan complete — ${data?.files?.length || 0} files analyzed`,
-            `[✓] Vulnerabilities found: ${data?.vulnerabilities_found || 'analyzing...'}`,
-            "shadowtalk@cyber:~$ "
-          ]);
-          toast.success("Scan completed successfully");
-        },
-        onError: (err) => {
-          setTerminalOutput(prev => [...prev, `[✗] Scan failed: ${err.message}`, "shadowtalk@cyber:~$ "]);
-          toast.error("Scan failed", { description: err.message });
-        },
-      }
-    );
+    if (!scanTarget.trim()) { toast.error("Enter a target URL"); return; }
+    websiteScan.mutate({ url: scanTarget, scanDepth: "standard" }, {
+      onSuccess: () => toast.success("Scan completed"),
+      onError: (err) => toast.error("Scan failed", { description: err.message }),
+    });
   }, [scanTarget, websiteScan]);
 
   const copyPayload = (name: string, code: string) => {
@@ -209,15 +166,19 @@ const CyberCommandCenter = () => {
   };
 
   const tabConfig = [
+    { id: "ai-copilot", label: "AI Copilot", icon: Brain, color: "text-primary" },
     { id: "threat-intel", label: "Threat Intel", icon: Radio, color: "text-destructive" },
-    { id: "pentesting", label: "Pentest Copilot", icon: Crosshair, color: "text-warning" },
+    { id: "pentesting", label: "Pentest", icon: Crosshair, color: "text-warning" },
+    { id: "osint", label: "OSINT", icon: Eye, color: "text-blue-400" },
     { id: "incident-response", label: "War Room", icon: ShieldAlert, color: "text-accent" },
+    { id: "bug-bounty", label: "Bug Bounty", icon: Trophy, color: "text-success" },
+    { id: "cheatsheets", label: "Cheat Sheets", icon: BookMarked, color: "text-secondary" },
     { id: "zero-day", label: "Zero-Day Lab", icon: FlaskConical, color: "text-secondary" },
   ];
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8">
-      {/* ── HERO ─────────────────────────────────────── */}
+      {/* HERO */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
         <div className="inline-flex items-center gap-2 rounded-full border border-destructive/30 bg-destructive/5 px-4 py-1.5 mb-6">
           <LivePulse />
@@ -228,10 +189,9 @@ const CyberCommandCenter = () => {
           <span className="bg-gradient-to-r from-destructive via-warning to-accent bg-clip-text text-transparent">Command Center</span>
         </h1>
         <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-          AI-powered threat intelligence, offensive security tooling, incident response, and zero-day research — unified in one sovereign platform.
+          AI-powered all-in-one security operations platform for pentesters, bug bounty hunters, SOC analysts, and CISOs.
         </p>
-        {/* Live stats strip */}
-        <div className="flex flex-wrap items-center justify-center gap-6 mt-8">
+        <div className="flex flex-wrap items-center justify-center gap-4 mt-8">
           {[
             { label: "CVEs Tracked", value: cveCount.toLocaleString(), icon: Bug, color: "text-destructive" },
             { label: "Threat Actors", value: "412", icon: Skull, color: "text-warning" },
@@ -247,131 +207,104 @@ const CyberCommandCenter = () => {
         </div>
       </motion.div>
 
-      {/* ── TABS ─────────────────────────────────────── */}
+      {/* TABS */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full flex bg-card border border-border rounded-2xl p-1.5 mb-8 h-auto">
+        <TabsList className="w-full flex flex-wrap bg-card border border-border rounded-2xl p-1.5 mb-8 h-auto gap-0.5">
           {tabConfig.map(tab => (
-            <TabsTrigger key={tab.id} value={tab.id} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl data-[state=active]:bg-muted data-[state=active]:shadow-md transition-all font-semibold text-sm">
-              <tab.icon className={cn("h-4 w-4", activeTab === tab.id ? tab.color : "text-muted-foreground")} />
-              <span className="hidden sm:inline">{tab.label}</span>
+            <TabsTrigger key={tab.id} value={tab.id} className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-2.5 rounded-xl data-[state=active]:bg-muted data-[state=active]:shadow-md transition-all font-semibold text-xs">
+              <tab.icon className={cn("h-3.5 w-3.5", activeTab === tab.id ? tab.color : "text-muted-foreground")} />
+              <span className="hidden md:inline">{tab.label}</span>
             </TabsTrigger>
           ))}
         </TabsList>
 
-        {/* ═══════════════════════════════════════════════ */}
-        {/* TAB 1: THREAT INTELLIGENCE                     */}
-        {/* ═══════════════════════════════════════════════ */}
+        {/* TAB: AI COPILOT */}
+        <TabsContent value="ai-copilot">
+          <Suspense fallback={<TabLoader />}><CyberAICopilot /></Suspense>
+        </TabsContent>
+
+        {/* TAB: THREAT INTEL */}
         <TabsContent value="threat-intel">
           <div className="space-y-6">
-            {/* Search bar */}
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Search CVEs, products, threat actors..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-11 h-12 bg-card border-border rounded-xl font-mono text-sm" />
             </div>
-
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Live CVE Feed */}
               <div className="lg:col-span-2">
                 <Card className="border-border bg-card">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <Bug className="h-5 w-5 text-destructive" />
-                        Live CVE Feed
-                        <LivePulse className="ml-1" />
-                      </CardTitle>
+                      <CardTitle className="flex items-center gap-2 text-lg"><Bug className="h-5 w-5 text-destructive" /> Live CVE Feed <LivePulse className="ml-1" /></CardTitle>
                       <Badge variant="outline" className="font-mono text-[10px]">{cveCount.toLocaleString()} total</Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="p-0">
                     <ScrollArea className="h-[520px]">
                       {cvesLoading ? (
-                        <div className="p-4 space-y-3">
-                          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
-                        </div>
+                        <div className="p-4 space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
                       ) : cvesError ? (
                         <div className="p-8 text-center">
                           <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
                           <p className="text-sm text-muted-foreground">Failed to load CVEs. Sign in to fetch live data.</p>
-                          <Button variant="outline" size="sm" className="mt-3" onClick={() => refetchCVEs()}>
-                            <RefreshCw className="h-3 w-3 mr-1" /> Retry
-                          </Button>
+                          <Button variant="outline" size="sm" className="mt-3" onClick={() => refetchCVEs()}><RefreshCw className="h-3 w-3 mr-1" /> Retry</Button>
                         </div>
                       ) : (
-                      <div className="divide-y divide-border">
-                        {liveCVEs.filter(c => !searchQuery || c.cve_id.toLowerCase().includes(searchQuery.toLowerCase()) || c.product.toLowerCase().includes(searchQuery.toLowerCase())).map((cve, i) => (
-                          <motion.div key={cve.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                            className={cn("p-4 hover:bg-muted/30 cursor-pointer transition-colors", selectedCVE === cve.id && "bg-muted/50 border-l-2 border-l-destructive")}
-                            onClick={() => setSelectedCVE(selectedCVE === cve.id ? null : cve.id)}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <code className="text-sm font-bold text-foreground font-mono">{cve.cve_id}</code>
-                                  <Badge className={cn("text-[9px] px-1.5 py-0", sevColor(cve.severity))}>{cve.severity.toUpperCase()}</Badge>
-                                  {cve.exploit_available && <Badge className="text-[9px] px-1.5 py-0 bg-destructive/15 text-destructive border-destructive/30">EXPLOIT ⚡</Badge>}
+                        <div className="divide-y divide-border">
+                          {liveCVEs.filter(c => !searchQuery || c.cve_id.toLowerCase().includes(searchQuery.toLowerCase()) || c.product.toLowerCase().includes(searchQuery.toLowerCase())).map((cve, i) => (
+                            <motion.div key={cve.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
+                              className={cn("p-4 hover:bg-muted/30 cursor-pointer transition-colors", selectedCVE === cve.id && "bg-muted/50 border-l-2 border-l-destructive")}
+                              onClick={() => setSelectedCVE(selectedCVE === cve.id ? null : cve.id)}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <code className="text-sm font-bold text-foreground font-mono">{cve.cve_id}</code>
+                                    <Badge className={cn("text-[9px] px-1.5 py-0", sevColor(cve.severity))}>{cve.severity.toUpperCase()}</Badge>
+                                    {cve.exploit_available && <Badge className="text-[9px] px-1.5 py-0 bg-destructive/15 text-destructive border-destructive/30">EXPLOIT ⚡</Badge>}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground font-mono">{cve.product}</p>
+                                  <p className="text-sm text-foreground/80 mt-1">{cve.description}</p>
                                 </div>
-                                <p className="text-xs text-muted-foreground font-mono">{cve.product}</p>
-                                <p className="text-sm text-foreground/80 mt-1">{cve.description}</p>
+                                <div className="text-right shrink-0">
+                                  <div className={cn("text-lg font-black font-mono", cve.cvss_score >= 9 ? "text-destructive" : cve.cvss_score >= 7 ? "text-warning" : "text-primary")}>{cve.cvss_score}</div>
+                                  <span className="text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(cve.published_at), { addSuffix: true })}</span>
+                                </div>
                               </div>
-                              <div className="text-right shrink-0">
-                                <div className={cn("text-lg font-black font-mono", cve.cvss_score >= 9 ? "text-destructive" : cve.cvss_score >= 7 ? "text-warning" : "text-primary")}>{cve.cvss_score}</div>
-                                <span className="text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(cve.published_at), { addSuffix: true })}</span>
-                              </div>
-                            </div>
-                            <AnimatePresence>
-                              {selectedCVE === cve.id && (
-                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                  <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-3 gap-3 text-xs">
-                                    <div className="p-2 rounded-lg bg-muted/50">
-                                      <span className="text-muted-foreground">Vector</span>
-                                      <p className="font-mono text-foreground mt-0.5">{cve.attack_vector || 'NETWORK'}</p>
+                              <AnimatePresence>
+                                {selectedCVE === cve.id && (
+                                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                    <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-3 gap-3 text-xs">
+                                      <div className="p-2 rounded-lg bg-muted/50"><span className="text-muted-foreground">Vector</span><p className="font-mono text-foreground mt-0.5">{cve.attack_vector || 'NETWORK'}</p></div>
+                                      <div className="p-2 rounded-lg bg-muted/50"><span className="text-muted-foreground">Complexity</span><p className="font-mono text-foreground mt-0.5">{cve.attack_complexity || 'LOW'}</p></div>
+                                      <div className="p-2 rounded-lg bg-muted/50"><span className="text-muted-foreground">Auth Required</span><p className="font-mono text-foreground mt-0.5">{cve.auth_required || 'NONE'}</p></div>
                                     </div>
-                                    <div className="p-2 rounded-lg bg-muted/50">
-                                      <span className="text-muted-foreground">Complexity</span>
-                                      <p className="font-mono text-foreground mt-0.5">{cve.attack_complexity || 'LOW'}</p>
+                                    <div className="flex gap-2 mt-3">
+                                      <Button size="sm" variant="outline" className="text-xs gap-1.5 h-7" asChild>
+                                        <a href={`https://nvd.nist.gov/vuln/detail/${cve.cve_id}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3" /> NVD Details</a>
+                                      </Button>
                                     </div>
-                                    <div className="p-2 rounded-lg bg-muted/50">
-                                      <span className="text-muted-foreground">Auth Required</span>
-                                      <p className="font-mono text-foreground mt-0.5">{cve.auth_required || 'NONE'}</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex gap-2 mt-3">
-                                    <Button size="sm" variant="outline" className="text-xs gap-1.5 h-7" asChild>
-                                      <a href={`https://nvd.nist.gov/vuln/detail/${cve.cve_id}`} target="_blank" rel="noopener noreferrer">
-                                        <ExternalLink className="h-3 w-3" /> NVD Details
-                                      </a>
-                                    </Button>
-                                    <Button size="sm" variant="outline" className="text-xs gap-1.5 h-7">
-                                      <Terminal className="h-3 w-3" /> Generate PoC
-                                    </Button>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </motion.div>
-                        ))}
-                      </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </motion.div>
+                          ))}
+                        </div>
                       )}
                     </ScrollArea>
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Threat Actors Sidebar */}
               <div className="space-y-6">
                 <Card className="border-border bg-card">
                   <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Skull className="h-5 w-5 text-warning" />
-                      Active Threat Actors
-                    </CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-base"><Skull className="h-5 w-5 text-warning" /> Active Threat Actors</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {actorsLoading ? (
                       <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
-                    ) : (
-                    threatActors.map((actor, i) => (
+                    ) : threatActors.map((actor, i) => (
                       <motion.div key={actor.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.06 }}
                         className="p-3 rounded-xl border border-border hover:border-warning/30 transition-colors cursor-pointer"
                       >
@@ -388,12 +321,9 @@ const CyberCommandCenter = () => {
                           <span>Last seen: {formatDistanceToNow(new Date(actor.last_seen_at), { addSuffix: true })}</span>
                         </div>
                       </motion.div>
-                    ))
-                    )}
+                    ))}
                   </CardContent>
                 </Card>
-
-                {/* Threat Landscape */}
                 <Card className="border-destructive/20 bg-gradient-to-br from-destructive/5 to-card">
                   <CardContent className="py-6 text-center">
                     <Globe className="h-8 w-8 text-destructive mx-auto mb-3" />
@@ -401,9 +331,7 @@ const CyberCommandCenter = () => {
                     <div className="text-3xl font-black font-mono text-destructive mb-2">ELEVATED</div>
                     <p className="text-xs text-muted-foreground">3 active campaigns targeting critical infrastructure</p>
                     <div className="flex justify-center gap-1 mt-3">
-                      {[...Array(5)].map((_, i) => (
-                        <div key={i} className={cn("h-2 w-8 rounded-full", i < 4 ? "bg-destructive" : "bg-muted")} />
-                      ))}
+                      {[...Array(5)].map((_, i) => <div key={i} className={cn("h-2 w-8 rounded-full", i < 4 ? "bg-destructive" : "bg-muted")} />)}
                     </div>
                   </CardContent>
                 </Card>
@@ -412,19 +340,11 @@ const CyberCommandCenter = () => {
           </div>
         </TabsContent>
 
-        {/* ═══════════════════════════════════════════════ */}
-        {/* TAB 2: PENTESTING COPILOT                      */}
-        {/* ═══════════════════════════════════════════════ */}
+        {/* TAB: PENTESTING */}
         <TabsContent value="pentesting">
           <div className="space-y-6">
-            {/* Attack Pipeline */}
             <Card className="border-border bg-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-warning" />
-                  Attack Pipeline
-                </CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-warning" /> Attack Pipeline</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                   {pentestModules.map((mod, i) => (
@@ -437,43 +357,26 @@ const CyberCommandCenter = () => {
                       <h4 className="text-xs font-bold text-foreground mb-1">{mod.name}</h4>
                       <p className="text-[10px] text-muted-foreground leading-tight">{mod.desc}</p>
                       <div className="flex flex-wrap justify-center gap-1 mt-2">
-                        {mod.tools.slice(0, 2).map(t => (
-                          <Badge key={t} variant="outline" className="text-[8px] px-1 py-0">{t}</Badge>
-                        ))}
+                        {mod.tools.slice(0, 2).map(t => <Badge key={t} variant="outline" className="text-[8px] px-1 py-0">{t}</Badge>)}
                         {mod.tools.length > 2 && <Badge variant="outline" className="text-[8px] px-1 py-0">+{mod.tools.length - 2}</Badge>}
                       </div>
                     </motion.div>
                   ))}
                 </div>
-                {/* Scan controls */}
                 <div className="mt-6 flex items-center gap-4">
                   <Input placeholder="Target: https://example.com" value={scanTarget} onChange={e => setScanTarget(e.target.value)} className="flex-1 h-11 font-mono text-sm bg-muted/30 border-border" />
                   <Button onClick={startScan} disabled={websiteScan.isPending} className="h-11 px-6 gap-2 bg-warning hover:bg-warning/90 text-warning-foreground font-bold">
                     {websiteScan.isPending ? <><RotateCcw className="h-4 w-4 animate-spin" /> Scanning...</> : <><Play className="h-4 w-4" /> Launch Scan</>}
                   </Button>
                 </div>
-                {websiteScan.isPending && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                      <span className="font-mono">Scanning target website...</span>
-                      <span className="font-mono animate-pulse">In progress</span>
-                    </div>
-                    <Progress value={undefined} className="h-2" />
-                  </motion.div>
-                )}
-                {/* Scan History */}
                 {scanHistory.length > 0 && (
                   <div className="mt-4 border-t border-border pt-4">
-                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
-                      <History className="h-3 w-3" /> Recent Scans
-                    </h4>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1"><History className="h-3 w-3" /> Recent Scans</h4>
                     <div className="space-y-2">
                       {scanHistory.slice(0, 5).map(scan => (
                         <div key={scan.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 text-xs">
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline" className={cn("text-[9px]", scan.status === 'completed' ? 'text-success border-success/30' : scan.status === 'failed' ? 'text-destructive border-destructive/30' : 'text-warning border-warning/30')}>
-                              {scan.status}
-                            </Badge>
+                            <Badge variant="outline" className={cn("text-[9px]", scan.status === 'completed' ? 'text-success border-success/30' : scan.status === 'failed' ? 'text-destructive border-destructive/30' : 'text-warning border-warning/30')}>{scan.status}</Badge>
                             <span className="font-mono text-foreground">{scan.target_url}</span>
                           </div>
                           <div className="flex items-center gap-3 text-muted-foreground">
@@ -488,20 +391,12 @@ const CyberCommandCenter = () => {
               </CardContent>
             </Card>
 
-            {/* Payload Library + Terminal */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="border-border bg-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <FileWarning className="h-5 w-5 text-accent" />
-                    Payload Library
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="flex items-center gap-2 text-base"><FileWarning className="h-5 w-5 text-accent" /> Payload Library</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
                   {payloadTemplates.map((p, i) => (
-                    <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }}
-                      className="p-3 rounded-xl border border-border hover:border-accent/30 transition-colors"
-                    >
+                    <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.05 }} className="p-3 rounded-xl border border-border hover:border-accent/30 transition-colors">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-[9px] font-mono">{p.lang}</Badge>
@@ -517,15 +412,10 @@ const CyberCommandCenter = () => {
                 </CardContent>
               </Card>
 
-              {/* Interactive Terminal */}
               <Card className="border-border bg-card">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
-                    <div className="flex gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-destructive/60" />
-                      <div className="w-3 h-3 rounded-full bg-warning/60" />
-                      <div className="w-3 h-3 rounded-full bg-success/60" />
-                    </div>
+                    <div className="flex gap-1.5"><div className="w-3 h-3 rounded-full bg-destructive/60" /><div className="w-3 h-3 rounded-full bg-warning/60" /><div className="w-3 h-3 rounded-full bg-success/60" /></div>
                     <span className="text-xs font-mono text-muted-foreground ml-2">shadowtalk@cyber:~</span>
                   </div>
                 </CardHeader>
@@ -533,15 +423,7 @@ const CyberCommandCenter = () => {
                   <ScrollArea className="h-[400px]">
                     <div className="p-4 font-mono text-xs text-success/80 bg-background/80 min-h-full">
                       {terminalOutput.map((line, i) => (
-                        <div key={i} className={cn(
-                          line.startsWith("[✓]") ? "text-success" :
-                          line.startsWith("[!]") ? "text-warning" :
-                          line.startsWith("[✗]") ? "text-destructive" :
-                          line.includes("shadowtalk@cyber") ? "text-primary" :
-                          "text-foreground/70"
-                        )}>
-                          {line || "\u00A0"}
-                        </div>
+                        <div key={i} className={cn(line.startsWith("[✓]") ? "text-success" : line.startsWith("[!]") ? "text-warning" : line.startsWith("[✗]") ? "text-destructive" : line.includes("shadowtalk@cyber") ? "text-primary" : "text-foreground/70")}>{line || "\u00A0"}</div>
                       ))}
                       <div className="flex items-center gap-1 mt-1">
                         <span className="text-primary">shadowtalk@cyber:~$</span>
@@ -555,19 +437,16 @@ const CyberCommandCenter = () => {
           </div>
         </TabsContent>
 
-        {/* ═══════════════════════════════════════════════ */}
-        {/* TAB 3: INCIDENT RESPONSE WAR ROOM              */}
-        {/* ═══════════════════════════════════════════════ */}
+        {/* TAB: OSINT */}
+        <TabsContent value="osint">
+          <Suspense fallback={<TabLoader />}><OSINTDashboard /></Suspense>
+        </TabsContent>
+
+        {/* TAB: WAR ROOM */}
         <TabsContent value="incident-response">
           <div className="space-y-6">
-            {/* MITRE ATT&CK Matrix */}
             <Card className="border-border bg-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Layers className="h-5 w-5 text-accent" />
-                  MITRE ATT&CK Matrix
-                </CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Layers className="h-5 w-5 text-accent" /> MITRE ATT&CK Matrix</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
                   {mitreTactics.map((tactic, i) => (
@@ -584,23 +463,15 @@ const CyberCommandCenter = () => {
               </CardContent>
             </Card>
 
-            {/* Forensic Timeline */}
             <Card className="border-border bg-card">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-secondary" />
-                    Forensic Timeline — Active Incident
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <LivePulse />
-                    <Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[10px]">SEVERITY: CRITICAL</Badge>
-                  </div>
+                  <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5 text-secondary" /> Forensic Timeline — Active Incident</CardTitle>
+                  <div className="flex items-center gap-2"><LivePulse /><Badge className="bg-destructive/15 text-destructive border-destructive/30 text-[10px]">SEVERITY: CRITICAL</Badge></div>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="relative">
-                  {/* Timeline line */}
                   <div className="absolute left-[72px] top-0 bottom-0 w-px bg-border" />
                   <div className="space-y-1">
                     {incidentTimeline.map((event, i) => {
@@ -610,18 +481,12 @@ const CyberCommandCenter = () => {
                           className={cn("flex items-start gap-4 p-3 rounded-xl transition-colors hover:bg-muted/30", selectedTactic && event.tactic !== selectedTactic && "opacity-30")}
                         >
                           <code className="text-xs font-mono text-muted-foreground w-14 shrink-0 pt-0.5">{event.time}</code>
-                          <div className="relative z-10 shrink-0 mt-1">
-                            <div className={cn("h-3 w-3 rounded-full ring-2 ring-background", sevDot(event.severity))} />
-                          </div>
+                          <div className="relative z-10 shrink-0 mt-1"><div className={cn("h-3 w-3 rounded-full ring-2 ring-background", sevDot(event.severity))} /></div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-foreground">{event.event}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge className={cn("text-[9px] px-1.5 py-0", sevColor(event.severity))}>{event.severity}</Badge>
-                              {matchedTactic && (
-                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono" style={{ borderColor: matchedTactic.color + "60", color: matchedTactic.color }}>
-                                  {matchedTactic.id}: {matchedTactic.name}
-                                </Badge>
-                              )}
+                              {matchedTactic && <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono" style={{ borderColor: matchedTactic.color + "60", color: matchedTactic.color }}>{matchedTactic.id}: {matchedTactic.name}</Badge>}
                             </div>
                           </div>
                         </motion.div>
@@ -632,12 +497,11 @@ const CyberCommandCenter = () => {
               </CardContent>
             </Card>
 
-            {/* Response Playbooks */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { name: "Containment", icon: Shield, desc: "Isolate affected systems, block C2 IPs, revoke compromised credentials", status: "executing", progress: 60 },
-                { name: "Eradication", icon: XCircle, desc: "Remove malware, patch vulnerabilities, reset credentials domain-wide", status: "pending", progress: 0 },
-                { name: "Recovery", icon: RotateCcw, desc: "Restore from clean backups, monitor for re-infection, post-incident review", status: "pending", progress: 0 },
+                { name: "Containment", icon: Shield, desc: "Isolate systems, block C2 IPs, revoke credentials", status: "executing", progress: 60 },
+                { name: "Eradication", icon: XCircle, desc: "Remove malware, patch vulns, reset credentials", status: "pending", progress: 0 },
+                { name: "Recovery", icon: RotateCcw, desc: "Restore from backups, monitor re-infection", status: "pending", progress: 0 },
               ].map((playbook, i) => (
                 <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}>
                   <Card className={cn("border-border bg-card h-full", playbook.status === "executing" && "border-accent/40")}>
@@ -646,10 +510,7 @@ const CyberCommandCenter = () => {
                         <div className={cn("p-2 rounded-xl", playbook.status === "executing" ? "bg-accent/10" : "bg-muted")}>
                           <playbook.icon className={cn("h-5 w-5", playbook.status === "executing" ? "text-accent" : "text-muted-foreground")} />
                         </div>
-                        <div>
-                          <h3 className="font-bold text-foreground text-sm">{playbook.name}</h3>
-                          <Badge variant="outline" className="text-[9px]">{playbook.status}</Badge>
-                        </div>
+                        <div><h3 className="font-bold text-foreground text-sm">{playbook.name}</h3><Badge variant="outline" className="text-[9px]">{playbook.status}</Badge></div>
                       </div>
                       <p className="text-xs text-muted-foreground mb-3">{playbook.desc}</p>
                       {playbook.status === "executing" && <Progress value={playbook.progress} className="h-1.5" />}
@@ -664,43 +525,35 @@ const CyberCommandCenter = () => {
           </div>
         </TabsContent>
 
-        {/* ═══════════════════════════════════════════════ */}
-        {/* TAB 4: ZERO-DAY RESEARCH LAB                   */}
-        {/* ═══════════════════════════════════════════════ */}
+        {/* TAB: BUG BOUNTY */}
+        <TabsContent value="bug-bounty">
+          <Suspense fallback={<TabLoader />}><BugBountyTracker /></Suspense>
+        </TabsContent>
+
+        {/* TAB: CHEAT SHEETS */}
+        <TabsContent value="cheatsheets">
+          <Suspense fallback={<TabLoader />}><SecurityCheatSheets /></Suspense>
+        </TabsContent>
+
+        {/* TAB: ZERO-DAY LAB */}
         <TabsContent value="zero-day">
           <div className="space-y-6">
-            {/* Active Research */}
             <Card className="border-border bg-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FlaskConical className="h-5 w-5 text-secondary" />
-                  Active Research Projects
-                </CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="flex items-center gap-2"><FlaskConical className="h-5 w-5 text-secondary" /> Active Research Projects</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {researchEntries.map((entry, i) => (
-                    <motion.div key={entry.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                      className="p-4 rounded-xl border border-border hover:border-secondary/40 transition-colors"
-                    >
+                    <motion.div key={entry.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="p-4 rounded-xl border border-border hover:border-secondary/40 transition-colors">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <code className="text-xs font-mono font-bold text-secondary">{entry.id}</code>
-                          <Badge className={cn("text-[9px]",
-                            entry.status === "poc-ready" ? "bg-success/15 text-success border-success/30" :
-                            entry.status === "analyzing" ? "bg-warning/15 text-warning border-warning/30" :
-                            entry.status === "fuzzing" ? "bg-primary/15 text-primary border-primary/30" :
-                            "bg-muted text-muted-foreground"
-                          )}>{entry.status}</Badge>
+                          <Badge className={cn("text-[9px]", entry.status === "poc-ready" ? "bg-success/15 text-success border-success/30" : entry.status === "analyzing" ? "bg-warning/15 text-warning border-warning/30" : entry.status === "fuzzing" ? "bg-primary/15 text-primary border-primary/30" : "bg-muted text-muted-foreground")}>{entry.status}</Badge>
                         </div>
                         <span className="text-sm font-bold text-success font-mono">{entry.bounty}</span>
                       </div>
                       <h4 className="text-sm font-semibold text-foreground">{entry.target}</h4>
                       <p className="text-xs text-muted-foreground mb-3">{entry.type}</p>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                        <span>Progress</span>
-                        <span className="font-mono">{entry.progress}%</span>
-                      </div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1"><span>Progress</span><span className="font-mono">{entry.progress}%</span></div>
                       <Progress value={entry.progress} className="h-1.5" />
                     </motion.div>
                   ))}
@@ -709,14 +562,8 @@ const CyberCommandCenter = () => {
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Fuzzing Dashboard */}
               <Card className="border-border bg-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Zap className="h-5 w-5 text-primary" />
-                    Fuzzing Engine — AFL++
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Zap className="h-5 w-5 text-primary" /> Fuzzing Engine — AFL++</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-3">
                     {[
@@ -734,29 +581,19 @@ const CyberCommandCenter = () => {
                     ))}
                   </div>
                   <div className="mt-4 flex gap-2">
-                    <Button size="sm" className="flex-1 gap-1.5 text-xs h-9">
-                      <Play className="h-3 w-3" /> Resume Fuzzer
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-1.5 text-xs h-9">
-                      <Download className="h-3 w-3" /> Export Crashes
-                    </Button>
+                    <Button size="sm" className="flex-1 gap-1.5 text-xs h-9"><Play className="h-3 w-3" /> Resume Fuzzer</Button>
+                    <Button size="sm" variant="outline" className="gap-1.5 text-xs h-9"><Download className="h-3 w-3" /> Export Crashes</Button>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Responsible Disclosure */}
               <Card className="border-secondary/20 bg-gradient-to-br from-secondary/5 to-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <BookOpen className="h-5 w-5 text-secondary" />
-                    Responsible Disclosure
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="flex items-center gap-2 text-base"><BookOpen className="h-5 w-5 text-secondary" /> Responsible Disclosure</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
                     {[
                       { step: 1, label: "Discovery & PoC", desc: "Confirm vulnerability and build minimal proof-of-concept" },
-                      { step: 2, label: "Vendor Notification", desc: "Report to vendor via security@vendor.com with 90-day disclosure window" },
+                      { step: 2, label: "Vendor Notification", desc: "Report to vendor via security@vendor.com with 90-day window" },
                       { step: 3, label: "Coordination", desc: "Work with vendor on patch development and CVE assignment" },
                       { step: 4, label: "Public Disclosure", desc: "Publish advisory after patch or after 90-day window expires" },
                     ].map(s => (
@@ -764,17 +601,11 @@ const CyberCommandCenter = () => {
                         <div className="w-7 h-7 rounded-full bg-secondary/20 flex items-center justify-center shrink-0">
                           <span className="text-xs font-bold text-secondary">{s.step}</span>
                         </div>
-                        <div>
-                          <h4 className="text-sm font-semibold text-foreground">{s.label}</h4>
-                          <p className="text-xs text-muted-foreground">{s.desc}</p>
-                        </div>
+                        <div><h4 className="text-sm font-semibold text-foreground">{s.label}</h4><p className="text-xs text-muted-foreground">{s.desc}</p></div>
                       </div>
                     ))}
                   </div>
-                  <Button variant="outline" className="w-full gap-2 text-xs">
-                    <Shield className="h-3.5 w-3.5" />
-                    Generate Disclosure Report
-                  </Button>
+                  <Button variant="outline" className="w-full gap-2 text-xs"><Shield className="h-3.5 w-3.5" /> Generate Disclosure Report</Button>
                 </CardContent>
               </Card>
             </div>
