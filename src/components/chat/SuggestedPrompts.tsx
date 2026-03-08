@@ -253,7 +253,7 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1 }}
-        className="mt-8 flex items-center gap-3 text-[10px] text-muted-foreground/20 font-mono"
+        className="mt-4 flex items-center gap-3 text-[10px] text-muted-foreground/20 font-mono"
       >
         <span className="flex items-center gap-1.5">
           <kbd className="px-1.5 py-0.5 rounded border border-border/10 bg-muted/10">⌘K</kbd>
