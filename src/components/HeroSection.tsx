@@ -60,32 +60,6 @@ const HeroSection = () => {
     localStorage.setItem('shadowtalk-demo-dismissed', 'true');
     setShowDemo(false);
   };
-  const [liveStats, setLiveStats] = useState({ users: 0, reviews: 0, rating: 0, dealsLeft: 0 });
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      const [profilesRes, feedbackRes, dealsRes] = await Promise.all([
-        supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('feedback').select('rating').not('rating', 'is', null),
-        supabase.from('manual_payments').select('id', { count: 'exact', head: true }).eq('plan_type', 'lifetime').eq('status', 'verified'),
-      ]);
-      
-      const userCount = profilesRes.count || 0;
-      const reviews = feedbackRes.data || [];
-      const avgRating = reviews.length > 0 
-        ? reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length 
-        : 0;
-      const lifetimeSold = dealsRes.count || 0;
-      
-      setLiveStats({
-        users: userCount,
-        reviews: reviews.length,
-        rating: Math.round(avgRating * 10) / 10,
-        dealsLeft: Math.max(50 - lifetimeSold, 0),
-      });
-    };
-    fetchStats();
-  }, []);
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
   const heroY = useTransform(scrollY, [0, 400], [0, 80]);
