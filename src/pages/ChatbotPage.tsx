@@ -1448,6 +1448,9 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
 
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
+        {/* Main content with optional browse panel */}
+        <div className="flex-1 flex min-w-0 h-full">
+        <div className="flex-1 flex flex-col min-w-0">
           <AdBanner />
           
           <ChatHeader
