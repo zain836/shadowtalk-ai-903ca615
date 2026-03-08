@@ -144,13 +144,19 @@ export const MemoryPanel = ({ onMemoryUpdate }: MemoryPanelProps) => {
     setEditContent(memory.content);
   };
 
-  const saveEdit = (id: string) => {
+  const saveEdit = async (id: string) => {
     const updated = memories.map(m => 
       m.id === id ? { ...m, content: editContent } : m
     );
     saveMemories(updated);
     setEditingId(null);
     setEditContent("");
+
+    // Sync to backend
+    if (user) {
+      await supabase.from('ai_memories').update({ content: editContent }).eq('id', id).eq('user_id', user.id);
+    }
+
     toast({ title: "Memory updated" });
   };
 

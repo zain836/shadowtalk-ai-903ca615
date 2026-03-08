@@ -45,13 +45,45 @@ const OnboardingFlow = () => {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    const done = localStorage.getItem(ONBOARDING_KEY);
-    if (!done) setShow(true);
+    const checkOnboarding = async () => {
+      const done = localStorage.getItem(ONBOARDING_KEY);
+      if (done) return;
+
+      // Check backend too
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('user_settings')
+          .select('setting_value')
+          .eq('user_id', user.id)
+          .eq('setting_key', 'onboarding_completed')
+          .maybeSingle();
+        if (data?.setting_value) {
+          localStorage.setItem(ONBOARDING_KEY, "true");
+          return;
+        }
+      }
+
+      setShow(true);
+    };
+    checkOnboarding();
   }, []);
 
   const dismiss = () => {
     localStorage.setItem(ONBOARDING_KEY, "true");
     setShow(false);
+
+    // Sync to backend
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('user_settings').upsert({
+          user_id: user.id,
+          setting_key: 'onboarding_completed',
+          setting_value: true,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,setting_key' }).then(() => {});
+      }
+    });
   };
 
   const next = () => {
