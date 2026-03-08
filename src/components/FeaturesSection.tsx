@@ -213,10 +213,10 @@ const FeaturesSection = () => {
         {/* Trust Indicators */}
         <div className="mt-16 flex items-center justify-center gap-4 flex-wrap">
           {[
-            "🏆 Product Hunt #1",
-            "⭐ GitHub 15K+ Stars",
-            "🔒 SOC 2 Certified",
-            "💎 Y Combinator",
+            "🛡️ Anti-Spyware Architecture",
+            "🔒 End-to-End Encrypted",
+            "⚡ Edge AI Powered",
+            "🧠 Multi-Model Engine",
           ].map((badge, i) => (
             <motion.div
               key={i}
