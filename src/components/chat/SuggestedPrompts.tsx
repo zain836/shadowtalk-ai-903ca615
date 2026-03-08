@@ -60,7 +60,7 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-              className="absolute w-28 h-28 md:w-36 md:h-36"
+              className="absolute w-24 h-24 md:w-28 md:h-28"
             >
               <div className="absolute inset-0 rounded-full border border-dashed border-primary/10" />
               {/* Orbit dot 1 */}
