@@ -89,14 +89,16 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
             />
 
             {/* Spinning accent ring */}
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-              className="absolute -inset-2 rounded-full"
-              style={{
-                background: "conic-gradient(from 0deg, transparent, hsl(var(--primary) / 0.4), transparent, transparent)",
-              }}
-            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                className="w-24 h-24 md:w-28 md:h-28 rounded-full"
+                style={{
+                  background: "conic-gradient(from 0deg, transparent, hsl(var(--primary) / 0.4), transparent, transparent)",
+                }}
+              />
+            </div>
 
             {/* Core body */}
             <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary/30 via-background to-secondary/20 border border-primary/30 flex items-center justify-center shadow-2xl shadow-primary/20 backdrop-blur-xl overflow-hidden">
