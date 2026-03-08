@@ -173,6 +173,7 @@ const ChatbotPage = () => {
   const [showCreativeSynthesis, setShowCreativeSynthesis] = useState(false);
   const [showShadowTalkLive, setShowShadowTalkLive] = useState(false);
   const [showShadowBrowser, setShowShadowBrowser] = useState(false);
+  const [showScreenAgent, setShowScreenAgent] = useState(false);
   const [browserInitialUrl, setBrowserInitialUrl] = useState<string | undefined>(undefined);
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   const [showMultiModel, setShowMultiModel] = useState(false);
