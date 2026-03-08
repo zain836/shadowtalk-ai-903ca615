@@ -81,6 +81,24 @@ const TOOL_PATTERNS: Array<{
     extractParams: (msg) => ({ query: msg }),
   },
   {
+    tool: 'music_generator',
+    patterns: [
+      /\b(generate|create|make|compose)\s+(a\s+)?(song|music|track|beat|melody|tune|jingle|soundtrack)/i,
+      /\b(generate|create|make)\s+(a\s+)?(sound\s*effect|sfx|audio|noise)/i,
+      /\bplay\s+(me\s+)?(a\s+)?(song|music|beat|tune)/i,
+      /\b(lo-?fi|synthwave|jazz|ambient|cinematic|orchestral)\s+(music|track|beat)/i,
+      /\bmusic\s+(generation|generator|studio)/i,
+    ],
+    priority: 10,
+    autoExecute: true,
+    extractParams: (msg) => {
+      const cleaned = msg
+        .replace(/^(generate|create|make|compose|play)\s+(me\s+)?(a\s+)?(song|music|track|beat|melody|tune|jingle|soundtrack|sound\s*effect|sfx|audio)\s*(of|for|about|like|called)?\s*/i, '')
+        .trim();
+      return { prompt: cleaned || msg };
+    }
+  },
+  {
     tool: 'image_generator',
     patterns: [
       /\b(generate|create|make|draw|design|imagine)\s+(an?\s+)?(image|picture|illustration|artwork|logo|icon|banner|poster)/i,
