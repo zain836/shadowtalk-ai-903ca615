@@ -239,6 +239,7 @@ const App = () => {
                </BrowserRouter>
               </CommandPaletteContext.Provider>
               </ShadowMemoryProvider>
+              </SecurityProvider>
             </AuthProvider>
           </TooltipProvider>
         </ThemeProvider>
