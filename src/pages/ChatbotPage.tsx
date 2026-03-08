@@ -482,6 +482,10 @@ const ChatbotPage = () => {
          case 'o': // Pakistan Compliance (Shift+O for 🇵🇰)
            // Already handled elsewhere, but we can also use 'o' for offline
            break;
+         case 'w': // Screen Watch & Clone (Kimi-style)
+           e.preventDefault();
+           setShowScreenAgent(true);
+           break;
       }
     };
 
