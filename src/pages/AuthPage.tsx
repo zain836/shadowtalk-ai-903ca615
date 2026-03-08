@@ -85,6 +85,8 @@ const AuthPage = () => {
   const { isOffline, hasOfflineCredentials, saveCredentialsForOffline, verifyOfflineCredentials, getOfflineSession } = useOfflineAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
+  const [robotReacting, setRobotReacting] = useState(false);
+  const [robotMessage, setRobotMessage] = useState("");
   const { checkLimit } = useRateLimiter(5, 60000);
 
   const strength = getPasswordStrength(password);
@@ -494,34 +496,112 @@ const AuthPage = () => {
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1, delay: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-          className="relative z-10"
+          className="relative z-10 cursor-pointer group/robot"
+          onMouseEnter={() => setRobotReacting(true)}
+          onMouseLeave={() => { setRobotReacting(false); setRobotMessage(""); }}
+          onClick={() => {
+            const msgs = [
+              "🔒 Your secrets are safe with me.",
+              "👁️ I see you... but your data? Never.",
+              "⚡ Zero-knowledge. Zero compromise.",
+              "🛡️ Encrypting everything. Always.",
+              "🤖 I guard. You create.",
+              "🔐 AES-256-GCM active.",
+            ];
+            setRobotMessage(msgs[Math.floor(Math.random() * msgs.length)]);
+          }}
         >
-          {/* Glow ring behind robot */}
+          {/* Glow ring behind robot — speeds up on hover */}
           <motion.div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] rounded-full border border-primary/10"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] rounded-full border border-primary/10 transition-all duration-500 group-hover/robot:border-primary/40"
             animate={{ rotate: 360 }}
-            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: robotReacting ? 8 : 30, repeat: Infinity, ease: "linear" }}
           >
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary/50" />
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-1.5 h-1.5 rounded-full bg-secondary/40" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary/50 transition-all duration-300 group-hover/robot:w-3 group-hover/robot:h-3 group-hover/robot:bg-primary" />
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-1.5 h-1.5 rounded-full bg-secondary/40 transition-all duration-300 group-hover/robot:w-2.5 group-hover/robot:h-2.5 group-hover/robot:bg-secondary" />
           </motion.div>
 
           <motion.div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] rounded-full border border-primary/5"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[320px] rounded-full border border-primary/5 transition-all duration-500 group-hover/robot:border-primary/20"
             animate={{ rotate: -360 }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: robotReacting ? 6 : 20, repeat: Infinity, ease: "linear" }}
           >
-            <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-accent/40" />
+            <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-accent/40 transition-all duration-300 group-hover/robot:w-2.5 group-hover/robot:h-2.5 group-hover/robot:bg-accent" />
           </motion.div>
+
+          {/* Eye glow overlay — appears on hover */}
+          <AnimatePresence>
+            {robotReacting && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] h-[340px] z-20 pointer-events-none"
+              >
+                <div className="absolute inset-0 rounded-full bg-gradient-radial from-primary/20 via-transparent to-transparent animate-pulse" />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* The robot */}
           <motion.img
             src={shadowRobotImg}
             alt="ShadowTalk AI Guardian"
-            className="w-[340px] h-[340px] object-contain drop-shadow-[0_0_60px_hsl(var(--primary)/0.3)] relative z-10"
-            animate={{ y: [0, -12, 0] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            className="w-[340px] h-[340px] object-contain relative z-10 transition-all duration-500"
+            animate={robotReacting ? {
+              y: [0, -8, 0],
+              scale: [1, 1.08, 1.04],
+              filter: [
+                "drop-shadow(0 0 60px hsl(var(--primary) / 0.3))",
+                "drop-shadow(0 0 100px hsl(var(--primary) / 0.6))",
+                "drop-shadow(0 0 80px hsl(var(--primary) / 0.5))",
+              ],
+            } : {
+              y: [0, -12, 0],
+              scale: 1,
+              filter: "drop-shadow(0 0 60px hsl(var(--primary) / 0.3))",
+            }}
+            transition={robotReacting ? {
+              duration: 1.2,
+              repeat: Infinity,
+              ease: "easeInOut",
+            } : {
+              duration: 5,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
           />
+
+          {/* Reaction speech bubble */}
+          <AnimatePresence>
+            {robotMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.8 }}
+                transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                className="absolute -top-4 left-1/2 -translate-x-1/2 z-30 bg-card/90 backdrop-blur-md border border-primary/30 rounded-xl px-4 py-2 shadow-lg shadow-primary/10 whitespace-nowrap"
+              >
+                <span className="text-sm font-medium text-foreground">{robotMessage}</span>
+                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-card/90 border-b border-r border-primary/30" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Hover hint */}
+          <AnimatePresence>
+            {robotReacting && !robotMessage && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-30 text-[10px] text-primary/60 font-mono"
+              >
+                click me
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* Text overlay */}
