@@ -8,8 +8,10 @@ interface StealthKillSwitchState {
   networkBlocked: boolean;
   lastActivated: string | null;
   blockedRequests: number;
-  countdownPhase: number; // 0 = idle, 3/2/1 = countdown
-  activationProgress: number; // 0-100
+  totalBlockedAllTime: number;
+  countdownPhase: number;
+  activationProgress: number;
+  isLoading: boolean;
 }
 
 export const useStealthKillSwitch = () => {
@@ -17,40 +19,77 @@ export const useStealthKillSwitch = () => {
   const blockedCountRef = useRef(0);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [state, setState] = useState<StealthKillSwitchState>(() => {
-    const saved = localStorage.getItem('shadowtalk_stealth_mode');
-    return {
-      isStealthMode: saved === 'true',
-      isTransitioning: false,
-      networkBlocked: saved === 'true',
-      lastActivated: localStorage.getItem('shadowtalk_stealth_last_activated'),
-      blockedRequests: 0,
-      countdownPhase: 0,
-      activationProgress: saved === 'true' ? 100 : 0,
-    };
+  const [state, setState] = useState<StealthKillSwitchState>({
+    isStealthMode: false,
+    isTransitioning: false,
+    networkBlocked: false,
+    lastActivated: null,
+    blockedRequests: 0,
+    totalBlockedAllTime: 0,
+    countdownPhase: 0,
+    activationProgress: 0,
+    isLoading: true,
   });
 
-  // Sync stealth mode preference to backend
+  // Load stealth state from backend on mount
   useEffect(() => {
-    if (!user) return;
-    const syncToBackend = async () => {
+    const loadFromBackend = async () => {
+      if (!user) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+
       try {
-        await supabase.from('user_settings').upsert({
-          user_id: user.id,
-          setting_key: 'stealth_mode',
-          setting_value: {
-            isStealthMode: state.isStealthMode,
-            lastActivated: state.lastActivated,
-            totalBlocked: state.blockedRequests,
-          },
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id,setting_key' });
-      } catch { /* best-effort sync */ }
+        const { data, error } = await supabase
+          .from('user_settings')
+          .select('setting_value')
+          .eq('user_id', user.id)
+          .eq('setting_key', 'stealth_mode')
+          .maybeSingle();
+
+        if (data?.setting_value && !error) {
+          const val = typeof data.setting_value === 'string'
+            ? JSON.parse(data.setting_value)
+            : data.setting_value;
+
+          const isActive = val.isStealthMode === true;
+          setState(prev => ({
+            ...prev,
+            isStealthMode: isActive,
+            networkBlocked: isActive,
+            lastActivated: val.lastActivated || null,
+            totalBlockedAllTime: val.totalBlocked || 0,
+            activationProgress: isActive ? 100 : 0,
+            isLoading: false,
+          }));
+          blockedCountRef.current = 0;
+        } else {
+          setState(prev => ({ ...prev, isLoading: false }));
+        }
+      } catch {
+        setState(prev => ({ ...prev, isLoading: false }));
+      }
     };
-    if (state.isStealthMode || state.lastActivated) {
-      syncToBackend();
-    }
-  }, [state.isStealthMode, user]);
+
+    loadFromBackend();
+  }, [user]);
+
+  // Persist to backend
+  const syncToBackend = useCallback(async (isActive: boolean, lastActivated: string | null, totalBlocked: number) => {
+    if (!user) return;
+    try {
+      await supabase.from('user_settings').upsert({
+        user_id: user.id,
+        setting_key: 'stealth_mode',
+        setting_value: {
+          isStealthMode: isActive,
+          lastActivated,
+          totalBlocked,
+        },
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,setting_key' });
+    } catch { /* best-effort */ }
+  }, [user]);
 
   // Block all fetch/XHR when stealth mode is active
   useEffect(() => {
@@ -89,7 +128,6 @@ export const useStealthKillSwitch = () => {
     setState(prev => ({ ...prev, isTransitioning: true, countdownPhase: 3, activationProgress: 0 }));
     blockedCountRef.current = 0;
 
-    // Dramatic 3-2-1 countdown
     let phase = 3;
     countdownRef.current = setInterval(() => {
       phase -= 1;
@@ -102,50 +140,60 @@ export const useStealthKillSwitch = () => {
       } else {
         if (countdownRef.current) clearInterval(countdownRef.current);
 
-        // Final activation
         setState(prev => ({ ...prev, countdownPhase: 0, activationProgress: 90 }));
 
         setTimeout(() => {
           const now = new Date().toISOString();
-          localStorage.setItem('shadowtalk_stealth_mode', 'true');
-          localStorage.setItem('shadowtalk_stealth_last_activated', now);
 
-          setState({
-            isStealthMode: true,
-            isTransitioning: false,
-            networkBlocked: true,
-            lastActivated: now,
-            blockedRequests: 0,
-            countdownPhase: 0,
-            activationProgress: 100,
+          setState(prev => {
+            const newState = {
+              isStealthMode: true,
+              isTransitioning: false,
+              networkBlocked: true,
+              lastActivated: now,
+              blockedRequests: 0,
+              totalBlockedAllTime: prev.totalBlockedAllTime,
+              countdownPhase: 0,
+              activationProgress: 100,
+              isLoading: false,
+            };
+            return newState;
           });
+
+          // Sync activation to backend BEFORE network gets blocked
+          syncToBackend(true, now, 0);
         }, 500);
       }
     }, 800);
-  }, []);
+  }, [syncToBackend]);
 
   const deactivateStealthMode = useCallback(() => {
     setState(prev => ({ ...prev, isTransitioning: true, activationProgress: 80 }));
 
-    // Quick deactivation sequence
     setTimeout(() => {
       setState(prev => ({ ...prev, activationProgress: 40 }));
     }, 300);
 
     setTimeout(() => {
-      localStorage.removeItem('shadowtalk_stealth_mode');
+      setState(prev => {
+        const newTotal = prev.totalBlockedAllTime + prev.blockedRequests;
+        // Sync deactivation to backend
+        syncToBackend(false, prev.lastActivated, newTotal);
 
-      setState(prev => ({
-        isStealthMode: false,
-        isTransitioning: false,
-        networkBlocked: false,
-        lastActivated: prev.lastActivated,
-        blockedRequests: 0,
-        countdownPhase: 0,
-        activationProgress: 0,
-      }));
+        return {
+          isStealthMode: false,
+          isTransitioning: false,
+          networkBlocked: false,
+          lastActivated: prev.lastActivated,
+          blockedRequests: 0,
+          totalBlockedAllTime: newTotal,
+          countdownPhase: 0,
+          activationProgress: 0,
+          isLoading: false,
+        };
+      });
     }, 800);
-  }, []);
+  }, [syncToBackend]);
 
   // Cleanup
   useEffect(() => {
