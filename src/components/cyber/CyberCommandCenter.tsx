@@ -22,24 +22,13 @@ import { useLiveCVEs, useThreatActors, useWebsiteScan, useScanHistory, useRealti
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
-// ── Threat Intelligence Data ──────────────────────────────
-const liveCVEs = [
-  { id: "CVE-2026-0217", severity: "critical", cvss: 9.8, product: "Apache HTTP Server", desc: "Remote Code Execution via crafted HTTP/2 CONTINUATION frames", age: "2h", exploitAvail: true },
-  { id: "CVE-2026-0198", severity: "critical", cvss: 9.6, product: "OpenSSL 3.x", desc: "Buffer overflow in X.509 certificate verification", age: "5h", exploitAvail: true },
-  { id: "CVE-2026-0183", severity: "high", cvss: 8.8, product: "Linux Kernel 6.x", desc: "Privilege escalation via netfilter nf_tables", age: "8h", exploitAvail: false },
-  { id: "CVE-2026-0175", severity: "high", cvss: 8.4, product: "Microsoft Exchange", desc: "SSRF leading to authenticated RCE", age: "12h", exploitAvail: true },
-  { id: "CVE-2026-0164", severity: "high", cvss: 8.1, product: "Kubernetes API Server", desc: "RBAC bypass via malformed ServiceAccount tokens", age: "1d", exploitAvail: false },
-  { id: "CVE-2026-0152", severity: "medium", cvss: 7.5, product: "PostgreSQL 16", desc: "SQL injection in COPY FROM PROGRAM", age: "1d", exploitAvail: false },
-  { id: "CVE-2026-0141", severity: "medium", cvss: 6.8, product: "Docker Engine", desc: "Container escape via symlink race condition", age: "2d", exploitAvail: true },
-  { id: "CVE-2026-0128", severity: "low", cvss: 4.3, product: "Nginx", desc: "Information disclosure via error page", age: "3d", exploitAvail: false },
+// Fallback mock data (used when no backend data available)
+const fallbackCVEs = [
+  { id: "fallback-1", cve_id: "CVE-2026-0217", severity: "critical", cvss_score: 9.8, product: "Apache HTTP Server", description: "Remote Code Execution via crafted HTTP/2 CONTINUATION frames", published_at: new Date().toISOString(), exploit_available: true, attack_vector: "NETWORK", attack_complexity: "LOW", auth_required: "NONE", created_at: new Date().toISOString() },
 ];
 
-const threatActors = [
-  { name: "APT-PHANTOM", origin: "🇷🇺", targets: "Critical Infrastructure", activity: "active", ttps: 47, lastSeen: "2h ago" },
-  { name: "LAZARUS-NK", origin: "🇰🇵", targets: "Financial / Crypto", activity: "active", ttps: 63, lastSeen: "6h ago" },
-  { name: "CHARMING-KITTEN", origin: "🇮🇷", targets: "Government / Research", activity: "dormant", ttps: 31, lastSeen: "5d ago" },
-  { name: "COZY-BEAR", origin: "🇷🇺", targets: "Diplomatic / NATO", activity: "active", ttps: 89, lastSeen: "1h ago" },
-  { name: "HAFNIUM", origin: "🇨🇳", targets: "Technology / Defense", activity: "active", ttps: 52, lastSeen: "4h ago" },
+const fallbackActors = [
+  { id: "fallback-1", name: "Loading...", origin_country: "", origin_flag: "🔄", targets: "Fetching from backend...", activity_status: "unknown", ttps_count: 0, last_seen_at: new Date().toISOString(), description: "" },
 ];
 
 // ── Pentesting Templates ──────────────────────────────────
