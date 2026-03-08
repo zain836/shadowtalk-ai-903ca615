@@ -2083,6 +2083,9 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             case 'browser':
               setShowShadowBrowser(true);
               break;
+            case 'music':
+              setShowMusicGenerator(true);
+              break;
             case 'script-automation':
               setShowScriptAutomation(true);
               break;
