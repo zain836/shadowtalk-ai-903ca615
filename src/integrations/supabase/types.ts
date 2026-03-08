@@ -333,6 +333,107 @@ export type Database = {
         }
         Relationships: []
       }
+      bug_bounty_programs: {
+        Row: {
+          created_at: string
+          id: string
+          max_bounty: number | null
+          notes: string | null
+          platform: string
+          program_name: string
+          program_url: string | null
+          scope: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_bounty?: number | null
+          notes?: string | null
+          platform?: string
+          program_name: string
+          program_url?: string | null
+          scope?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_bounty?: number | null
+          notes?: string | null
+          platform?: string
+          program_name?: string
+          program_url?: string | null
+          scope?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bug_bounty_submissions: {
+        Row: {
+          bounty_amount: number | null
+          created_at: string
+          id: string
+          notes: string | null
+          program_id: string | null
+          report_url: string | null
+          resolved_at: string | null
+          severity: string
+          status: string
+          submitted_at: string
+          title: string
+          updated_at: string
+          user_id: string
+          vulnerability_type: string
+        }
+        Insert: {
+          bounty_amount?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          program_id?: string | null
+          report_url?: string | null
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          submitted_at?: string
+          title: string
+          updated_at?: string
+          user_id: string
+          vulnerability_type: string
+        }
+        Update: {
+          bounty_amount?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          program_id?: string | null
+          report_url?: string | null
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          submitted_at?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          vulnerability_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bug_bounty_submissions_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "bug_bounty_programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_intents: {
         Row: {
           country: string | null
@@ -566,6 +667,36 @@ export type Database = {
           name?: string
           training_examples?: Json | null
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cyber_ai_chats: {
+        Row: {
+          context: string | null
+          created_at: string
+          id: string
+          messages: Json
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string
+          id?: string
+          messages?: Json
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          context?: string | null
+          created_at?: string
+          id?: string
+          messages?: Json
+          title?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
