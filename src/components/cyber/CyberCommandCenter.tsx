@@ -285,8 +285,21 @@ const CyberCommandCenter = () => {
                   </CardHeader>
                   <CardContent className="p-0">
                     <ScrollArea className="h-[520px]">
+                      {cvesLoading ? (
+                        <div className="p-4 space-y-3">
+                          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+                        </div>
+                      ) : cvesError ? (
+                        <div className="p-8 text-center">
+                          <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
+                          <p className="text-sm text-muted-foreground">Failed to load CVEs. Sign in to fetch live data.</p>
+                          <Button variant="outline" size="sm" className="mt-3" onClick={() => refetchCVEs()}>
+                            <RefreshCw className="h-3 w-3 mr-1" /> Retry
+                          </Button>
+                        </div>
+                      ) : (
                       <div className="divide-y divide-border">
-                        {liveCVEs.filter(c => !searchQuery || c.id.toLowerCase().includes(searchQuery.toLowerCase()) || c.product.toLowerCase().includes(searchQuery.toLowerCase())).map((cve, i) => (
+                        {liveCVEs.filter(c => !searchQuery || c.cve_id.toLowerCase().includes(searchQuery.toLowerCase()) || c.product.toLowerCase().includes(searchQuery.toLowerCase())).map((cve, i) => (
                           <motion.div key={cve.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
                             className={cn("p-4 hover:bg-muted/30 cursor-pointer transition-colors", selectedCVE === cve.id && "bg-muted/50 border-l-2 border-l-destructive")}
                             onClick={() => setSelectedCVE(selectedCVE === cve.id ? null : cve.id)}
@@ -294,16 +307,16 @@ const CyberCommandCenter = () => {
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <code className="text-sm font-bold text-foreground font-mono">{cve.id}</code>
+                                  <code className="text-sm font-bold text-foreground font-mono">{cve.cve_id}</code>
                                   <Badge className={cn("text-[9px] px-1.5 py-0", sevColor(cve.severity))}>{cve.severity.toUpperCase()}</Badge>
-                                  {cve.exploitAvail && <Badge className="text-[9px] px-1.5 py-0 bg-destructive/15 text-destructive border-destructive/30">EXPLOIT ⚡</Badge>}
+                                  {cve.exploit_available && <Badge className="text-[9px] px-1.5 py-0 bg-destructive/15 text-destructive border-destructive/30">EXPLOIT ⚡</Badge>}
                                 </div>
                                 <p className="text-xs text-muted-foreground font-mono">{cve.product}</p>
-                                <p className="text-sm text-foreground/80 mt-1">{cve.desc}</p>
+                                <p className="text-sm text-foreground/80 mt-1">{cve.description}</p>
                               </div>
                               <div className="text-right shrink-0">
-                                <div className={cn("text-lg font-black font-mono", cve.cvss >= 9 ? "text-destructive" : cve.cvss >= 7 ? "text-warning" : "text-primary")}>{cve.cvss}</div>
-                                <span className="text-[10px] text-muted-foreground">{cve.age}</span>
+                                <div className={cn("text-lg font-black font-mono", cve.cvss_score >= 9 ? "text-destructive" : cve.cvss_score >= 7 ? "text-warning" : "text-primary")}>{cve.cvss_score}</div>
+                                <span className="text-[10px] text-muted-foreground">{formatDistanceToNow(new Date(cve.published_at), { addSuffix: true })}</span>
                               </div>
                             </div>
                             <AnimatePresence>
