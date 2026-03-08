@@ -45,7 +45,8 @@ export type ToolType =
   | 'workspace'
   | 'marketplace'
   | 'privacy_score'
-  | 'presentation_builder';
+  | 'presentation_builder'
+  | 'music_generator';
 
 interface ToolDetectionResult {
   tool: ToolType | null;
