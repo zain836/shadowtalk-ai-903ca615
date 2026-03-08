@@ -93,6 +93,7 @@ const AuthPage = () => {
   const [appleLoading, setAppleLoading] = useState(false);
   const [robotReacting, setRobotReacting] = useState(false);
   const [robotMessage, setRobotMessage] = useState("");
+  const [robotSpeaking, setRobotSpeaking] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [robotTilt, setRobotTilt] = useState({ rotateX: 0, rotateY: 0 });
   const [eyeGlow, setEyeGlow] = useState(0.3);
