@@ -1417,12 +1417,16 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
 
   return (
     <motion.div 
-      className="min-h-screen bg-background"
+      className="min-h-screen bg-background relative overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
-      <div className="flex h-screen w-full relative">
+      {/* Ambient background glow */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/3 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-secondary/3 rounded-full blur-[100px] pointer-events-none" />
+      
+      <div className="flex h-screen w-full relative z-10">
         {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
           {showSidebar && (
@@ -1459,7 +1463,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         </AnimatePresence>
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 bg-background/50">
         {/* Main content with optional browse panel */}
         <div className="flex-1 flex min-w-0 h-full">
         <div className="flex-1 flex flex-col min-w-0">

@@ -78,29 +78,29 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ 
-        duration: 0.25, 
+        duration: 0.3, 
         ease: [0.25, 0.46, 0.45, 0.94],
         delay: Math.min(index * 0.02, 0.1)
       }}
       className={`group flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}
     >
       {/* Avatar */}
-      <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
+      <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 ${
         isUser 
-          ? 'bg-primary/10 border border-primary/20' 
-          : 'bg-gradient-to-br from-primary to-secondary'
+          ? 'bg-primary/8 border border-primary/15' 
+          : 'bg-gradient-to-br from-primary via-primary/90 to-secondary shadow-lg shadow-primary/15'
       }`}>
         {isUser 
-          ? <User className="h-4 w-4 text-primary" /> 
+          ? <User className="h-4 w-4 text-primary/80" /> 
           : <Sparkles className="h-4 w-4 text-primary-foreground" />
         }
       </div>
 
       {/* Content */}
-      <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[75%]`}>
+      <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[78%]`}>
         {/* Image attachment */}
         {message.attachment?.type === 'image' && (
           <img 
@@ -129,10 +129,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
 
         {/* Message bubble */}
-        <div className={`rounded-2xl px-4 py-3 w-full overflow-hidden transition-all duration-200 ${
+        <div className={`rounded-2xl px-4 py-3 w-full overflow-hidden transition-all duration-300 ${
           isUser 
-            ? 'bg-primary text-primary-foreground rounded-tr-md shadow-md shadow-primary/10' 
-            : 'bg-card/60 backdrop-blur-sm border border-border/30 rounded-tl-md hover:border-border/50'
+            ? 'bg-primary text-primary-foreground rounded-tr-md shadow-lg shadow-primary/15' 
+            : 'bg-card/50 backdrop-blur-md border border-border/20 rounded-tl-md hover:border-border/40 hover:bg-card/60'
         }`}>
           {isUser ? (
             <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{typeof message.content === 'string' ? message.content : String(message.content || '')}</p>
@@ -283,7 +283,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {/* Actions */}
         {!isWelcome && (
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200">
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0">
             {isUser ? (
               <Button 
                 variant="ghost" 
