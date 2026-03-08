@@ -55,6 +55,7 @@ import { CustomInstructions } from "@/components/chat/CustomInstructions";
 import { ConversationBranching } from "@/components/chat/ConversationBranching";
 import { BunkerModeToggle } from "@/components/chat/BunkerModeToggle";
 import { CognitiveLoopPanel } from "@/components/chat/CognitiveLoopPanel";
+import { BrowseActivityPanel, useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
 import { PluginsManager } from "@/components/chat/PluginsManager";
 import { ChatGPTBeaterIndicator } from "@/components/chat/ChatGPTBeaterIndicator";
 import { ClaudeBeaterIndicator } from "@/components/chat/ClaudeBeaterIndicator";
@@ -242,6 +243,7 @@ const ChatbotPage = () => {
   const guestUsage = useGuestUsage(); // Guest usage tracking
   const shadowMemory = useShadowMemoryContext();
   const toolOrchestrator = useToolOrchestrator(); // Intelligent tool detection
+  const autoBrowse = useAutoBrowse(); // Manus-style auto-browsing
   const thinkingSteps = useThinkingSteps(); // Claude-style thinking transparency
   // proactiveAI removed from main chatbot — runs on 24/7 support widget only
   const intelligenceHub = useIntelligenceHub(); // Retention: AI memory + knowledge + streaks
@@ -1095,6 +1097,11 @@ const ChatbotPage = () => {
       length: messageToSend.length,
     });
 
+    // Auto-browse detection (Manus-style)
+    if (!isOffline && autoBrowse.shouldBrowse(messageToSend)) {
+      autoBrowse.startBrowseSession(messageToSend);
+    }
+
     abortControllerRef.current = new AbortController();
     await saveMessage(messageToSend, 'user');
 
@@ -1441,6 +1448,9 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
 
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
+        {/* Main content with optional browse panel */}
+        <div className="flex-1 flex min-w-0 h-full">
+        <div className="flex-1 flex flex-col min-w-0">
           <AdBanner />
           
           <ChatHeader
@@ -1556,6 +1566,23 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
              }}
             personality={personality}
           />
+        </div>
+
+        {/* Manus-style Browse Activity Panel - Right Side */}
+        <BrowseActivityPanel
+          isOpen={!!autoBrowse.browseSession}
+          onClose={autoBrowse.closeBrowseSession}
+          session={autoBrowse.browseSession}
+          onResultReady={(result, sources) => {
+            setMessages(prev => [...prev, {
+              id: crypto.randomUUID(),
+              type: 'ai',
+              content: `🔍 **Browse Results**\n\n${result}\n\n**Sources:**\n${sources.map(s => `- [${s.title}](${s.url})`).join('\n')}`,
+              timestamp: new Date()
+            }]);
+          }}
+        />
+        </div>
         </div>
       </div>
 
