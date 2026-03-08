@@ -1466,13 +1466,52 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
               {readingMode && <ReadingModeOverlay content={readingContent} onClose={() => setReadingMode(false)} />}
             </AnimatePresence>
 
-            {!activeTab.error && !proxyHtml && (
+            {!activeTab.error && !proxyHtml && !firecrawlData && (
               <iframe ref={iframeRef} src={activeTab.url} className="w-full h-full border-0"
                 onLoad={handleIframeLoad} onError={handleIframeError}
                 sandbox="allow-same-origin allow-scripts allow-popups allow-forms" title="Browser" />
             )}
 
-            {proxyHtml && !activeTab.error && (
+            {/* Firecrawl cloud browser view — screenshot + markdown */}
+            {firecrawlData && !activeTab.error && (
+              <div className="absolute inset-0 flex flex-col">
+                <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border-b border-emerald-500/20 text-xs">
+                  <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className="font-medium text-emerald-500">Cloud Browser View</span>
+                  <span className="text-muted-foreground">— {getDomainFromUrl(activeTab.url)}</span>
+                  <div className="ml-auto flex gap-1.5">
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] rounded" onClick={() => window.open(activeTab.url, "_blank")}>
+                      <ExternalLink className="h-3 w-3 mr-1" /> Open Original
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] rounded" onClick={() => { setFirecrawlData(null); navigateTo(DEFAULT_HOME); }}>
+                      <X className="h-3 w-3 mr-1" /> Close
+                    </Button>
+                  </div>
+                </div>
+                <ScrollArea className="flex-1">
+                  {firecrawlData.screenshot && (
+                    <div className="w-full">
+                      <img
+                        src={firecrawlData.screenshot}
+                        alt={firecrawlData.title || "Page screenshot"}
+                        className="w-full h-auto"
+                      />
+                    </div>
+                  )}
+                  {firecrawlData.markdown && (
+                    <div className="max-w-4xl mx-auto px-6 py-8">
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {firecrawlData.markdown}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
+            )}
+
+            {proxyHtml && !activeTab.error && !firecrawlData && (
               <div className="absolute inset-0 flex flex-col">
                 <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border-b border-primary/20 text-xs">
                   <Globe className="h-3.5 w-3.5 text-primary" />
