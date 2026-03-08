@@ -24,21 +24,10 @@ const ICON_MAP: Record<string, any> = {
   "Vision": Sparkles,
 };
 
-// Fallback posts when DB is empty
-const FALLBACK_POSTS = [
-  { id: "1", title: "The Future of AI: Building Sovereign Intelligence", excerpt: "Exploring how offline AI capabilities are reshaping the landscape of artificial intelligence.", author: "Zain Ahmed", published_at: "2026-01-18", read_time_minutes: 8, category: "AI & Technology", is_featured: true },
-  { id: "2", title: "Introducing Offline Mode: AI Without Internet", excerpt: "Learn how ShadowTalk AI's offline capabilities let you run powerful LLMs directly in your browser.", author: "Zain Ahmed", published_at: "2026-01-15", read_time_minutes: 5, category: "Product Updates" },
-  { id: "3", title: "Best Practices for Prompt Engineering", excerpt: "Master the art of crafting effective prompts to get the best results from AI assistants.", author: "ShadowTalk Team", published_at: "2026-01-12", read_time_minutes: 7, category: "Tutorials" },
-  { id: "4", title: "Enterprise Security: How We Protect Your Data", excerpt: "A deep dive into our security infrastructure, encryption standards, and compliance certifications.", author: "ShadowTalk Team", published_at: "2026-01-08", read_time_minutes: 6, category: "Security" },
-  { id: "5", title: "Multi-Model AI: Choosing the Right Brain for Your Task", excerpt: "Understanding the strengths of different AI models and when to use each one.", author: "Zain Ahmed", published_at: "2026-01-05", read_time_minutes: 9, category: "AI & Technology" },
-  { id: "6", title: "Building a Tech-Independent Pakistan", excerpt: "Our vision for democratizing AI access and building sovereign technology solutions.", author: "Zain Ahmed", published_at: "2026-01-01", read_time_minutes: 10, category: "Vision" },
-];
-
 const BlogPage = () => {
-  const { posts: dbPosts, isLoading } = useBlogPosts();
+  const { posts, isLoading } = useBlogPosts();
   const [activeCategory, setActiveCategory] = useState("All");
 
-  const posts = dbPosts.length > 0 ? dbPosts : FALLBACK_POSTS;
   const featuredPost = posts[0];
   const gridPosts = posts.slice(1);
 
@@ -87,6 +76,12 @@ const BlogPage = () => {
       {isLoading ? (
         <div className="flex justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="text-center py-20 px-4">
+          <BookOpen className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">No blog posts yet</h2>
+          <p className="text-muted-foreground">New AI-generated articles are published daily. Check back soon!</p>
         </div>
       ) : (
         <>
@@ -137,6 +132,9 @@ const BlogPage = () => {
               <motion.h2 initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-2xl font-bold mb-8 tracking-tight">
                 Latest Articles
               </motion.h2>
+              {filteredPosts.length === 0 ? (
+                <p className="text-center text-muted-foreground py-12">No articles in this category yet.</p>
+              ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filteredPosts.map((post, i) => {
                   const Icon = ICON_MAP[post.category] || Sparkles;
@@ -165,6 +163,7 @@ const BlogPage = () => {
                   );
                 })}
               </div>
+              )}
             </div>
           </section>
         </>
