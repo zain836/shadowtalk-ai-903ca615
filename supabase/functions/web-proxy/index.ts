@@ -1,6 +1,25 @@
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import { requireAuth } from "../_shared/auth.ts";
 
 const MAX_CONTENT_SIZE = 5 * 1024 * 1024; // 5MB limit
+
+// Blocked internal/private IP ranges for SSRF prevention
+const BLOCKED_HOSTS = [
+  /^localhost$/i,
+  /^127\./,
+  /^10\./,
+  /^172\.(1[6-9]|2[0-9]|3[01])\./,
+  /^192\.168\./,
+  /^0\./,
+  /^169\.254\./,
+  /^::1$/,
+  /^fc00:/,
+  /^fe80:/,
+];
+
+function isBlockedHost(hostname: string): boolean {
+  return BLOCKED_HOSTS.some(pattern => pattern.test(hostname));
+}
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -10,6 +29,10 @@ Deno.serve(async (req) => {
   }
 
   const corsHeaders = getCorsHeaders(origin);
+
+  // Require authentication to prevent anonymous proxy abuse
+  const auth = await requireAuth(req, corsHeaders);
+  if (!auth.authenticated) return auth.response;
 
   try {
     const { url, mode } = await req.json();
@@ -28,8 +51,12 @@ Deno.serve(async (req) => {
       if (!["http:", "https:"].includes(parsedUrl.protocol)) {
         throw new Error("Invalid protocol");
       }
+      // SSRF prevention: block internal/private IPs
+      if (isBlockedHost(parsedUrl.hostname)) {
+        throw new Error("Blocked host");
+      }
     } catch {
-      return new Response(JSON.stringify({ error: "Invalid URL" }), {
+      return new Response(JSON.stringify({ error: "Invalid or blocked URL" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
