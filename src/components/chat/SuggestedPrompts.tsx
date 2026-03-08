@@ -103,7 +103,9 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
         initial="hidden"
         animate="visible"
         variants={{ visible: { transition: { staggerChildren: 0.1, delayChildren: 0.2 } } }}
-        className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 w-full mb-5"
+        className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 w-full mb-5 relative"
+        onMouseEnter={() => setGridHovered(true)}
+        onMouseLeave={() => setGridHovered(false)}
       >
         {capabilities.map((cap, i) => {
           const Icon = cap.icon;
@@ -127,8 +129,26 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
               }}
               whileTap={{ scale: 0.96 }}
               onClick={() => onSelect(cap.prompt)}
-              className={`group relative flex flex-col items-start gap-2.5 p-3.5 rounded-xl border ${cap.border} bg-card/30 backdrop-blur-sm cursor-pointer transition-colors duration-300 hover:bg-card/50 shadow-lg shadow-transparent ${cap.glow} overflow-hidden`}
+              className={`group relative flex flex-col items-start gap-2.5 p-3.5 rounded-xl border bg-card/30 backdrop-blur-sm cursor-pointer transition-all duration-500 hover:bg-card/50 overflow-hidden ${cap.border}`}
+              style={{
+                boxShadow: gridHovered
+                  ? `0 0 20px ${cap.glowColor}, 0 0 40px ${cap.glowColor}, inset 0 0 15px ${cap.glowColor}`
+                  : "0 0 0px transparent",
+                borderColor: gridHovered ? cap.glowColor.replace("0.15", "0.4") : undefined,
+              }}
             >
+              {/* Full-card glow overlay on grid hover */}
+              <motion.div
+                className="absolute inset-0 rounded-xl pointer-events-none"
+                animate={{
+                  opacity: gridHovered ? 1 : 0,
+                }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                style={{
+                  background: `radial-gradient(ellipse at 50% 0%, ${cap.glowColor} 0%, transparent 70%)`,
+                }}
+              />
+
               {/* Scanning line effect */}
               <motion.div
                 className="absolute inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent pointer-events-none"
@@ -137,40 +157,59 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
                 transition={{ duration: 4 + i * 0.5, repeat: Infinity, ease: "easeInOut", delay: i * 0.8 }}
               />
 
-              {/* Animated gradient accent top bar - sweeps in */}
+              {/* Animated gradient accent top bar */}
               <motion.div
                 className={`absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r ${cap.accent} rounded-t-xl`}
                 initial={{ scaleX: 0, opacity: 0 }}
-                animate={{ scaleX: 1, opacity: 1 }}
+                animate={{ scaleX: 1, opacity: gridHovered ? 1 : 0.6 }}
                 transition={{ delay: 0.5 + i * 0.1, duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] }}
-                style={{ originX: 0 }}
+                style={{
+                  originX: 0,
+                  height: gridHovered ? 2 : 1,
+                }}
               />
 
-              {/* Corner glow pulse */}
+              {/* Corner glow pulse - intensifies on grid hover */}
               <motion.div
-                className={`absolute -top-4 -right-4 w-12 h-12 rounded-full bg-gradient-to-br ${cap.accent} blur-xl pointer-events-none`}
-                animate={{ opacity: [0, 0.4, 0], scale: [0.8, 1.2, 0.8] }}
-                transition={{ duration: 3 + i * 0.3, repeat: Infinity, ease: "easeInOut", delay: i * 0.5 }}
+                className={`absolute -top-4 -right-4 w-16 h-16 rounded-full bg-gradient-to-br ${cap.accent} blur-xl pointer-events-none`}
+                animate={{
+                  opacity: gridHovered ? [0.3, 0.7, 0.3] : [0, 0.4, 0],
+                  scale: gridHovered ? [1, 1.5, 1] : [0.8, 1.2, 0.8],
+                }}
+                transition={{ duration: 2 + i * 0.2, repeat: Infinity, ease: "easeInOut", delay: i * 0.3 }}
               />
 
               {/* Icon with breathing float */}
               <motion.div
-                animate={{ y: [0, -3, 0], rotate: [0, 1, -1, 0] }}
+                animate={{
+                  y: [0, -3, 0],
+                  rotate: [0, 1, -1, 0],
+                }}
                 transition={{ duration: 3.5 + i * 0.4, repeat: Infinity, ease: "easeInOut", delay: i * 0.2 }}
-                className="w-8 h-8 rounded-lg bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center"
+                className="relative z-10 w-8 h-8 rounded-lg bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center"
+                style={{
+                  boxShadow: gridHovered ? `0 0 12px ${cap.glowColor}` : "none",
+                  transition: "box-shadow 0.4s ease",
+                }}
               >
-                <Icon className="w-4 h-4 text-foreground/70 group-hover:text-foreground transition-colors duration-200" />
+                <Icon className="w-4 h-4 text-foreground/70 group-hover:text-foreground transition-colors duration-200" style={{ color: gridHovered ? cap.glowColor.replace("0.15", "0.9") : undefined }} />
               </motion.div>
 
-              <div className="flex items-center justify-between w-full">
-                <span className="text-[13px] font-medium text-foreground/70 group-hover:text-foreground/90 transition-colors">
+              <div className="relative z-10 flex items-center justify-between w-full">
+                <span
+                  className="text-[13px] font-medium transition-colors duration-300"
+                  style={{ color: gridHovered ? "hsl(var(--foreground) / 0.95)" : "hsl(var(--foreground) / 0.7)" }}
+                >
                   {cap.label}
                 </span>
                 <motion.div
-                  animate={{ x: [0, 2, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1 + i * 0.2 }}
+                  animate={{ x: gridHovered ? [0, 3, 0] : [0, 2, 0] }}
+                  transition={{ duration: gridHovered ? 1 : 2, repeat: Infinity, ease: "easeInOut", delay: 1 + i * 0.2 }}
                 >
-                  <ArrowRight className="w-3 h-3 text-muted-foreground/30 group-hover:text-foreground/50 transition-all" />
+                  <ArrowRight
+                    className="w-3 h-3 transition-all duration-300"
+                    style={{ color: gridHovered ? "hsl(var(--foreground) / 0.6)" : "hsl(var(--muted-foreground) / 0.3)" }}
+                  />
                 </motion.div>
               </div>
             </motion.button>
