@@ -184,10 +184,10 @@ const FeaturesSection = () => {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20 max-w-4xl mx-auto">
           {[
-            { value: liveStats.users > 0 ? `${liveStats.users.toLocaleString()}` : "—", label: "Active Users", sub: "From database", subColor: "text-success" },
-            { value: liveStats.tasks > 0 ? `${liveStats.tasks.toLocaleString()}` : "—", label: "AI Conversations", sub: "Real-time count", subColor: "text-primary" },
-            { value: liveStats.uptime, label: "Uptime", sub: "Enterprise grade", subColor: "text-accent" },
-            { value: liveStats.responseTime, label: "Response Time", sub: "Lightning fast", subColor: "text-warning" },
+            { value: "100%", label: "On-Device", sub: "Zero cloud dependency", subColor: "text-success" },
+            { value: "10+", label: "AI Models", sub: "Multi-model engine", subColor: "text-primary" },
+            { value: "E2E", label: "Encrypted", sub: "Military-grade security", subColor: "text-accent" },
+            { value: "<2s", label: "Response Time", sub: "Lightning fast", subColor: "text-warning" },
           ].map((stat, i) => (
             <motion.div
               key={i}
