@@ -626,29 +626,55 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
   const fetchViaProxy = async () => {
     setIsProxyLoading(true);
     setProxyHtml(null);
+    setFirecrawlData(null);
     try {
-      const headers = await getAuthHeaders();
-      const response = await fetchAIWithRetry(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/web-proxy`,
-        {
-          method: "POST", headers,
-          body: JSON.stringify({ url: activeTab.url, mode: "proxy" }),
+      // Use Firecrawl for rich rendering (screenshot + markdown)
+      const { data, error } = await supabase.functions.invoke('firecrawl-scrape', {
+        body: {
+          url: activeTab.url,
+          options: { formats: ['markdown', 'screenshot', 'links'], onlyMainContent: false },
         },
-        1, 20000
-      );
-      const data = await response.json();
-      if (data.success && data.html) {
-        setProxyHtml(data.html);
+      });
+
+      if (error) throw new Error(error.message);
+
+      const scrapeData = data?.data || data;
+      const screenshot = scrapeData?.screenshot;
+      const markdown = scrapeData?.markdown;
+      const title = scrapeData?.metadata?.title;
+      const links = scrapeData?.links;
+
+      if (screenshot || markdown) {
+        setFirecrawlData({ screenshot, markdown, title, links });
         setTabs(prev => prev.map(tab => tab.id === activeTabId ? {
-          ...tab, error: null, isLoading: false, title: data.title || tab.title,
+          ...tab, error: null, isLoading: false, title: title || tab.title,
         } : tab));
-        toast({ title: "Page loaded via proxy", description: data.title || getDomainFromUrl(activeTab.url) });
+        toast({ title: "Page loaded via cloud browser", description: title || getDomainFromUrl(activeTab.url) });
       } else {
-        toast({ title: "Proxy failed", description: data.error || "Could not fetch page", variant: "destructive" });
+        // Fallback to old proxy
+        const headers = await getAuthHeaders();
+        const response = await fetchAIWithRetry(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/web-proxy`,
+          {
+            method: "POST", headers,
+            body: JSON.stringify({ url: activeTab.url, mode: "proxy" }),
+          },
+          1, 20000
+        );
+        const proxyData = await response.json();
+        if (proxyData.success && proxyData.html) {
+          setProxyHtml(proxyData.html);
+          setTabs(prev => prev.map(tab => tab.id === activeTabId ? {
+            ...tab, error: null, isLoading: false, title: proxyData.title || tab.title,
+          } : tab));
+          toast({ title: "Page loaded via proxy", description: proxyData.title || getDomainFromUrl(activeTab.url) });
+        } else {
+          toast({ title: "Could not load page", description: proxyData.error || "Failed to fetch", variant: "destructive" });
+        }
       }
     } catch (err) {
-      const msg = err instanceof AIError ? err.message : "Proxy request failed";
-      toast({ title: "Proxy error", description: msg, variant: "destructive" });
+      const msg = err instanceof Error ? err.message : "Request failed";
+      toast({ title: "Load error", description: msg, variant: "destructive" });
     } finally {
       setIsProxyLoading(false);
     }
