@@ -177,6 +177,7 @@ const Navigation = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-1.5">
+            <TrustBadge />
             <StealthKillSwitch />
             <HardwarePassthrough />
             {!isInstalled && (

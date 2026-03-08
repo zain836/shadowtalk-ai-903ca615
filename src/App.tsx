@@ -177,6 +177,7 @@ const AnimatedRoutes = () => {
           <Route path="/competitive" element={<PageTransition><CompetitivePage /></PageTransition>} />
           <Route path="/agents" element={<PageTransition><AgentArchitecturePage /></PageTransition>} />
           <Route path="/compliance" element={<PageTransition><ComplianceDashboardPage /></PageTransition>} />
+          <Route path="/trust" element={<PageTransition><TrustPage /></PageTransition>} />
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
         </Routes>
       </AnimatePresence>
