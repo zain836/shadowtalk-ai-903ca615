@@ -78,29 +78,29 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ 
-        duration: 0.25, 
+        duration: 0.3, 
         ease: [0.25, 0.46, 0.45, 0.94],
         delay: Math.min(index * 0.02, 0.1)
       }}
       className={`group flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}
     >
       {/* Avatar */}
-      <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
+      <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 ${
         isUser 
-          ? 'bg-primary/10 border border-primary/20' 
-          : 'bg-gradient-to-br from-primary to-secondary'
+          ? 'bg-primary/8 border border-primary/15' 
+          : 'bg-gradient-to-br from-primary via-primary/90 to-secondary shadow-lg shadow-primary/15'
       }`}>
         {isUser 
-          ? <User className="h-4 w-4 text-primary" /> 
+          ? <User className="h-4 w-4 text-primary/80" /> 
           : <Sparkles className="h-4 w-4 text-primary-foreground" />
         }
       </div>
 
       {/* Content */}
-      <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[75%]`}>
+      <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[78%]`}>
         {/* Image attachment */}
         {message.attachment?.type === 'image' && (
           <img 
