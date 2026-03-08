@@ -243,6 +243,7 @@ const ChatbotPage = () => {
   const guestUsage = useGuestUsage(); // Guest usage tracking
   const shadowMemory = useShadowMemoryContext();
   const toolOrchestrator = useToolOrchestrator(); // Intelligent tool detection
+  const autoBrowse = useAutoBrowse(); // Manus-style auto-browsing
   const thinkingSteps = useThinkingSteps(); // Claude-style thinking transparency
   // proactiveAI removed from main chatbot — runs on 24/7 support widget only
   const intelligenceHub = useIntelligenceHub(); // Retention: AI memory + knowledge + streaks
