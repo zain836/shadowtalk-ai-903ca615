@@ -1017,6 +1017,14 @@ const ChatbotPage = () => {
           setMessage("");
           return;
 
+        case 'music_generator':
+          setMusicGeneratorPrompt(toolDetection.params?.prompt);
+          setMusicGeneratorAutoGenerate(toolDetection.autoExecute ?? false);
+          setShowMusicGenerator(true);
+          toast({ title: "🎵 Music Studio", description: toolDetection.autoExecute ? "Generating your audio..." : "Opening music studio..." });
+          setMessage("");
+          return;
+
         case 'referral':
           navigate('/profile');
           toast({ title: "🎁 Referral Program", description: "Opening referral dashboard..." });
