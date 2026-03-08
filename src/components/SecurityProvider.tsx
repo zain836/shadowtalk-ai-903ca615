@@ -124,7 +124,7 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (window.self !== window.top) {
       try {
         // If framed, break out
-        window.top!.location = window.self.location;
+        window.top!.location.href = window.self.location.href;
       } catch {
         // Cross-origin frame - hide content
         document.body.style.display = 'none';
