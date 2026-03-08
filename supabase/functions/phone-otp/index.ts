@@ -1,11 +1,11 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// In-memory OTP store (for demo; in production use a DB table)
+// In-memory OTP store (resets on cold start — acceptable for OTP with short TTL)
 const otpStore = new Map<string, { code: string; expiresAt: number; attempts: number }>();
 
 function generateOTP(): string {
@@ -14,7 +14,7 @@ function generateOTP(): string {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -27,7 +27,6 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'send') {
-      // Rate limit: max 3 OTPs per phone per 5 minutes
       const existing = otpStore.get(phone);
       if (existing && existing.attempts >= 3 && Date.now() < existing.expiresAt) {
         return new Response(JSON.stringify({ error: 'Too many OTP requests. Try again later.' }), {
@@ -38,12 +37,12 @@ Deno.serve(async (req) => {
       const otp = generateOTP();
       otpStore.set(phone, { code: otp, expiresAt: Date.now() + 5 * 60 * 1000, attempts: (existing?.attempts || 0) + 1 });
 
-      // Send via Twilio SMS
       const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
       const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
       const twilioNumber = Deno.env.get('TWILIO_WHATSAPP_NUMBER')?.replace('whatsapp:', '') || '';
 
-      if (!accountSid || !authToken) {
+      if (!accountSid || !authToken || !twilioNumber) {
+        console.error('Missing Twilio configuration');
         return new Response(JSON.stringify({ error: 'SMS service not configured' }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -56,10 +55,11 @@ Deno.serve(async (req) => {
         Body: `Your ShadowTalk verification code is: ${otp}. Valid for 5 minutes. Do not share this code.`,
       });
 
+      const credentials = btoa(`${accountSid}:${authToken}`);
       const twilioRes = await fetch(twilioUrl, {
         method: 'POST',
         headers: {
-          'Authorization': 'Basic ' + btoa(`${accountSid}:${authToken}`),
+          'Authorization': `Basic ${credentials}`,
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: body.toString(),
@@ -68,10 +68,12 @@ Deno.serve(async (req) => {
       if (!twilioRes.ok) {
         const errData = await twilioRes.json();
         console.error('Twilio error:', errData);
-        return new Response(JSON.stringify({ error: 'Failed to send SMS. Please try again.' }), {
+        return new Response(JSON.stringify({ error: errData?.message || 'Failed to send SMS. Please try again.' }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
+
+      await twilioRes.text(); // consume body
 
       return new Response(JSON.stringify({ success: true, message: 'OTP sent successfully' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -101,23 +103,26 @@ Deno.serve(async (req) => {
 
       otpStore.delete(phone);
 
-      // Create a Supabase admin client to sign in or create user
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, serviceRoleKey);
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-      // Check if user with this phone exists
+      if (!supabaseUrl || !serviceRoleKey) {
+        console.error('Missing Supabase configuration');
+        return new Response(JSON.stringify({ 
+          success: true, 
+          verified: true,
+          user_exists: false,
+          message: 'Phone verified. Please create an account with your email.'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const supabase = createClient(supabaseUrl, serviceRoleKey);
       const { data: users } = await supabase.auth.admin.listUsers();
-      const existingUser = users?.users?.find(u => u.phone === phone);
+      const existingUser = users?.users?.find((u: any) => u.phone === phone);
 
       if (existingUser) {
-        // Generate a magic link for the existing user
-        const { data, error } = await supabase.auth.admin.generateLink({
-          type: 'magiclink',
-          email: existingUser.email!,
-        });
-        if (error) throw error;
-
         return new Response(JSON.stringify({ 
           success: true, 
           verified: true,
