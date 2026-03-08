@@ -1,7 +1,6 @@
 import { Code, Wifi, Brain, Shield, Zap, Download, ArrowUpRight } from "lucide-react";
 import { motion, useInView } from "framer-motion";
-import { useRef, useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useRef } from "react";
 
 const cardVariants = {
   hidden: { opacity: 0, y: 50, scale: 0.95 },
