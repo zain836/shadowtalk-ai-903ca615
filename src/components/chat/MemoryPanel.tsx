@@ -38,16 +38,59 @@ export const MemoryPanel = ({ onMemoryUpdate }: MemoryPanelProps) => {
   const [editContent, setEditContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load memories from localStorage (could be moved to Supabase later)
+  // Load memories from backend, fallback to localStorage
   useEffect(() => {
-    if (user) {
-      const stored = localStorage.getItem(`memories_${user.id}`);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setMemories(parsed);
-        onMemoryUpdate?.(parsed);
+    if (!user) return;
+
+    const loadMemories = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('ai_memories')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true });
+
+        if (data && !error && data.length > 0) {
+          const mapped: Memory[] = data.map(m => ({
+            id: m.id,
+            content: m.content,
+            category: m.category as Memory['category'],
+            created_at: m.created_at,
+          }));
+          setMemories(mapped);
+          onMemoryUpdate?.(mapped);
+        } else {
+          // Migrate from localStorage
+          const stored = localStorage.getItem(`memories_${user.id}`);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            setMemories(parsed);
+            onMemoryUpdate?.(parsed);
+            // Migrate to backend
+            for (const m of parsed) {
+              await supabase.from('ai_memories').upsert({
+                id: m.id,
+                user_id: user.id,
+                content: m.content,
+                category: m.category,
+                source: 'manual',
+              }, { onConflict: 'id' });
+            }
+          }
+        }
+      } catch {
+        const stored = localStorage.getItem(`memories_${user.id}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setMemories(parsed);
+          onMemoryUpdate?.(parsed);
+        }
       }
-    }
+      setIsLoading(false);
+    };
+
+    loadMemories();
   }, [user]);
 
   const saveMemories = (newMemories: Memory[]) => {
@@ -58,8 +101,8 @@ export const MemoryPanel = ({ onMemoryUpdate }: MemoryPanelProps) => {
     }
   };
 
-  const addMemory = () => {
-    if (!newMemory.trim()) return;
+  const addMemory = async () => {
+    if (!newMemory.trim() || !user) return;
     
     const memory: Memory = {
       id: crypto.randomUUID(),
@@ -71,12 +114,28 @@ export const MemoryPanel = ({ onMemoryUpdate }: MemoryPanelProps) => {
     const updated = [...memories, memory];
     saveMemories(updated);
     setNewMemory("");
+
+    // Sync to backend
+    await supabase.from('ai_memories').insert({
+      id: memory.id,
+      user_id: user.id,
+      content: memory.content,
+      category: memory.category,
+      source: 'manual',
+    });
+
     toast({ title: "Memory added", description: "I'll remember this for future conversations." });
   };
 
-  const deleteMemory = (id: string) => {
+  const deleteMemory = async (id: string) => {
     const updated = memories.filter(m => m.id !== id);
     saveMemories(updated);
+
+    // Delete from backend
+    if (user) {
+      await supabase.from('ai_memories').delete().eq('id', id).eq('user_id', user.id);
+    }
+
     toast({ title: "Memory deleted" });
   };
 
@@ -85,13 +144,19 @@ export const MemoryPanel = ({ onMemoryUpdate }: MemoryPanelProps) => {
     setEditContent(memory.content);
   };
 
-  const saveEdit = (id: string) => {
+  const saveEdit = async (id: string) => {
     const updated = memories.map(m => 
       m.id === id ? { ...m, content: editContent } : m
     );
     saveMemories(updated);
     setEditingId(null);
     setEditContent("");
+
+    // Sync to backend
+    if (user) {
+      await supabase.from('ai_memories').update({ content: editContent }).eq('id', id).eq('user_id', user.id);
+    }
+
     toast({ title: "Memory updated" });
   };
 

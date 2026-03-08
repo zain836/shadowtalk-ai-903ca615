@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { useAuth } from '@/components/AuthProvider';
+import { supabase } from '@/integrations/supabase/client';
 
 // =============================================================================
 // CONTEXTUAL MEMORY GRAPHS - Beyond RAG
@@ -194,6 +195,17 @@ export const useMemoryGraph = () => {
     // Auto-extract semantic knowledge from episode
     await extractSemanticKnowledge(newEpisode);
 
+    // Sync to cloud knowledge_entries
+    try {
+      await supabase.from('knowledge_entries').insert({
+        user_id: user.id,
+        title: `Episode: ${episode.context}`,
+        content: `User: ${episode.userInput}\nAI: ${episode.aiResponse}`,
+        entry_type: 'episodic',
+        tags: [episode.context, episode.outcome],
+      });
+    } catch { /* best-effort */ }
+
     return newEpisode;
   }, [user, updateStats]);
 
@@ -319,6 +331,18 @@ export const useMemoryGraph = () => {
 
     await dbRef.current.put('semantic', newNode);
     await updateStats();
+
+    // Sync to cloud
+    try {
+      await supabase.from('knowledge_entries').insert({
+        user_id: user.id,
+        title: newNode.label,
+        content: JSON.stringify(newNode.properties),
+        entry_type: 'semantic',
+        tags: [newNode.type, ...newNode.sources],
+      });
+    } catch { /* best-effort */ }
+
     return newNode;
   }, [user, updateStats]);
 
@@ -465,7 +489,6 @@ export const useMemoryGraph = () => {
 
     const tx = dbRef.current.transaction(['episodic', 'semantic', 'procedural', 'relationships'], 'readwrite');
 
-    // Delete only user's data
     const stores = ['episodic', 'semantic', 'procedural'] as const;
     for (const storeName of stores) {
       const store = tx.objectStore(storeName);
@@ -477,6 +500,15 @@ export const useMemoryGraph = () => {
 
     await tx.done;
     await updateStats();
+
+    // Also clear cloud knowledge entries from memory graph
+    try {
+      await supabase
+        .from('knowledge_entries')
+        .delete()
+        .eq('user_id', user.id)
+        .in('entry_type', ['episodic', 'semantic']);
+    } catch { /* best-effort */ }
   }, [user, updateStats]);
 
   return {

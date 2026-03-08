@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import {
   CommandDialog,
@@ -49,18 +50,47 @@ export const CommandPalette = ({ open, onOpenChange, onAction }: CommandPaletteP
   const [search, setSearch] = useState("");
   const [recentCommands, setRecentCommands] = useState<string[]>([]);
 
-  // Load recent commands from localStorage
+  // Load recent commands from backend, fallback to localStorage
   useEffect(() => {
-    const recent = localStorage.getItem('shadowtalk_recent_commands');
-    if (recent) {
-      setRecentCommands(JSON.parse(recent).slice(0, 5));
-    }
+    const loadRecent = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        try {
+          const { data } = await supabase
+            .from('user_settings')
+            .select('setting_value')
+            .eq('user_id', user.id)
+            .eq('setting_key', 'recent_commands')
+            .maybeSingle();
+          if (data?.setting_value) {
+            setRecentCommands((data.setting_value as string[]).slice(0, 5));
+            return;
+          }
+        } catch { /* fallback below */ }
+      }
+      const recent = localStorage.getItem('shadowtalk_recent_commands');
+      if (recent) {
+        setRecentCommands(JSON.parse(recent).slice(0, 5));
+      }
+    };
+    if (open) loadRecent();
   }, [open]);
 
-  const trackCommand = useCallback((commandId: string) => {
+  const trackCommand = useCallback(async (commandId: string) => {
     const recent = JSON.parse(localStorage.getItem('shadowtalk_recent_commands') || '[]');
     const updated = [commandId, ...recent.filter((id: string) => id !== commandId)].slice(0, 10);
     localStorage.setItem('shadowtalk_recent_commands', JSON.stringify(updated));
+
+    // Sync to backend
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      supabase.from('user_settings').upsert({
+        user_id: user.id,
+        setting_key: 'recent_commands',
+        setting_value: updated,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,setting_key' }).then(() => {});
+    }
   }, []);
 
   const executeAndClose = useCallback((commandId: string, action: () => void) => {
