@@ -77,6 +77,12 @@ const BlogPage = () => {
         <div className="flex justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
+      ) : posts.length === 0 ? (
+        <div className="text-center py-20 px-4">
+          <BookOpen className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">No blog posts yet</h2>
+          <p className="text-muted-foreground">New AI-generated articles are published daily. Check back soon!</p>
+        </div>
       ) : (
         <>
           {/* Featured */}
@@ -126,6 +132,9 @@ const BlogPage = () => {
               <motion.h2 initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-2xl font-bold mb-8 tracking-tight">
                 Latest Articles
               </motion.h2>
+              {filteredPosts.length === 0 ? (
+                <p className="text-center text-muted-foreground py-12">No articles in this category yet.</p>
+              ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filteredPosts.map((post, i) => {
                   const Icon = ICON_MAP[post.category] || Sparkles;
@@ -154,6 +163,7 @@ const BlogPage = () => {
                   );
                 })}
               </div>
+              )}
             </div>
           </section>
         </>
