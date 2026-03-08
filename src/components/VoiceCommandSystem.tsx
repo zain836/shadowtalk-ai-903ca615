@@ -587,18 +587,31 @@ const VoiceCommandSystem: React.FC = () => {
         });
         setIsActive(false);
       }
-      if (event.error === "no-speech" || event.error === "aborted") {
-        if (isActive) {
-          try { recognition.start(); } catch {}
-        }
+      if (event.error === "no-speech" || event.error === "aborted" || event.error === "network") {
+        // Use ref to check active state (avoids stale closure)
+        setTimeout(() => {
+          if (isActiveRef.current && recognitionRef.current) {
+            try { recognitionRef.current.start(); } catch {}
+          }
+        }, 300);
       }
     };
 
     recognition.onend = () => {
       setIsListening(false);
-      if (isActive) {
-        try { recognition.start(); } catch {}
-      }
+      // Use ref to avoid stale closure — always restart if still active
+      setTimeout(() => {
+        if (isActiveRef.current) {
+          try {
+            if (recognitionRef.current) {
+              recognitionRef.current.start();
+            } else {
+              // Recognition was destroyed, recreate
+              startListening();
+            }
+          } catch {}
+        }
+      }, 200);
     };
 
     recognition.onstart = () => {
