@@ -51,3 +51,5 @@ project_id = "axsudmhjpfzffcicfvuj"
     verify_jwt = false
   [functions.website-security-scan]
     verify_jwt = false
+  [functions.cyber-ai-copilot]
+    verify_jwt = false
