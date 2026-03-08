@@ -561,7 +561,8 @@ const DocsPage = () => {
                   <Card className="card-glass mb-6 overflow-hidden">
                     <CardHeader className="relative z-10"><CardTitle>Base URL</CardTitle></CardHeader>
                     <CardContent className="relative z-10">
-                      <code className="px-4 py-2.5 rounded-xl glass-subtle text-primary text-sm font-mono inline-block">https://api.shadowtalk-ai.com/v1</code>
+                      <code className="px-4 py-2.5 rounded-xl glass-subtle text-primary text-sm font-mono inline-block">https://{'{project-id}'}.supabase.co</code>
+                      <p className="text-xs text-muted-foreground mt-2">Contact support for API key provisioning (Elite plan)</p>
                     </CardContent>
                   </Card>
                 </motion.div>
