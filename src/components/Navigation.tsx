@@ -10,6 +10,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { StealthKillSwitch } from "@/components/StealthKillSwitch";
 import { HardwarePassthrough } from "@/components/HardwarePassthrough";
+import { TrustBadge } from "@/components/TrustBadge";
 import {
   DropdownMenu,
   DropdownMenuContent,
