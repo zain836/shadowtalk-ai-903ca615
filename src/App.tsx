@@ -8,6 +8,7 @@ import { AnimatePresence } from "framer-motion";
 import { PageTransition } from "@/components/PageTransition";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/AuthProvider";
+import { SecurityProvider } from "@/components/SecurityProvider";
 import { ShadowMemoryProvider } from "@/contexts/ShadowMemoryContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import BootScreen from "@/components/BootScreen";
