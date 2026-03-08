@@ -1,7 +1,6 @@
 import { Code, Wifi, Brain, Shield, Zap, Download, ArrowUpRight } from "lucide-react";
 import { motion, useInView } from "framer-motion";
-import { useRef, useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useRef } from "react";
 
 const cardVariants = {
   hidden: { opacity: 0, y: 50, scale: 0.95 },
@@ -35,23 +34,6 @@ const statVariants = {
 const FeaturesSection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
-  const [liveStats, setLiveStats] = useState({ users: 0, tasks: 0, uptime: "99.9%", responseTime: "<2s" });
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      const [usersRes, convsRes] = await Promise.all([
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
-        supabase.from("conversations").select("id", { count: "exact", head: true }),
-      ]);
-      setLiveStats({
-        users: usersRes.count || 0,
-        tasks: convsRes.count || 0,
-        uptime: "99.9%",
-        responseTime: "<2s",
-      });
-    };
-    fetchStats();
-  }, []);
 
   const features = [
     {
@@ -202,10 +184,10 @@ const FeaturesSection = () => {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20 max-w-4xl mx-auto">
           {[
-            { value: liveStats.users > 0 ? `${liveStats.users.toLocaleString()}` : "—", label: "Active Users", sub: "From database", subColor: "text-success" },
-            { value: liveStats.tasks > 0 ? `${liveStats.tasks.toLocaleString()}` : "—", label: "AI Conversations", sub: "Real-time count", subColor: "text-primary" },
-            { value: liveStats.uptime, label: "Uptime", sub: "Enterprise grade", subColor: "text-accent" },
-            { value: liveStats.responseTime, label: "Response Time", sub: "Lightning fast", subColor: "text-warning" },
+            { value: "100%", label: "On-Device", sub: "Zero cloud dependency", subColor: "text-success" },
+            { value: "10+", label: "AI Models", sub: "Multi-model engine", subColor: "text-primary" },
+            { value: "E2E", label: "Encrypted", sub: "Military-grade security", subColor: "text-accent" },
+            { value: "<2s", label: "Response Time", sub: "Lightning fast", subColor: "text-warning" },
           ].map((stat, i) => (
             <motion.div
               key={i}
@@ -231,10 +213,10 @@ const FeaturesSection = () => {
         {/* Trust Indicators */}
         <div className="mt-16 flex items-center justify-center gap-4 flex-wrap">
           {[
-            "🏆 Product Hunt #1",
-            "⭐ GitHub 15K+ Stars",
-            "🔒 SOC 2 Certified",
-            "💎 Y Combinator",
+            "🛡️ Anti-Spyware Architecture",
+            "🔒 End-to-End Encrypted",
+            "⚡ Edge AI Powered",
+            "🧠 Multi-Model Engine",
           ].map((badge, i) => (
             <motion.div
               key={i}

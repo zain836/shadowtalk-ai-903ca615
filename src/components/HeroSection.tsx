@@ -60,32 +60,6 @@ const HeroSection = () => {
     localStorage.setItem('shadowtalk-demo-dismissed', 'true');
     setShowDemo(false);
   };
-  const [liveStats, setLiveStats] = useState({ users: 0, reviews: 0, rating: 0, dealsLeft: 0 });
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      const [profilesRes, feedbackRes, dealsRes] = await Promise.all([
-        supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('feedback').select('rating').not('rating', 'is', null),
-        supabase.from('manual_payments').select('id', { count: 'exact', head: true }).eq('plan_type', 'lifetime').eq('status', 'verified'),
-      ]);
-      
-      const userCount = profilesRes.count || 0;
-      const reviews = feedbackRes.data || [];
-      const avgRating = reviews.length > 0 
-        ? reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length 
-        : 0;
-      const lifetimeSold = dealsRes.count || 0;
-      
-      setLiveStats({
-        users: userCount,
-        reviews: reviews.length,
-        rating: Math.round(avgRating * 10) / 10,
-        dealsLeft: Math.max(50 - lifetimeSold, 0),
-      });
-    };
-    fetchStats();
-  }, []);
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
   const heroY = useTransform(scrollY, [0, 400], [0, 80]);
@@ -226,46 +200,19 @@ const HeroSection = () => {
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 300 }}
             >
-              <div className="flex -space-x-1.5">
-                {[0, 1, 2].map((i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ scale: 0, x: -10 }}
-                    animate={{ scale: 1, x: 0 }}
-                    transition={{ delay: 0.8 + i * 0.1, type: "spring", stiffness: 500 }}
-                    className={`w-7 h-7 rounded-full border-2 border-background ${
-                      i === 0 ? 'bg-primary/80' : i === 1 ? 'bg-secondary/80' : 'bg-accent/80'
-                    }`}
-                  />
-                ))}
-              </div>
-              <span className="text-sm font-medium">{liveStats.users.toLocaleString()}+ Active Users</span>
+              <Shield className="h-4 w-4 text-success" />
+              <span className="text-sm font-medium">100% On-Device Processing</span>
             </motion.div>
             <div className="hidden sm:block w-px h-4 bg-border"></div>
-            <div className="flex items-center space-x-1.5">
-              <div className="flex text-warning text-sm">
-                {[...Array(5)].map((_, i) => (
-                  <motion.span
-                    key={i}
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 1.0 + i * 0.08, type: "spring", stiffness: 500 }}
-                  >
-                    ★
-                  </motion.span>
-                ))}
-              </div>
-              <span className="text-sm font-medium">{liveStats.rating}/5 from {liveStats.reviews.toLocaleString()} reviews</span>
+            <div className="flex items-center space-x-2">
+              <Zap className="h-4 w-4 text-warning" />
+              <span className="text-sm font-medium">Zero Data Collection</span>
             </div>
             <div className="hidden sm:block w-px h-4 bg-border"></div>
-            <motion.div
-              animate={{ opacity: [1, 0.5, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="flex items-center space-x-2"
-            >
-              <div className="w-1.5 h-1.5 bg-destructive rounded-full"></div>
-              <span className="text-sm font-medium text-destructive">Only {liveStats.dealsLeft} Lifetime deals left</span>
-            </motion.div>
+            <div className="flex items-center space-x-2">
+              <MessageCircle className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Multi-Model AI Engine</span>
+            </div>
           </motion.div>
 
           {/* Trust Badges */}
