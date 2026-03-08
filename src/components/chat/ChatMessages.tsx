@@ -61,7 +61,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
   return (
     <div className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth">
-      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-5 sm:space-y-6">
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-8 space-y-6 sm:space-y-7">
         {/* Suggested prompts */}
         {showSuggestions && (
           <SuggestedPrompts 

@@ -85,7 +85,7 @@ export const ConversationSidebar = ({
   const groupOrder = ['Today', 'Yesterday', 'This Week', 'This Month', 'Older'];
 
   return (
-    <div className="w-[272px] shrink-0 bg-background/60 backdrop-blur-2xl border-r border-border/30 flex flex-col max-md:absolute max-md:left-0 max-md:top-0 max-md:h-full max-md:z-50 max-md:shadow-2xl">
+    <div className="w-[280px] shrink-0 bg-background/70 backdrop-blur-2xl border-r border-border/15 flex flex-col max-md:absolute max-md:left-0 max-md:top-0 max-md:h-full max-md:z-50 max-md:shadow-2xl max-md:shadow-black/40">
       {/* Header */}
       <div className="p-3 pb-2 space-y-2.5">
         <div className="flex items-center justify-between px-1">
