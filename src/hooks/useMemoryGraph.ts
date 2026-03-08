@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { useAuth } from '@/components/AuthProvider';
+import { supabase } from '@/integrations/supabase/client';
 
 // =============================================================================
 // CONTEXTUAL MEMORY GRAPHS - Beyond RAG
