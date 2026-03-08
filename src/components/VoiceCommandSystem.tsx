@@ -183,6 +183,12 @@ const VoiceCommandSystem: React.FC = () => {
   const recognitionRef = useRef<any>(null);
   const feedbackTimeoutRef = useRef<NodeJS.Timeout>();
   const zoomRef = useRef(100);
+  const isActiveRef = useRef(false);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    isActiveRef.current = isActive;
+  }, [isActive]);
 
   const showFeedback = useCallback((msg: string, speakIt = false) => {
     setFeedback(msg);
