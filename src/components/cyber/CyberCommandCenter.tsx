@@ -366,24 +366,28 @@ const CyberCommandCenter = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {threatActors.map((actor, i) => (
-                      <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.06 }}
+                    {actorsLoading ? (
+                      <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
+                    ) : (
+                    threatActors.map((actor, i) => (
+                      <motion.div key={actor.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.06 }}
                         className="p-3 rounded-xl border border-border hover:border-warning/30 transition-colors cursor-pointer"
                       >
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">{actor.origin}</span>
+                            <span className="text-lg">{actor.origin_flag}</span>
                             <span className="font-mono text-sm font-bold text-foreground">{actor.name}</span>
                           </div>
-                          {actor.activity === "active" ? <LivePulse /> : <span className="h-2 w-2 rounded-full bg-muted-foreground" />}
+                          {actor.activity_status === "active" ? <LivePulse /> : <span className="h-2 w-2 rounded-full bg-muted-foreground" />}
                         </div>
                         <p className="text-xs text-muted-foreground">{actor.targets}</p>
                         <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
-                          <span className="font-mono">{actor.ttps} TTPs</span>
-                          <span>Last seen: {actor.lastSeen}</span>
+                          <span className="font-mono">{actor.ttps_count} TTPs</span>
+                          <span>Last seen: {formatDistanceToNow(new Date(actor.last_seen_at), { addSuffix: true })}</span>
                         </div>
                       </motion.div>
-                    ))}
+                    ))
+                    )}
                   </CardContent>
                 </Card>
 
