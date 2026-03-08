@@ -241,7 +241,7 @@ const CyberCommandCenter = () => {
           {[
             { label: "CVEs Tracked", value: (heroStats?.cveCount || liveCVEs.length).toLocaleString(), icon: Bug, color: "text-destructive" },
             { label: "Threat Actors", value: (heroStats?.actorCount || threatActors.length).toLocaleString(), icon: Skull, color: "text-warning" },
-            { label: "MITRE Techniques", value: "201", icon: Layers, color: "text-accent" },
+            { label: "MITRE Techniques", value: mitreTactics.reduce((sum, t) => sum + t.techniques, 0).toString(), icon: Layers, color: "text-accent" },
             { label: "Scans Run", value: (heroStats?.scanCount || 0).toLocaleString(), icon: Scan, color: "text-secondary" },
           ].map((stat, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-card">
