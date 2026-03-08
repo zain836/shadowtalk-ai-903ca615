@@ -952,8 +952,15 @@ const AuthPage = () => {
               src={shadowRobotImg}
               alt="ShadowTalk AI Guardian"
               className="w-[380px] h-[380px] object-contain relative z-10"
-              animate={robotReacting ? { y: [0, -6, 0] } : { y: [0, -14, 0] }}
-              transition={robotReacting ? {
+              animate={robotSpeaking 
+                ? { y: [0, -4, 0], scale: [1, 1.03, 1] } 
+                : robotReacting 
+                  ? { y: [0, -6, 0] } 
+                  : { y: [0, -14, 0] }
+              }
+              transition={robotSpeaking ? {
+                duration: 0.8, repeat: Infinity, ease: "easeInOut",
+              } : robotReacting ? {
                 duration: 2, repeat: Infinity, ease: "easeInOut",
               } : {
                 duration: 5, repeat: Infinity, ease: "easeInOut",
