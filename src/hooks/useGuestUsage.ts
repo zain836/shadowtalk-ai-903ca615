@@ -1,25 +1,31 @@
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
-// Guest usage limits - more generous than ChatGPT!
 export const GUEST_LIMITS = {
-  chats: 10,          // ChatGPT gives ~5-10 for free
-  images: 5,          // ChatGPT free = very limited
-  deepResearch: 2,    // ChatGPT free = very limited
+  chats: 10,
+  images: 5,
+  deepResearch: 2,
 } as const;
 
 interface GuestUsage {
   chats: number;
   images: number;
   deepResearch: number;
-  createdAt: string;  // ISO date of first usage
-  lastReset: string;  // ISO date of last reset
+  createdAt: string;
+  lastReset: string;
 }
 
 const STORAGE_KEY = 'shadowtalk-guest-usage';
 
-// Get the current date in YYYY-MM-DD format (UTC to be consistent)
-const getTodayKey = (): string => {
-  return new Date().toISOString().split('T')[0];
+const getTodayKey = (): string => new Date().toISOString().split('T')[0];
+
+const getSessionId = (): string => {
+  let sid = localStorage.getItem('shadowtalk-guest-session-id');
+  if (!sid) {
+    sid = `guest_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    localStorage.setItem('shadowtalk-guest-session-id', sid);
+  }
+  return sid;
 };
 
 const getDefaultGuestUsage = (): GuestUsage => ({
@@ -30,82 +36,132 @@ const getDefaultGuestUsage = (): GuestUsage => ({
   lastReset: getTodayKey(),
 });
 
+const DB_TO_LOCAL_MAP: Record<string, keyof GuestUsage> = {
+  chats: 'chats',
+  images: 'images',
+  deep_research: 'deepResearch',
+};
+
 export function useGuestUsage() {
   const [usage, setUsage] = useState<GuestUsage>(getDefaultGuestUsage);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load usage from localStorage on mount
+  // Load from backend first, fallback to localStorage
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed: GuestUsage = JSON.parse(stored);
-        const today = getTodayKey();
-        
-        // Reset if it's a new day (but keep createdAt for overall tracking)
-        if (parsed.lastReset !== today) {
-          const fresh: GuestUsage = {
-            ...getDefaultGuestUsage(),
-            createdAt: parsed.createdAt, // Keep original creation date
-          };
+    const load = async () => {
+      const sessionId = getSessionId();
+      const today = getTodayKey();
+
+      try {
+        const { data } = await supabase
+          .from('guest_usage')
+          .select('*')
+          .eq('session_id', sessionId)
+          .maybeSingle();
+
+        if (data) {
+          const needsReset = data.last_reset !== today;
+          const loaded: GuestUsage = needsReset
+            ? { ...getDefaultGuestUsage(), createdAt: data.created_at }
+            : {
+                chats: data.chats,
+                images: data.images,
+                deepResearch: data.deep_research,
+                createdAt: data.created_at,
+                lastReset: data.last_reset,
+              };
+
+          if (needsReset) {
+            await supabase
+              .from('guest_usage')
+              .update({ chats: 0, images: 0, deep_research: 0, last_reset: today })
+              .eq('session_id', sessionId);
+          }
+
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
+          setUsage(loaded);
+        } else {
+          // Try localStorage migration
+          const stored = localStorage.getItem(STORAGE_KEY);
+          const fresh = stored ? JSON.parse(stored) : getDefaultGuestUsage();
+          
+          if (stored && fresh.lastReset !== today) {
+            Object.assign(fresh, getDefaultGuestUsage(), { createdAt: fresh.createdAt });
+          }
+
+          // Insert into backend
+          await supabase.from('guest_usage').insert({
+            session_id: sessionId,
+            chats: fresh.chats,
+            images: fresh.images,
+            deep_research: fresh.deepResearch,
+            last_reset: fresh.lastReset || today,
+          });
+
           localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
           setUsage(fresh);
-        } else {
-          setUsage(parsed);
         }
-      } else {
-        // First time user - initialize
-        const fresh = getDefaultGuestUsage();
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
-        setUsage(fresh);
+      } catch {
+        // Fallback to localStorage only
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          setUsage(JSON.parse(stored));
+        } else {
+          const fresh = getDefaultGuestUsage();
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+          setUsage(fresh);
+        }
       }
-    } catch {
-      const fresh = getDefaultGuestUsage();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
-      setUsage(fresh);
-    }
-    setIsLoaded(true);
+      setIsLoaded(true);
+    };
+
+    load();
   }, []);
 
-  // Persist to localStorage whenever usage changes
   const persistUsage = useCallback((newUsage: GuestUsage) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newUsage));
     setUsage(newUsage);
+
+    // Sync to backend
+    const sessionId = getSessionId();
+    supabase
+      .from('guest_usage')
+      .update({
+        chats: newUsage.chats,
+        images: newUsage.images,
+        deep_research: newUsage.deepResearch,
+      })
+      .eq('session_id', sessionId)
+      .then(() => {});
   }, []);
 
-  // Check if guest can perform an action
   const canPerform = useCallback((action: keyof typeof GUEST_LIMITS): boolean => {
     return usage[action] < GUEST_LIMITS[action];
   }, [usage]);
 
-  // Get remaining count for an action
   const getRemaining = useCallback((action: keyof typeof GUEST_LIMITS): number => {
     return Math.max(0, GUEST_LIMITS[action] - usage[action]);
   }, [usage]);
 
-  // Track usage of an action
   const trackGuestAction = useCallback((action: keyof typeof GUEST_LIMITS, count: number = 1) => {
     const newUsage: GuestUsage = {
       ...usage,
       [action]: usage[action] + count,
     };
     persistUsage(newUsage);
-    return newUsage[action] >= GUEST_LIMITS[action]; // Returns true if limit reached
+    return newUsage[action] >= GUEST_LIMITS[action];
   }, [usage, persistUsage]);
 
-  // Check if guest should be prompted to sign in (limit reached)
   const shouldPromptSignIn = useCallback((action: keyof typeof GUEST_LIMITS): boolean => {
     return usage[action] >= GUEST_LIMITS[action];
   }, [usage]);
 
-  // Check if all guest limits are exhausted
   const allLimitsExhausted = useCallback((): boolean => {
-    return usage.chats >= GUEST_LIMITS.chats && 
+    return usage.chats >= GUEST_LIMITS.chats &&
            usage.images >= GUEST_LIMITS.images &&
            usage.deepResearch >= GUEST_LIMITS.deepResearch;
   }, [usage]);
 
-  // Reset all guest usage (for testing or admin purposes)
   const resetGuestUsage = useCallback(() => {
     const fresh = getDefaultGuestUsage();
     persistUsage(fresh);
