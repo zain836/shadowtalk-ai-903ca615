@@ -93,6 +93,7 @@ const AuthPage = () => {
   const [appleLoading, setAppleLoading] = useState(false);
   const [robotReacting, setRobotReacting] = useState(false);
   const [robotMessage, setRobotMessage] = useState("");
+  const [robotSpeaking, setRobotSpeaking] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [robotTilt, setRobotTilt] = useState({ rotateX: 0, rotateY: 0 });
   const [eyeGlow, setEyeGlow] = useState(0.3);
@@ -114,6 +115,73 @@ const AuthPage = () => {
   }, [navigate, isOffline, getOfflineSession]);
 
   const sanitizeInput = (input: string) => input.trim().slice(0, 255);
+
+  const playWelcomeVoice = useCallback(async (userName: string) => {
+    try {
+      setRobotReacting(true);
+      setRobotSpeaking(true);
+      const displayName = userName.split('@')[0];
+      const welcomeMessages = [
+        `Welcome back, ${displayName}. Your secure workspace is ready.`,
+        `Hello ${displayName}. All systems encrypted and operational.`,
+        `${displayName}, welcome to ShadowTalk. Your data fortress awaits.`,
+      ];
+      const msg = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+      setRobotMessage(msg);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ 
+            text: msg,
+            voiceId: "onwK4e9ZLuTAKqWW03F9" // Daniel - deep, authoritative
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.audioContent) {
+          const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
+          const audio = new Audio(audioUrl);
+          audio.volume = 0.8;
+          
+          return new Promise<void>((resolve) => {
+            audio.onended = () => {
+              setRobotSpeaking(false);
+              setRobotReacting(false);
+              setRobotMessage("");
+              resolve();
+            };
+            audio.onerror = () => {
+              setRobotSpeaking(false);
+              setRobotReacting(false);
+              setRobotMessage("");
+              resolve();
+            };
+            audio.play().catch(() => {
+              setRobotSpeaking(false);
+              setRobotReacting(false);
+              setRobotMessage("");
+              resolve();
+            });
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Voice welcome error:", err);
+    } finally {
+      setRobotSpeaking(false);
+      setRobotReacting(false);
+      setRobotMessage("");
+    }
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,13 +234,21 @@ const AuthPage = () => {
         if (error) throw error;
         if (data.user) await saveCredentialsForOffline(cleanEmail, cleanPassword, data.user.id);
         toast({ title: "Success", description: "Logged in successfully!" });
+        setLoading(false);
+        await playWelcomeVoice(cleanEmail);
         navigate('/chatbot');
       } else {
         const { data, error } = await supabase.auth.signUp({ email: cleanEmail, password: cleanPassword, options: { emailRedirectTo: `${window.location.origin}/` } });
         if (error) throw error;
-        if (data.user && data.session) await saveCredentialsForOffline(cleanEmail, cleanPassword, data.user.id);
-        toast({ title: "Success", description: data.session ? "Account created!" : "Check your email to confirm!" });
-        if (data.session) navigate('/chatbot');
+        if (data.user && data.session) {
+          await saveCredentialsForOffline(cleanEmail, cleanPassword, data.user.id);
+          toast({ title: "Success", description: "Account created!" });
+          setLoading(false);
+          await playWelcomeVoice(cleanEmail);
+          navigate('/chatbot');
+        } else {
+          toast({ title: "Success", description: "Check your email to confirm!" });
+        }
       }
     } catch (error: any) {
       toast({ title: "Authentication Failed", description: error.message, variant: "destructive" });
@@ -876,14 +952,21 @@ const AuthPage = () => {
               src={shadowRobotImg}
               alt="ShadowTalk AI Guardian"
               className="w-[380px] h-[380px] object-contain relative z-10"
-              animate={robotReacting ? { y: [0, -6, 0] } : { y: [0, -14, 0] }}
-              transition={robotReacting ? {
+              animate={robotSpeaking 
+                ? { y: [0, -4, 0], scale: [1, 1.03, 1] } 
+                : robotReacting 
+                  ? { y: [0, -6, 0] } 
+                  : { y: [0, -14, 0] }
+              }
+              transition={robotSpeaking ? {
+                duration: 0.8, repeat: Infinity, ease: "easeInOut",
+              } : robotReacting ? {
                 duration: 2, repeat: Infinity, ease: "easeInOut",
               } : {
                 duration: 5, repeat: Infinity, ease: "easeInOut",
               }}
               style={{
-                filter: `drop-shadow(0 0 ${robotReacting ? 80 : 40}px hsl(var(--primary) / ${eyeGlow}))`,
+                filter: `drop-shadow(0 0 ${robotSpeaking ? 120 : robotReacting ? 80 : 40}px hsl(var(--primary) / ${robotSpeaking ? 1 : eyeGlow}))`,
                 transition: "filter 0.3s",
               }}
             />
@@ -943,7 +1026,33 @@ const AuthPage = () => {
                   boxShadow: "0 8px 32px hsl(var(--primary) / 0.15), 0 0 60px hsl(var(--primary) / 0.1)",
                 }}
               >
-                <span className="text-sm font-semibold text-foreground tracking-wide">{robotMessage}</span>
+                <div className="flex items-center gap-2">
+                  {robotSpeaking && (
+                    <div className="flex items-center gap-0.5">
+                      {[0, 1, 2, 3].map((i) => (
+                        <motion.div
+                          key={i}
+                          className="w-0.5 bg-primary rounded-full"
+                          animate={{ height: [4, 12, 4] }}
+                          transition={{ duration: 0.5, delay: i * 0.1, repeat: Infinity }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <span className="text-sm font-semibold text-foreground tracking-wide">{robotMessage}</span>
+                  {robotSpeaking && (
+                    <div className="flex items-center gap-0.5">
+                      {[0, 1, 2, 3].map((i) => (
+                        <motion.div
+                          key={i}
+                          className="w-0.5 bg-primary rounded-full"
+                          animate={{ height: [4, 12, 4] }}
+                          transition={{ duration: 0.5, delay: i * 0.15, repeat: Infinity }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div
                   className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rotate-45"
                   style={{
