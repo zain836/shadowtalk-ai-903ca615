@@ -8,12 +8,12 @@ interface SuggestedPromptsProps {
 }
 
 const capabilities = [
-  { icon: Code, label: "Code", prompt: "Help me write a function that ", accent: "from-blue-500/20 to-blue-600/10", border: "border-blue-500/20 hover:border-blue-400/40", glow: "group-hover:shadow-blue-500/10" },
-  { icon: Lightbulb, label: "Brainstorm", prompt: "Give me 5 creative ideas for ", accent: "from-amber-500/20 to-amber-600/10", border: "border-amber-500/20 hover:border-amber-400/40", glow: "group-hover:shadow-amber-500/10" },
-  { icon: Image, label: "Imagine", prompt: "/imagine ", accent: "from-violet-500/20 to-violet-600/10", border: "border-violet-500/20 hover:border-violet-400/40", glow: "group-hover:shadow-violet-500/10" },
-  { icon: Search, label: "Research", prompt: "Research and explain: ", accent: "from-emerald-500/20 to-emerald-600/10", border: "border-emerald-500/20 hover:border-emerald-400/40", glow: "group-hover:shadow-emerald-500/10" },
-  { icon: Brain, label: "Explain", prompt: "Explain in simple terms: ", accent: "from-pink-500/20 to-pink-600/10", border: "border-pink-500/20 hover:border-pink-400/40", glow: "group-hover:shadow-pink-500/10" },
-  { icon: Globe, label: "Browse", prompt: "Search the web for latest info on ", accent: "from-cyan-500/20 to-cyan-600/10", border: "border-cyan-500/20 hover:border-cyan-400/40", glow: "group-hover:shadow-cyan-500/10" },
+  { icon: Code, label: "Code", prompt: "Help me write a function that ", accent: "from-blue-500/20 to-blue-600/10", border: "border-blue-500/20 hover:border-blue-400/40", glowColor: "rgba(59,130,246,0.15)", glowHover: "group-hover:shadow-blue-500/10" },
+  { icon: Lightbulb, label: "Brainstorm", prompt: "Give me 5 creative ideas for ", accent: "from-amber-500/20 to-amber-600/10", border: "border-amber-500/20 hover:border-amber-400/40", glowColor: "rgba(245,158,11,0.15)", glowHover: "group-hover:shadow-amber-500/10" },
+  { icon: Image, label: "Imagine", prompt: "/imagine ", accent: "from-violet-500/20 to-violet-600/10", border: "border-violet-500/20 hover:border-violet-400/40", glowColor: "rgba(139,92,246,0.15)", glowHover: "group-hover:shadow-violet-500/10" },
+  { icon: Search, label: "Research", prompt: "Research and explain: ", accent: "from-emerald-500/20 to-emerald-600/10", border: "border-emerald-500/20 hover:border-emerald-400/40", glowColor: "rgba(16,185,129,0.15)", glowHover: "group-hover:shadow-emerald-500/10" },
+  { icon: Brain, label: "Explain", prompt: "Explain in simple terms: ", accent: "from-pink-500/20 to-pink-600/10", border: "border-pink-500/20 hover:border-pink-400/40", glowColor: "rgba(236,72,153,0.15)", glowHover: "group-hover:shadow-pink-500/10" },
+  { icon: Globe, label: "Browse", prompt: "Search the web for latest info on ", accent: "from-cyan-500/20 to-cyan-600/10", border: "border-cyan-500/20 hover:border-cyan-400/40", glowColor: "rgba(6,182,212,0.15)", glowHover: "group-hover:shadow-cyan-500/10" },
 ];
 
 const quickActions = [
