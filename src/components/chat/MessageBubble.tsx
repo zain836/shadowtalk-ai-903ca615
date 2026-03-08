@@ -283,7 +283,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {/* Actions */}
         {!isWelcome && (
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200">
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0">
             {isUser ? (
               <Button 
                 variant="ghost" 
