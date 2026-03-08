@@ -1848,6 +1848,20 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         }}
       />
 
+      {/* Screen Agent - Kimi K2.5-style Screen Watch & Clone */}
+      <ScreenAgent
+        isOpen={showScreenAgent}
+        onClose={() => setShowScreenAgent(false)}
+        onSendToChat={(content) => {
+          setMessages(prev => [...prev, {
+            id: crypto.randomUUID(),
+            type: 'ai',
+            content,
+            timestamp: new Date()
+          }]);
+        }}
+      />
+
       {/* ShadowBrowser - Integrated AI-Powered Browser */}
       <ShadowBrowser
         isOpen={showShadowBrowser}
