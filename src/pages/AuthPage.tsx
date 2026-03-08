@@ -966,7 +966,7 @@ const AuthPage = () => {
                 duration: 5, repeat: Infinity, ease: "easeInOut",
               }}
               style={{
-                filter: `drop-shadow(0 0 ${robotReacting ? 80 : 40}px hsl(var(--primary) / ${eyeGlow}))`,
+                filter: `drop-shadow(0 0 ${robotSpeaking ? 120 : robotReacting ? 80 : 40}px hsl(var(--primary) / ${robotSpeaking ? 1 : eyeGlow}))`,
                 transition: "filter 0.3s",
               }}
             />
