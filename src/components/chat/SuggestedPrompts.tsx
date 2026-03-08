@@ -1,4 +1,4 @@
-import { Code, Languages, FileText, Lightbulb, Image, MessageSquare, Pen, Music, Sparkles } from "lucide-react";
+import { Code, Languages, FileText, Lightbulb, Image, MessageSquare, Pen, Music, Sparkles, ArrowRight, Brain, Search, Globe, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface SuggestedPromptsProps {
@@ -6,121 +6,169 @@ interface SuggestedPromptsProps {
   personality: string;
 }
 
-const prompts = [
+const quickActions = [
   {
     icon: <Code className="h-5 w-5" />,
     label: "Write code",
-    description: "Generate clean, production-ready code",
     prompt: "Help me write a function that ",
     color: "text-blue-400",
-    bg: "from-blue-500/10 to-blue-500/5",
-    border: "border-blue-500/20 hover:border-blue-500/40",
+    glow: "group-hover:shadow-blue-500/20",
   },
   {
     icon: <Lightbulb className="h-5 w-5" />,
     label: "Brainstorm",
-    description: "Generate creative ideas and solutions",
     prompt: "Give me 5 creative ideas for ",
     color: "text-amber-400",
-    bg: "from-amber-500/10 to-amber-500/5",
-    border: "border-amber-500/20 hover:border-amber-500/40",
-  },
-  {
-    icon: <FileText className="h-5 w-5" />,
-    label: "Summarize",
-    description: "Distill key points from any text",
-    prompt: "Summarize the following text: ",
-    color: "text-emerald-400",
-    bg: "from-emerald-500/10 to-emerald-500/5",
-    border: "border-emerald-500/20 hover:border-emerald-500/40",
-  },
-  {
-    icon: <Pen className="h-5 w-5" />,
-    label: "Debug code",
-    description: "Find and fix bugs in your code",
-    prompt: "Help me debug this error: ",
-    color: "text-red-400",
-    bg: "from-red-500/10 to-red-500/5",
-    border: "border-red-500/20 hover:border-red-500/40",
+    glow: "group-hover:shadow-amber-500/20",
   },
   {
     icon: <Image className="h-5 w-5" />,
     label: "Generate image",
-    description: "Create AI-generated visuals",
     prompt: "/imagine ",
     color: "text-violet-400",
-    bg: "from-violet-500/10 to-violet-500/5",
-    border: "border-violet-500/20 hover:border-violet-500/40",
+    glow: "group-hover:shadow-violet-500/20",
   },
   {
-    icon: <MessageSquare className="h-5 w-5" />,
-    label: "Explain",
-    description: "Break down complex concepts",
+    icon: <Search className="h-5 w-5" />,
+    label: "Research",
+    prompt: "Research and explain: ",
+    color: "text-emerald-400",
+    glow: "group-hover:shadow-emerald-500/20",
+  },
+];
+
+const expandedPrompts = [
+  {
+    icon: <FileText className="h-4 w-4" />,
+    label: "Summarize text",
+    prompt: "Summarize the following text: ",
+    color: "text-cyan-400",
+  },
+  {
+    icon: <Pen className="h-4 w-4" />,
+    label: "Debug code",
+    prompt: "Help me debug this error: ",
+    color: "text-red-400",
+  },
+  {
+    icon: <Languages className="h-4 w-4" />,
+    label: "Translate",
+    prompt: "Translate this to Spanish: ",
+    color: "text-sky-400",
+  },
+  {
+    icon: <Brain className="h-4 w-4" />,
+    label: "Explain concept",
     prompt: "Explain in simple terms: ",
     color: "text-pink-400",
-    bg: "from-pink-500/10 to-pink-500/5",
-    border: "border-pink-500/20 hover:border-pink-500/40",
   },
   {
-    icon: <Languages className="h-5 w-5" />,
-    label: "Translate",
-    description: "Translate between any languages",
-    prompt: "Translate this to Spanish: ",
-    color: "text-cyan-400",
-    bg: "from-cyan-500/10 to-cyan-500/5",
-    border: "border-cyan-500/20 hover:border-cyan-500/40",
+    icon: <Globe className="h-4 w-4" />,
+    label: "Web search",
+    prompt: "Search the web for latest info on ",
+    color: "text-green-400",
   },
   {
-    icon: <Pen className="h-5 w-5" />,
-    label: "Creative writing",
-    description: "Stories, essays, and creative content",
-    prompt: "Write a short story about ",
+    icon: <Music className="h-4 w-4" />,
+    label: "Generate music",
+    prompt: "Generate a chill lo-fi track with ",
     color: "text-orange-400",
-    bg: "from-orange-500/10 to-orange-500/5",
-    border: "border-orange-500/20 hover:border-orange-500/40",
   },
 ];
 
 export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
   return (
-    <div className="flex flex-col items-center justify-center py-8 md:py-16 px-4">
-      {/* Welcome Header */}
+    <div className="flex flex-col items-center justify-center py-12 md:py-20 px-4">
+      {/* Hero */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="text-center mb-8 md:mb-12"
+        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="text-center mb-10 md:mb-14"
       >
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/20">
-          <Sparkles className="h-7 w-7 text-primary-foreground" />
-        </div>
-        <h2 className="text-xl md:text-2xl font-bold mb-2">How can I help you today?</h2>
-        <p className="text-sm text-muted-foreground max-w-md">Choose a starting point or type your own message below</p>
+        {/* Animated logo */}
+        <motion.div 
+          className="relative w-16 h-16 mx-auto mb-5"
+          initial={{ scale: 0.8 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary to-secondary blur-xl opacity-40" />
+          <div className="relative w-full h-full rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-secondary flex items-center justify-center shadow-2xl shadow-primary/30">
+            <motion.div
+              animate={{ rotate: [0, 5, -5, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Sparkles className="h-8 w-8 text-primary-foreground" />
+            </motion.div>
+          </div>
+        </motion.div>
+
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-2.5">
+          What can I help with?
+        </h2>
+        <p className="text-sm text-muted-foreground/70 max-w-sm mx-auto leading-relaxed">
+          Ask anything, generate images, write code, or explore the web
+        </p>
       </motion.div>
 
-      {/* Bento Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 w-full max-w-2xl">
-        {prompts.slice(0, 8).map((p, i) => (
+      {/* Primary Action Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full max-w-2xl mb-6">
+        {quickActions.map((action, i) => (
           <motion.button
             key={i}
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 + i * 0.04, duration: 0.3 }}
-            onClick={() => onSelect(p.prompt)}
-            className={`group relative flex flex-col items-start gap-2 p-3 md:p-4 rounded-xl border bg-gradient-to-br ${p.bg} ${p.border} transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] text-left`}
+            transition={{ delay: 0.1 + i * 0.06, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+            onClick={() => onSelect(action.prompt)}
+            className={`group relative flex flex-col items-start gap-3 p-4 rounded-2xl border border-border/30 bg-card/40 backdrop-blur-sm transition-all duration-300 hover:bg-card/70 hover:border-border/50 hover:shadow-lg ${action.glow} hover:-translate-y-0.5 active:scale-[0.98] text-left`}
           >
-            <span className={`${p.color} transition-transform duration-200 group-hover:scale-110`}>
-              {p.icon}
-            </span>
-            <div>
-              <span className="text-xs md:text-sm font-medium block">{p.label}</span>
-              <span className="text-[10px] md:text-xs text-muted-foreground leading-tight hidden md:block mt-0.5">
-                {p.description}
-              </span>
+            <div className={`${action.color} transition-transform duration-300 group-hover:scale-110`}>
+              {action.icon}
+            </div>
+            <div className="flex items-center gap-1.5 w-full">
+              <span className="text-sm font-medium">{action.label}</span>
+              <ArrowRight className="h-3 w-3 text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-all duration-300 ml-auto group-hover:translate-x-0.5" />
             </div>
           </motion.button>
         ))}
       </div>
+
+      {/* Secondary Quick Links */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5, duration: 0.4 }}
+        className="flex flex-wrap justify-center gap-2 max-w-xl"
+      >
+        {expandedPrompts.map((p, i) => (
+          <motion.button
+            key={i}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.55 + i * 0.04, duration: 0.3 }}
+            onClick={() => onSelect(p.prompt)}
+            className="group flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/20 bg-muted/20 hover:bg-muted/40 hover:border-border/40 transition-all duration-200 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <span className={p.color}>{p.icon}</span>
+            <span>{p.label}</span>
+          </motion.button>
+        ))}
+      </motion.div>
+
+      {/* Keyboard shortcut hint */}
+      <motion.p 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.8 }}
+        className="text-[10px] text-muted-foreground/30 mt-8 font-mono flex items-center gap-2"
+      >
+        <kbd className="px-1.5 py-0.5 rounded border border-border/20 bg-muted/20">⌘K</kbd>
+        <span>Command palette</span>
+        <span className="opacity-50">·</span>
+        <kbd className="px-1.5 py-0.5 rounded border border-border/20 bg-muted/20">⇧R</kbd>
+        <span>Deep Research</span>
+      </motion.p>
     </div>
   );
 };
