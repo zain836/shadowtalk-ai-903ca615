@@ -69,7 +69,7 @@ const FAQPage = () => {
   // Group DB items by category, or use fallback
   const hasDbData = dbItems.length > 0;
   const groupedByCategory = hasDbData
-    ? dbItems.reduce((acc: Record<string, any[]>, item) => {
+    ? dbItems.reduce<Record<string, any[]>>((acc, item) => {
         const cat = item.category || 'general';
         if (!acc[cat]) acc[cat] = [];
         acc[cat].push(item);
