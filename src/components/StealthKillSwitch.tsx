@@ -6,7 +6,8 @@ import { useStealthKillSwitch } from "@/hooks/useStealthKillSwitch";
 import { cn } from "@/lib/utils";
 
 export const StealthKillSwitch = () => {
-  const { isStealthMode, isTransitioning, toggleStealthMode } = useStealthKillSwitch();
+  const { isStealthMode, isTransitioning, activateStealthMode, deactivateStealthMode } = useStealthKillSwitch();
+  const toggleStealthMode = () => isStealthMode ? deactivateStealthMode() : activateStealthMode();
   const [showConfirm, setShowConfirm] = useState(false);
 
   const handleToggle = () => {
