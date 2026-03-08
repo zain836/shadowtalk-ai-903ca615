@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface VaultDocument {
   id: string;
@@ -25,7 +26,6 @@ const CHUNK_OVERLAP = 50;
 const DB_NAME = 'shadowtalk-knowledge-vault';
 const STORE_NAME = 'documents';
 
-// Simple text chunking
 const chunkText = (text: string, size = CHUNK_SIZE, overlap = CHUNK_OVERLAP): string[] => {
   const chunks: string[] = [];
   const sentences = text.split(/[.!?\n]+/).filter(s => s.trim().length > 10);
@@ -34,7 +34,6 @@ const chunkText = (text: string, size = CHUNK_SIZE, overlap = CHUNK_OVERLAP): st
   for (const sentence of sentences) {
     if ((currentChunk + sentence).length > size && currentChunk.length > 0) {
       chunks.push(currentChunk.trim());
-      // Keep overlap
       const words = currentChunk.split(' ');
       currentChunk = words.slice(-Math.floor(overlap / 5)).join(' ') + ' ' + sentence;
     } else {
@@ -45,7 +44,6 @@ const chunkText = (text: string, size = CHUNK_SIZE, overlap = CHUNK_OVERLAP): st
   return chunks.length > 0 ? chunks : [text.slice(0, size)];
 };
 
-// Simple keyword-based search (no external embeddings needed)
 const searchChunks = (query: string, chunks: string[]): string[] => {
   const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
   
@@ -54,7 +52,6 @@ const searchChunks = (query: string, chunks: string[]): string[] => {
     let score = 0;
     for (const word of queryWords) {
       if (lowerChunk.includes(word)) score += 1;
-      // Boost exact phrase matches
       if (lowerChunk.includes(query.toLowerCase())) score += 5;
     }
     return { chunk, score };
@@ -67,7 +64,6 @@ const searchChunks = (query: string, chunks: string[]): string[] => {
     .map(s => s.chunk);
 };
 
-// Open IndexedDB
 const openDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
@@ -94,7 +90,6 @@ export const useKnowledgeVault = () => {
 
   const dbRef = useRef<IDBDatabase | null>(null);
 
-  // Initialize and load documents
   const initialize = useCallback(async () => {
     try {
       const db = await openDB();
@@ -117,7 +112,6 @@ export const useKnowledgeVault = () => {
     }
   }, []);
 
-  // Process and add files
   const addFiles = useCallback(async (files: File[]) => {
     setState(prev => ({ ...prev, isProcessing: true, progress: 0, stage: 'Reading files...', error: null }));
 
@@ -136,7 +130,6 @@ export const useKnowledgeVault = () => {
         if (file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.txt') || file.name.endsWith('.csv') || file.name.endsWith('.json')) {
           content = await file.text();
         } else {
-          // For non-text files, store metadata
           content = `[File: ${file.name}, Type: ${file.type}, Size: ${file.size} bytes]`;
         }
 
@@ -147,7 +140,7 @@ export const useKnowledgeVault = () => {
           name: file.name,
           type: file.type || 'text/plain',
           size: file.size,
-          content: content.slice(0, 50000), // Cap stored content
+          content: content.slice(0, 50000),
           chunks,
           addedAt: new Date(),
         };
@@ -171,6 +164,24 @@ export const useKnowledgeVault = () => {
         tx.onerror = () => reject(tx.error);
       });
 
+      // Sync metadata to knowledge_entries table for cloud persistence
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          for (const doc of newDocs) {
+            await supabase.from('knowledge_entries').insert({
+              user_id: user.id,
+              title: doc.name,
+              content: doc.content.slice(0, 10000),
+              entry_type: 'document',
+              tags: [doc.type, 'vault-upload'],
+            });
+          }
+        }
+      } catch {
+        // Cloud sync is best-effort
+      }
+
       setState(prev => ({
         ...prev,
         documents: [...prev.documents, ...newDocs],
@@ -192,13 +203,11 @@ export const useKnowledgeVault = () => {
     }
   }, []);
 
-  // Search across all documents
   const search = useCallback((query: string): string[] => {
     const allChunks = state.documents.flatMap(d => d.chunks);
     return searchChunks(query, allChunks);
   }, [state.documents]);
 
-  // Get context for a query (for RAG)
   const getContext = useCallback((query: string, maxTokens = 2000): string => {
     const results = search(query);
     let context = '';
@@ -209,7 +218,6 @@ export const useKnowledgeVault = () => {
     return context.trim();
   }, [search]);
 
-  // Remove a document
   const removeDocument = useCallback(async (docId: string) => {
     try {
       const db = dbRef.current || await openDB();
@@ -229,7 +237,6 @@ export const useKnowledgeVault = () => {
     }
   }, []);
 
-  // Clear all documents
   const clearVault = useCallback(async () => {
     try {
       const db = dbRef.current || await openDB();

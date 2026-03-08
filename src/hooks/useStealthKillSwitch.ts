@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 interface StealthKillSwitchState {
   isStealthMode: boolean;
@@ -8,6 +10,7 @@ interface StealthKillSwitchState {
 }
 
 export const useStealthKillSwitch = () => {
+  const { user } = useAuth();
   const [state, setState] = useState<StealthKillSwitchState>(() => {
     const saved = localStorage.getItem('shadowtalk_stealth_mode');
     return {
@@ -18,6 +21,28 @@ export const useStealthKillSwitch = () => {
     };
   });
 
+  // Sync stealth mode preference to backend
+  useEffect(() => {
+    if (!user) return;
+    const syncToBackend = async () => {
+      try {
+        await supabase.from('user_settings').upsert({
+          user_id: user.id,
+          setting_key: 'stealth_mode',
+          setting_value: {
+            isStealthMode: state.isStealthMode,
+            lastActivated: state.lastActivated,
+          },
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,setting_key' });
+      } catch { /* best-effort sync */ }
+    };
+    // Only sync when stealth state changes (not on mount)
+    if (state.isStealthMode || state.lastActivated) {
+      syncToBackend();
+    }
+  }, [state.isStealthMode, user]);
+
   // Block all fetch/XHR when stealth mode is active
   useEffect(() => {
     if (!state.isStealthMode) return;
@@ -25,23 +50,22 @@ export const useStealthKillSwitch = () => {
     const originalFetch = window.fetch;
     const originalXHROpen = XMLHttpRequest.prototype.open;
 
-    // Allow only local requests (blob:, data:, indexeddb operations)
     window.fetch = function (...args: Parameters<typeof fetch>) {
       const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request)?.url || '';
-      const isLocal = url.startsWith('blob:') || url.startsWith('data:') || url.startsWith('chrome-extension:');
-      if (isLocal) return originalFetch.apply(this, args);
-      
-      console.warn('[StealthMode] Blocked network request:', url);
-      return Promise.reject(new Error('[STEALTH MODE] All network requests are blocked. Disable stealth mode to restore connectivity.'));
+      if (url.startsWith('blob:') || url.startsWith('data:') || url.includes('localhost')) {
+        return originalFetch.apply(window, args);
+      }
+      console.log('[StealthMode] Blocked fetch:', url);
+      return Promise.reject(new Error('Network blocked by Stealth Mode'));
     };
 
-    XMLHttpRequest.prototype.open = function (...args: any) {
-      const url = args[1] as string;
-      const isLocal = url?.startsWith('blob:') || url?.startsWith('data:');
-      if (isLocal) return originalXHROpen.apply(this, args);
-      
-      console.warn('[StealthMode] Blocked XHR request:', url);
-      throw new Error('[STEALTH MODE] Network blocked');
+    XMLHttpRequest.prototype.open = function (method: string, url: string | URL, ...rest: any[]) {
+      const urlStr = typeof url === 'string' ? url : url.toString();
+      if (urlStr.startsWith('blob:') || urlStr.startsWith('data:') || urlStr.includes('localhost')) {
+        return originalXHROpen.apply(this, [method, url, ...rest] as any);
+      }
+      console.log('[StealthMode] Blocked XHR:', urlStr);
+      throw new Error('Network blocked by Stealth Mode');
     };
 
     return () => {
@@ -53,7 +77,6 @@ export const useStealthKillSwitch = () => {
   const activateStealthMode = useCallback(() => {
     setState(prev => ({ ...prev, isTransitioning: true }));
     
-    // Small delay for visual transition
     setTimeout(() => {
       const now = new Date().toISOString();
       localStorage.setItem('shadowtalk_stealth_mode', 'true');
@@ -65,9 +88,7 @@ export const useStealthKillSwitch = () => {
         networkBlocked: true,
         lastActivated: now,
       });
-      
-      console.log('[StealthMode] ⚡ ACTIVATED — All network traffic blocked');
-    }, 500);
+    }, 1500);
   }, []);
 
   const deactivateStealthMode = useCallback(() => {
@@ -82,23 +103,12 @@ export const useStealthKillSwitch = () => {
         networkBlocked: false,
         lastActivated: state.lastActivated,
       });
-      
-      console.log('[StealthMode] 🌐 DEACTIVATED — Network restored');
-    }, 500);
+    }, 1000);
   }, [state.lastActivated]);
-
-  const toggleStealthMode = useCallback(() => {
-    if (state.isStealthMode) {
-      deactivateStealthMode();
-    } else {
-      activateStealthMode();
-    }
-  }, [state.isStealthMode, activateStealthMode, deactivateStealthMode]);
 
   return {
     ...state,
     activateStealthMode,
     deactivateStealthMode,
-    toggleStealthMode,
   };
 };
