@@ -570,6 +570,51 @@ export type Database = {
         }
         Relationships: []
       }
+      cyber_scan_results: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          files_found: number | null
+          id: string
+          results: Json | null
+          risk_score: number | null
+          scan_depth: string
+          started_at: string | null
+          status: string
+          target_url: string
+          user_id: string
+          vulnerabilities_found: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          files_found?: number | null
+          id?: string
+          results?: Json | null
+          risk_score?: number | null
+          scan_depth?: string
+          started_at?: string | null
+          status?: string
+          target_url: string
+          user_id: string
+          vulnerabilities_found?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          files_found?: number | null
+          id?: string
+          results?: Json | null
+          risk_score?: number | null
+          scan_depth?: string
+          started_at?: string | null
+          status?: string
+          target_url?: string
+          user_id?: string
+          vulnerabilities_found?: number | null
+        }
+        Relationships: []
+      }
       daily_insights: {
         Row: {
           category: string
@@ -2449,6 +2494,96 @@ export type Database = {
           subscription_tier?: string | null
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      threat_actors: {
+        Row: {
+          activity_status: string
+          created_at: string
+          description: string | null
+          id: string
+          last_seen_at: string | null
+          name: string
+          origin_country: string | null
+          origin_flag: string | null
+          targets: string | null
+          ttps_count: number
+          updated_at: string
+        }
+        Insert: {
+          activity_status?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_seen_at?: string | null
+          name: string
+          origin_country?: string | null
+          origin_flag?: string | null
+          targets?: string | null
+          ttps_count?: number
+          updated_at?: string
+        }
+        Update: {
+          activity_status?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_seen_at?: string | null
+          name?: string
+          origin_country?: string | null
+          origin_flag?: string | null
+          targets?: string | null
+          ttps_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      threat_intel_cves: {
+        Row: {
+          attack_complexity: string | null
+          attack_vector: string | null
+          auth_required: string | null
+          created_at: string
+          cve_id: string
+          cvss_score: number
+          description: string
+          exploit_available: boolean
+          id: string
+          product: string
+          published_at: string
+          severity: string
+          updated_at: string
+        }
+        Insert: {
+          attack_complexity?: string | null
+          attack_vector?: string | null
+          auth_required?: string | null
+          created_at?: string
+          cve_id: string
+          cvss_score?: number
+          description: string
+          exploit_available?: boolean
+          id?: string
+          product: string
+          published_at?: string
+          severity?: string
+          updated_at?: string
+        }
+        Update: {
+          attack_complexity?: string | null
+          attack_vector?: string | null
+          auth_required?: string | null
+          created_at?: string
+          cve_id?: string
+          cvss_score?: number
+          description?: string
+          exploit_available?: boolean
+          id?: string
+          product?: string
+          published_at?: string
+          severity?: string
+          updated_at?: string
         }
         Relationships: []
       }
