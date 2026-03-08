@@ -28,14 +28,14 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   return (
-    <div className="flex flex-col items-center justify-center py-8 md:py-14 px-4 select-none overflow-hidden">
+    <div className="flex flex-col items-center justify-center py-2 md:py-4 px-4 select-none">
       
       {/* Central Orb + Orbiting Actions */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
-        className="relative w-[320px] h-[320px] md:w-[380px] md:h-[380px] mb-8"
+        className="relative w-[260px] h-[260px] md:w-[300px] md:h-[300px] mb-2"
       >
         {/* Central Core */}
         <div className="absolute inset-0 flex items-center justify-center">
@@ -60,7 +60,7 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-              className="absolute w-36 h-36 md:w-44 md:h-44"
+              className="absolute w-24 h-24 md:w-28 md:h-28"
             >
               <div className="absolute inset-0 rounded-full border border-dashed border-primary/10" />
               {/* Orbit dot 1 */}
@@ -80,7 +80,7 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
             <motion.div
               animate={{ rotate: -360 }}
               transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
-              className="absolute w-28 h-28 md:w-32 md:h-32"
+              className="absolute w-22 h-22 md:w-26 md:h-26"
             >
               <div className="absolute inset-0 rounded-full border border-secondary/8" />
               <motion.div
@@ -94,11 +94,11 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
             <motion.div
               animate={{ scale: [1, 1.4, 1], opacity: [0.1, 0.3, 0.1] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute -inset-10 rounded-full bg-gradient-to-br from-primary/20 via-accent/10 to-transparent blur-3xl"
+              className="absolute -inset-6 rounded-full bg-gradient-to-br from-primary/20 via-accent/10 to-transparent blur-3xl"
             />
 
             {/* Core body */}
-            <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-primary/30 via-background to-secondary/20 flex items-center justify-center shadow-2xl shadow-primary/20 backdrop-blur-xl overflow-hidden">
+            <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-primary/30 via-background to-secondary/20 flex items-center justify-center shadow-2xl shadow-primary/20 backdrop-blur-xl overflow-hidden">
               {/* Sweeping shimmer */}
               <motion.div
                 animate={{ rotate: [0, 360] }}
@@ -121,8 +121,8 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
           const Icon = action.icon;
           const total = orbitActions.length;
           const angle = (i / total) * 2 * Math.PI - Math.PI / 2;
-          const radius = 130; // px from center
-          const mdRadius = 155;
+          const radius = 95;
+          const mdRadius = 115;
           const x = Math.cos(angle) * radius;
           const y = Math.sin(angle) * radius;
           const mdX = Math.cos(angle) * mdRadius;
@@ -213,7 +213,7 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="text-center mb-6"
+        className="text-center mb-3"
       >
         <h2 className="text-lg md:text-xl font-semibold tracking-tight text-foreground/90 mb-1">
           What shall we build?
@@ -253,7 +253,7 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1 }}
-        className="mt-8 flex items-center gap-3 text-[10px] text-muted-foreground/20 font-mono"
+        className="mt-4 flex items-center gap-3 text-[10px] text-muted-foreground/20 font-mono"
       >
         <span className="flex items-center gap-1.5">
           <kbd className="px-1.5 py-0.5 rounded border border-border/10 bg-muted/10">⌘K</kbd>
