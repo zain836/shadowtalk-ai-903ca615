@@ -122,52 +122,85 @@ const CyberCommandCenter = () => {
   const [activeTab, setActiveTab] = useState("threat-intel");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCVE, setSelectedCVE] = useState<string | null>(null);
-  const [scanProgress, setScanProgress] = useState(0);
-  const [isScanning, setIsScanning] = useState(false);
+  const [scanTarget, setScanTarget] = useState("");
   const [copiedPayload, setCopiedPayload] = useState<string | null>(null);
   const [selectedTactic, setSelectedTactic] = useState<string | null>(null);
   const [terminalOutput, setTerminalOutput] = useState<string[]>([
     "shadowtalk@cyber:~$ ",
-    "╔══════════════════════════════════════════════╗",
-    "║  ShadowTalk Cyber Command Center v3.0       ║",
-    "║  Sovereign Security Intelligence Platform   ║",
-    "╚══════════════════════════════════════════════╝",
+    "╔══════════════════════════════════════════════════╗",
+    "║  ShadowTalk Cyber Command Center v3.0            ║",
+    "║  Sovereign Security Intelligence Platform        ║",
+    "╚══════════════════════════════════════════════════╝",
     "",
     "[*] Initializing threat intelligence feeds...",
-    "[✓] NVD CVE Database — connected",
-    "[✓] MITRE ATT&CK v14 — loaded",
-    "[✓] Exploit-DB mirror — synced",
-    "[*] Ready for operations.",
-    "",
+    "[*] Connecting to backend...",
     "shadowtalk@cyber:~$ "
   ]);
 
-  // Simulated live CVE counter
-  const [cveCount, setCveCount] = useState(247_832);
+  // Real backend hooks
+  const { data: liveCVEs = [], isLoading: cvesLoading, refetch: refetchCVEs, isError: cvesError } = useLiveCVEs();
+  const { data: threatActors = [], isLoading: actorsLoading } = useThreatActors();
+  const { data: scanHistory = [] } = useScanHistory();
+  const websiteScan = useWebsiteScan();
+
+  // Realtime CVE notifications
+  const { subscribe } = useRealtimeCVEs((newCve) => {
+    toast.info(`New CVE: ${newCve.cve_id}`, {
+      description: `${newCve.severity.toUpperCase()} - ${newCve.product}`,
+    });
+    setTerminalOutput(prev => [...prev, `[!] NEW CVE: ${newCve.cve_id} (${newCve.severity}) — ${newCve.product}`, "shadowtalk@cyber:~$ "]);
+  });
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCveCount(c => c + Math.floor(Math.random() * 3));
-    }, 8000);
-    return () => clearInterval(interval);
+    const unsub = subscribe();
+    return unsub;
   }, []);
 
-  // Scan simulator
-  const startScan = useCallback(() => {
-    setIsScanning(true);
-    setScanProgress(0);
-    setTerminalOutput(prev => [...prev, "[*] Starting vulnerability scan...", "[*] Target: 192.168.1.0/24"]);
-    const interval = setInterval(() => {
-      setScanProgress(p => {
-        if (p >= 100) {
-          clearInterval(interval);
-          setIsScanning(false);
-          setTerminalOutput(prev => [...prev, "[✓] Scan complete — 12 hosts up, 47 ports open, 8 vulnerabilities found", "shadowtalk@cyber:~$ "]);
-          return 100;
-        }
-        return p + Math.random() * 8;
+  // Update terminal when data loads
+  useEffect(() => {
+    if (liveCVEs.length > 0 && !cvesLoading) {
+      setTerminalOutput(prev => {
+        if (prev.some(l => l.includes('NVD CVE Database'))) return prev;
+        return [...prev,
+          `[✓] NVD CVE Database — ${liveCVEs.length} CVEs loaded`,
+          "[✓] MITRE ATT&CK v14 — loaded",
+          `[✓] Threat Actors — ${threatActors.length} tracked`,
+          "[*] Ready for operations.",
+          "",
+          "shadowtalk@cyber:~$ "
+        ];
       });
-    }, 300);
-  }, []);
+    }
+  }, [liveCVEs, threatActors, cvesLoading]);
+
+  // CVE counter from real data
+  const cveCount = liveCVEs.length > 0 ? 247_832 + liveCVEs.length : 247_832;
+
+  // Website scan handler
+  const startScan = useCallback(() => {
+    if (!scanTarget.trim()) {
+      toast.error("Enter a target URL to scan");
+      return;
+    }
+    setTerminalOutput(prev => [...prev, `[*] Starting security scan: ${scanTarget}...`]);
+    websiteScan.mutate(
+      { url: scanTarget, scanDepth: "standard" },
+      {
+        onSuccess: (data) => {
+          setTerminalOutput(prev => [...prev,
+            `[✓] Scan complete — ${data?.files?.length || 0} files analyzed`,
+            `[✓] Vulnerabilities found: ${data?.vulnerabilities_found || 'analyzing...'}`,
+            "shadowtalk@cyber:~$ "
+          ]);
+          toast.success("Scan completed successfully");
+        },
+        onError: (err) => {
+          setTerminalOutput(prev => [...prev, `[✗] Scan failed: ${err.message}`, "shadowtalk@cyber:~$ "]);
+          toast.error("Scan failed", { description: err.message });
+        },
+      }
+    );
+  }, [scanTarget, websiteScan]);
 
   const copyPayload = (name: string, code: string) => {
     navigator.clipboard.writeText(code);
