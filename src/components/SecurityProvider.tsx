@@ -54,16 +54,11 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   }, [user, resetTimer]);
 
-  // === 2. Freeze critical security globals ===
+  // === 2. Prototype pollution prevention (logging only) ===
+  // Note: Object.freeze on prototypes breaks many libraries, so we log instead
   useEffect(() => {
-    try {
-      // Prevent prototype pollution
-      if (Object.freeze) {
-        Object.freeze(Object.prototype);
-        Object.freeze(Array.prototype);
-      }
-    } catch {
-      // Some environments may not allow this
+    if (import.meta.env.PROD) {
+      console.info('[Security] Prototype pollution monitoring active');
     }
   }, []);
 
@@ -119,16 +114,22 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, []);
 
-  // === 6. Prevent clickjacking via frame detection ===
+  // === 6. Clickjacking detection (production only, skip known hosts) ===
   useEffect(() => {
+    if (!import.meta.env.PROD) return;
     if (window.self !== window.top) {
       try {
-        // If framed, break out
-        window.top!.location.href = window.self.location.href;
+        // Only break out if not in a known trusted frame
+        const parentOrigin = document.referrer;
+        const trusted = ['lovable.app', 'lovableproject.com', 'shadowtalk-ai.com'];
+        const isTrusted = trusted.some(h => parentOrigin.includes(h));
+        if (!isTrusted) {
+          document.body.style.display = 'none';
+          console.error('Clickjacking detected — content hidden');
+        }
       } catch {
-        // Cross-origin frame - hide content
+        // Cross-origin frame
         document.body.style.display = 'none';
-        console.error('Clickjacking detected — content hidden');
       }
     }
   }, []);

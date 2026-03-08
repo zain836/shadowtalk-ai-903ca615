@@ -19,6 +19,9 @@ export const useJourneyTracking = () => {
   const lastTimestampRef = useRef<number>(Date.now());
 
   useEffect(() => {
+    // RLS requires authenticated user - skip tracking for anonymous visitors
+    if (!user?.id) return;
+
     const trackPageVisit = async () => {
       const currentPath = location.pathname;
       const sessionId = getSessionId();
