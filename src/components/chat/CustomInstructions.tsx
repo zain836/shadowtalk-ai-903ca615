@@ -47,20 +47,17 @@ const defaultInstructions: CustomInstructions = {
 export const CustomInstructions = ({ onInstructionsChange }: CustomInstructionsProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { value: savedInstructions, save: saveToBackend, isLoading } = useUserSettings<CustomInstructions>('custom_instructions', defaultInstructions);
   const [instructions, setInstructions] = useState<CustomInstructions>(defaultInstructions);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Load from localStorage
+  // Sync from backend
   useEffect(() => {
-    if (user) {
-      const stored = localStorage.getItem(`custom_instructions_${user.id}`);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setInstructions(parsed);
-        onInstructionsChange(parsed);
-      }
+    if (!isLoading && savedInstructions) {
+      setInstructions(savedInstructions);
+      onInstructionsChange(savedInstructions);
     }
-  }, [user]);
+  }, [isLoading, savedInstructions]);
 
   const handleChange = <K extends keyof CustomInstructions>(key: K, value: CustomInstructions[K]) => {
     const updated = { ...instructions, [key]: value };
@@ -68,13 +65,11 @@ export const CustomInstructions = ({ onInstructionsChange }: CustomInstructionsP
     setHasChanges(true);
   };
 
-  const handleSave = () => {
-    if (user) {
-      localStorage.setItem(`custom_instructions_${user.id}`, JSON.stringify(instructions));
-      onInstructionsChange(instructions);
-      setHasChanges(false);
-      toast({ title: "Settings saved", description: "Your custom instructions have been saved." });
-    }
+  const handleSave = async () => {
+    await saveToBackend(instructions);
+    onInstructionsChange(instructions);
+    setHasChanges(false);
+    toast({ title: "Settings saved", description: "Your custom instructions have been saved." });
   };
 
   const handleReset = () => {
