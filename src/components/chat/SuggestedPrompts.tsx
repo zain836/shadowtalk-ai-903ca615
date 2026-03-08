@@ -35,7 +35,7 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
-        className="relative w-[260px] h-[260px] md:w-[300px] md:h-[300px] mb-2"
+        className="relative mx-auto w-[250px] h-[250px] sm:w-[270px] sm:h-[270px] md:w-[300px] md:h-[300px] mb-2"
       >
         {/* Central Core */}
         <div className="absolute inset-0 flex items-center justify-center">
