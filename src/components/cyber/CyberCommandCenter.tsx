@@ -337,8 +337,10 @@ const CyberCommandCenter = () => {
                                     </div>
                                   </div>
                                   <div className="flex gap-2 mt-3">
-                                    <Button size="sm" variant="outline" className="text-xs gap-1.5 h-7">
-                                      <ExternalLink className="h-3 w-3" /> NVD Details
+                                    <Button size="sm" variant="outline" className="text-xs gap-1.5 h-7" asChild>
+                                      <a href={`https://nvd.nist.gov/vuln/detail/${cve.cve_id}`} target="_blank" rel="noopener noreferrer">
+                                        <ExternalLink className="h-3 w-3" /> NVD Details
+                                      </a>
                                     </Button>
                                     <Button size="sm" variant="outline" className="text-xs gap-1.5 h-7">
                                       <Terminal className="h-3 w-3" /> Generate PoC
