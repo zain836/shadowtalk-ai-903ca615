@@ -119,24 +119,6 @@ export function WelcomeDialog({ open, onOpenChange }: WelcomeDialogProps) {
             </div>
           </div>
 
-          {/* Development Notice */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
-            className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20"
-          >
-            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                Active Development
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Some features are still under development and may not work as expected. 
-                We're constantly improving ShadowTalk AI to bring you the best experience.
-              </p>
-            </div>
-          </motion.div>
 
           {/* Quick Tips */}
           <div className="grid grid-cols-2 gap-2">
