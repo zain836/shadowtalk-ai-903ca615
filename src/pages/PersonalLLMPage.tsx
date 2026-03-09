@@ -666,10 +666,10 @@ export default function PersonalLLMPage() {
                     <div className="space-y-2.5">
                       <div className="flex items-center gap-2">
                         <span className="flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
+                          <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-primary opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
                         </span>
-                        <span className="text-xs font-medium text-green-400">Active</span>
+                        <span className="text-xs font-medium text-primary">Active</span>
                       </div>
                       <p className="text-xs text-foreground font-medium">{ai.activeModel}</p>
                       <div className="space-y-1.5 text-xs text-muted-foreground">
