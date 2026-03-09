@@ -529,7 +529,22 @@ export default function PersonalLLMPage() {
                           size="sm"
                           variant="ghost"
                           className="h-6 px-2 text-xs gap-1 text-muted-foreground"
-                          onClick={() => { setMessages([]); setTotalTokens(0); setTokensPerSec(null); }}
+                          onClick={() => { startNewConversation(); }}
+                        >
+                          <Plus className="h-3 w-3" /> New Chat
+                        </Button>
+                      )}
+                      {messages.length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 px-2 text-xs gap-1 text-muted-foreground"
+                          onClick={() => {
+                            if (store.activeConversationId) {
+                              store.deleteConversation(store.activeConversationId);
+                            }
+                            setMessages([]); setTotalTokens(0); setTokensPerSec(null);
+                          }}
                         >
                           <Trash2 className="h-3 w-3" /> Clear
                         </Button>
