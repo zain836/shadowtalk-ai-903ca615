@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { useRobustOfflineAI } from "@/hooks/useRobustOfflineAI";
+import { usePersonalLLMStore } from "@/hooks/usePersonalLLMStore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +16,8 @@ import {
   Cpu, Download, Wifi, WifiOff, Zap, Brain, Send, Loader2,
   Settings2, Trash2, CheckCircle2, HardDrive, Activity,
   Sparkles, Terminal, Shield, ArrowLeft, ChevronRight,
-  Lock, AlertCircle, Gauge
+  Lock, AlertCircle, Gauge, Cloud, CloudOff, Plus, MessageSquare,
+  RefreshCw
 } from "lucide-react";
 
 type Message = { role: "user" | "assistant"; content: string; ts: number };
@@ -51,6 +53,7 @@ const QUICK_STARTERS = [
 export default function PersonalLLMPage() {
   const navigate = useNavigate();
   const ai = useRobustOfflineAI();
+  const store = usePersonalLLMStore();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -68,6 +71,27 @@ export default function PersonalLLMPage() {
   const genStartRef = useRef<number>(0);
   const tokenCountRef = useRef(0);
 
+  // Load active conversation messages from store
+  useEffect(() => {
+    if (store.activeConversation) {
+      setMessages(store.activeConversation.messages.map(m => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        ts: m.createdAt,
+      })));
+      setSystemPrompt(store.activeConversation.systemPrompt);
+      setTotalTokens(store.activeConversation.totalTokens);
+    }
+  }, [store.activeConversationId]);
+
+  // Create new conversation helper
+  const startNewConversation = useCallback(async () => {
+    await store.createConversation(systemPrompt);
+    setMessages([]);
+    setTotalTokens(0);
+    setTokensPerSec(null);
+  }, [store, systemPrompt]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -84,6 +108,12 @@ export default function PersonalLLMPage() {
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isGenerating) return;
 
+    // Ensure we have an active conversation
+    let convoId = store.activeConversationId;
+    if (!convoId) {
+      convoId = await store.createConversation(systemPrompt);
+    }
+
     const userMsg: Message = { role: "user", content: text.trim(), ts: Date.now() };
     const allMessages = [...messages, userMsg];
     setMessages(allMessages);
@@ -92,6 +122,9 @@ export default function PersonalLLMPage() {
     setTokensPerSec(null);
     tokenCountRef.current = 0;
     genStartRef.current = Date.now();
+
+    // Persist user message to store
+    await store.addMessage(convoId, "user", text.trim());
 
     const history = allMessages.slice(-12).map(m => ({
       role: m.role as "user" | "assistant",
@@ -105,6 +138,9 @@ export default function PersonalLLMPage() {
 
     let assistantContent = "";
     const assistantTs = Date.now();
+
+    // Add empty assistant message to store
+    const assistantMsgId = await store.addMessage(convoId, "assistant", "");
 
     setMessages(prev => [
       ...prev,
@@ -131,24 +167,25 @@ export default function PersonalLLMPage() {
         });
       });
 
+      // Persist final assistant message to store
+      await store.updateLastAssistantMessage(convoId, assistantContent, tokenCountRef.current);
       setTotalTokens(prev => prev + tokenCountRef.current);
     } catch (e) {
       console.error(e);
+      const errorContent = "⚠️ An error occurred. Please try again.";
       setMessages(prev => {
         const updated = [...prev];
         const lastIdx = updated.length - 1;
         if (updated[lastIdx]?.role === "assistant") {
-          updated[lastIdx] = {
-            ...updated[lastIdx],
-            content: "⚠️ An error occurred. Please try again.",
-          };
+          updated[lastIdx] = { ...updated[lastIdx], content: errorContent };
         }
         return updated;
       });
+      await store.updateLastAssistantMessage(convoId, errorContent);
     }
 
     setIsGenerating(false);
-  }, [messages, isGenerating, systemPrompt, ai]);
+  }, [messages, isGenerating, systemPrompt, ai, store]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -202,6 +239,21 @@ export default function PersonalLLMPage() {
             {ai.isReady && (
               <Badge variant="outline" className="gap-1.5 text-xs border-primary/30 text-primary bg-primary/5">
                 <CheckCircle2 className="h-3 w-3" /> {ai.activeModel} Ready
+              </Badge>
+            )}
+            {store.isAuthenticated ? (
+              <Badge variant="outline" className={cn(
+                "gap-1.5 text-xs",
+                store.isSyncing
+                  ? "border-primary/30 text-primary bg-primary/5"
+                  : "border-primary/20 text-primary/70 bg-primary/5"
+              )}>
+                {store.isSyncing ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Cloud className="h-3 w-3" />}
+                {store.isSyncing ? "Syncing..." : "Cloud Backup"}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1.5 text-xs border-muted-foreground/30 text-muted-foreground">
+                <CloudOff className="h-3 w-3" /> Local Only
               </Badge>
             )}
           </div>
@@ -477,7 +529,22 @@ export default function PersonalLLMPage() {
                           size="sm"
                           variant="ghost"
                           className="h-6 px-2 text-xs gap-1 text-muted-foreground"
-                          onClick={() => { setMessages([]); setTotalTokens(0); setTokensPerSec(null); }}
+                          onClick={() => { startNewConversation(); }}
+                        >
+                          <Plus className="h-3 w-3" /> New Chat
+                        </Button>
+                      )}
+                      {messages.length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 px-2 text-xs gap-1 text-muted-foreground"
+                          onClick={() => {
+                            if (store.activeConversationId) {
+                              store.deleteConversation(store.activeConversationId);
+                            }
+                            setMessages([]); setTotalTokens(0); setTokensPerSec(null);
+                          }}
                         >
                           <Trash2 className="h-3 w-3" /> Clear
                         </Button>
@@ -651,7 +718,7 @@ export default function PersonalLLMPage() {
                       </Button>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-1.5 px-1">
-                      Enter to send · Shift+Enter for new line · No data leaves your device
+                      Enter to send · Shift+Enter for new line · {store.isAuthenticated ? "Backed up to cloud" : "Local only — sign in to enable cloud backup"}
                     </p>
                   </div>
                 </div>
@@ -659,6 +726,49 @@ export default function PersonalLLMPage() {
 
               {/* Right sidebar */}
               <div className="space-y-4">
+                {/* Conversation History */}
+                <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">History</h3>
+                    <Button size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1" onClick={startNewConversation}>
+                      <Plus className="h-3 w-3" /> New
+                    </Button>
+                  </div>
+                  {store.conversations.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No conversations yet</p>
+                  ) : (
+                    <ScrollArea className="max-h-[200px]">
+                      <div className="space-y-1">
+                        {store.conversations.slice(0, 20).map(convo => (
+                          <button
+                            key={convo.id}
+                            onClick={() => store.setActiveConversationId(convo.id)}
+                            className={cn(
+                              "w-full text-left px-3 py-2 rounded-lg text-xs transition-all flex items-center gap-2",
+                              store.activeConversationId === convo.id
+                                ? "bg-primary/10 text-foreground border border-primary/20"
+                                : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                            )}
+                          >
+                            <MessageSquare className="h-3 w-3 shrink-0" />
+                            <span className="truncate flex-1">{convo.title || "New conversation"}</span>
+                            {convo.needsSync && store.isAuthenticated && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" title="Pending sync" />
+                            )}
+                            {convo.syncedAt && !convo.needsSync && (
+                              <Cloud className="h-3 w-3 text-primary/40 shrink-0" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+                  {store.isAuthenticated && store.conversations.some(c => c.needsSync) && (
+                    <Button size="sm" variant="outline" className="w-full text-xs gap-1.5" onClick={store.syncToCloud}>
+                      <Cloud className="h-3 w-3" /> Sync Now
+                    </Button>
+                  )}
+                </div>
                 {/* Model status */}
                 <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
                   <h3 className="text-sm font-semibold text-foreground">Model Status</h3>
