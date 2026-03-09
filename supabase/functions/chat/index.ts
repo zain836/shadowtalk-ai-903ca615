@@ -1322,7 +1322,36 @@ Return ONLY valid JSON in this exact format:
 
     console.log("[CHAT] Processing request with", messages.length, "messages, personality:", personality, "mode:", mode);
 
-    // === KIMI K2.5-BEATING INTELLIGENCE: Agent Swarm + Visual Coding + Deep Reasoning ===
+    // === SPRINT 1: ADAPTIVE CONTEXT ENGINE ===
+    // Extract user ID from auth header for server-side context fetching
+    let serverSideContext = '';
+    const authHeader = req.headers.get('authorization');
+    if (authHeader) {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+        
+        if (supabaseUrl && serviceRoleKey) {
+          // Decode user from JWT
+          const token = authHeader.replace('Bearer ', '');
+          const anonClient = createClient(supabaseUrl, supabaseAnonKey);
+          const { data: { user: authUser } } = await anonClient.auth.getUser(token);
+          
+          if (authUser?.id) {
+            console.log("[CONTEXT ENGINE] Fetching adaptive context for user:", authUser.id);
+            serverSideContext = await fetchAdaptiveContext(authUser.id, supabaseUrl, serviceRoleKey);
+            if (serverSideContext) {
+              console.log("[CONTEXT ENGINE] Injected", serverSideContext.length, "chars of adaptive context");
+            }
+          }
+        }
+      } catch (contextErr) {
+        console.error("[CONTEXT ENGINE] Non-fatal context fetch error:", contextErr);
+      }
+    }
+
+    // === SPRINT 1: SMART MODEL ROUTER V2 ===
     const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user');
     const lastUserText = typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : 
       (Array.isArray(lastUserMsg?.content) ? lastUserMsg.content.find((c: any) => c.type === 'text')?.text || '' : '');
@@ -1331,33 +1360,10 @@ Return ONLY valid JSON in this exact format:
       Array.isArray(m.content) && m.content.some((c: any) => c.type === 'image_url')
     );
 
-    // Visual Coding Detection — Kimi K2.5's killer feature replicated
-    const isVisualCoding = hasImageContent && /\b(code|build|create|implement|convert|make|develop|clone|replicate|reproduce|html|css|react|component|website|app|ui|page|layout|design)\b/i.test(lastUserText);
+    const hasMemoryContext = !!(businessMemory?.trim() || serverSideContext);
+    const routerDecision = smartModelRouter(lastUserText, hasImageContent, messages.length, hasMemoryContext);
     
-    // Deep Reasoning Detection — matches Kimi's 96.1% AIME performance tier  
-    const isDeepReasoning = lastUserText.length > 500 || 
-      /\b(think|reason|step.by.step|chain.of.thought|why|how does|prove|derive|calculate|solve|theorem|proof|logic|deduce|infer)\b/i.test(lastUserText);
-    
-    // Agent Swarm Detection — multi-task queries that benefit from parallel sub-agents
-    const isSwarmQuery = /\b(and also|plus|additionally|as well as|on top of that|meanwhile|at the same time)\b/i.test(lastUserText) ||
-      (lastUserText.match(/\b(1\.|2\.|3\.|first|second|third|step \d|part \d)\b/gi) || []).length >= 2 ||
-      lastUserText.length > 1000;
-
-    const isComplexQuery = (text: string): boolean => {
-      const complexIndicators = [
-        /\b(analyze|analysis|compare|evaluate|assess|critique|review|audit)\b/i,
-        /\b(write|create|build|design|architect)\s+(a|an|the)?\s*(full|complete|comprehensive|detailed|production)/i,
-        /\b(explain|describe)\s+(in detail|thoroughly|comprehensively|step.by.step)/i,
-        /\b(debug|troubleshoot|diagnose)\b.*\b(error|issue|problem|bug)\b/i,
-        /\b(strategy|plan|roadmap|framework|architecture)\b/i,
-        /\b(math|calcul|equation|theorem|proof|algorithm)\b/i,
-        /\b(research|investigate|deep.dive|comprehensive)\b/i,
-        /```[\s\S]{200,}/,
-      ];
-      return text.length > 300 || complexIndicators.some(r => r.test(text));
-    };
-    
-    const useProModel = isComplexQuery(lastUserText) || hasImageContent || isDeepReasoning || isVisualCoding || isSwarmQuery;
+    console.log(`[MODEL ROUTER V2] Tier: ${routerDecision.tier} | Score: ${routerDecision.score} | Model: ${routerDecision.model} | Signals: ${routerDecision.reasoning}`);
 
     // === MEMORY UPGRADE: 50-message context window ===
     const MAX_HISTORY = 50;
@@ -1447,9 +1453,11 @@ Follow these rules precisely:
 - For multi-step processes: provide eligibility, documents, steps, links, timeline
 ${contextString}`;
 
+    // Merge client-side + server-side memory context
     let businessMemoryPrompt = "";
-    if (businessMemory && businessMemory.trim()) {
-      businessMemoryPrompt = `\n## BUSINESS CONTEXT\nUse intelligently when relevant:\n${businessMemory}`;
+    const allMemoryContext = [businessMemory?.trim(), serverSideContext].filter(Boolean).join('\n');
+    if (allMemoryContext) {
+      businessMemoryPrompt = `\n## BUSINESS & ADAPTIVE CONTEXT\nUse intelligently when relevant:\n${allMemoryContext}`;
     }
 
     const capabilitiesPrompt = `
@@ -1520,16 +1528,7 @@ When a user asks you to build, create, or generate a website, SaaS, web app, lan
 When a user asks you to write, create, draft, or generate any document (email, article, report, proposal, resume, letter, blog post, book chapter, essay, cover letter, business plan, memo, press release, etc.):
 
 1. **Detect intent automatically** — if the user says "write me an email", "draft a report", "create a resume", "generate a proposal", etc., produce the full document immediately.
-2. **Format professionally** — use proper document structure:
-   - **Email**: Include Subject line, Greeting, Body paragraphs, Professional closing & signature
-   - **Article/Blog**: Title, subtitle, intro hook, body sections with ## headings, conclusion
-   - **Report**: Executive Summary, Findings, Analysis sections, Recommendations, Conclusion
-   - **Proposal**: Objective, Methodology, Timeline, Budget, Expected Outcomes
-   - **Resume/CV**: Contact Info, Professional Summary, Experience (with bullet points), Education, Skills
-   - **Letter**: Date, Recipient, Salutation, Body paragraphs, Closing, Signature
-   - **Book Chapter**: Chapter title, opening hook, vivid narrative scenes, dialogue, chapter ending
-   - **Business Plan**: Executive Summary, Market Analysis, Strategy, Financial Projections
-   - **Press Release**: Headline, Dateline, Lead paragraph, Body, Boilerplate, Contact info
+2. **Format professionally** — use proper document structure
 3. **Output the complete document** — never give partial content or just an outline unless explicitly asked for one.
 4. **Use markdown formatting** to make the document visually structured and readable in chat.
 5. **Adapt tone** to the document type (formal for business, creative for blogs, narrative for books).
@@ -1581,12 +1580,11 @@ When a user asks you to write, create, draft, or generate any document (email, a
       systemPrompt += `\n\n## Current Mode: ${mode?.toUpperCase() || 'GENERAL'}\n${modePrompt}`;
     }
 
-    // === KIMI K2.5-BEATING: GPT-5.2 for complex/swarm/visual, Gemini 3 Pro for standard ===
-    const model = useProModel ? "openai/gpt-5.2" : "google/gemini-3-pro-preview";
-    console.log("[CHAT] Agent Swarm:", isSwarmQuery, "Visual Coding:", isVisualCoding, "Deep Reasoning:", isDeepReasoning);
+    // === SPRINT 1: USE ROUTER V2 MODEL DECISION ===
+    const model = routerDecision.model;
+    console.log(`[CHAT] Model Router V2 selected: ${model} (${routerDecision.tier}, score: ${routerDecision.score})`);
 
-    console.log("[CHAT] Using model:", model, "complex:", useProModel, "hasImages:", hasImageContent, "msgs:", trimmedMessages.length);
-
+    // First attempt
     const response = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -1627,6 +1625,87 @@ When a user asks you to write, create, draft, or generate any document (email, a
       throw new Error("AI gateway error");
     }
 
+    // === SPRINT 1: RESPONSE QUALITY SCORING ===
+    // For high-tier queries, buffer the response, score it, and retry if poor
+    if (routerDecision.tier === 'EXTREME' || routerDecision.tier === 'COMPLEX') {
+      // Buffer the streamed response to evaluate quality
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response body");
+      
+      const decoder = new TextDecoder();
+      let fullContent = '';
+      const chunks: Uint8Array[] = [];
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        const text = decoder.decode(value, { stream: true });
+        
+        // Extract content from SSE for quality check
+        for (const line of text.split('\n')) {
+          if (!line.startsWith('data: ') || line.includes('[DONE]')) continue;
+          try {
+            const parsed = JSON.parse(line.slice(6));
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) fullContent += delta;
+          } catch { /* skip */ }
+        }
+      }
+
+      // Only quality-check if we got substantial content
+      if (fullContent.length > 100) {
+        const quality = await evaluateResponseQuality(lastUserText, fullContent, LOVABLE_API_KEY);
+        console.log(`[QUALITY SCORER] Score: ${quality.score}/10, Verdict: ${quality.verdict}, Issues: ${quality.issues.join(', ') || 'none'}`);
+
+        // If quality is poor (< 5), retry with upgraded model
+        if (quality.score < 5 && model !== 'openai/gpt-5.2') {
+          console.log("[QUALITY SCORER] Low quality detected, retrying with GPT-5.2...");
+          
+          const retryResponse = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: 'openai/gpt-5.2',
+              messages: [
+                { role: "system", content: systemPrompt + `\n\n> QUALITY IMPROVEMENT: A previous attempt scored ${quality.score}/10. Issues: ${quality.issues.join(', ')}. Ensure this response is comprehensive, accurate, and well-structured.` },
+                ...trimmedMessages,
+              ],
+              stream: true,
+            }),
+          });
+
+          if (retryResponse.ok) {
+            console.log("[QUALITY SCORER] Retry successful, streaming upgraded response");
+            return new Response(retryResponse.body, {
+              headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+            });
+          }
+        }
+      }
+
+      // Re-stream the buffered response
+      const mergedArray = new Uint8Array(chunks.reduce((acc, c) => acc + c.length, 0));
+      let offset = 0;
+      for (const chunk of chunks) {
+        mergedArray.set(chunk, offset);
+        offset += chunk.length;
+      }
+      
+      return new Response(new ReadableStream({
+        start(controller) {
+          controller.enqueue(mergedArray);
+          controller.close();
+        }
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
+    // For standard tiers, stream directly (no quality check overhead)
     console.log("[CHAT] Streaming response started");
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
