@@ -241,6 +241,21 @@ export default function PersonalLLMPage() {
                 <CheckCircle2 className="h-3 w-3" /> {ai.activeModel} Ready
               </Badge>
             )}
+            {store.isAuthenticated ? (
+              <Badge variant="outline" className={cn(
+                "gap-1.5 text-xs",
+                store.isSyncing
+                  ? "border-primary/30 text-primary bg-primary/5"
+                  : "border-primary/20 text-primary/70 bg-primary/5"
+              )}>
+                {store.isSyncing ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Cloud className="h-3 w-3" />}
+                {store.isSyncing ? "Syncing..." : "Cloud Backup"}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1.5 text-xs border-muted-foreground/30 text-muted-foreground">
+                <CloudOff className="h-3 w-3" /> Local Only
+              </Badge>
+            )}
           </div>
         </div>
 
