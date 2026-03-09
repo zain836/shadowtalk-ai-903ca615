@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { useRobustOfflineAI } from "@/hooks/useRobustOfflineAI";
+import { usePersonalLLMStore } from "@/hooks/usePersonalLLMStore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +16,8 @@ import {
   Cpu, Download, Wifi, WifiOff, Zap, Brain, Send, Loader2,
   Settings2, Trash2, CheckCircle2, HardDrive, Activity,
   Sparkles, Terminal, Shield, ArrowLeft, ChevronRight,
-  Lock, AlertCircle, Gauge
+  Lock, AlertCircle, Gauge, Cloud, CloudOff, Plus, MessageSquare,
+  RefreshCw
 } from "lucide-react";
 
 type Message = { role: "user" | "assistant"; content: string; ts: number };
@@ -51,6 +53,7 @@ const QUICK_STARTERS = [
 export default function PersonalLLMPage() {
   const navigate = useNavigate();
   const ai = useRobustOfflineAI();
+  const store = usePersonalLLMStore();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -67,6 +70,27 @@ export default function PersonalLLMPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const genStartRef = useRef<number>(0);
   const tokenCountRef = useRef(0);
+
+  // Load active conversation messages from store
+  useEffect(() => {
+    if (store.activeConversation) {
+      setMessages(store.activeConversation.messages.map(m => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        ts: m.createdAt,
+      })));
+      setSystemPrompt(store.activeConversation.systemPrompt);
+      setTotalTokens(store.activeConversation.totalTokens);
+    }
+  }, [store.activeConversationId]);
+
+  // Create new conversation helper
+  const startNewConversation = useCallback(async () => {
+    await store.createConversation(systemPrompt);
+    setMessages([]);
+    setTotalTokens(0);
+    setTokensPerSec(null);
+  }, [store, systemPrompt]);
 
   useEffect(() => {
     if (scrollRef.current) {
