@@ -367,7 +367,7 @@ export default function PersonalLLMPage() {
                       <span className="text-xs text-muted-foreground flex items-center gap-1.5">
                         <Zap className="h-3.5 w-3.5" /> WebGPU
                       </span>
-                      <span className={cn("text-xs font-medium", ai.hasWebGPU ? "text-green-400" : "text-muted-foreground")}>
+                      <span className={cn("text-xs font-medium", ai.hasWebGPU ? "text-primary" : "text-muted-foreground")}>
                         {ai.hasWebGPU ? "✓ Available" : "Not available"}
                       </span>
                     </div>
@@ -375,7 +375,7 @@ export default function PersonalLLMPage() {
                       <span className="text-xs text-muted-foreground flex items-center gap-1.5">
                         <Wifi className="h-3.5 w-3.5" /> Internet
                       </span>
-                      <span className={cn("text-xs font-medium", navigator.onLine ? "text-green-400" : "text-destructive")}>
+                      <span className={cn("text-xs font-medium", navigator.onLine ? "text-primary" : "text-destructive")}>
                         {navigator.onLine ? "Online" : "Offline"}
                       </span>
                     </div>
