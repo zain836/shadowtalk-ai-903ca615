@@ -726,6 +726,49 @@ export default function PersonalLLMPage() {
 
               {/* Right sidebar */}
               <div className="space-y-4">
+                {/* Conversation History */}
+                <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground">History</h3>
+                    <Button size="sm" variant="ghost" className="h-6 px-2 text-xs gap-1" onClick={startNewConversation}>
+                      <Plus className="h-3 w-3" /> New
+                    </Button>
+                  </div>
+                  {store.conversations.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No conversations yet</p>
+                  ) : (
+                    <ScrollArea className="max-h-[200px]">
+                      <div className="space-y-1">
+                        {store.conversations.slice(0, 20).map(convo => (
+                          <button
+                            key={convo.id}
+                            onClick={() => store.setActiveConversationId(convo.id)}
+                            className={cn(
+                              "w-full text-left px-3 py-2 rounded-lg text-xs transition-all flex items-center gap-2",
+                              store.activeConversationId === convo.id
+                                ? "bg-primary/10 text-foreground border border-primary/20"
+                                : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                            )}
+                          >
+                            <MessageSquare className="h-3 w-3 shrink-0" />
+                            <span className="truncate flex-1">{convo.title || "New conversation"}</span>
+                            {convo.needsSync && store.isAuthenticated && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" title="Pending sync" />
+                            )}
+                            {convo.syncedAt && !convo.needsSync && (
+                              <Cloud className="h-3 w-3 text-primary/40 shrink-0" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+                  {store.isAuthenticated && store.conversations.some(c => c.needsSync) && (
+                    <Button size="sm" variant="outline" className="w-full text-xs gap-1.5" onClick={store.syncToCloud}>
+                      <Cloud className="h-3 w-3" /> Sync Now
+                    </Button>
+                  )}
+                </div>
                 {/* Model status */}
                 <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
                   <h3 className="text-sm font-semibold text-foreground">Model Status</h3>
