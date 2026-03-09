@@ -108,6 +108,12 @@ export default function PersonalLLMPage() {
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isGenerating) return;
 
+    // Ensure we have an active conversation
+    let convoId = store.activeConversationId;
+    if (!convoId) {
+      convoId = await store.createConversation(systemPrompt);
+    }
+
     const userMsg: Message = { role: "user", content: text.trim(), ts: Date.now() };
     const allMessages = [...messages, userMsg];
     setMessages(allMessages);
@@ -116,6 +122,9 @@ export default function PersonalLLMPage() {
     setTokensPerSec(null);
     tokenCountRef.current = 0;
     genStartRef.current = Date.now();
+
+    // Persist user message to store
+    await store.addMessage(convoId, "user", text.trim());
 
     const history = allMessages.slice(-12).map(m => ({
       role: m.role as "user" | "assistant",
@@ -129,6 +138,9 @@ export default function PersonalLLMPage() {
 
     let assistantContent = "";
     const assistantTs = Date.now();
+
+    // Add empty assistant message to store
+    const assistantMsgId = await store.addMessage(convoId, "assistant", "");
 
     setMessages(prev => [
       ...prev,
@@ -155,24 +167,25 @@ export default function PersonalLLMPage() {
         });
       });
 
+      // Persist final assistant message to store
+      await store.updateLastAssistantMessage(convoId, assistantContent, tokenCountRef.current);
       setTotalTokens(prev => prev + tokenCountRef.current);
     } catch (e) {
       console.error(e);
+      const errorContent = "⚠️ An error occurred. Please try again.";
       setMessages(prev => {
         const updated = [...prev];
         const lastIdx = updated.length - 1;
         if (updated[lastIdx]?.role === "assistant") {
-          updated[lastIdx] = {
-            ...updated[lastIdx],
-            content: "⚠️ An error occurred. Please try again.",
-          };
+          updated[lastIdx] = { ...updated[lastIdx], content: errorContent };
         }
         return updated;
       });
+      await store.updateLastAssistantMessage(convoId, errorContent);
     }
 
     setIsGenerating(false);
-  }, [messages, isGenerating, systemPrompt, ai]);
+  }, [messages, isGenerating, systemPrompt, ai, store]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
