@@ -3,7 +3,214 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { checkRateLimit, getRateLimitHeaders } from "../_shared/rate-limit.ts";
 import { ChatRequestSchema, validateInput } from "../_shared/validation.ts";
- 
+
+// ============================================================================
+// SPRINT 1: CHAT INTELLIGENCE ENGINE
+// ============================================================================
+
+// --- FEATURE 1: ADAPTIVE CONTEXT ENGINE ---
+// Server-side auto-fetching of memories, knowledge, and AI insights
+async function fetchAdaptiveContext(userId: string, supabaseUrl: string, serviceRoleKey: string): Promise<string> {
+  const admin = createClient(supabaseUrl, serviceRoleKey);
+  const sections: string[] = [];
+
+  try {
+    // Fetch active business memories (sorted by priority)
+    const { data: bizMemories } = await admin
+      .from('business_memories')
+      .select('category, title, content, priority')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('priority', { ascending: false })
+      .limit(20);
+
+    if (bizMemories?.length) {
+      const grouped: Record<string, string[]> = {};
+      for (const m of bizMemories) {
+        const cat = m.category || 'general';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(`- **${m.title}**: ${m.content}`);
+      }
+      const bizSection = Object.entries(grouped)
+        .map(([cat, items]) => `### ${cat.charAt(0).toUpperCase() + cat.slice(1)}\n${items.join('\n')}`)
+        .join('\n\n');
+      sections.push(`## BUSINESS MEMORY\n${bizSection}`);
+    }
+
+    // Fetch AI memories (top 15 by confidence × reference count)
+    const { data: aiMemories } = await admin
+      .from('ai_memories')
+      .select('category, content, confidence, times_referenced')
+      .eq('user_id', userId)
+      .order('confidence', { ascending: false })
+      .limit(15);
+
+    if (aiMemories?.length) {
+      const memItems = aiMemories.map(m => `- [${m.category}] ${m.content} (confidence: ${(m.confidence * 100).toFixed(0)}%)`);
+      sections.push(`## AI LEARNED MEMORIES\n${memItems.join('\n')}`);
+    }
+
+    // Fetch recent knowledge entries (top 10 by access count)
+    const { data: knowledge } = await admin
+      .from('knowledge_entries')
+      .select('title, content, entry_type, tags')
+      .eq('user_id', userId)
+      .order('access_count', { ascending: false })
+      .limit(10);
+
+    if (knowledge?.length) {
+      const kItems = knowledge.map(k => `- **${k.title}** (${k.entry_type}): ${k.content.substring(0, 200)}`);
+      sections.push(`## KNOWLEDGE BASE\n${kItems.join('\n')}`);
+    }
+  } catch (err) {
+    console.error("[CONTEXT ENGINE] Error fetching adaptive context:", err);
+  }
+
+  if (sections.length === 0) return '';
+  return `\n\n## ADAPTIVE CONTEXT (Auto-injected — use to personalize responses)\n\n${sections.join('\n\n')}`;
+}
+
+// --- FEATURE 2: SMART MODEL ROUTER V2 ---
+// 5-tier complexity scoring with weighted analysis
+interface RouterDecision {
+  model: string;
+  tier: string;
+  score: number;
+  reasoning: string;
+}
+
+function smartModelRouter(lastUserText: string, hasImageContent: boolean, messageCount: number, hasMemoryContext: boolean): RouterDecision {
+  let score = 0;
+  const signals: string[] = [];
+
+  // Length scoring (0-25 pts)
+  if (lastUserText.length > 2000) { score += 25; signals.push('very_long_input'); }
+  else if (lastUserText.length > 800) { score += 15; signals.push('long_input'); }
+  else if (lastUserText.length > 300) { score += 8; signals.push('medium_input'); }
+  else if (lastUserText.length < 50) { score -= 5; signals.push('short_input'); }
+
+  // Image content (fixed +20)
+  if (hasImageContent) { score += 20; signals.push('has_images'); }
+
+  // Visual coding detection (+25)
+  const isVisualCoding = hasImageContent && /\b(code|build|create|implement|convert|make|develop|clone|replicate|html|css|react|component|website|app|ui|page|layout|design)\b/i.test(lastUserText);
+  if (isVisualCoding) { score += 25; signals.push('visual_coding'); }
+
+  // Deep reasoning patterns (+20)
+  const reasoningPatterns = /\b(think|reason|step.by.step|chain.of.thought|why|how does|prove|derive|calculate|solve|theorem|proof|logic|deduce|infer|analyze in depth|compare and contrast)\b/i;
+  if (reasoningPatterns.test(lastUserText)) { score += 20; signals.push('deep_reasoning'); }
+
+  // Multi-task / swarm detection (+15)
+  const swarmIndicators = /\b(and also|plus|additionally|as well as|on top of that|meanwhile)\b/i.test(lastUserText) ||
+    (lastUserText.match(/\b(1\.|2\.|3\.|first|second|third|step \d|part \d)\b/gi) || []).length >= 2;
+  if (swarmIndicators) { score += 15; signals.push('multi_task'); }
+
+  // Technical complexity (+15)
+  const technicalPatterns = /\b(architecture|algorithm|optimization|database|scalability|distributed|concurrent|async|microservice|kubernetes|terraform|ML|neural|gradient|backprop|transformer)\b/i;
+  if (technicalPatterns.test(lastUserText)) { score += 15; signals.push('technical'); }
+
+  // Analysis/strategy requests (+12)
+  const analysisPatterns = /\b(analyze|analysis|compare|evaluate|assess|critique|review|audit|strategy|plan|roadmap|framework)\b/i;
+  if (analysisPatterns.test(lastUserText)) { score += 12; signals.push('analysis'); }
+
+  // Creative/generation complexity (+10)
+  const creativePatterns = /\b(write|create|build|design|architect)\s+(a|an|the)?\s*(full|complete|comprehensive|detailed|production)/i;
+  if (creativePatterns.test(lastUserText)) { score += 10; signals.push('creative_generation'); }
+
+  // Code block present (+10)
+  if (/```[\s\S]{200,}/.test(lastUserText)) { score += 10; signals.push('large_code_block'); }
+
+  // Math/science (+10)
+  if (/\b(math|equation|integral|derivative|matrix|probability|statistics|physics|chemistry)\b/i.test(lastUserText)) { score += 10; signals.push('math_science'); }
+
+  // Conversation depth bonus (+5 for long threads needing coherence)
+  if (messageCount > 20) { score += 5; signals.push('deep_conversation'); }
+
+  // Memory context bonus (+3 — richer context needs smarter model)
+  if (hasMemoryContext) { score += 3; signals.push('has_memory_context'); }
+
+  // 5-Tier Model Selection
+  let model: string;
+  let tier: string;
+
+  if (score >= 70) {
+    model = 'openai/gpt-5.2';
+    tier = 'EXTREME';
+  } else if (score >= 45) {
+    model = 'openai/gpt-5';
+    tier = 'COMPLEX';
+  } else if (score >= 25) {
+    model = 'google/gemini-3-pro-preview';
+    tier = 'MODERATE';
+  } else if (score >= 10) {
+    model = 'google/gemini-2.5-flash';
+    tier = 'SIMPLE';
+  } else {
+    model = 'google/gemini-2.5-flash-lite';
+    tier = 'TRIVIAL';
+  }
+
+  return { model, tier, score, reasoning: signals.join(', ') };
+}
+
+// --- FEATURE 3: RESPONSE QUALITY SCORING ---
+// Evaluates response quality and triggers auto-retry if below threshold
+async function evaluateResponseQuality(
+  question: string,
+  response: string,
+  apiKey: string
+): Promise<{ score: number; verdict: string; issues: string[] }> {
+  try {
+    const evalResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content: `You are a response quality evaluator. Score the AI response on a 1-10 scale.
+Return ONLY valid JSON: {"score": 8, "verdict": "good", "issues": []}
+
+Scoring criteria:
+- Relevance (does it answer the question?)
+- Completeness (are all parts addressed?)
+- Accuracy (no hallucinations or contradictions?)
+- Formatting (proper markdown, code blocks?)
+- Depth (appropriate level of detail?)
+
+Verdicts: "excellent" (9-10), "good" (7-8), "acceptable" (5-6), "poor" (3-4), "terrible" (1-2)`
+          },
+          {
+            role: "user",
+            content: `Question: "${question.substring(0, 500)}"\n\nResponse (first 1500 chars): "${response.substring(0, 1500)}"\n\nEvaluate quality.`
+          }
+        ],
+      }),
+    });
+
+    if (!evalResponse.ok) return { score: 7, verdict: 'good', issues: [] };
+
+    const result = await evalResponse.json();
+    const content = result.choices?.[0]?.message?.content || '';
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        score: typeof parsed.score === 'number' ? parsed.score : 7,
+        verdict: parsed.verdict || 'good',
+        issues: Array.isArray(parsed.issues) ? parsed.issues : [],
+      };
+    }
+  } catch (err) {
+    console.error("[QUALITY SCORER] Evaluation error:", err);
+  }
+  return { score: 7, verdict: 'good', issues: [] };
+}
+
 // Retry helper for transient gateway errors
 async function fetchWithRetry(
   url: string, 
