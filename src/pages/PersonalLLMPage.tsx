@@ -718,7 +718,7 @@ export default function PersonalLLMPage() {
                       </Button>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-1.5 px-1">
-                      Enter to send · Shift+Enter for new line · No data leaves your device
+                      Enter to send · Shift+Enter for new line · {store.isAuthenticated ? "Backed up to cloud" : "Local only — sign in to enable cloud backup"}
                     </p>
                   </div>
                 </div>
