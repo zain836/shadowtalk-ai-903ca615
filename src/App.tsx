@@ -76,6 +76,7 @@ const ComplianceDashboardPage = lazy(() => import("./pages/ComplianceDashboardPa
 const TrustPage = lazy(() => import("./pages/TrustPage"));
 const CreativeStudioPage = lazy(() => import("./pages/CreativeStudioPage"));
 const CyberCommandPage = lazy(() => import("./pages/CyberCommandPage"));
+const PersonalLLMPage = lazy(() => import("./pages/PersonalLLMPage"));
 const PWABanner = lazy(() => import("./components/PWABanner"));
 const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
@@ -183,6 +184,7 @@ const AnimatedRoutes = () => {
           <Route path="/compliance" element={<PageTransition><ComplianceDashboardPage /></PageTransition>} />
           <Route path="/trust" element={<PageTransition><TrustPage /></PageTransition>} />
           <Route path="/cyber" element={<PageTransition><CyberCommandPage /></PageTransition>} />
+          <Route path="/personal-llm" element={<PageTransition><PersonalLLMPage /></PageTransition>} />
           <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
         </Routes>
       </AnimatePresence>
