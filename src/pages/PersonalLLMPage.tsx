@@ -13,33 +13,29 @@ import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import {
   Cpu, Download, Wifi, WifiOff, Zap, Brain, Send, Loader2,
-  Settings2, Trash2, CheckCircle2, Circle, HardDrive, Activity,
+  Settings2, Trash2, CheckCircle2, HardDrive, Activity,
   Sparkles, Terminal, Shield, ArrowLeft, ChevronRight,
-  Lock, AlertCircle, Server, MemoryStick, Gauge
+  Lock, AlertCircle, Gauge
 } from "lucide-react";
 
 type Message = { role: "user" | "assistant"; content: string; ts: number };
 
-const MODEL_META: Record<string, { desc: string; best_for: string[]; color: string }> = {
+const MODEL_META: Record<string, { desc: string; best_for: string[] }> = {
   "Llama-3.2-3B-Instruct-q4f16_1-MLC": {
     desc: "Meta's flagship small model. Best balance of speed and quality.",
     best_for: ["Code", "Reasoning", "Math", "Chat"],
-    color: "hsl(var(--primary))",
   },
   "Llama-3.2-1B-Instruct-q4f16_1-MLC": {
     desc: "Ultra-fast lightweight model for quick responses.",
     best_for: ["Chat", "Summaries", "Q&A"],
-    color: "hsl(var(--secondary))",
   },
   "Qwen2.5-1.5B-Instruct-q4f16_1-MLC": {
     desc: "Alibaba's multilingual model. Strong at reasoning.",
     best_for: ["Multilingual", "Reasoning", "Math"],
-    color: "hsl(220 70% 55%)",
   },
   "Qwen2.5-0.5B-Instruct-q4f16_1-MLC": {
     desc: "Smallest model. Instant responses, minimal RAM.",
     best_for: ["Chat", "Basic tasks"],
-    color: "hsl(150 60% 45%)",
   },
 };
 
@@ -200,7 +196,7 @@ export default function PersonalLLMPage() {
                 <Cpu className="h-3 w-3" /> CPU Mode
               </Badge>
             )}
-            <Badge variant="outline" className="gap-1.5 text-xs border-green-500/30 text-green-400 bg-green-500/5">
+            <Badge variant="outline" className="gap-1.5 text-xs border-primary/30 text-primary bg-primary/5">
               <Lock className="h-3 w-3" /> Air-Gapped
             </Badge>
             {ai.isReady && (
@@ -274,8 +270,7 @@ export default function PersonalLLMPage() {
                             <span className="font-bold text-foreground">{model.name}</span>
                             <Badge
                               variant="outline"
-                              className="text-[10px] px-1.5 py-0 h-4"
-                              style={{ borderColor: meta?.color, color: meta?.color }}
+                              className="text-[10px] px-1.5 py-0 h-4 border-primary/30 text-primary"
                             >
                               {model.size}
                             </Badge>
@@ -372,7 +367,7 @@ export default function PersonalLLMPage() {
                       <span className="text-xs text-muted-foreground flex items-center gap-1.5">
                         <Zap className="h-3.5 w-3.5" /> WebGPU
                       </span>
-                      <span className={cn("text-xs font-medium", ai.hasWebGPU ? "text-green-400" : "text-muted-foreground")}>
+                      <span className={cn("text-xs font-medium", ai.hasWebGPU ? "text-primary" : "text-muted-foreground")}>
                         {ai.hasWebGPU ? "✓ Available" : "Not available"}
                       </span>
                     </div>
@@ -380,7 +375,7 @@ export default function PersonalLLMPage() {
                       <span className="text-xs text-muted-foreground flex items-center gap-1.5">
                         <Wifi className="h-3.5 w-3.5" /> Internet
                       </span>
-                      <span className={cn("text-xs font-medium", navigator.onLine ? "text-green-400" : "text-destructive")}>
+                      <span className={cn("text-xs font-medium", navigator.onLine ? "text-primary" : "text-destructive")}>
                         {navigator.onLine ? "Online" : "Offline"}
                       </span>
                     </div>
@@ -671,10 +666,10 @@ export default function PersonalLLMPage() {
                     <div className="space-y-2.5">
                       <div className="flex items-center gap-2">
                         <span className="flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
+                          <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-primary opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
                         </span>
-                        <span className="text-xs font-medium text-green-400">Active</span>
+                        <span className="text-xs font-medium text-primary">Active</span>
                       </div>
                       <p className="text-xs text-foreground font-medium">{ai.activeModel}</p>
                       <div className="space-y-1.5 text-xs text-muted-foreground">
@@ -730,8 +725,8 @@ export default function PersonalLLMPage() {
                 </div>
 
                 {/* Privacy guarantee */}
-                <div className="rounded-2xl border border-green-500/20 bg-green-500/5 p-4 space-y-2">
-                  <div className="flex items-center gap-2 text-green-400">
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-primary">
                     <Shield className="h-4 w-4" />
                     <span className="text-xs font-semibold">Privacy Guarantee</span>
                   </div>
