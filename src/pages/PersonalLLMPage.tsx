@@ -13,33 +13,29 @@ import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import {
   Cpu, Download, Wifi, WifiOff, Zap, Brain, Send, Loader2,
-  Settings2, Trash2, CheckCircle2, Circle, HardDrive, Activity,
+  Settings2, Trash2, CheckCircle2, HardDrive, Activity,
   Sparkles, Terminal, Shield, ArrowLeft, ChevronRight,
-  Lock, AlertCircle, Server, MemoryStick, Gauge
+  Lock, AlertCircle, Gauge
 } from "lucide-react";
 
 type Message = { role: "user" | "assistant"; content: string; ts: number };
 
-const MODEL_META: Record<string, { desc: string; best_for: string[]; color: string }> = {
+const MODEL_META: Record<string, { desc: string; best_for: string[] }> = {
   "Llama-3.2-3B-Instruct-q4f16_1-MLC": {
     desc: "Meta's flagship small model. Best balance of speed and quality.",
     best_for: ["Code", "Reasoning", "Math", "Chat"],
-    color: "hsl(var(--primary))",
   },
   "Llama-3.2-1B-Instruct-q4f16_1-MLC": {
     desc: "Ultra-fast lightweight model for quick responses.",
     best_for: ["Chat", "Summaries", "Q&A"],
-    color: "hsl(var(--secondary))",
   },
   "Qwen2.5-1.5B-Instruct-q4f16_1-MLC": {
     desc: "Alibaba's multilingual model. Strong at reasoning.",
     best_for: ["Multilingual", "Reasoning", "Math"],
-    color: "hsl(220 70% 55%)",
   },
   "Qwen2.5-0.5B-Instruct-q4f16_1-MLC": {
     desc: "Smallest model. Instant responses, minimal RAM.",
     best_for: ["Chat", "Basic tasks"],
-    color: "hsl(150 60% 45%)",
   },
 };
 
