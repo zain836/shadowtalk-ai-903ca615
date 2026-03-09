@@ -725,8 +725,8 @@ export default function PersonalLLMPage() {
                 </div>
 
                 {/* Privacy guarantee */}
-                <div className="rounded-2xl border border-green-500/20 bg-green-500/5 p-4 space-y-2">
-                  <div className="flex items-center gap-2 text-green-400">
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-primary">
                     <Shield className="h-4 w-4" />
                     <span className="text-xs font-semibold">Privacy Guarantee</span>
                   </div>
