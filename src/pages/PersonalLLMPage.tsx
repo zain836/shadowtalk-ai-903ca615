@@ -196,7 +196,7 @@ export default function PersonalLLMPage() {
                 <Cpu className="h-3 w-3" /> CPU Mode
               </Badge>
             )}
-            <Badge variant="outline" className="gap-1.5 text-xs border-green-500/30 text-green-400 bg-green-500/5">
+            <Badge variant="outline" className="gap-1.5 text-xs border-primary/30 text-primary bg-primary/5">
               <Lock className="h-3 w-3" /> Air-Gapped
             </Badge>
             {ai.isReady && (
