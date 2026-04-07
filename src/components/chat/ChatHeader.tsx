@@ -458,6 +458,11 @@ export const ChatHeader = ({
           blockedAttempts={privacyScore.trackersBlocked}
         />
 
+        {/* Push Intelligence */}
+        <div className="relative hidden sm:block">
+          <PushIntelligencePanel />
+        </div>
+
         {/* Connection Status Indicator - Shows online/offline + LLM status */}
         <div className="flex items-center">
           <ConnectionStatusIndicator />
