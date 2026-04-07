@@ -21,7 +21,7 @@ export const useVoiceCopilot = (options: UseVoiceCopilotOptions = {}) => {
   const [isListening, setIsListening] = useState(false);
   const [lastTranscript, setLastTranscript] = useState("");
   const [conversationHistory, setConversationHistory] = useState<VoiceCopilotMessage[]>([]);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
