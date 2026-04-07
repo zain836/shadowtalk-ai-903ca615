@@ -17,6 +17,7 @@ import PresenceAvatars from "@/components/collaboration/PresenceAvatars";
 import { useRealtimePresence } from "@/hooks/useRealtimePresence";
 import { LiveCursors } from "@/components/collaboration/LiveCursors";
 import { MentionInput } from "@/components/collaboration/MentionInput";
+import { useCollaborativeAI } from "@/hooks/useCollaborativeAI";
 interface RoomMessage {
   id: string;
   room_id: string;
