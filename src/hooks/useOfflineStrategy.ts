@@ -55,6 +55,7 @@ export const useOfflineStrategy = () => {
 
   const { generateResponse, isReady: aiReady, loadModel } = useAdvancedOfflineAI();
   const { memories } = useBusinessMemory();
+  const { search: vectorSearch } = useLocalVectorStore();
 
   // Generate SWOT analysis
   const generateSWOT = useCallback(async (
