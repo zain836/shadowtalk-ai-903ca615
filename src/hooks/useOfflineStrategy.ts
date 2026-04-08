@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useAdvancedOfflineAI } from './useAdvancedOfflineAI';
 import { useBusinessMemory } from './useBusinessMemory';
+import { useLocalVectorStore } from './useLocalVectorStore';
 
 interface SWOTAnalysis {
   strengths: string[];
@@ -55,6 +56,7 @@ export const useOfflineStrategy = () => {
 
   const { generateResponse, isReady: aiReady, loadModel } = useAdvancedOfflineAI();
   const { memories } = useBusinessMemory();
+  const { search: vectorSearch } = useLocalVectorStore();
 
   // Generate SWOT analysis
   const generateSWOT = useCallback(async (
