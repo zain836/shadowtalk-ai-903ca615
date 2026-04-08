@@ -79,7 +79,7 @@ export const useOfflineCodeExecution = () => {
         encodeURI, decodeURI, encodeURIComponent, decodeURIComponent,
         atob, btoa,
         structuredClone: structuredClone,
-        crypto: { randomUUID: () => crypto.randomUUID(), getRandomValues: (arr: Uint8Array) => crypto.getRandomValues(arr) },
+        crypto: { randomUUID: () => crypto.randomUUID(), getRandomValues: (arr: ArrayBufferView) => crypto.getRandomValues(arr as Uint8Array) },
         TextEncoder, TextDecoder,
         URL, URLSearchParams,
         setTimeout: (fn: () => void, ms: number) => {
