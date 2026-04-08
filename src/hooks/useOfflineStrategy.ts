@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useAdvancedOfflineAI } from './useAdvancedOfflineAI';
 import { useBusinessMemory } from './useBusinessMemory';
+import { useLocalVectorStore } from './useLocalVectorStore';
 
 interface SWOTAnalysis {
   strengths: string[];
