@@ -152,7 +152,8 @@ export const useOfflineAnalytics = () => {
       }
 
       // Get unsynced events
-      const unsyncedEvents: AnalyticsEvent[] = await db.getAllFromIndex(EVENTS_STORE, 'by-synced', false);
+      const allEventsForSync: AnalyticsEvent[] = await db.getAll(EVENTS_STORE);
+      const unsyncedEvents = allEventsForSync.filter(e => !e.synced);
       if (unsyncedEvents.length === 0) {
         setSyncing(false);
         return;
