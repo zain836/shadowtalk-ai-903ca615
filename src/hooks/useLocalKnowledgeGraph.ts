@@ -36,13 +36,15 @@ const DB_NAME = 'shadowtalk-knowledge-graph';
 const NODES_STORE = 'nodes';
 const EDGES_STORE = 'edges';
 
-// Entity extraction patterns
+// Entity extraction patterns — expanded for Sprint 4
 const ENTITY_PATTERNS = {
-  company: /\b([A-Z][a-z]+ (?:Inc|Corp|LLC|Ltd|Company|Co)\b)/g,
+  company: /\b(Google|Apple|Microsoft|Amazon|Meta|OpenAI|Anthropic|Tesla|Netflix|Stripe|Vercel|Supabase|[A-Z][a-z]+ (?:Inc|Corp|LLC|Ltd|Company|Co|Labs|AI))\b/g,
   product: /\b((?:the )?[A-Z][a-z]+ (?:Platform|App|Software|System|Tool|Service))\b/g,
-  technology: /\b(AI|ML|API|SaaS|Cloud|React|Python|JavaScript|TypeScript|Node\.js|AWS|Azure|GCP)\b/gi,
-  industry: /\b(fintech|healthtech|edtech|e-commerce|B2B|B2C|marketplace|subscription)\b/gi,
-  metric: /\b(revenue|profit|growth|CAC|LTV|MRR|ARR|churn|conversion)\b/gi,
+  technology: /\b(AI|ML|API|SaaS|Cloud|React|Python|JavaScript|TypeScript|Node\.js|AWS|Azure|GCP|WebGPU|WebAssembly|Docker|Kubernetes|GraphQL|REST|PostgreSQL|MongoDB|Redis|Elasticsearch|Firebase|DynamoDB|Rust|Go|Swift|Kotlin)\b/gi,
+  industry: /\b(fintech|healthtech|edtech|proptech|insurtech|legaltech|martech|adtech|biotech|cleantech|cybersecurity|e-commerce|B2B|B2C|D2C|marketplace|subscription|IoT|gaming)\b/gi,
+  metric: /\b(revenue|profit|growth|CAC|LTV|MRR|ARR|churn|conversion|ROI|ARPU|NPS|DAU|MAU|burn rate|runway)\b/gi,
+  concept: /\b(machine learning|deep learning|neural network|transformer|LLM|RAG|fine-tuning|embeddings|federated learning|zero-knowledge|data sovereignty|differential privacy)\b/gi,
+  strategy: /\b(go-to-market|GTM|product-led growth|PLG|freemium|SWOT|OKR|KPI|north star metric|competitive moat|value proposition)\b/gi,
 };
 
 export const useLocalKnowledgeGraph = () => {
