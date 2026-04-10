@@ -86,7 +86,7 @@ const SovereignDataDashboard = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CloudOff className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium text-foreground">Zero-Knowledge Sync</span>
+            <span className="text-sm font-medium text-foreground">Encrypted Sync</span>
           </div>
           <Button
             size="sm"
@@ -158,7 +158,7 @@ const SovereignDataDashboard = () => {
       {/* Privacy guarantee */}
       <div className="text-center py-4">
         <p className="text-[11px] text-muted-foreground/50">
-          🔒 All data encrypted client-side · Zero-knowledge architecture · Your keys, your data
+          🔒 Vault data encrypted client-side · Your encryption keys stay on your device
         </p>
       </div>
     </div>
