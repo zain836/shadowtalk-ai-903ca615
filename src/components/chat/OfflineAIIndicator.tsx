@@ -60,7 +60,7 @@ export const OfflineAIIndicator: React.FC = () => {
             </TooltipTrigger>
             <TooltipContent>
               {isReady ? (
-                <p>🛡️ {activeModel} running locally. 100% private.</p>
+                <p>🛡️ {activeModel} running locally on your device.</p>
               ) : hasCachedModel ? (
                 <p>You're offline. Click to load cached AI model.</p>
               ) : (
