@@ -31,7 +31,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Heart, Laugh, Briefcase, Lightbulb, Scale, MessageCircle, Target, HelpCircle } from "lucide-react";
-import { PushIntelligencePanel } from "./PushIntelligencePanel";
+
 import { OfflineModeIndicator } from "./OfflineModeIndicator";
 import { ConnectionStatusIndicator } from "./ConnectionStatusIndicator";
 import { SovereignModeIndicator } from "./SovereignModeIndicator";
