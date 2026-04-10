@@ -31,7 +31,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Heart, Laugh, Briefcase, Lightbulb, Scale, MessageCircle, Target, HelpCircle } from "lucide-react";
-import { PushIntelligencePanel } from "./PushIntelligencePanel";
+
 import { OfflineModeIndicator } from "./OfflineModeIndicator";
 import { ConnectionStatusIndicator } from "./ConnectionStatusIndicator";
 import { SovereignModeIndicator } from "./SovereignModeIndicator";
@@ -458,10 +458,6 @@ export const ChatHeader = ({
           blockedAttempts={privacyScore.trackersBlocked}
         />
 
-        {/* Push Intelligence */}
-        <div className="relative hidden sm:block">
-          <PushIntelligencePanel />
-        </div>
 
         {/* Connection Status Indicator - Shows online/offline + LLM status */}
         <div className="flex items-center">
