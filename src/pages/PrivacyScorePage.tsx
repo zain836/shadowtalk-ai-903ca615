@@ -229,8 +229,8 @@ const PrivacyScorePage = () => {
                   <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/10 border border-primary/20">
                     <Shield className="h-5 w-5 text-primary shrink-0" />
                     <div>
-                      <p className="text-sm font-medium">Zero-Knowledge Architecture</p>
-                      <p className="text-xs text-muted-foreground">We can't read your data</p>
+                      <p className="text-sm font-medium">Client-Side Encryption</p>
+                      <p className="text-xs text-muted-foreground">Vault data encrypted in your browser</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-3 rounded-xl bg-violet-500/10 border border-violet-500/20">
@@ -323,10 +323,10 @@ const PrivacyScorePage = () => {
               <CardContent>
                 <div className="space-y-4">
                   {[
-                    { label: 'Data stored on your device', us: 100, them: 0 },
-                    { label: 'AI processing on-device', us: score.localProcessingRate, them: 0 },
+                    { label: 'Vault data encrypted client-side', us: 100, them: 0 },
+                    { label: 'Optional on-device AI', us: score.localProcessingRate, them: 0 },
                     { label: 'Tracker blocking', us: 100, them: 5 },
-                    { label: 'Zero-knowledge architecture', us: 100, them: 0 },
+                    { label: 'Client-side encryption', us: 100, them: 0 },
                   ].map((item, i) => (
                     <div key={i} className="space-y-1.5">
                       <div className="flex justify-between text-sm">
