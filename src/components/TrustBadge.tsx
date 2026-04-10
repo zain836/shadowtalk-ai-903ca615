@@ -5,17 +5,16 @@ import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 
 export const TrustBadge = ({ className }: { className?: string }) => {
-  const [verified, setVerified] = useState(false);
+  const [cryptoAvailable, setCryptoAvailable] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    // Verify crypto API availability as live proof
     const check = async () => {
       try {
         await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt"]);
-        setVerified(true);
+        setCryptoAvailable(true);
       } catch {
-        setVerified(false);
+        setCryptoAvailable(false);
       }
     };
     check();
@@ -27,14 +26,14 @@ export const TrustBadge = ({ className }: { className?: string }) => {
         onClick={() => setExpanded(!expanded)}
         className={cn(
           "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono transition-all border",
-          verified
-            ? "border-success/30 bg-success/5 text-success hover:bg-success/10"
+          cryptoAvailable
+            ? "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
             : "border-warning/30 bg-warning/5 text-warning hover:bg-warning/10"
         )}
       >
-        {verified ? <CheckCircle2 className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
-        <span className="hidden sm:inline">{verified ? "ZERO-KNOWLEDGE VERIFIED" : "CHECKING..."}</span>
-        <span className="sm:hidden">{verified ? "ZK ✓" : "..."}</span>
+        {cryptoAvailable ? <Shield className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
+        <span className="hidden sm:inline">{cryptoAvailable ? "PRIVACY ARCHITECTURE" : "CHECKING..."}</span>
+        <span className="sm:hidden">{cryptoAvailable ? "🔒" : "..."}</span>
       </button>
 
       <AnimatePresence>
@@ -47,32 +46,37 @@ export const TrustBadge = ({ className }: { className?: string }) => {
           >
             <div className="flex items-center gap-2 mb-2">
               <Shield className="h-4 w-4 text-primary" />
-              <span className="text-xs font-semibold text-foreground">Privacy Architecture</span>
+              <span className="text-xs font-semibold text-foreground">Privacy Features</span>
             </div>
             <div className="space-y-1.5 text-[10px] font-mono text-muted-foreground">
               <div className="flex justify-between">
-                <span>Encryption</span>
-                <span className="text-success">AES-256-GCM ✓</span>
+                <span>Client-Side Encryption</span>
+                <span className={cryptoAvailable ? "text-success" : "text-destructive"}>
+                  {cryptoAvailable ? "AES-256-GCM ✓" : "Unavailable"}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Key Derivation</span>
-                <span className="text-success">PBKDF2-600K ✓</span>
+                <span className="text-success">PBKDF2-600K</span>
               </div>
               <div className="flex justify-between">
                 <span>Local Storage</span>
-                <span className="text-success">IndexedDB ✓</span>
+                <span className="text-success">IndexedDB</span>
               </div>
               <div className="flex justify-between">
-                <span>Server Access</span>
-                <span className="text-destructive">CIPHERTEXT ONLY</span>
+                <span>Optional Offline AI</span>
+                <span className="text-muted-foreground">User opt-in</span>
               </div>
             </div>
+            <p className="mt-2 text-[9px] text-muted-foreground/70 leading-relaxed">
+              These features describe the technical architecture. No third-party audit has been conducted yet.
+            </p>
             <Link
               to="/trust"
-              className="mt-3 block text-center text-[10px] font-mono text-primary hover:underline"
+              className="mt-2 block text-center text-[10px] font-mono text-primary hover:underline"
               onClick={() => setExpanded(false)}
             >
-              VIEW FULL PRIVACY PROOFS →
+              LEARN MORE →
             </Link>
           </motion.div>
         )}

@@ -26,8 +26,8 @@ interface Feature {
 const COMPARISON_FEATURES: Feature[] = [
   {
     id: "offline",
-    name: "100% Offline AI",
-    description: "Works without internet connection",
+    name: "Optional Offline AI",
+    description: "Can work without internet (user opt-in download required)",
     shadowtalk: true,
     chatgpt: false,
     icon: <WifiOff className="h-4 w-4" />,
@@ -35,8 +35,8 @@ const COMPARISON_FEATURES: Feature[] = [
   },
   {
     id: "privacy",
-    name: "Zero-Knowledge Privacy",
-    description: "Your data never leaves your device",
+    name: "Client-Side Encryption",
+    description: "Data encrypted in your browser before storage",
     shadowtalk: true,
     chatgpt: false,
     icon: <Shield className="h-4 w-4" />,

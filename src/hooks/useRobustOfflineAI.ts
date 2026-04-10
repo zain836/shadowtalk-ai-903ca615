@@ -247,12 +247,7 @@ export const useRobustOfflineAI = () => {
            console.warn(`[RobustOfflineAI] Skipping ${model.id}:`, e);
           }
         }
-        console.log('[RobustOfflineAI] No cached models found');
-        
-        // Trigger background download of recommended model if online
-        if (navigator.onLine && !backgroundDownloadAttemptedRef.current) {
-          triggerBackgroundDownload();
-        }
+        console.log('[RobustOfflineAI] No cached models found — user can opt-in to download via Bunker Mode');
       } catch (e) {
         console.warn('[RobustOfflineAI] Cache check failed:', e);
       }

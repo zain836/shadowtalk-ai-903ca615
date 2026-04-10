@@ -109,7 +109,7 @@ const AgentArchitecturePage = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
           <div className="inline-flex items-center gap-2 glass-subtle rounded-full px-5 py-2 mb-6">
             <Network className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-muted-foreground">100% On-Device Processing</span>
+            <span className="text-sm font-medium text-muted-foreground">On-Device Processing Available</span>
           </div>
           <h1 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
             Distributed Agent <span className="gradient-text">Architecture</span>

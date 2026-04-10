@@ -23,19 +23,19 @@ interface DataFlowNode {
 const dataFlowNodes: DataFlowNode[] = [
   { id: "input", label: "Your Input", icon: Smartphone, encrypted: false, location: "device", description: "Text, voice, files — entered on your device" },
   { id: "encrypt", label: "AES-256-GCM Encryption", icon: Lock, encrypted: true, location: "device", description: "Encrypted on-device before leaving your browser" },
-  { id: "transit", label: "TLS 1.3 Transit", icon: Wifi, encrypted: true, location: "transit", description: "Double-encrypted in transit — we cannot read it" },
-  { id: "server", label: "Encrypted Storage", icon: Database, encrypted: true, location: "server", description: "Stored as ciphertext — decryption key never leaves your device" },
+  { id: "transit", label: "TLS 1.3 Transit", icon: Wifi, encrypted: true, location: "transit", description: "Encrypted in transit via TLS" },
+  { id: "server", label: "Encrypted Storage", icon: Database, encrypted: true, location: "server", description: "Vault data stored as ciphertext on the server" },
   { id: "retrieve", label: "Encrypted Response", icon: Cloud, encrypted: true, location: "transit", description: "Response encrypted before transmission" },
   { id: "decrypt", label: "Local Decryption", icon: Fingerprint, encrypted: false, location: "device", description: "Decrypted only on your device with your key" },
 ];
 
 const proofPoints = [
-  { title: "Zero-Knowledge Vault", status: "verified", detail: "PBKDF2 + AES-256-GCM. Master password never transmitted. All encryption/decryption happens in-browser via Web Crypto API.", icon: FileKey },
-  { title: "On-Device AI Processing", status: "verified", detail: "WebLLM models (SmolLM2, Phi-3.5) run entirely in your browser via WebGPU/WASM. No data sent to any server.", icon: Smartphone },
-  { title: "End-to-End Encryption", status: "verified", detail: "Vault entries, business memories, and sensitive data are encrypted client-side before storage. Server only sees ciphertext.", icon: Lock },
-  { title: "No Tracking Scripts", status: "verified", detail: "Zero third-party analytics, no Google Analytics, no Facebook Pixel, no fingerprinting. Privacy Score monitors and blocks any attempts.", icon: EyeOff },
-  { title: "Open RLS Policies", status: "verified", detail: "Row-Level Security ensures users can only access their own data. Admin access is role-gated and audited.", icon: Shield },
-  { title: "Offline-First Architecture", status: "verified", detail: "IndexedDB stores your knowledge graph, sync queue, and preferences locally. Works without internet.", icon: WifiOff },
+  { title: "Encrypted Vault", status: "implemented", detail: "PBKDF2 + AES-256-GCM. Master password never transmitted. Encryption/decryption happens in-browser via Web Crypto API.", icon: FileKey },
+  { title: "Optional On-Device AI", status: "implemented", detail: "WebLLM models can run in your browser via WebGPU/WASM when you opt in. Requires explicit model download.", icon: Smartphone },
+  { title: "Client-Side Encryption", status: "implemented", detail: "Vault entries and sensitive data are encrypted client-side before storage. Server stores ciphertext for these features.", icon: Lock },
+  { title: "Minimal Tracking", status: "implemented", detail: "No third-party analytics scripts. Privacy Score monitors network requests. Some basic device data is collected for security.", icon: EyeOff },
+  { title: "Row-Level Security", status: "implemented", detail: "Row-Level Security ensures users can only access their own data. Admin access is role-gated.", icon: Shield },
+  { title: "Offline-Capable Architecture", status: "implemented", detail: "IndexedDB stores your knowledge graph and preferences locally. Offline AI requires opt-in model download.", icon: WifiOff },
 ];
 
 const TransparencyDashboard = () => {

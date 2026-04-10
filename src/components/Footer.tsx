@@ -87,7 +87,7 @@ const Footer = () => {
               <span className="text-lg font-bold gradient-text">ShadowTalk AI</span>
             </motion.div>
             <p className="text-sm text-muted-foreground mb-6 leading-relaxed max-w-xs">
-              The Sovereign AI Operating System. On-device intelligence for creators, coders & CEOs.
+              AI-powered productivity with privacy-focused features. Optional offline mode for creators, coders & CEOs.
             </p>
 
             {/* Socials */}

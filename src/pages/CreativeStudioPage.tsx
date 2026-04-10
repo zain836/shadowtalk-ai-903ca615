@@ -21,7 +21,7 @@ const CreativeStudioPage = () => {
     <>
       <Helmet>
         <title>Creative Studio — ShadowTalk AI</title>
-        <meta name="description" content="AI-powered image editing and document transformation. Edit images, generate visuals, rewrite documents — all with zero-knowledge privacy." />
+        <meta name="description" content="AI-powered image editing and document transformation. Edit images, generate visuals, rewrite documents — with privacy-focused architecture." />
       </Helmet>
       <Navigation />
       <main className="min-h-screen bg-background pt-20 pb-12">
@@ -38,7 +38,7 @@ const CreativeStudioPage = () => {
                 <Sparkles className="h-3 w-3" /> AI-Powered
               </Badge>
               <Badge variant="outline" className="gap-1 text-xs">
-                <Shield className="h-3 w-3" /> Zero-Knowledge
+                <Shield className="h-3 w-3" /> Encrypted
               </Badge>
             </div>
             <p className="text-muted-foreground">

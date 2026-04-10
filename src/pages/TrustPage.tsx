@@ -100,7 +100,7 @@ const useIntegrityHash = () => {
 
   useEffect(() => {
     const computeHash = async () => {
-      const policyText = `ShadowTalk Zero-Knowledge Architecture v2.0 — No server-side storage of user conversations, no telemetry collection, AES-256-GCM client-side encryption, PBKDF2 key derivation, WebAuthn biometric binding`;
+      const policyText = `ShadowTalk Privacy Architecture v2.0 — Client-side AES-256-GCM encryption, PBKDF2 key derivation, optional WebAuthn biometric binding, optional offline AI inference`;
       const encoder = new TextEncoder();
       const data = encoder.encode(policyText + new Date().toISOString().slice(0, 10));
       const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -208,21 +208,21 @@ const DataFlowNode = ({ label, icon: Icon, type, delay }: { label: string; icon:
 const architectureGuarantees = [
   {
     icon: EyeOff,
-    title: "Zero-Knowledge Conversations",
-    description: "We mathematically cannot read your AI conversations — they're encrypted with keys only you possess",
-    proof: "AES-256-GCM encryption with PBKDF2-derived keys (600,000 iterations). Server stores only ciphertext. No master key exists.",
+    title: "Client-Side Encrypted Vault",
+    description: "Vault entries are encrypted in your browser with keys derived from your master password",
+    proof: "AES-256-GCM encryption with PBKDF2-derived keys (600,000 iterations). Server stores only ciphertext. No master key exists on our servers.",
   },
   {
     icon: Fingerprint,
     title: "Device-Bound Authentication",
-    description: "Biometric credentials never leave your hardware's secure enclave",
+    description: "Biometric credentials are stored in your device's secure enclave when supported",
     proof: "WebAuthn Level 2 with platform authenticator. Private keys stored in TPM/Secure Enclave. No server-side credential storage.",
   },
   {
     icon: Database,
-    title: "Local-First Architecture",
-    description: "AI models, knowledge graphs, and activity logs run entirely on your device",
-    proof: "IndexedDB for persistence. Web Workers for computation. No telemetry endpoints. Network can be fully severed via Kill Switch.",
+    title: "Optional Local-First Mode",
+    description: "AI models and knowledge graphs can run on your device when you opt in to offline mode",
+    proof: "IndexedDB for persistence. Web Workers for computation. Offline AI requires explicit user opt-in to download models.",
   },
   {
     icon: Shield,
@@ -520,7 +520,7 @@ const TrustPage = () => {
                 transition={{ delay: 0.7 }}
                 className="p-6 rounded-xl border border-border/50 bg-card/50"
               >
-                <h3 className="font-bold text-foreground mb-4 text-center">Zero-Knowledge Data Flow</h3>
+                <h3 className="font-bold text-foreground mb-4 text-center">Encrypted Data Flow</h3>
                 <div className="flex items-center justify-center gap-2 flex-wrap">
                   <div className="px-3 py-2 rounded-lg bg-success/10 border border-success/30 text-xs font-mono text-success">
                     YOUR DEVICE
