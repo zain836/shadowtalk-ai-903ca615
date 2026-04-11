@@ -746,9 +746,28 @@ const ChatbotPage = () => {
     if (toolDetection.tool && toolDetection.confidence >= 70) {
       console.log('[ChatbotPage] Tool detected:', toolDetection.tool, 'confidence:', toolDetection.confidence);
       
+      // Add user message + tool card inline
+      const toolCardId = crypto.randomUUID();
+      const addToolCard = (tool: string, params?: Record<string, string>) => {
+        setMessages(prev => [
+          ...prev,
+          { id: crypto.randomUUID(), type: 'user', content: messageToSend, timestamp: new Date() },
+          { id: toolCardId, type: 'ai', content: '', timestamp: new Date(), toolExecution: { tool, status: 'running', params } }
+        ]);
+        setMessage("");
+        setSelectedFile(null);
+      };
+
+      const markToolComplete = (result?: string) => {
+        setMessages(prev => prev.map(m => 
+          m.id === toolCardId 
+            ? { ...m, toolExecution: { ...m.toolExecution!, status: 'complete' as const, result } }
+            : m
+        ));
+      };
+      
       switch (toolDetection.tool) {
         case 'image_decoder':
-          // If there's an attachment, use it for decoding
           if (attachmentToSend?.type === 'image') {
             setImageDecoderImage(attachmentToSend.data);
             setImageDecoderAutoAnalyze(true);
@@ -756,24 +775,15 @@ const ChatbotPage = () => {
             setImageDecoderImage(undefined);
             setImageDecoderAutoAnalyze(false);
           }
+          addToolCard('image_decoder', toolDetection.params);
           setShowImageDecoder(true);
-          toast({ 
-            title: "🔍 Image Decoder", 
-            description: attachmentToSend?.type === 'image' ? "Analyzing your image..." : "Upload an image to decode..." 
-          });
-          setMessage("");
-          setSelectedFile(null);
           return;
         
         case 'image_generator':
+          addToolCard('image_generator', toolDetection.params);
           setImageGeneratorPrompt(toolDetection.params?.prompt);
           setImageGeneratorAutoGenerate(toolDetection.autoExecute ?? false);
           setShowImageGenerator(true);
-          toast({ 
-            title: "🎨 Image Generator", 
-            description: toolDetection.autoExecute ? "Generating your image..." : "Opening image generator..." 
-          });
-          setMessage("");
           return;
         
         case 'deep_research':
