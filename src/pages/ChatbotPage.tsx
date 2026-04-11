@@ -859,100 +859,84 @@ const ChatbotPage = () => {
           return;
         
         case 'api_marketplace':
+          addToolCard('api_marketplace');
           setShowAPIMarketplace(true);
-          toast({ title: "🛒 API Marketplace", description: "Opening developer portal..." });
-          setMessage("");
           return;
         
         case 'analytics':
+          addToolCard('analytics');
           setShowAnalytics(true);
-          toast({ title: "📈 Analytics", description: "Opening analytics dashboard..." });
-          setMessage("");
           return;
         
         case 'web_search':
           setChatMode('research');
-          // Continue with normal chat in research mode
           break;
         
         case 'document_generator':
+          addToolCard('document_generator', toolDetection.params);
           setDocumentGeneratorTopic(toolDetection.params?.topic || messageToSend);
           setDocumentGeneratorAutoGenerate(toolDetection.autoExecute || false);
           setShowDocumentGenerator(true);
-          toast({ title: "📄 Document Generator", description: "Creating your document..." });
-          setMessage("");
           return;
         
         case 'daily_planner':
+          addToolCard('daily_planner');
           setShowDailyPlanner(true);
-          toast({ title: "📅 Daily Planner", description: "Opening your day planner..." });
-          setMessage("");
           return;
         
         case 'wordle_game':
+          addToolCard('wordle_game');
           setShowWordleGame(true);
-          toast({ title: "🟩 Wordle Bot", description: "Starting offline word game..." });
-          setMessage("");
           return;
 
         case 'script_automation':
+          addToolCard('script_automation');
           setShowScriptAutomation(true);
-          toast({ title: "⚙️ Script Automation", description: "Opening automation editor..." });
-          setMessage("");
           return;
 
         case 'agent_workflows':
+          addToolCard('agent_workflows');
           setShowAgentWorkflows(true);
-          toast({ title: "🤖 Agent Workflows", description: "Opening AI workflow builder..." });
-          setMessage("");
           return;
 
         case 'model_fine_tuning':
+          addToolCard('model_fine_tuning');
           setShowModelFineTuning(true);
-          toast({ title: "🧬 Model Fine-Tuning", description: "Opening model trainer..." });
-          setMessage("");
           return;
 
         case 'white_label':
+          addToolCard('white_label');
           setShowWhiteLabelBranding(true);
-          toast({ title: "🎨 Branding", description: "Opening white-label customizer..." });
-          setMessage("");
           return;
 
         case 'gemini_analytics':
+          addToolCard('gemini_analytics');
           setShowGeminiAnalytics(true);
-          toast({ title: "📊 API Analytics", description: "Opening key analytics..." });
-          setMessage("");
           return;
 
         case 'google_integration':
+          addToolCard('google_integration');
           setShowGoogleIntegration(true);
-          toast({ title: "🔗 Google Integration", description: "Opening Google panel..." });
-          setMessage("");
           return;
 
         case 'sovereign_models':
+          addToolCard('sovereign_models');
           setShowSovereignModels(true);
-          toast({ title: "🏠 Sovereign AI", description: "Opening local model manager..." });
-          setMessage("");
           return;
 
         case 'security_audit':
+          addToolCard('security_audit', toolDetection.params);
           setChatMode('hsca');
-          toast({ title: "🔒 Security Audit", description: "Switching to security audit mode..." });
-          setMessage("");
           return;
 
         case 'eco_actions':
+          addToolCard('eco_actions');
           setChatMode('ppag');
-          toast({ title: "🌍 Eco Actions", description: "Switching to planetary action mode..." });
-          setMessage("");
           return;
 
         case 'vision_agent':
+          addToolCard('vision_agent');
           setShowVisionAgent(true);
-          toast({ title: "👁️ Vision Agent", description: "Activating real-time vision AI..." });
-          setMessage("");
           return;
 
         case 'command_palette':
@@ -961,70 +945,60 @@ const ChatbotPage = () => {
           return;
 
         case 'knowledge_vault':
+          addToolCard('knowledge_vault');
           setShowKnowledgeVault(true);
-          toast({ title: "📚 Knowledge Vault", description: "Opening knowledge base..." });
-          setMessage("");
           return;
 
         case 'memory_panel':
+          addToolCard('memory_panel');
           setShowMemoryPanel(true);
-          toast({ title: "🧠 Memory Panel", description: "Opening AI memory..." });
-          setMessage("");
           return;
 
         case 'mission_control':
+          addToolCard('mission_control');
           setShowMissionControl(true);
-          toast({ title: "🚀 Mission Control", description: "Opening S.E.E. dashboard..." });
-          setMessage("");
           return;
 
         case 'custom_instructions':
+          addToolCard('custom_instructions');
           setShowCustomInstructions(true);
-          toast({ title: "⚙️ Custom Instructions", description: "Opening instruction editor..." });
-          setMessage("");
           return;
 
         case 'conversation_branching':
+          addToolCard('conversation_branching');
           setShowConversationBranching(true);
-          toast({ title: "🌿 Branching", description: "Opening conversation branches..." });
-          setMessage("");
           return;
 
         case 'bunker_mode':
+          addToolCard('bunker_mode');
           setShowBunkerMode(true);
           robustOfflineAI.loadModel();
-          toast({ title: "🏰 Bunker Mode", description: "Activating sovereign AI..." });
-          setMessage("");
           return;
 
         case 'strategy_agent':
+          addToolCard('strategy_agent');
           navigate('/strategy-agent');
-          setMessage("");
           return;
 
         case 'cognitive_loop':
+          addToolCard('cognitive_loop');
           setShowCognitiveLoop(true);
-          toast({ title: "🔄 Cognitive Loop", description: "Activating multi-agent reasoning..." });
-          setMessage("");
           return;
 
         case 'canvas_document':
+          addToolCard('canvas_document');
           setCanvasState({ content: "", type: "document", language: "javascript" });
-          toast({ title: "📝 Document Canvas", description: "Opening document editor..." });
-          setMessage("");
           return;
 
         case 'music_generator':
+          addToolCard('music_generator', toolDetection.params);
           setMusicGeneratorPrompt(toolDetection.params?.prompt);
           setMusicGeneratorAutoGenerate(toolDetection.autoExecute ?? false);
           setShowMusicGenerator(true);
-          toast({ title: "🎵 Music Studio", description: toolDetection.autoExecute ? "Generating your audio..." : "Opening music studio..." });
-          setMessage("");
           return;
 
         case 'referral':
           navigate('/profile');
-          toast({ title: "🎁 Referral Program", description: "Opening referral dashboard..." });
           setMessage("");
           return;
 
@@ -1034,14 +1008,18 @@ const ChatbotPage = () => {
           return;
 
         case 'marketplace':
+          addToolCard('marketplace');
           setShowPluginsManager(true);
-          toast({ title: "🛍️ Marketplace", description: "Opening plugins marketplace..." });
-          setMessage("");
           return;
 
         case 'privacy_score':
           navigate('/privacy-score');
           setMessage("");
+          return;
+
+        case 'presentation_builder':
+          addToolCard('presentation_builder', toolDetection.params);
+          navigate('/presentations');
           return;
       }
     }
