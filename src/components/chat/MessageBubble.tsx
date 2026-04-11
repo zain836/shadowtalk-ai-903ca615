@@ -10,6 +10,8 @@ import 'katex/dist/katex.min.css';
 import { CodeBlock } from './CodeBlock';
 import { useToast } from '@/hooks/use-toast';
 import { DocumentArtifact, detectDocumentArtifact } from './DocumentArtifact';
+import { ToolExecutionCard } from './ToolExecutionCard';
+import { ToolType } from '@/hooks/useToolOrchestrator';
 
 const extractUrls = (text: string): string[] => {
   const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
