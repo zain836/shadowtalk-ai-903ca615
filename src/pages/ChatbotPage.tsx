@@ -812,44 +812,35 @@ const ChatbotPage = () => {
           return;
         
         case 'creative_synthesis':
+          addToolCard('creative_synthesis', toolDetection.params);
           setCreativeSynthesisPrompt(toolDetection.params?.prompt || toolDetection.originalMessage);
           setCreativeSynthesisAutoGenerate(toolDetection.autoExecute ?? false);
           setShowCreativeSynthesis(true);
-          toast({ 
-            title: "✨ Creative Synthesis", 
-            description: toolDetection.autoExecute ? "Creating your content..." : "Opening creative workspace..." 
-          });
-          setMessage("");
           return;
         
         case 'shadow_live':
+          addToolCard('shadow_live');
           setShowShadowTalkLive(true);
-          toast({ title: "🎙️ ShadowTalk Live", description: "Starting voice conversation..." });
-          setMessage("");
           return;
         
         case 'code_canvas':
+          addToolCard('code_canvas');
           setCanvasState({ content: "", type: "code", language: "javascript" });
-          toast({ title: "💻 Code Canvas", description: "Opening code editor..." });
-          setMessage("");
           return;
         
         case 'data_organizer':
+          addToolCard('data_organizer');
           setShowDataOrganizer(true);
-          toast({ title: "📊 Data Organizer", description: "Opening data organizer..." });
-          setMessage("");
           return;
         
         case 'camera_capture':
+          addToolCard('camera_capture');
           setShowCameraCapture(true);
-          toast({ title: "📷 Camera", description: "Opening camera..." });
-          setMessage("");
           return;
         
         case 'stealth_vault':
+          addToolCard('stealth_vault');
           setShowStealthVault(true);
-          toast({ title: "🔐 Stealth Vault", description: "Opening secure vault..." });
-          setMessage("");
           return;
         
         case 'calculator':
@@ -857,15 +848,14 @@ const ChatbotPage = () => {
           setMessages(prev => [
             ...prev, 
             { id: crypto.randomUUID(), type: 'user', content: messageToSend, timestamp: new Date() },
-            { id: crypto.randomUUID(), type: 'ai', content: `🧮 ${calcResult}`, timestamp: new Date() }
+            { id: crypto.randomUUID(), type: 'ai', content: `🧮 ${calcResult}`, timestamp: new Date(), toolExecution: { tool: 'calculator', status: 'complete' as const, result: calcResult } }
           ]);
           setMessage("");
           return;
         
         case 'multi_model':
+          addToolCard('multi_model');
           setShowMultiModel(true);
-          toast({ title: "🧠 Multi-Model", description: "Opening AI orchestrator..." });
-          setMessage("");
           return;
         
         case 'api_marketplace':
