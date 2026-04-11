@@ -122,6 +122,7 @@ type Message = {
   timestamp: Date;
   attachment?: { type: 'image' | 'file'; data: string; name: string; mimeType: string };
   imageUrl?: string; // For AI-generated images
+  toolExecution?: { tool: string; status: 'pending' | 'running' | 'complete' | 'error' | 'confirm'; params?: Record<string, string>; result?: string };
 };
 type Conversation = { id: string; title: string; created_at: string };
 type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive" | "spicy";
@@ -745,9 +746,28 @@ const ChatbotPage = () => {
     if (toolDetection.tool && toolDetection.confidence >= 70) {
       console.log('[ChatbotPage] Tool detected:', toolDetection.tool, 'confidence:', toolDetection.confidence);
       
+      // Add user message + tool card inline
+      const toolCardId = crypto.randomUUID();
+      const addToolCard = (tool: string, params?: Record<string, string>) => {
+        setMessages(prev => [
+          ...prev,
+          { id: crypto.randomUUID(), type: 'user', content: messageToSend, timestamp: new Date() },
+          { id: toolCardId, type: 'ai', content: '', timestamp: new Date(), toolExecution: { tool, status: 'running', params } }
+        ]);
+        setMessage("");
+        setSelectedFile(null);
+      };
+
+      const markToolComplete = (result?: string) => {
+        setMessages(prev => prev.map(m => 
+          m.id === toolCardId 
+            ? { ...m, toolExecution: { ...m.toolExecution!, status: 'complete' as const, result } }
+            : m
+        ));
+      };
+      
       switch (toolDetection.tool) {
         case 'image_decoder':
-          // If there's an attachment, use it for decoding
           if (attachmentToSend?.type === 'image') {
             setImageDecoderImage(attachmentToSend.data);
             setImageDecoderAutoAnalyze(true);
@@ -755,100 +775,72 @@ const ChatbotPage = () => {
             setImageDecoderImage(undefined);
             setImageDecoderAutoAnalyze(false);
           }
+          addToolCard('image_decoder', toolDetection.params);
           setShowImageDecoder(true);
-          toast({ 
-            title: "🔍 Image Decoder", 
-            description: attachmentToSend?.type === 'image' ? "Analyzing your image..." : "Upload an image to decode..." 
-          });
-          setMessage("");
-          setSelectedFile(null);
           return;
         
         case 'image_generator':
+          addToolCard('image_generator', toolDetection.params);
           setImageGeneratorPrompt(toolDetection.params?.prompt);
           setImageGeneratorAutoGenerate(toolDetection.autoExecute ?? false);
           setShowImageGenerator(true);
-          toast({ 
-            title: "🎨 Image Generator", 
-            description: toolDetection.autoExecute ? "Generating your image..." : "Opening image generator..." 
-          });
-          setMessage("");
           return;
         
         case 'deep_research':
+          addToolCard('deep_research', toolDetection.params);
           setDeepResearchQuery(toolDetection.params?.query);
           setDeepResearchAutoStart(toolDetection.autoExecute ?? false);
           setShowDeepResearch(true);
-          toast({ 
-            title: "🔬 Deep Research", 
-            description: toolDetection.autoExecute ? "Starting research..." : "Opening research panel..." 
-          });
-          setMessage("");
           return;
         
         case 'agentic_runner':
+          addToolCard('agentic_runner', toolDetection.params);
           setAgenticGoal(toolDetection.params?.goal || toolDetection.originalMessage);
           setAgenticAutoStart(toolDetection.autoExecute ?? false);
           setShowAgenticRunner(true);
-          toast({ 
-            title: "🤖 Agent Activated", 
-            description: toolDetection.autoExecute ? "Starting autonomous task..." : "Opening task runner..." 
-          });
-          setMessage("");
           return;
         
         case 'shadow_browser':
+          addToolCard('shadow_browser', toolDetection.params);
           setBrowserInitialUrl(toolDetection.params?.url || 'https://google.com');
           setShowShadowBrowser(true);
-          toast({ title: "🌐 Shadow Browser", description: "Opening browser..." });
-          setMessage("");
           return;
         
         case 'visual_reasoning':
+          addToolCard('visual_reasoning');
           setShowVisualReasoning(true);
-          toast({ title: "👁️ Visual Reasoning", description: "Upload an image to analyze..." });
-          setMessage("");
           return;
         
         case 'creative_synthesis':
+          addToolCard('creative_synthesis', toolDetection.params);
           setCreativeSynthesisPrompt(toolDetection.params?.prompt || toolDetection.originalMessage);
           setCreativeSynthesisAutoGenerate(toolDetection.autoExecute ?? false);
           setShowCreativeSynthesis(true);
-          toast({ 
-            title: "✨ Creative Synthesis", 
-            description: toolDetection.autoExecute ? "Creating your content..." : "Opening creative workspace..." 
-          });
-          setMessage("");
           return;
         
         case 'shadow_live':
+          addToolCard('shadow_live');
           setShowShadowTalkLive(true);
-          toast({ title: "🎙️ ShadowTalk Live", description: "Starting voice conversation..." });
-          setMessage("");
           return;
         
         case 'code_canvas':
+          addToolCard('code_canvas');
           setCanvasState({ content: "", type: "code", language: "javascript" });
-          toast({ title: "💻 Code Canvas", description: "Opening code editor..." });
-          setMessage("");
           return;
         
         case 'data_organizer':
+          addToolCard('data_organizer');
           setShowDataOrganizer(true);
-          toast({ title: "📊 Data Organizer", description: "Opening data organizer..." });
-          setMessage("");
           return;
         
         case 'camera_capture':
+          addToolCard('camera_capture');
           setShowCameraCapture(true);
-          toast({ title: "📷 Camera", description: "Opening camera..." });
-          setMessage("");
           return;
         
         case 'stealth_vault':
+          addToolCard('stealth_vault');
           setShowStealthVault(true);
-          toast({ title: "🔐 Stealth Vault", description: "Opening secure vault..." });
-          setMessage("");
           return;
         
         case 'calculator':
@@ -856,112 +848,95 @@ const ChatbotPage = () => {
           setMessages(prev => [
             ...prev, 
             { id: crypto.randomUUID(), type: 'user', content: messageToSend, timestamp: new Date() },
-            { id: crypto.randomUUID(), type: 'ai', content: `🧮 ${calcResult}`, timestamp: new Date() }
+            { id: crypto.randomUUID(), type: 'ai', content: `🧮 ${calcResult}`, timestamp: new Date(), toolExecution: { tool: 'calculator', status: 'complete' as const, result: calcResult } }
           ]);
           setMessage("");
           return;
         
         case 'multi_model':
+          addToolCard('multi_model');
           setShowMultiModel(true);
-          toast({ title: "🧠 Multi-Model", description: "Opening AI orchestrator..." });
-          setMessage("");
           return;
         
         case 'api_marketplace':
+          addToolCard('api_marketplace');
           setShowAPIMarketplace(true);
-          toast({ title: "🛒 API Marketplace", description: "Opening developer portal..." });
-          setMessage("");
           return;
         
         case 'analytics':
+          addToolCard('analytics');
           setShowAnalytics(true);
-          toast({ title: "📈 Analytics", description: "Opening analytics dashboard..." });
-          setMessage("");
           return;
         
         case 'web_search':
           setChatMode('research');
-          // Continue with normal chat in research mode
           break;
         
         case 'document_generator':
+          addToolCard('document_generator', toolDetection.params);
           setDocumentGeneratorTopic(toolDetection.params?.topic || messageToSend);
           setDocumentGeneratorAutoGenerate(toolDetection.autoExecute || false);
           setShowDocumentGenerator(true);
-          toast({ title: "📄 Document Generator", description: "Creating your document..." });
-          setMessage("");
           return;
         
         case 'daily_planner':
+          addToolCard('daily_planner');
           setShowDailyPlanner(true);
-          toast({ title: "📅 Daily Planner", description: "Opening your day planner..." });
-          setMessage("");
           return;
         
         case 'wordle_game':
+          addToolCard('wordle_game');
           setShowWordleGame(true);
-          toast({ title: "🟩 Wordle Bot", description: "Starting offline word game..." });
-          setMessage("");
           return;
 
         case 'script_automation':
+          addToolCard('script_automation');
           setShowScriptAutomation(true);
-          toast({ title: "⚙️ Script Automation", description: "Opening automation editor..." });
-          setMessage("");
           return;
 
         case 'agent_workflows':
+          addToolCard('agent_workflows');
           setShowAgentWorkflows(true);
-          toast({ title: "🤖 Agent Workflows", description: "Opening AI workflow builder..." });
-          setMessage("");
           return;
 
         case 'model_fine_tuning':
+          addToolCard('model_fine_tuning');
           setShowModelFineTuning(true);
-          toast({ title: "🧬 Model Fine-Tuning", description: "Opening model trainer..." });
-          setMessage("");
           return;
 
         case 'white_label':
+          addToolCard('white_label');
           setShowWhiteLabelBranding(true);
-          toast({ title: "🎨 Branding", description: "Opening white-label customizer..." });
-          setMessage("");
           return;
 
         case 'gemini_analytics':
+          addToolCard('gemini_analytics');
           setShowGeminiAnalytics(true);
-          toast({ title: "📊 API Analytics", description: "Opening key analytics..." });
-          setMessage("");
           return;
 
         case 'google_integration':
+          addToolCard('google_integration');
           setShowGoogleIntegration(true);
-          toast({ title: "🔗 Google Integration", description: "Opening Google panel..." });
-          setMessage("");
           return;
 
         case 'sovereign_models':
+          addToolCard('sovereign_models');
           setShowSovereignModels(true);
-          toast({ title: "🏠 Sovereign AI", description: "Opening local model manager..." });
-          setMessage("");
           return;
 
         case 'security_audit':
+          addToolCard('security_audit', toolDetection.params);
           setChatMode('hsca');
-          toast({ title: "🔒 Security Audit", description: "Switching to security audit mode..." });
-          setMessage("");
           return;
 
         case 'eco_actions':
+          addToolCard('eco_actions');
           setChatMode('ppag');
-          toast({ title: "🌍 Eco Actions", description: "Switching to planetary action mode..." });
-          setMessage("");
           return;
 
         case 'vision_agent':
+          addToolCard('vision_agent');
           setShowVisionAgent(true);
-          toast({ title: "👁️ Vision Agent", description: "Activating real-time vision AI..." });
-          setMessage("");
           return;
 
         case 'command_palette':
@@ -970,70 +945,60 @@ const ChatbotPage = () => {
           return;
 
         case 'knowledge_vault':
+          addToolCard('knowledge_vault');
           setShowKnowledgeVault(true);
-          toast({ title: "📚 Knowledge Vault", description: "Opening knowledge base..." });
-          setMessage("");
           return;
 
         case 'memory_panel':
+          addToolCard('memory_panel');
           setShowMemoryPanel(true);
-          toast({ title: "🧠 Memory Panel", description: "Opening AI memory..." });
-          setMessage("");
           return;
 
         case 'mission_control':
+          addToolCard('mission_control');
           setShowMissionControl(true);
-          toast({ title: "🚀 Mission Control", description: "Opening S.E.E. dashboard..." });
-          setMessage("");
           return;
 
         case 'custom_instructions':
+          addToolCard('custom_instructions');
           setShowCustomInstructions(true);
-          toast({ title: "⚙️ Custom Instructions", description: "Opening instruction editor..." });
-          setMessage("");
           return;
 
         case 'conversation_branching':
+          addToolCard('conversation_branching');
           setShowConversationBranching(true);
-          toast({ title: "🌿 Branching", description: "Opening conversation branches..." });
-          setMessage("");
           return;
 
         case 'bunker_mode':
+          addToolCard('bunker_mode');
           setShowBunkerMode(true);
           robustOfflineAI.loadModel();
-          toast({ title: "🏰 Bunker Mode", description: "Activating sovereign AI..." });
-          setMessage("");
           return;
 
         case 'strategy_agent':
+          addToolCard('strategy_agent');
           navigate('/strategy-agent');
-          setMessage("");
           return;
 
         case 'cognitive_loop':
+          addToolCard('cognitive_loop');
           setShowCognitiveLoop(true);
-          toast({ title: "🔄 Cognitive Loop", description: "Activating multi-agent reasoning..." });
-          setMessage("");
           return;
 
         case 'canvas_document':
+          addToolCard('canvas_document');
           setCanvasState({ content: "", type: "document", language: "javascript" });
-          toast({ title: "📝 Document Canvas", description: "Opening document editor..." });
-          setMessage("");
           return;
 
         case 'music_generator':
+          addToolCard('music_generator', toolDetection.params);
           setMusicGeneratorPrompt(toolDetection.params?.prompt);
           setMusicGeneratorAutoGenerate(toolDetection.autoExecute ?? false);
           setShowMusicGenerator(true);
-          toast({ title: "🎵 Music Studio", description: toolDetection.autoExecute ? "Generating your audio..." : "Opening music studio..." });
-          setMessage("");
           return;
 
         case 'referral':
           navigate('/profile');
-          toast({ title: "🎁 Referral Program", description: "Opening referral dashboard..." });
           setMessage("");
           return;
 
@@ -1043,14 +1008,18 @@ const ChatbotPage = () => {
           return;
 
         case 'marketplace':
+          addToolCard('marketplace');
           setShowPluginsManager(true);
-          toast({ title: "🛍️ Marketplace", description: "Opening plugins marketplace..." });
-          setMessage("");
           return;
 
         case 'privacy_score':
           navigate('/privacy-score');
           setMessage("");
+          return;
+
+        case 'presentation_builder':
+          addToolCard('presentation_builder', toolDetection.params);
+          navigate('/presentations');
           return;
       }
     }

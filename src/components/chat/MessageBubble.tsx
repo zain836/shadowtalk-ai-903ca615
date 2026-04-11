@@ -10,6 +10,8 @@ import 'katex/dist/katex.min.css';
 import { CodeBlock } from './CodeBlock';
 import { useToast } from '@/hooks/use-toast';
 import { DocumentArtifact, detectDocumentArtifact } from './DocumentArtifact';
+import { ToolExecutionCard } from './ToolExecutionCard';
+import { ToolType } from '@/hooks/useToolOrchestrator';
 
 const extractUrls = (text: string): string[] => {
   const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
@@ -28,6 +30,7 @@ interface Message {
   timestamp: Date;
   attachment?: { type: 'image' | 'file'; data: string; name: string; mimeType: string };
   imageUrl?: string;
+  toolExecution?: { tool: string; status: 'pending' | 'running' | 'complete' | 'error' | 'confirm'; params?: Record<string, string>; result?: string };
 }
 
 interface MessageBubbleProps {
@@ -269,6 +272,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             </div>
           )}
         </div>
+
+        {/* Tool Execution Card */}
+        {message.toolExecution && (
+          <ToolExecutionCard
+            tool={message.toolExecution.tool as ToolType}
+            status={message.toolExecution.status}
+            params={message.toolExecution.params}
+            result={message.toolExecution.result}
+          />
+        )}
 
         {/* Document Artifact - auto-detected from AI response */}
         {documentArtifact && (

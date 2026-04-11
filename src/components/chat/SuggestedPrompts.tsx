@@ -1,5 +1,5 @@
-import { Code, Languages, FileText, Lightbulb, Image, Pen, Music, Search, Globe, Brain, Bug, ArrowRight } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Code, Languages, FileText, Lightbulb, Image, Pen, Music, Search, Globe, Brain, Bug, ArrowRight, Shield, Play } from "lucide-react";
+import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 
 interface SuggestedPromptsProps {
@@ -8,42 +8,34 @@ interface SuggestedPromptsProps {
 }
 
 const capabilities = [
-  { icon: Code, label: "Code", prompt: "Help me write a function that ", accent: "from-blue-500/20 to-blue-600/10", border: "border-blue-500/20 hover:border-blue-400/40", glowColor: "rgba(59,130,246,0.15)", glowHover: "group-hover:shadow-blue-500/10" },
-  { icon: Lightbulb, label: "Brainstorm", prompt: "Give me 5 creative ideas for ", accent: "from-amber-500/20 to-amber-600/10", border: "border-amber-500/20 hover:border-amber-400/40", glowColor: "rgba(245,158,11,0.15)", glowHover: "group-hover:shadow-amber-500/10" },
-  { icon: Image, label: "Imagine", prompt: "/imagine ", accent: "from-violet-500/20 to-violet-600/10", border: "border-violet-500/20 hover:border-violet-400/40", glowColor: "rgba(139,92,246,0.15)", glowHover: "group-hover:shadow-violet-500/10" },
-  { icon: Search, label: "Research", prompt: "Research and explain: ", accent: "from-emerald-500/20 to-emerald-600/10", border: "border-emerald-500/20 hover:border-emerald-400/40", glowColor: "rgba(16,185,129,0.15)", glowHover: "group-hover:shadow-emerald-500/10" },
-  { icon: Brain, label: "Explain", prompt: "Explain in simple terms: ", accent: "from-pink-500/20 to-pink-600/10", border: "border-pink-500/20 hover:border-pink-400/40", glowColor: "rgba(236,72,153,0.15)", glowHover: "group-hover:shadow-pink-500/10" },
-  { icon: Globe, label: "Browse", prompt: "Search the web for latest info on ", accent: "from-cyan-500/20 to-cyan-600/10", border: "border-cyan-500/20 hover:border-cyan-400/40", glowColor: "rgba(6,182,212,0.15)", glowHover: "group-hover:shadow-cyan-500/10" },
+  { icon: Search, label: "Research", prompt: "Research and explain: ", description: "Deep dive into any topic" },
+  { icon: Code, label: "Code", prompt: "Help me write a function that ", description: "Write, debug, or explain code" },
+  { icon: Image, label: "Create Image", prompt: "/imagine ", description: "Generate images from text" },
+  { icon: FileText, label: "Write Document", prompt: "Write a detailed document about ", description: "Articles, emails, reports" },
+  { icon: Brain, label: "Explain", prompt: "Explain in simple terms: ", description: "Break down complex topics" },
+  { icon: Globe, label: "Browse Web", prompt: "Search the web for latest info on ", description: "Real-time web search" },
 ];
 
 const quickActions = [
-  { icon: FileText, label: "Summarize", prompt: "Summarize the following text: " },
-  { icon: Bug, label: "Debug", prompt: "Help me debug this error: " },
+  { icon: Bug, label: "Debug code", prompt: "Help me debug this error: " },
   { icon: Languages, label: "Translate", prompt: "Translate this to Spanish: " },
-  { icon: Music, label: "Music", prompt: "Generate a chill lo-fi track with " },
-  { icon: Pen, label: "Write", prompt: "Write a detailed essay about " },
+  { icon: Music, label: "Create music", prompt: "Generate a chill lo-fi track with " },
+  { icon: Pen, label: "Write essay", prompt: "Write a detailed essay about " },
+  { icon: Lightbulb, label: "Brainstorm", prompt: "Give me 5 creative ideas for " },
+  { icon: Shield, label: "Security scan", prompt: "Run a security audit on " },
+  { icon: Play, label: "Automate task", prompt: "Automate this workflow: " },
 ];
 
 const greetings = [
-  "What can I help you build today?",
-  "Ready to create something extraordinary.",
+  "What can I help you with today?",
+  "Ready to create something great.",
   "Let's solve something together.",
-  "Your intelligence engine awaits.",
+  "How can I assist you?",
 ];
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.06, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
-  }),
-};
 
 export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
   const [greeting] = useState(() => greetings[Math.floor(Math.random() * greetings.length)]);
   const [typedText, setTypedText] = useState("");
-  const [gridHovered, setGridHovered] = useState(false);
 
   useEffect(() => {
     let i = 0;
@@ -51,40 +43,19 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
       setTypedText(greeting.slice(0, i + 1));
       i++;
       if (i >= greeting.length) clearInterval(interval);
-    }, 32);
+    }, 30);
     return () => clearInterval(interval);
   }, [greeting]);
 
   return (
     <div className="w-full flex flex-col items-center justify-center px-4 select-none max-w-2xl mx-auto">
-
       {/* Header */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
         className="text-center mb-8"
       >
-        {/* Minimal logo mark */}
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-          className="mx-auto mb-5 w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center backdrop-blur-sm"
-        >
-          <motion.div
-            animate={{ rotate: [0, 5, -5, 0] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-primary">
-              <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-              <path d="M2 17l10 5 10-5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" opacity="0.5" />
-              <path d="M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" opacity="0.75" />
-            </svg>
-          </motion.div>
-        </motion.div>
-
-        {/* Typed greeting */}
         <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-foreground/90 mb-1.5 min-h-[2rem]">
           {typedText}
           <motion.span
@@ -93,172 +64,68 @@ export const SuggestedPrompts = ({ onSelect }: SuggestedPromptsProps) => {
             className="inline-block w-[2px] h-5 bg-primary ml-0.5 align-middle"
           />
         </h2>
-        <p className="text-xs text-muted-foreground/40 tracking-[0.2em] uppercase font-mono">
-          sovereign intelligence engine
+        <p className="text-xs text-muted-foreground/50 mt-1">
+          Ask anything, or pick a suggestion below
         </p>
       </motion.div>
 
       {/* Capability Grid */}
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={{ visible: { transition: { staggerChildren: 0.1, delayChildren: 0.2 } } }}
-        className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 w-full mb-5 relative"
-        onMouseEnter={() => setGridHovered(true)}
-        onMouseLeave={() => setGridHovered(false)}
-      >
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full mb-5">
         {capabilities.map((cap, i) => {
           const Icon = cap.icon;
           return (
             <motion.button
               key={cap.label}
-              variants={{
-                hidden: { opacity: 0, y: 30, scale: 0.85, filter: "blur(8px)" },
-                visible: {
-                  opacity: 1,
-                  y: 0,
-                  scale: 1,
-                  filter: "blur(0px)",
-                  transition: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
-                },
-              }}
-              whileHover={{
-                scale: 1.05,
-                y: -4,
-                transition: { type: "spring", stiffness: 400, damping: 15 },
-              }}
-              whileTap={{ scale: 0.96 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + i * 0.05, duration: 0.3 }}
               onClick={() => onSelect(cap.prompt)}
-              className={`group relative flex flex-col items-start gap-2.5 p-3.5 rounded-xl border bg-card/30 backdrop-blur-sm cursor-pointer transition-all duration-500 hover:bg-card/50 overflow-hidden ${cap.border}`}
-              style={{
-                boxShadow: gridHovered
-                  ? `0 0 20px ${cap.glowColor}, 0 0 40px ${cap.glowColor}, inset 0 0 15px ${cap.glowColor}`
-                  : "0 0 0px transparent",
-                borderColor: gridHovered ? cap.glowColor.replace("0.15", "0.4") : undefined,
-              }}
+              className="group flex flex-col items-start gap-2 p-3 rounded-xl border border-border/20 bg-card/30 hover:bg-card/60 hover:border-border/40 cursor-pointer transition-all duration-200 text-left"
             >
-              {/* Full-card glow overlay on grid hover */}
-              <motion.div
-                className="absolute inset-0 rounded-xl pointer-events-none"
-                animate={{
-                  opacity: gridHovered ? 1 : 0,
-                }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                style={{
-                  background: `radial-gradient(ellipse at 50% 0%, ${cap.glowColor} 0%, transparent 70%)`,
-                }}
-              />
-
-              {/* Scanning line effect */}
-              <motion.div
-                className="absolute inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent pointer-events-none"
-                initial={{ top: 0, opacity: 0 }}
-                animate={{ top: ["0%", "100%", "0%"], opacity: [0, 0.6, 0] }}
-                transition={{ duration: 4 + i * 0.5, repeat: Infinity, ease: "easeInOut", delay: i * 0.8 }}
-              />
-
-              {/* Animated gradient accent top bar */}
-              <motion.div
-                className={`absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r ${cap.accent} rounded-t-xl`}
-                initial={{ scaleX: 0, opacity: 0 }}
-                animate={{ scaleX: 1, opacity: gridHovered ? 1 : 0.6 }}
-                transition={{ delay: 0.5 + i * 0.1, duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] }}
-                style={{
-                  originX: 0,
-                  height: gridHovered ? 2 : 1,
-                }}
-              />
-
-              {/* Corner glow pulse - intensifies on grid hover */}
-              <motion.div
-                className={`absolute -top-4 -right-4 w-16 h-16 rounded-full bg-gradient-to-br ${cap.accent} blur-xl pointer-events-none`}
-                animate={{
-                  opacity: gridHovered ? [0.3, 0.7, 0.3] : [0, 0.4, 0],
-                  scale: gridHovered ? [1, 1.5, 1] : [0.8, 1.2, 0.8],
-                }}
-                transition={{ duration: 2 + i * 0.2, repeat: Infinity, ease: "easeInOut", delay: i * 0.3 }}
-              />
-
-              {/* Icon with breathing float */}
-              <motion.div
-                animate={{
-                  y: [0, -3, 0],
-                  rotate: [0, 1, -1, 0],
-                }}
-                transition={{ duration: 3.5 + i * 0.4, repeat: Infinity, ease: "easeInOut", delay: i * 0.2 }}
-                className="relative z-10 w-8 h-8 rounded-lg bg-gradient-to-br from-muted/50 to-muted/20 flex items-center justify-center"
-                style={{
-                  boxShadow: gridHovered ? `0 0 12px ${cap.glowColor}` : "none",
-                  transition: "box-shadow 0.4s ease",
-                }}
-              >
-                <Icon className="w-4 h-4 text-foreground/70 group-hover:text-foreground transition-colors duration-200" style={{ color: gridHovered ? cap.glowColor.replace("0.15", "0.9") : undefined }} />
-              </motion.div>
-
-              <div className="relative z-10 flex items-center justify-between w-full">
-                <span
-                  className="text-[13px] font-medium transition-colors duration-300"
-                  style={{ color: gridHovered ? "hsl(var(--foreground) / 0.95)" : "hsl(var(--foreground) / 0.7)" }}
-                >
-                  {cap.label}
-                </span>
-                <motion.div
-                  animate={{ x: gridHovered ? [0, 3, 0] : [0, 2, 0] }}
-                  transition={{ duration: gridHovered ? 1 : 2, repeat: Infinity, ease: "easeInOut", delay: 1 + i * 0.2 }}
-                >
-                  <ArrowRight
-                    className="w-3 h-3 transition-all duration-300"
-                    style={{ color: gridHovered ? "hsl(var(--foreground) / 0.6)" : "hsl(var(--muted-foreground) / 0.3)" }}
-                  />
-                </motion.div>
+              <Icon className="w-4 h-4 text-muted-foreground/60 group-hover:text-primary transition-colors" />
+              <div>
+                <span className="text-[13px] font-medium text-foreground/80 group-hover:text-foreground transition-colors block">{cap.label}</span>
+                <span className="text-[11px] text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">{cap.description}</span>
               </div>
             </motion.button>
           );
         })}
-      </motion.div>
+      </div>
 
       {/* Quick action pills */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.45, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4 }}
         className="flex flex-wrap justify-center gap-1.5"
       >
-        {quickActions.map((action, i) => {
+        {quickActions.map((action) => {
           const Icon = action.icon;
           return (
-            <motion.button
+            <button
               key={action.label}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5 + i * 0.04, duration: 0.3 }}
               onClick={() => onSelect(action.prompt)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/10 bg-muted/5 hover:bg-muted/15 hover:border-border/20 transition-all duration-200 text-[11px] text-muted-foreground/50 hover:text-foreground/70 cursor-pointer group"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/10 hover:border-border/25 hover:bg-muted/10 transition-all duration-150 text-[11px] text-muted-foreground/50 hover:text-muted-foreground/80 cursor-pointer"
             >
-              <Icon className="w-3 h-3 text-primary/30 group-hover:text-primary/60 transition-colors" />
+              <Icon className="w-3 h-3" />
               <span>{action.label}</span>
-            </motion.button>
+            </button>
           );
         })}
       </motion.div>
 
-      {/* Keyboard shortcuts */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.7 }}
-        className="mt-5 flex items-center gap-3 text-[10px] text-muted-foreground/20 font-mono"
-      >
+      {/* Keyboard hint */}
+      <div className="mt-5 flex items-center gap-3 text-[10px] text-muted-foreground/25 font-mono">
         <span className="flex items-center gap-1.5">
           <kbd className="px-1.5 py-0.5 rounded border border-border/10 bg-muted/10">⌘K</kbd>
-          Commands
+          All tools
         </span>
         <span className="opacity-30">·</span>
         <span className="flex items-center gap-1.5">
           <kbd className="px-1.5 py-0.5 rounded border border-border/10 bg-muted/10">⇧R</kbd>
-          Deep Research
+          Research
         </span>
-      </motion.div>
+      </div>
     </div>
   );
 };
