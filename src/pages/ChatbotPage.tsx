@@ -787,38 +787,28 @@ const ChatbotPage = () => {
           return;
         
         case 'deep_research':
+          addToolCard('deep_research', toolDetection.params);
           setDeepResearchQuery(toolDetection.params?.query);
           setDeepResearchAutoStart(toolDetection.autoExecute ?? false);
           setShowDeepResearch(true);
-          toast({ 
-            title: "🔬 Deep Research", 
-            description: toolDetection.autoExecute ? "Starting research..." : "Opening research panel..." 
-          });
-          setMessage("");
           return;
         
         case 'agentic_runner':
+          addToolCard('agentic_runner', toolDetection.params);
           setAgenticGoal(toolDetection.params?.goal || toolDetection.originalMessage);
           setAgenticAutoStart(toolDetection.autoExecute ?? false);
           setShowAgenticRunner(true);
-          toast({ 
-            title: "🤖 Agent Activated", 
-            description: toolDetection.autoExecute ? "Starting autonomous task..." : "Opening task runner..." 
-          });
-          setMessage("");
           return;
         
         case 'shadow_browser':
+          addToolCard('shadow_browser', toolDetection.params);
           setBrowserInitialUrl(toolDetection.params?.url || 'https://google.com');
           setShowShadowBrowser(true);
-          toast({ title: "🌐 Shadow Browser", description: "Opening browser..." });
-          setMessage("");
           return;
         
         case 'visual_reasoning':
+          addToolCard('visual_reasoning');
           setShowVisualReasoning(true);
-          toast({ title: "👁️ Visual Reasoning", description: "Upload an image to analyze..." });
-          setMessage("");
           return;
         
         case 'creative_synthesis':
