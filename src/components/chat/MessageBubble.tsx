@@ -273,6 +273,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           )}
         </div>
 
+        {/* Tool Execution Card */}
+        {message.toolExecution && (
+          <ToolExecutionCard
+            tool={message.toolExecution.tool as ToolType}
+            status={message.toolExecution.status}
+            params={message.toolExecution.params}
+            result={message.toolExecution.result}
+          />
+        )}
+
         {/* Document Artifact - auto-detected from AI response */}
         {documentArtifact && (
           <DocumentArtifact
