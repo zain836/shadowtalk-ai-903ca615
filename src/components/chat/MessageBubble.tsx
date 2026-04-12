@@ -224,9 +224,19 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                       </a>
                     ); 
                   },
-                  blockquote({ children }) { 
+                  blockquote({ children }) {
+                    // Detect callout type from emoji prefix
+                    const text = String(children);
+                    const isWarning = text.includes('⚠️');
+                    const isSuccess = text.includes('✅');
+                    const isKey = text.includes('🔑') || text.includes('📌');
+                    const isTip = text.includes('💡');
+                    
+                    const borderColor = isWarning ? 'border-amber-400/50' : isSuccess ? 'border-emerald-400/50' : isKey ? 'border-violet-400/50' : isTip ? 'border-sky-400/50' : 'border-primary/30';
+                    const bgColor = isWarning ? 'bg-amber-500/[0.04]' : isSuccess ? 'bg-emerald-500/[0.04]' : isKey ? 'bg-violet-500/[0.04]' : isTip ? 'bg-sky-500/[0.04]' : 'bg-primary/[0.03]';
+                    
                     return (
-                      <blockquote className="border-l-[3px] border-primary/30 pl-4 py-2 my-4 bg-primary/[0.03] rounded-r-xl text-foreground/70 not-italic [&_p]:mb-1.5 [&_p]:last:mb-0 [&_p]:text-[13px] [&_p]:leading-relaxed">
+                      <blockquote className={`border-l-[3px] ${borderColor} pl-4 py-2.5 my-4 ${bgColor} rounded-r-xl text-foreground/80 not-italic [&_p]:mb-1.5 [&_p]:last:mb-0 [&_p]:text-[13px] [&_p]:leading-relaxed`}>
                         {children}
                       </blockquote>
                     ); 
