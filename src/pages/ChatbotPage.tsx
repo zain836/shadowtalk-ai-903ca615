@@ -869,8 +869,12 @@ const ChatbotPage = () => {
           return;
         
         case 'web_search':
-          setChatMode('research');
-          break;
+          // Auto-trigger deep research with real web results
+          addToolCard('web_search', toolDetection.params);
+          setDeepResearchQuery(toolDetection.params?.query || messageToSend);
+          setDeepResearchAutoStart(true);
+          setShowDeepResearch(true);
+          return;
         
         case 'document_generator':
           addToolCard('document_generator', toolDetection.params);

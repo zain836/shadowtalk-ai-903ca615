@@ -267,13 +267,25 @@ const TOOL_PATTERNS: Array<{
     tool: 'web_search',
     patterns: [
       /\b(search|google|look\s+up|find)\s+(?:for\s+)?(?:information\s+(?:about|on))?\s*.{3,}/i,
-      /\bwhat(?:'s| is)\s+(?:the\s+)?(?:latest|current|recent)\s+(?:news|update)/i,
+      /\bwhat(?:'s| is)\s+(?:the\s+)?(?:latest|current|recent|new)\b/i,
+      /\b(?:latest|current|recent|new)\s+(?:news|updates?|info|information|developments?|trends?)\b/i,
+      /\b(?:tell me|give me|show me)\s+(?:about|the)\s+(?:latest|current|recent)\b/i,
+      /\b(?:what(?:'s| is)\s+happening|what(?:'s| is)\s+going on)\s+(?:in|with|about)\b/i,
+      /\b(?:research|investigate|explore)\s+.{3,}/i,
+      /\b(?:real.?time|live|up.?to.?date|today(?:'s)?)\s+(?:data|info|news|results?|stats?|statistics?)\b/i,
+      /\b(?:who|what|when|where|how)\s+(?:is|are|was|were|did)\s+.{5,}\??\s*$/i,
+      /\b(?:update|updates)\s+(?:on|about|regarding)\s+/i,
+      /\bfind\s+(?:out|me)\s+(?:about|if|whether)\b/i,
     ],
-    priority: 2,
+    priority: 3,
     autoExecute: true,
     extractParams: (msg) => {
-      const cleaned = msg.replace(/^(search|google|look\s+up|find)\s+(?:for\s+)?(?:information\s+(?:about|on))?\s*/i, '');
-      return { query: cleaned.trim() };
+      const cleaned = msg
+        .replace(/^(?:search|google|look\s+up|find|research|investigate|explore)\s+(?:for\s+)?(?:information\s+)?(?:about|on)?\s*/i, '')
+        .replace(/^(?:tell me|give me|show me)\s+(?:about|the)\s*/i, '')
+        .replace(/^(?:what(?:'s| is)\s+(?:the\s+)?(?:latest|current|recent)\s+(?:news|updates?|info)\s+(?:about|on|for|regarding)\s*)/i, '')
+        .trim();
+      return { query: cleaned || msg };
     }
   },
   // Document Generator
