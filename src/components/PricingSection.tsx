@@ -297,7 +297,7 @@ const PricingSection = () => {
             30-day money-back guarantee · Cancel anytime · Secure payment
           </p>
           <div className="flex flex-wrap justify-center items-center gap-5 text-xs text-muted-foreground">
-            {["No setup fees", "Instant activation", "SOC 2 compliant", "GDPR ready"].map((t, i) => (
+            {["No setup fees", "Instant activation", "Client-side encryption", "GDPR principles applied"].map((t, i) => (
               <span key={i} className="flex items-center space-x-1.5">
                 <Check className="h-3.5 w-3.5 text-success" />
                 <span>{t}</span>
