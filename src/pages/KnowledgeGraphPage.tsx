@@ -16,7 +16,7 @@ import {
   seedDefaultKnowledge,
   type KBSearchResult,
 } from "@/lib/local-knowledge-base";
-import OfflineAnalyticsPanel from "@/components/chat/OfflineAnalyticsPanel";
+import { OfflineDisabledNotice } from "@/components/chat/OfflineDisabledNotice";
 
 const KnowledgeGraphPage = () => {
   const [kbQuery, setKbQuery] = useState("");
