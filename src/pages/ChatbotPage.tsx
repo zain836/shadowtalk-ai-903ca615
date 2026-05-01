@@ -281,27 +281,24 @@ const ChatbotPage = () => {
   // ─── Proactive AI removed from main chatbot ─────────
   // Proactive behavioral engine now runs exclusively in the 24/7 CustomerSupportWidget
 
-   // Auto-initialize offline AI when going offline - use Robust Offline AI
+  // Offline mode is being rebuilt — auto-init of the local engine is disabled.
+  // The original effect below is preserved for the rewrite. When the new offline
+  // engine ships, restore by uncommenting and pointing at the new hook.
+  /*
   useEffect(() => {
-     if (isOffline && !robustOfflineAI.isReady && !robustOfflineAI.isLoading) {
-       console.log('[ChatbotPage] Network offline - auto-initializing Robust Offline AI...');
-      toast({ 
-        title: "🔌 Offline Mode", 
-        description: "Initializing local AI engine..." 
-      });
-       robustOfflineAI.loadModel().then(success => {
+    if (isOffline && !robustOfflineAI.isReady && !robustOfflineAI.isLoading) {
+      console.log('[ChatbotPage] Network offline - auto-initializing Robust Offline AI...');
+      toast({ title: "🔌 Offline Mode", description: "Initializing local AI engine..." });
+      robustOfflineAI.loadModel().then(success => {
         if (success) {
-          toast({ 
-            title: "✅ Offline AI Ready", 
-             description: `${robustOfflineAI.activeModel || 'Local Model'} loaded locally` 
-          });
+          toast({ title: "✅ Offline AI Ready", description: `${robustOfflineAI.activeModel || 'Local Model'} loaded locally` });
         } else {
-           // Don't show error - basic fallback mode is still available
-           console.log('[ChatbotPage] Model not loaded, basic fallback available');
+          console.log('[ChatbotPage] Model not loaded, basic fallback available');
         }
       });
     }
-   }, [isOffline, robustOfflineAI.isReady, robustOfflineAI.isLoading, robustOfflineAI.activeModel, toast]);
+  }, [isOffline, robustOfflineAI.isReady, robustOfflineAI.isLoading, robustOfflineAI.activeModel, toast]);
+  */
 
   // Load cached conversations from IndexedDB when offline
   useEffect(() => {
