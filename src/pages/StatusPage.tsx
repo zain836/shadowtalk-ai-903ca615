@@ -94,7 +94,11 @@ const StatusPage = () => {
                       <span className="font-medium">{service.service_name}</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-sm text-muted-foreground">{Number(service.uptime_percentage).toFixed(2)}% uptime</span>
+                      <span className="text-sm text-muted-foreground">
+                        {service.uptime_percentage != null
+                          ? `${Number(service.uptime_percentage).toFixed(2)}% uptime`
+                          : "Monitoring not yet enabled"}
+                      </span>
                       {getStatusBadge(service.status)}
                     </div>
                   </div>
