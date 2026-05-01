@@ -974,9 +974,9 @@ const ChatbotPage = () => {
           return;
 
         case 'bunker_mode':
+          // Offline mode is being rebuilt — surface a friendly notice instead of opening the old flow.
           addToolCard('bunker_mode');
           setShowBunkerMode(true);
-          robustOfflineAI.loadModel();
           return;
 
         case 'strategy_agent':
