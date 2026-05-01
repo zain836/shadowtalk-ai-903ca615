@@ -2124,7 +2124,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
               break;
             case 'bunker':
               setShowBunkerMode(true);
-              robustOfflineAI.loadModel();
+              // Offline model loader disabled while offline mode is being rebuilt.
               break;
             case 'image-decoder':
               setShowImageDecoder(true);
