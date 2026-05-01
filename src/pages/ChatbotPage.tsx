@@ -56,6 +56,7 @@ import { MissionControl } from "@/components/chat/MissionControl";
 import { CustomInstructions } from "@/components/chat/CustomInstructions";
 import { ConversationBranching } from "@/components/chat/ConversationBranching";
 import { BunkerModeToggle } from "@/components/chat/BunkerModeToggle";
+import { OfflineDisabledNotice } from "@/components/chat/OfflineDisabledNotice";
 import { CognitiveLoopPanel } from "@/components/chat/CognitiveLoopPanel";
 import { BrowseActivityPanel, useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
 import { PluginsManager } from "@/components/chat/PluginsManager";
