@@ -2221,7 +2221,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         </div>
       )}
 
-      {/* Bunker Mode - wrapped */}
+      {/* Bunker Mode — temporarily replaced with a "being rebuilt" notice. */}
       {showBunkerMode && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center" onClick={() => setShowBunkerMode(false)}>
           <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto m-4 p-6" onClick={(e) => e.stopPropagation()}>
@@ -2229,7 +2229,10 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
               <h2 className="text-lg font-semibold">🏰 Bunker Mode</h2>
               <button onClick={() => setShowBunkerMode(false)} className="text-muted-foreground hover:text-foreground">✕</button>
             </div>
-            <BunkerModeToggle />
+            <OfflineDisabledNotice
+              title="Bunker Mode is being rebuilt"
+              description="The on-device download + offline inference experience is paused while we ship a more reliable version. Cloud chat continues to work — check back tomorrow."
+            />
           </div>
         </div>
       )}
