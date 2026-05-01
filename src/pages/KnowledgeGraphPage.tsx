@@ -163,7 +163,10 @@ const KnowledgeGraphPage = () => {
 
           <TabsContent value="analytics">
             <div className="max-w-lg mx-auto">
-              <OfflineAnalyticsPanel />
+              <OfflineDisabledNotice
+                title="Offline analytics paused"
+                description="Local-session analytics are unavailable while offline mode is being rebuilt."
+              />
             </div>
           </TabsContent>
         </Tabs>
