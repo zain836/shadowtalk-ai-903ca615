@@ -1094,73 +1094,23 @@ const ChatbotPage = () => {
     abortControllerRef.current = new AbortController();
     await saveMessage(messageToSend, 'user');
 
-    // Offline mode - use Sovereign AI (Llama 3) for high-performance local reasoning
+    // Offline mode is being rebuilt — when the network is offline, surface a
+    // friendly message instead of trying to spin up the old local engine.
+    // The original local-inference flow is preserved in version control.
     if (isOffline) {
-       console.log('[ChatbotPage] Offline mode detected, using Robust Offline AI');
-      
-      try {
-        // Create AI message placeholder for streaming
-        const aiMessageId = crypto.randomUUID();
-        setMessages(prev => [...prev, { id: aiMessageId, type: "ai", content: "", timestamp: new Date() }]);
-        
-        // Build message history for AI - include system context for better reasoning
-        const offlineMessages = messages
-          .filter(m => m.id !== 'welcome')
-          .map(m => ({ 
-            role: m.type === 'user' ? 'user' as const : 'assistant' as const, 
-            content: m.content 
-          }));
-        offlineMessages.push({ role: 'user' as const, content: messageToSend });
-        
-         // Generate response with Robust Offline AI - 100% reliable with fallback
-         const fullResponse = await robustOfflineAI.generateResponse(offlineMessages, (chunk) => {
-          setMessages(prev => prev.map(m => 
-            m.id === aiMessageId ? { ...m, content: m.content + chunk } : m
-          ));
-        });
-        
-        // Cache the messages to IndexedDB for persistence
-        if (offlineChatHistory.isReady && currentConversationId) {
-          await offlineChatHistory.cacheMessage(currentConversationId, userMessage);
-          await offlineChatHistory.cacheMessage(currentConversationId, {
-            id: aiMessageId,
-            type: 'ai',
-            content: fullResponse,
-            timestamp: new Date()
-          });
-        }
-        
-        setIsLoading(false);
-        return;
-      } catch (e) {
-         console.error('[ChatbotPage] Robust Offline AI error:', e);
-        
-         // Final fallback: use basic offline responses
-        try {
-          const aiMessageId = crypto.randomUUID();
-          setMessages(prev => [...prev, { id: aiMessageId, type: "ai", content: "", timestamp: new Date() }]);
-          
-          const offlineMessages = messages
-            .filter(m => m.id !== 'welcome')
-            .map(m => ({ role: m.type === 'user' ? 'user' as const : 'assistant' as const, content: m.content }));
-          offlineMessages.push({ role: 'user' as const, content: messageToSend });
-          
-           // Use the basic fallback from robust AI
-           const fallbackResponse = robustOfflineAI.getBasicFallback(messageToSend);
-           setMessages(prev => prev.map(m => 
-             m.id === aiMessageId ? { ...m, content: fallbackResponse } : m
-           ));
-          
-          setIsLoading(false);
-          return;
-        } catch (fallbackError) {
-          console.error('[ChatbotPage] Fallback AI also failed:', fallbackError);
-           const errorResponse = `🔌 **Offline Mode Active**\n\nI'm running in basic offline mode. I can help with:\n• Time and date queries\n• Simple math calculations\n• Basic greetings\n\nFor full AI capabilities, please:\n1. Click "Bunker" in the header\n2. Download an offline model\n3. Or connect to the internet`;
-          setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: errorResponse, timestamp: new Date() }]);
-          setIsLoading(false);
-          return;
-        }
-      }
+      const aiMessageId = crypto.randomUUID();
+      const noticeContent =
+        "🔌 **You're offline**\n\n" +
+        "On-device AI is temporarily disabled while we ship a new offline mode. " +
+        "Please reconnect to the internet to keep chatting — the new engine lands soon.";
+      setMessages(prev => [...prev, {
+        id: aiMessageId,
+        type: "ai",
+        content: noticeContent,
+        timestamp: new Date(),
+      }]);
+      setIsLoading(false);
+      return;
     }
 
     let assistantContent = "";
