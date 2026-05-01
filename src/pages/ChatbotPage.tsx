@@ -1501,7 +1501,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
           )}
 
 
-          <NetworkTransitionOverlay />
+          {/* <NetworkTransitionOverlay />  — disabled while offline mode is being rebuilt */}
           {/* Messages */}
           {!isSpecialMode && (
             <ChatMessages
