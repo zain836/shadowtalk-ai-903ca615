@@ -111,34 +111,32 @@ const StatusPage = () => {
 
       <section className="py-16 px-4 bg-muted/30">
         <div className="container mx-auto max-w-4xl">
-          <h2 className="text-2xl font-bold mb-8">Performance Metrics</h2>
-          <div className="grid md:grid-cols-4 gap-6">
+          <h2 className="text-2xl font-bold mb-2">Performance Metrics</h2>
+          <p className="text-sm text-muted-foreground mb-8">
+            We're in early access. The metrics below are only shown when we have
+            real measurements to back them up — fabricated uptime numbers do more
+            harm than blank fields. A public uptime monitor (UptimeRobot / Better
+            Uptime) is on the roadmap.
+          </p>
+          <div className="grid md:grid-cols-2 gap-6">
             <Card>
               <CardContent className="p-6 text-center">
                 <Server className="h-8 w-8 text-primary mx-auto mb-3" />
-                <div className="text-3xl font-bold mb-1">{avgUptime.toFixed(2)}%</div>
-                <div className="text-sm text-muted-foreground">Uptime (30 days)</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Zap className="h-8 w-8 text-primary mx-auto mb-3" />
-                <div className="text-3xl font-bold mb-1">45ms</div>
-                <div className="text-sm text-muted-foreground">Avg Response</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Globe className="h-8 w-8 text-primary mx-auto mb-3" />
-                <div className="text-3xl font-bold mb-1">12</div>
-                <div className="text-sm text-muted-foreground">Global Regions</div>
+                <div className="text-3xl font-bold mb-1">
+                  {hasRealUptime && avgUptime != null ? `${avgUptime.toFixed(2)}%` : "—"}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {hasRealUptime ? "Uptime (30 days)" : "Uptime — monitoring not yet enabled"}
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6 text-center">
                 <Shield className="h-8 w-8 text-primary mx-auto mb-3" />
-                <div className="text-3xl font-bold mb-1">0</div>
-                <div className="text-sm text-muted-foreground">Security Incidents</div>
+                <div className="text-3xl font-bold mb-1">No incidents reported</div>
+                <div className="text-sm text-muted-foreground">
+                  Security incidents — disclosed publicly when they occur
+                </div>
               </CardContent>
             </Card>
           </div>
