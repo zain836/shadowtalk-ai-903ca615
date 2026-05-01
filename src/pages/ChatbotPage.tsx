@@ -1477,12 +1477,12 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             dailyChats={dailyChats}
           />
 
-          {/* Offline AI Indicator - hidden if not relevant */}
-           {(isOffline || robustOfflineAI.isReady || robustOfflineAI.isLoading || robustOfflineAI.hasCachedModel) && (
+          {/* Offline AI Indicator — disabled while a new offline mode is being built. */}
+          {/* {(isOffline || robustOfflineAI.isReady || robustOfflineAI.isLoading || robustOfflineAI.hasCachedModel) && (
             <div className="px-2 py-1.5 md:px-4 md:py-2 border-b border-border/50">
-               <OfflineAIIndicator />
+              <OfflineAIIndicator />
             </div>
-          )}
+          )} */}
 
           {/* Special Mode Panels */}
           {chatMode === 'ppag' && <PlanetaryActionPanel onGetActions={handleGetEcoActions} isLoading={isLoadingEcoActions} />}
