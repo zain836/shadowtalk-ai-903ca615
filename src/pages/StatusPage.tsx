@@ -8,15 +8,19 @@ import {
 } from "lucide-react";
 import { useStatusMonitors } from "@/hooks/useCMSContent";
 
+// Honest beta-stage placeholders. We are not yet running an external uptime
+// monitor (e.g. UptimeRobot / Better Uptime) — until we are, we display
+// "Monitoring not yet enabled" instead of fabricated uptime percentages.
+// Real numbers will replace these once a public status monitor is wired up.
 const FALLBACK_SERVICES = [
-  { service_name: "API Gateway", status: "operational", uptime_percentage: 99.99 },
-  { service_name: "Chat Service", status: "operational", uptime_percentage: 99.98 },
-  { service_name: "Authentication", status: "operational", uptime_percentage: 99.99 },
-  { service_name: "Database", status: "operational", uptime_percentage: 99.97 },
-  { service_name: "AI Processing", status: "operational", uptime_percentage: 99.95 },
-  { service_name: "File Storage", status: "operational", uptime_percentage: 99.99 },
-  { service_name: "Real-time Sync", status: "operational", uptime_percentage: 99.96 },
-  { service_name: "CDN", status: "operational", uptime_percentage: 99.99 },
+  { service_name: "API Gateway", status: "operational", uptime_percentage: null },
+  { service_name: "Chat Service", status: "operational", uptime_percentage: null },
+  { service_name: "Authentication", status: "operational", uptime_percentage: null },
+  { service_name: "Database", status: "operational", uptime_percentage: null },
+  { service_name: "AI Processing", status: "operational", uptime_percentage: null },
+  { service_name: "File Storage", status: "operational", uptime_percentage: null },
+  { service_name: "Real-time Sync", status: "operational", uptime_percentage: null },
+  { service_name: "CDN", status: "operational", uptime_percentage: null },
 ];
 
 const StatusPage = () => {
