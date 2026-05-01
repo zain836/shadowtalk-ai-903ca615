@@ -51,7 +51,11 @@ const StatusPage = () => {
     ? "All Systems Operational" 
     : "Some Systems Affected";
 
-  const avgUptime = services.reduce((sum, s) => sum + Number(s.uptime_percentage || 99.9), 0) / services.length;
+  const monitoredServices = services.filter(s => s.uptime_percentage != null);
+  const hasRealUptime = monitoredServices.length > 0;
+  const avgUptime = hasRealUptime
+    ? monitoredServices.reduce((sum, s) => sum + Number(s.uptime_percentage), 0) / monitoredServices.length
+    : null;
 
   return (
     <div className="min-h-screen bg-background">
