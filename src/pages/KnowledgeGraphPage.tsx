@@ -16,7 +16,7 @@ import {
   seedDefaultKnowledge,
   type KBSearchResult,
 } from "@/lib/local-knowledge-base";
-import OfflineAnalyticsPanel from "@/components/chat/OfflineAnalyticsPanel";
+import { OfflineDisabledNotice } from "@/components/chat/OfflineDisabledNotice";
 
 const KnowledgeGraphPage = () => {
   const [kbQuery, setKbQuery] = useState("");
@@ -163,7 +163,10 @@ const KnowledgeGraphPage = () => {
 
           <TabsContent value="analytics">
             <div className="max-w-lg mx-auto">
-              <OfflineAnalyticsPanel />
+              <OfflineDisabledNotice
+                title="Offline analytics paused"
+                description="Local-session analytics are unavailable while offline mode is being rebuilt."
+              />
             </div>
           </TabsContent>
         </Tabs>
