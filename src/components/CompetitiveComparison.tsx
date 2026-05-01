@@ -38,20 +38,20 @@ const CompetitiveComparison = () => {
   const detailedComparisons = [
     {
       competitor: "ChatGPT",
-      weaknesses: ["Privacy concerns — data used for training", "Requires internet — no offline mode", "High cost ($20/mo Plus, $200/mo Pro)"],
-      shadowAdvantages: ["Stealth Vault (E2E encrypted)", "Full Offline Mode via WebGPU", "75% cheaper Elite plan ($20/mo)"],
-      priceDiff: "75% cheaper",
+      weaknesses: ["Conversations may be used for training (depends on settings)", "Requires internet — no on-device model", "Pro tier costs $200/mo"],
+      shadowAdvantages: ["Client-side encrypted Stealth Vault", "Optional offline AI via WebGPU", "Elite tier: $50/mo vs ChatGPT Pro $200/mo"],
+      priceDiff: "Elite tier 75% cheaper than ChatGPT Pro",
     },
     {
       competitor: "Claude",
       weaknesses: ["Limited image generation in free tier", "No native offline mode", "No autonomous agent framework"],
-      shadowAdvantages: ["4 free images/day", "Dedicated on-device engine", "Strategy Agent + Smart Scripts"],
+      shadowAdvantages: ["4 free images/day", "Optional on-device engine", "Strategy Agent + Smart Scripts"],
       priceDiff: "More generous free tier",
     },
     {
       competitor: "Perplexity",
-      weaknesses: ["High privacy risks & data retention", "Expensive Pro plan ($20/mo)", "No local inference capability"],
-      shadowAdvantages: ["Zero-knowledge, privacy-first", "Pay-per-solution options available", "On-device AI OS architecture"],
+      weaknesses: ["Cloud-only — data leaves your device", "Pro plan $20/mo", "No local inference option"],
+      shadowAdvantages: ["Privacy-first architecture", "Pay-per-solution options available", "Optional on-device model"],
       priceDiff: "Privacy-first alternative",
     },
   ];

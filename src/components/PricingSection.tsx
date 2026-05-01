@@ -35,10 +35,10 @@ const PricingSection = () => {
   };
 
   const plans = [
-    { name: "Free", price: "$0", period: "", description: "More generous than ChatGPT Free!", icon: Zap, popular: false, highlight: false, features: PLAN_DETAILS.free.features, comparison: "ChatGPT gives ~3 images, we give 4!", cta: "Start Free", variant: "outline" },
-    { name: "Pro", price: `$${PLAN_DETAILS.pro.price}`, period: "/month", description: "Half the price of ChatGPT Plus!", icon: Star, popular: false, highlight: false, features: PLAN_DETAILS.pro.features, comparison: "ChatGPT Plus = $20/mo", cta: "Upgrade to Pro", variant: "default" },
-    { name: "Premium", price: `$${PLAN_DETAILS.premium.price}`, period: "/month", description: "Premium features at Plus prices", icon: Rocket, popular: true, highlight: true, features: PLAN_DETAILS.premium.features, comparison: "More features than ChatGPT Plus", cta: "Go Premium", variant: "default" },
-    { name: "Elite", price: `$${PLAN_DETAILS.elite.price}`, period: "/month", description: "75% cheaper than ChatGPT Pro!", icon: Crown, popular: false, highlight: false, features: PLAN_DETAILS.elite.features, comparison: "ChatGPT Pro = $200/mo", cta: "Go Elite", variant: "secondary" },
+    { name: "Free", price: "$0", period: "", description: "Get started — no credit card required", icon: Zap, popular: false, highlight: false, features: PLAN_DETAILS.free.features, comparison: "Same price as ChatGPT Free", cta: "Start Free", variant: "outline" },
+    { name: "Pro", price: `$${PLAN_DETAILS.pro.price}`, period: "/month", description: "For power users who want offline AI", icon: Star, popular: false, highlight: false, features: PLAN_DETAILS.pro.features, comparison: "Compare features, not just price", cta: "Upgrade to Pro", variant: "default" },
+    { name: "Premium", price: `$${PLAN_DETAILS.premium.price}`, period: "/month", description: "Most popular tier", icon: Rocket, popular: true, highlight: true, features: PLAN_DETAILS.premium.features, comparison: "More features than ChatGPT Plus", cta: "Go Premium", variant: "default" },
+    { name: "Elite", price: `$${PLAN_DETAILS.elite.price}`, period: "/month", description: "75% cheaper than ChatGPT Pro ($200/mo)", icon: Crown, popular: false, highlight: false, features: PLAN_DETAILS.elite.features, comparison: "ChatGPT Pro = $200/mo", cta: "Go Elite", variant: "secondary" },
   ];
 
   const getCurrentPlanBadge = (planName: string) => {
@@ -297,7 +297,7 @@ const PricingSection = () => {
             30-day money-back guarantee · Cancel anytime · Secure payment
           </p>
           <div className="flex flex-wrap justify-center items-center gap-5 text-xs text-muted-foreground">
-            {["No setup fees", "Instant activation", "SOC 2 compliant", "GDPR ready"].map((t, i) => (
+            {["No setup fees", "Instant activation", "Client-side encryption", "GDPR principles applied"].map((t, i) => (
               <span key={i} className="flex items-center space-x-1.5">
                 <Check className="h-3.5 w-3.5 text-success" />
                 <span>{t}</span>

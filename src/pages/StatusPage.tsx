@@ -4,19 +4,23 @@ import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  CheckCircle2, AlertCircle, XCircle, Activity, Server, Globe, Zap, Shield, Clock, Loader2
+  CheckCircle2, AlertCircle, XCircle, Activity, Server, Shield, Loader2
 } from "lucide-react";
 import { useStatusMonitors } from "@/hooks/useCMSContent";
 
+// Honest beta-stage placeholders. We are not yet running an external uptime
+// monitor (e.g. UptimeRobot / Better Uptime) — until we are, we display
+// "Monitoring not yet enabled" instead of fabricated uptime percentages.
+// Real numbers will replace these once a public status monitor is wired up.
 const FALLBACK_SERVICES = [
-  { service_name: "API Gateway", status: "operational", uptime_percentage: 99.99 },
-  { service_name: "Chat Service", status: "operational", uptime_percentage: 99.98 },
-  { service_name: "Authentication", status: "operational", uptime_percentage: 99.99 },
-  { service_name: "Database", status: "operational", uptime_percentage: 99.97 },
-  { service_name: "AI Processing", status: "operational", uptime_percentage: 99.95 },
-  { service_name: "File Storage", status: "operational", uptime_percentage: 99.99 },
-  { service_name: "Real-time Sync", status: "operational", uptime_percentage: 99.96 },
-  { service_name: "CDN", status: "operational", uptime_percentage: 99.99 },
+  { service_name: "API Gateway", status: "operational", uptime_percentage: null },
+  { service_name: "Chat Service", status: "operational", uptime_percentage: null },
+  { service_name: "Authentication", status: "operational", uptime_percentage: null },
+  { service_name: "Database", status: "operational", uptime_percentage: null },
+  { service_name: "AI Processing", status: "operational", uptime_percentage: null },
+  { service_name: "File Storage", status: "operational", uptime_percentage: null },
+  { service_name: "Real-time Sync", status: "operational", uptime_percentage: null },
+  { service_name: "CDN", status: "operational", uptime_percentage: null },
 ];
 
 const StatusPage = () => {
@@ -47,7 +51,11 @@ const StatusPage = () => {
     ? "All Systems Operational" 
     : "Some Systems Affected";
 
-  const avgUptime = services.reduce((sum, s) => sum + Number(s.uptime_percentage || 99.9), 0) / services.length;
+  const monitoredServices = services.filter(s => s.uptime_percentage != null);
+  const hasRealUptime = monitoredServices.length > 0;
+  const avgUptime = hasRealUptime
+    ? monitoredServices.reduce((sum, s) => sum + Number(s.uptime_percentage), 0) / monitoredServices.length
+    : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -86,7 +94,11 @@ const StatusPage = () => {
                       <span className="font-medium">{service.service_name}</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-sm text-muted-foreground">{Number(service.uptime_percentage).toFixed(2)}% uptime</span>
+                      <span className="text-sm text-muted-foreground">
+                        {service.uptime_percentage != null
+                          ? `${Number(service.uptime_percentage).toFixed(2)}% uptime`
+                          : "Monitoring not yet enabled"}
+                      </span>
                       {getStatusBadge(service.status)}
                     </div>
                   </div>
@@ -99,34 +111,32 @@ const StatusPage = () => {
 
       <section className="py-16 px-4 bg-muted/30">
         <div className="container mx-auto max-w-4xl">
-          <h2 className="text-2xl font-bold mb-8">Performance Metrics</h2>
-          <div className="grid md:grid-cols-4 gap-6">
+          <h2 className="text-2xl font-bold mb-2">Performance Metrics</h2>
+          <p className="text-sm text-muted-foreground mb-8">
+            We're in early access. The metrics below are only shown when we have
+            real measurements to back them up — fabricated uptime numbers do more
+            harm than blank fields. A public uptime monitor (UptimeRobot / Better
+            Uptime) is on the roadmap.
+          </p>
+          <div className="grid md:grid-cols-2 gap-6">
             <Card>
               <CardContent className="p-6 text-center">
                 <Server className="h-8 w-8 text-primary mx-auto mb-3" />
-                <div className="text-3xl font-bold mb-1">{avgUptime.toFixed(2)}%</div>
-                <div className="text-sm text-muted-foreground">Uptime (30 days)</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Zap className="h-8 w-8 text-primary mx-auto mb-3" />
-                <div className="text-3xl font-bold mb-1">45ms</div>
-                <div className="text-sm text-muted-foreground">Avg Response</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Globe className="h-8 w-8 text-primary mx-auto mb-3" />
-                <div className="text-3xl font-bold mb-1">12</div>
-                <div className="text-sm text-muted-foreground">Global Regions</div>
+                <div className="text-3xl font-bold mb-1">
+                  {hasRealUptime && avgUptime != null ? `${avgUptime.toFixed(2)}%` : "—"}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {hasRealUptime ? "Uptime (30 days)" : "Uptime — monitoring not yet enabled"}
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6 text-center">
                 <Shield className="h-8 w-8 text-primary mx-auto mb-3" />
-                <div className="text-3xl font-bold mb-1">0</div>
-                <div className="text-sm text-muted-foreground">Security Incidents</div>
+                <div className="text-3xl font-bold mb-1">No incidents reported</div>
+                <div className="text-sm text-muted-foreground">
+                  Security incidents — disclosed publicly when they occur
+                </div>
               </CardContent>
             </Card>
           </div>

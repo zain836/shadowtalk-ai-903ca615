@@ -1,77 +1,26 @@
-import { Star, Quote, ArrowRight } from "lucide-react";
+import { Quote, Sparkles, MessageSquare, Heart } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion, useInView } from "framer-motion";
-import { useRef, useMemo } from "react";
-import avatar1 from "@/assets/avatar-1.jpg";
-import avatar2 from "@/assets/avatar-2.jpg";
-import avatar3 from "@/assets/avatar-3.jpg";
-import avatar4 from "@/assets/avatar-4.jpg";
-import avatar5 from "@/assets/avatar-5.jpg";
-import avatar6 from "@/assets/avatar-6.jpg";
-import avatar7 from "@/assets/avatar-7.jpg";
-import avatar8 from "@/assets/avatar-8.jpg";
-import avatar9 from "@/assets/avatar-9.jpg";
+import { useRef } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
-const identityPool = [
-  { name: "Lena Vasquez", role: "Lead Engineer", company: "ArcLight Systems" },
-  { name: "Omar Khalil", role: "Head of Operations", company: "Stratosphere" },
-  { name: "Priya Sharma", role: "CTO & Co-Founder", company: "Nimbus Labs" },
-  { name: "Marcus Chen", role: "Senior Developer", company: "Vertigo Digital" },
-  { name: "Sofia Andersson", role: "Product Lead", company: "Polaris AI" },
-  { name: "Jake Okafor", role: "DevOps Manager", company: "CloudStack" },
-  { name: "Aisha Patel", role: "Engineering Director", company: "Helix Studios" },
-  { name: "Ryan Tanaka", role: "Startup Founder", company: "Wavefront" },
-  { name: "Nina Ivanova", role: "Tech Architect", company: "Quantum Leap" },
-  { name: "Diego Morales", role: "VP of Engineering", company: "Nextera" },
-  { name: "Hana Kim", role: "AI Researcher", company: "DeepMind Labs" },
-  { name: "Ethan Brooks", role: "Full Stack Lead", company: "Forge Systems" },
-];
-
-const reviewTemplates = [
-  { content: "This chatbot has completely transformed my workflow! The code generation feature saved me 20+ hours a week. The AI understands context better than any tool I've used before.", highlight: "20+ hours saved weekly", metric: "+340%", metricLabel: "Productivity" },
-  { content: "Incredible AI assistant! I use it for everything from writing documentation to automating repetitive tasks. The offline mode is a game-changer for remote work.", highlight: "Offline mode game-changer", metric: "100%", metricLabel: "Uptime" },
-  { content: "The script automation feature is phenomenal. I can generate complex automation scripts in minutes instead of hours. Best investment I've made for my productivity.", highlight: "Minutes instead of hours", metric: "10x", metricLabel: "Faster" },
-];
-
-const avatarPool = [avatar1, avatar2, avatar3, avatar4, avatar5, avatar6, avatar7, avatar8, avatar9];
-
-function shuffleAndPick<T>(arr: T[], count: number): T[] {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
-}
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 60, rotateX: 15 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    rotateX: 0,
-    transition: {
-      delay: i * 0.15,
-      duration: 0.7,
-      ease: [0.25, 0.46, 0.45, 0.94] as const,
-    },
-  }),
-};
-
+/**
+ * HONEST early-stage testimonials section.
+ *
+ * Per the "Claims to Reality Roadmap" (P0):
+ * - Removed AI-generated avatars and fabricated quotes (Ryan Tanaka, Marcus Chen, Lena Vasquez, etc.)
+ * - Removed "4.9/5 from 12,483 verified reviews" — we have not collected real reviews yet.
+ * - Replaced with a transparent "building in public" call-out and an invitation to
+ *   share real feedback. Will be repopulated with real, attributed testimonials
+ *   (with explicit user permission) as we collect them.
+ */
 const TestimonialsSection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
 
-  const testimonials = useMemo(() => {
-    const pickedIdentities = shuffleAndPick(identityPool, 3);
-    const pickedAvatars = shuffleAndPick(avatarPool, 3);
-    return pickedIdentities.map((identity, i) => ({
-      ...identity,
-      avatar: pickedAvatars[i],
-      rating: 5,
-      ...reviewTemplates[i],
-    }));
-  }, []);
-
   return (
     <section ref={sectionRef} className="py-28 bg-background relative overflow-hidden">
-      {/* Ambient */}
       <div className="absolute inset-0 bg-grid-dense opacity-30" />
       <motion.div
         animate={isInView ? { scale: [1, 1.3, 1], opacity: [0.04, 0.08, 0.04] } : {}}
@@ -80,147 +29,100 @@ const TestimonialsSection = () => {
       />
 
       <div className="container mx-auto px-4 relative z-10">
-        {/* Header */}
-        <div className="text-center mb-20">
+        <div className="text-center mb-12 max-w-3xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             whileInView={{ opacity: 1, y: 0, scale: 1 }}
             viewport={{ once: true }}
             transition={{ type: "spring", stiffness: 200 }}
-            className="inline-flex items-center space-x-2 glass-subtle rounded-full px-5 py-2 mb-8"
+            className="inline-flex items-center space-x-2 glass-subtle rounded-full px-5 py-2 mb-6"
           >
-            <Quote className="h-4 w-4 text-secondary" />
-            <span className="text-sm text-muted-foreground font-medium">User Stories</span>
+            <Sparkles className="h-4 w-4 text-secondary" />
+            <span className="text-sm text-muted-foreground font-medium">Early Access · Building in Public</span>
           </motion.div>
+
           <motion.h2
             initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
             whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             viewport={{ once: true }}
             transition={{ delay: 0.1, duration: 0.7 }}
-            className="text-4xl md:text-6xl font-bold mb-6 tracking-tight"
+            className="text-4xl md:text-5xl font-bold mb-6 tracking-tight"
           >
-            Loved by{" "}
-            <span className="gradient-text">Thousands</span>
+            Honest about where{" "}
+            <span className="gradient-text">we are</span>
           </motion.h2>
+
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.2, duration: 0.6 }}
-            className="text-lg text-muted-foreground max-w-2xl mx-auto"
+            className="text-lg text-muted-foreground"
           >
-            Real stories from developers, founders, and teams who transformed their workflow.
+            ShadowTalk AI is in early access. We haven't collected enough verified user
+            reviews to publish a star rating yet — and we'd rather show nothing than show
+            numbers we can't prove.
           </motion.p>
         </div>
 
-        {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto" style={{ perspective: "1200px" }}>
-          {testimonials.map((testimonial, index) => (
-            <motion.div
-              key={index}
-              custom={index}
-              variants={cardVariants}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-50px" }}
-              whileHover={{
-                y: -12,
-                scale: 1.03,
-                transition: { type: "spring", stiffness: 300, damping: 20 },
-              }}
-            >
-              <Card className="h-full border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-[0_20px_60px_-15px_hsl(var(--primary)/0.15)] group relative overflow-hidden">
-                {/* Top glow line */}
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
+          <Card className="border-border/50">
+            <CardContent className="p-6">
+              <Quote className="h-6 w-6 text-primary/60 mb-3" />
+              <h3 className="font-semibold mb-2">No fake testimonials</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                We removed every AI-generated avatar and quote from this page. Real
+                testimonials with real names will appear here once verified beta users
+                opt in to share their experience.
+              </p>
+            </CardContent>
+          </Card>
 
-                <CardContent className="p-8">
-                  {/* Metric badge */}
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.3 + index * 0.15, type: "spring" }}
-                    className="inline-flex items-center gap-2 glass-subtle rounded-full px-3 py-1.5 mb-5"
-                  >
-                    <span className="text-lg font-bold gradient-text">{testimonial.metric}</span>
-                    <span className="text-xs text-muted-foreground">{testimonial.metricLabel}</span>
-                  </motion.div>
+          <Card className="border-border/50">
+            <CardContent className="p-6">
+              <MessageSquare className="h-6 w-6 text-primary/60 mb-3" />
+              <h3 className="font-semibold mb-2">Try it, then judge it</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                The free tier needs no credit card. Use the offline AI, the deep
+                research, the document generator — and decide for yourself instead of
+                trusting a marketing quote.
+              </p>
+            </CardContent>
+          </Card>
 
-                  {/* Stars */}
-                  <div className="flex items-center space-x-1 mb-5">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, scale: 0, rotate: -30 }}
-                        whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: 0.4 + index * 0.1 + i * 0.06, type: "spring", stiffness: 500 }}
-                      >
-                        <Star className="h-4 w-4 fill-warning text-warning" />
-                      </motion.div>
-                    ))}
-                  </div>
-
-                  {/* Quote */}
-                  <blockquote className="text-muted-foreground mb-6 leading-relaxed text-sm">
-                    "{testimonial.content}"
-                  </blockquote>
-
-                  {/* Highlight */}
-                  <div className="mb-6 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10">
-                    <p className="text-xs font-medium text-primary flex items-center gap-1.5">
-                      <ArrowRight className="h-3 w-3" />
-                      {testimonial.highlight}
-                    </p>
-                  </div>
-
-                  {/* Author */}
-                  <div className="flex items-center space-x-4">
-                    <motion.img
-                      whileHover={{ scale: 1.1 }}
-                      transition={{ type: "spring", stiffness: 400 }}
-                      src={testimonial.avatar}
-                      alt={testimonial.name}
-                      className="w-11 h-11 rounded-full object-cover ring-2 ring-border group-hover:ring-primary/30 transition-all"
-                    />
-                    <div>
-                      <div className="font-semibold text-sm">{testimonial.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {testimonial.role} · {testimonial.company}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+          <Card className="border-border/50">
+            <CardContent className="p-6">
+              <Heart className="h-6 w-6 text-primary/60 mb-3" />
+              <h3 className="font-semibold mb-2">Tell us what's broken</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Beta users get a direct line to the founder. Honest feedback —
+                positive or critical — shapes the next release. Reach us anytime
+                from the contact page.
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Social Proof Bar */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.4, duration: 0.6 }}
-          className="mt-16 max-w-2xl mx-auto"
+          className="max-w-2xl mx-auto"
         >
-          <div className="glass-subtle rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-center gap-6">
-            <div className="flex items-center gap-3">
-              <div className="flex text-warning text-sm">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-5 w-5 fill-warning text-warning" />
-                ))}
-              </div>
-              <span className="text-lg font-bold">4.9/5</span>
+          <div className="glass-subtle rounded-2xl p-6 text-center">
+            <p className="text-sm text-muted-foreground mb-4">
+              Used ShadowTalk AI? We'd love a real, attributed testimonial — and we
+              promise to never publish anything you didn't write.
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button asChild size="sm" variant="default">
+                <Link to="/chatbot">Try the free tier</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/contact">Share feedback</Link>
+              </Button>
             </div>
-            <div className="hidden sm:block w-px h-6 bg-border" />
-            <span className="text-sm text-muted-foreground">
-              from <span className="text-foreground font-semibold">12,483</span> verified reviews
-            </span>
-            <div className="hidden sm:block w-px h-6 bg-border" />
-            <span className="text-sm text-muted-foreground">
-              Trusted worldwide
-            </span>
           </div>
         </motion.div>
       </div>
