@@ -1990,7 +1990,8 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
               setShowStealthVault(true);
               break;
             case 'offline':
-              robustOfflineAI.loadModel();
+              // Offline mode is being rebuilt — show the disabled-mode toast.
+              toast({ title: "Offline mode is being rebuilt", description: "On-device AI returns soon." });
               break;
             case 'security':
               setChatMode('hsca');
