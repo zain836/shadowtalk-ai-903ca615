@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
-  CheckCircle2, AlertCircle, XCircle, Activity, Server, Globe, Zap, Shield, Clock, Loader2
+  CheckCircle2, AlertCircle, XCircle, Activity, Server, Shield, Loader2
 } from "lucide-react";
 import { useStatusMonitors } from "@/hooks/useCMSContent";
 
