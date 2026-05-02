@@ -71,7 +71,7 @@ export async function detectCapabilities(): Promise<EngineCapabilities> {
   let webgpu = false;
   try {
     if ("gpu" in navigator) {
-      // @ts-expect-error - WebGPU types
+      // @ts-ignore - WebGPU types
       const adapter = await navigator.gpu.requestAdapter();
       webgpu = !!adapter;
     }

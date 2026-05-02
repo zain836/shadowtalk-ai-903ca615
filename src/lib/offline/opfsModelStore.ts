@@ -82,7 +82,7 @@ export async function getModelStatus(modelId: string): Promise<ModelStatus | nul
   if (!dir) return null;
   let bytes = 0;
   const files: string[] = [];
-  // @ts-expect-error - entries() exists on FileSystemDirectoryHandle
+  // @ts-ignore - entries() iteration
   for await (const [name, handle] of dir.entries()) {
     if (handle.kind === "file") {
       const file = await (handle as FileSystemFileHandle).getFile();
@@ -98,7 +98,7 @@ export async function deleteModel(modelId: string): Promise<boolean> {
   if (!root) return false;
   try {
     const models = await root.getDirectoryHandle(ROOT_DIR, { create: false });
-    // @ts-expect-error - removeEntry exists
+    // @ts-ignore - removeEntry
     await models.removeEntry(modelId, { recursive: true });
     return true;
   } catch {
@@ -126,7 +126,7 @@ export async function downloadFileToOpfs(
 
   const total = Number(response.headers.get("content-length") || 0);
   const fileHandle = await dir.getFileHandle(filename, { create: true });
-  // @ts-expect-error - createWritable
+  // @ts-ignore - createWritable
   const writable = await fileHandle.createWritable();
 
   const reader = response.body.getReader();
