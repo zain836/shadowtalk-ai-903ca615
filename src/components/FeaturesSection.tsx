@@ -62,8 +62,8 @@ const FeaturesSection = () => {
     },
     {
       icon: Wifi,
-      title: "Offline Mode",
-      description: "Continue working without internet. Your AI assistant is always available, anywhere.",
+      title: "Optional On-Device AI",
+      description: "Opt in to download Google's Gemma model and run it offline via WebGPU on Chrome/Edge. CPU fallback works elsewhere but is slower.",
       gradient: "from-warning/20 to-warning/5",
       iconColor: "text-warning",
       span: "sm:col-span-2 md:col-span-2",

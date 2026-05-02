@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Settings, Globe, Palette, Monitor, Moon, Sun, Volume2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
+import { OfflineAISettings } from "./OfflineAISettings";
 
 const tabMotion = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.3 } };
 
@@ -111,6 +112,9 @@ export const PreferencesTab = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* On-Device AI (new offline mode — opt-in download) */}
+      <OfflineAISettings />
     </motion.div>
   );
 };

@@ -33,10 +33,10 @@ const FALLBACK_CATEGORIES = [
   {
     icon: Zap, title: "General",
     questions: [
-      { q: "What is ShadowTalk AI?", a: "ShadowTalk AI is an advanced AI assistant platform designed for developers, creators, and teams. It offers intelligent conversations, multi-model support, offline capabilities, and enterprise features to boost productivity." },
-      { q: "How does the AI work?", a: "ShadowTalk AI leverages multiple large language models (LLMs) including Google Gemini, OpenAI GPT, and local models for offline use." },
-      { q: "Is my data safe with ShadowTalk AI?", a: "Yes, we take data security seriously. All conversations are encrypted, and we offer offline mode for complete privacy." },
-      { q: "Can I use ShadowTalk AI offline?", a: "Yes! Our offline mode uses local AI models that run entirely on your device. No internet connection required." }
+      { q: "What is ShadowTalk AI?", a: "ShadowTalk AI is a privacy-first AI assistant for developers, creators, and teams. It pairs cloud models (Gemini, GPT-5) with optional on-device inference using Google's Gemma model via WebGPU." },
+      { q: "How does the AI work?", a: "By default, ShadowTalk routes chat to cloud models (Google Gemini, OpenAI GPT-5) through a secure backend. You can also opt in to download Gemma and run it fully on your device." },
+      { q: "Is my data safe with ShadowTalk AI?", a: "Conversations are encrypted in transit. When you enable the optional on-device Gemma model, those chats never leave your machine — they run locally with zero network calls." },
+      { q: "Can I use ShadowTalk AI offline?", a: "Yes — open Settings → On-Device AI to download a Gemma model. After the one-time download (~220 MB to 2.6 GB depending on size), the model runs offline in your browser. Best performance on Chrome/Edge with WebGPU; a slower CPU fallback works elsewhere." }
     ]
   },
   {
