@@ -1117,7 +1117,7 @@ const ChatbotPage = () => {
           acc += token;
           setMessages(prev => prev.map(m => m.id === aiMessageId ? { ...m, content: acc } : m));
         });
-        await saveMessage(acc, 'ai');
+        await saveMessage(acc, 'assistant');
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'On-device generation failed';
         setMessages(prev => prev.map(m => m.id === aiMessageId ? { ...m, content: `⚠️ ${msg}` } : m));
