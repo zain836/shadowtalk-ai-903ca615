@@ -256,6 +256,7 @@ const ChatbotPage = () => {
   const thinkingSteps = useThinkingSteps(); // Claude-style thinking transparency
   // proactiveAI removed from main chatbot — runs on 24/7 support widget only
   const intelligenceHub = useIntelligenceHub(); // Retention: AI memory + knowledge + streaks
+  const gemmaOffline = useGemmaOffline(); // New on-device Gemma engine + hybrid router
   
   // Thinking transparency state
   const [showThinkingPanel, setShowThinkingPanel] = useState(true);
@@ -1095,15 +1096,43 @@ const ChatbotPage = () => {
     abortControllerRef.current = new AbortController();
     await saveMessage(messageToSend, 'user');
 
-    // Offline mode is being rebuilt — when the network is offline, surface a
-    // friendly message instead of trying to spin up the old local engine.
-    // The original local-inference flow is preserved in version control.
+    // Hybrid router: route to on-device Gemma when offline (or user forces local)
+    // and the model is loaded; otherwise fall through to the cloud pipeline.
+    const routerMessages = [
+      ...messages.filter(m => m.id !== 'welcome').map(m => ({
+        role: (m.type === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+        content: typeof m.content === 'string' ? m.content : '',
+      })),
+      { role: 'user' as const, content: messageToSend },
+    ];
+    const decision = gemmaOffline.route(routerMessages);
+
+    if (decision.target === 'local') {
+      const aiMessageId = crypto.randomUUID();
+      // Insert empty assistant message we will stream into
+      setMessages(prev => [...prev, { id: aiMessageId, type: 'ai', content: '', timestamp: new Date() }]);
+      let acc = '';
+      try {
+        await gemmaOffline.chatLocal(routerMessages, (token) => {
+          acc += token;
+          setMessages(prev => prev.map(m => m.id === aiMessageId ? { ...m, content: acc } : m));
+        });
+        await saveMessage(acc, 'ai');
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'On-device generation failed';
+        setMessages(prev => prev.map(m => m.id === aiMessageId ? { ...m, content: `⚠️ ${msg}` } : m));
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     if (isOffline) {
+      // Cloud was chosen but we're offline — show the friendly notice.
       const aiMessageId = crypto.randomUUID();
       const noticeContent =
         "🔌 **You're offline**\n\n" +
-        "On-device AI is temporarily disabled while we ship a new offline mode. " +
-        "Please reconnect to the internet to keep chatting — the new engine lands soon.";
+        "On-device AI isn't loaded yet. Open Settings → On-Device AI to download a model so you can chat fully offline next time.";
       setMessages(prev => [...prev, {
         id: aiMessageId,
         type: "ai",
