@@ -23,7 +23,22 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const count = slideCount || 10;
-    const t = THEMES[style || "corporate"] || THEMES.corporate;
+    const requestedStyle = style || "corporate";
+
+    // Audience detection — auto-suggest a friendlier theme when the topic/context
+    // mentions children or students, even if the caller passed "corporate".
+    const audienceBlob = `${topic || ""} ${additionalContext || ""}`.toLowerCase();
+    const isYoungAudience = /\b(kids?|children|elementary|kindergarten|preschool|primary school|young students?|grade [1-6]\b|ages?\s*[3-9]|ages?\s*1[0-2])\b/.test(audienceBlob);
+    const isAcademic = /\b(university|college|academic|researchers?|phd|graduate students?|scholars?)\b/.test(audienceBlob);
+    let effectiveStyle = requestedStyle;
+    if (requestedStyle === "corporate" && isYoungAudience) effectiveStyle = "creative";
+    else if (requestedStyle === "corporate" && isAcademic) effectiveStyle = "academic";
+    const t = THEMES[effectiveStyle] || THEMES.corporate;
+    const themeAutoSwitched = effectiveStyle !== requestedStyle;
+
+    const audienceGuidance = isYoungAudience
+      ? `\n\nAUDIENCE ADAPTATION (CRITICAL): The audience is YOUNG CHILDREN / elementary students.\n- Use simple, playful language at a 2nd–4th grade reading level.\n- Replace technical percentages, citations, and jargon with friendly comparisons (e.g. "more than half of your body" instead of "55–78%").\n- Prefer big icons, emojis, bright accent colors, and short sentences (max ~12 words).\n- NO academic citations on slides. Save sources for speaker notes only.`
+      : "";
 
     // Single powerful call with Manus-level instructions
     // The prompt forces the model to THINK like Manus: research first, then code
