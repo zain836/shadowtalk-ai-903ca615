@@ -112,7 +112,7 @@ CRITICAL VISUAL STANDARDS:
 
 LAYOUT RULES:
 - Root: <div style="width:960px;height:540px;overflow:hidden;position:relative;background:${t.bg};color:${t.text};font-family:'Inter','Segoe UI',system-ui,sans-serif;">
-- ALL styles MUST be inline (style="...")
+- ALL styles MUST be inline. Use SINGLE QUOTES for HTML attributes (e.g. style='color:red;font-size:20px;') so they don't conflict with the JSON double-quotes wrapping the html field. NEVER use double quotes inside the html string.
 - NO <style> tags, NO CSS classes, NO external resources
 - Use flexbox (display:flex) and grid (display:grid) for layouts
 - Generous padding (40-60px) and consistent spacing
