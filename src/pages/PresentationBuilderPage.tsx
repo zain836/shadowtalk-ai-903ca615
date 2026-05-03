@@ -203,6 +203,11 @@ const PresentationBuilderPage = () => {
       setCurrentSlide(0);
       setActiveTab("editor");
       setUrlWorkflowStep("idle");
+      const meta = data?.metadata;
+      if (meta?.themeAutoSwitched && meta.effectiveStyle && meta.effectiveStyle in THEMES) {
+        setStyle(meta.effectiveStyle as ThemeKey);
+        toast.info(`Theme auto-adjusted to "${meta.effectiveStyle}" for your audience`);
+      }
       toast.success(`Generated ${slides.length} elite slides from website analysis!`);
     } catch (err) {
       phaseTimers.forEach(clearTimeout);
