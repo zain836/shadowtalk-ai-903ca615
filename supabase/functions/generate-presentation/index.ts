@@ -112,7 +112,7 @@ CRITICAL VISUAL STANDARDS:
 
 LAYOUT RULES:
 - Root: <div style="width:960px;height:540px;overflow:hidden;position:relative;background:${t.bg};color:${t.text};font-family:'Inter','Segoe UI',system-ui,sans-serif;">
-- ALL styles MUST be inline (style="...")
+- ALL styles MUST be inline. Use SINGLE QUOTES for HTML attributes (e.g. style='color:red;font-size:20px;') so they don't conflict with the JSON double-quotes wrapping the html field. NEVER use double quotes inside the html string.
 - NO <style> tags, NO CSS classes, NO external resources
 - Use flexbox (display:flex) and grid (display:grid) for layouts
 - Generous padding (40-60px) and consistent spacing
@@ -207,15 +207,64 @@ For "content" field (PPTX fallback):
     let raw = data.choices?.[0]?.message?.content || '';
     if (!raw) throw new Error("Empty response from AI model");
     raw = raw.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-    // Fix control characters inside JSON string values
+    // Strip control characters
     raw = raw.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
-    // Replace unescaped newlines/tabs inside strings
-    raw = raw.replace(/(?<=":[ ]*")((?:[^"\\]|\\.)*)(?=")/g, (match) => {
-      return match.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
-    });
-    
+
     console.log("AI response length:", raw.length);
-    const presentation = JSON.parse(raw);
+
+    // Robust JSON parse: AI often emits inline HTML with unescaped double-quotes
+    // (e.g. style="..."). Try strict first, then fall back to a single-pass
+    // repair that escapes stray quotes/newlines/tabs inside string values only.
+    function repairJsonString(input: string): string {
+      let out = "";
+      let inString = false;
+      let escaped = false;
+      for (let i = 0; i < input.length; i++) {
+        const ch = input[i];
+        if (!inString) {
+          if (ch === '"') { inString = true; out += ch; continue; }
+          out += ch;
+          continue;
+        }
+        // Inside a string
+        if (escaped) { out += ch; escaped = false; continue; }
+        if (ch === '\\') { out += ch; escaped = true; continue; }
+        if (ch === '"') {
+          // Decide if this " ends the string. Look at the next non-space char.
+          let j = i + 1;
+          while (j < input.length && (input[j] === ' ' || input[j] === '\t')) j++;
+          const next = input[j];
+          if (next === ',' || next === '}' || next === ']' || next === ':' || next === '\n' || next === '\r' || next === undefined) {
+            inString = false;
+            out += ch;
+          } else {
+            // Stray inner quote — escape it
+            out += '\\"';
+          }
+          continue;
+        }
+        if (ch === '\n') { out += '\\n'; continue; }
+        if (ch === '\r') { out += '\\r'; continue; }
+        if (ch === '\t') { out += '\\t'; continue; }
+        out += ch;
+      }
+      return out;
+    }
+
+    let presentation: any;
+    try {
+      presentation = JSON.parse(raw);
+    } catch (firstErr) {
+      console.warn("Initial JSON.parse failed, attempting repair:", (firstErr as Error).message);
+      const repaired = repairJsonString(raw);
+      try {
+        presentation = JSON.parse(repaired);
+        console.log("Repaired JSON parsed successfully");
+      } catch (secondErr) {
+        console.error("Repair also failed:", (secondErr as Error).message);
+        throw new Error("AI returned malformed JSON. Please regenerate.");
+      }
+    }
 
     // Validate and fix slides
     if (presentation.slides) {
