@@ -481,11 +481,12 @@ const PresentationBuilderPage = () => {
       }
 
       const filename = `${presentation.title.replace(/[^a-zA-Z0-9]/g, '_')}.pptx`;
+      toast.loading(`Writing ${filename}…`, { id: exportToastId });
       await pptx.writeFile({ fileName: filename });
-      toast.success("Professional PPTX downloaded!");
+      toast.success("Professional PPTX downloaded!", { id: exportToastId });
     } catch (err) {
       console.error("PPTX export error:", err);
-      toast.error("Export failed: " + (err instanceof Error ? err.message : "Unknown error"));
+      toast.error("Export failed: " + (err instanceof Error ? err.message : "Unknown error"), { id: exportToastId });
     } finally {
       setIsExporting(false);
     }
