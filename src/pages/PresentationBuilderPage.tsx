@@ -270,6 +270,7 @@ const PresentationBuilderPage = () => {
   const exportToPPTX = useCallback(async () => {
     if (!presentation) return;
     setIsExporting(true);
+    const exportToastId = toast.loading(`Preparing PPTX (${presentation.slides.length} slides)…`);
     try {
       const pptxgenjs = await import("pptxgenjs");
       const PptxGenJS = pptxgenjs.default;
@@ -279,6 +280,7 @@ const PresentationBuilderPage = () => {
       pptx.author = "ShadowTalk AI";
       pptx.title = presentation.title;
       pptx.layout = "LAYOUT_WIDE";
+      toast.loading(`Building slides…`, { id: exportToastId });
 
       for (const slide of presentation.slides) {
         const pptSlide = pptx.addSlide();
