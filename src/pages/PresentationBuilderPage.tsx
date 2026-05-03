@@ -245,6 +245,12 @@ const PresentationBuilderPage = () => {
       setPresentation({ ...data, slides });
       setCurrentSlide(0);
       setActiveTab("editor");
+      // Surface theme auto-switch from edge function (e.g. "corporate" → "creative" for kids)
+      const meta = data?.metadata;
+      if (meta?.themeAutoSwitched && meta.effectiveStyle && meta.effectiveStyle in THEMES) {
+        setStyle(meta.effectiveStyle as ThemeKey);
+        toast.info(`Theme auto-adjusted to "${meta.effectiveStyle}" for your audience`);
+      }
       toast.success(`Generated ${slides.length} Manus-quality slides with real research!`);
     } catch (err) {
       phaseTimers.forEach(clearTimeout);
