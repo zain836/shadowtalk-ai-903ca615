@@ -125,7 +125,11 @@ CONTENT QUALITY:
 - Short punchy descriptions (2-3 lines max per card)
 - Speaker notes: 4-6 sentences with delivery cues and transitions
 
-SLIDE SEQUENCE (${count} slides, narrative arc):
+SLIDE COUNT (STRICT): You MUST output EXACTLY ${count} slides — no more, no less. Plan the narrative arc to fit precisely into ${count} slides. If a topic has more ideas than ${count} slides, MERGE related concepts. If fewer, expand with deeper detail. Count your slides before returning.
+
+VISUAL–DATA CONSISTENCY (STRICT): Whenever a slide states a NUMBER or RANGE in the text (e.g. "5–8 glasses", "3 steps", "7 benefits"), the icon/visual representation MUST match that number exactly. For ranges like "5–8", render the MAXIMUM (8 icons) and visually highlight the MINIMUM (5 filled, 3 outlined) — never reverse this. Never let icon counts contradict the written number.${audienceGuidance}
+
+SLIDE SEQUENCE (${count} slides, narrative arc — adapt to fit EXACTLY ${count}):
 1. Title — Cinematic, full-gradient, bold provocative positioning statement
 2. Problem — What's broken, backed by hard data
 3. Solution overview — 3 key pillars with icon cards
@@ -136,7 +140,7 @@ SLIDE SEQUENCE (${count} slides, narrative arc):
 8. Business model / Pricing — Tier cards or table
 9. Roadmap — Phased timeline with status indicators
 10. Closing/CTA — Cinematic, contact info, next steps
-Adapt this to ${count} slides. Merge or split as needed.
+Adapt this to ${count} slides. Merge or split as needed. FINAL OUTPUT MUST CONTAIN EXACTLY ${count} SLIDE OBJECTS.
 
 OUTPUT FORMAT:
 {
