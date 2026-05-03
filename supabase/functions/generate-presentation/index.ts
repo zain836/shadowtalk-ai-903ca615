@@ -234,6 +234,32 @@ For "content" field (PPTX fallback):
       });
     }
 
+    // STRICT slide-count enforcement — trim or pad to exactly `count` slides
+    if (Array.isArray(presentation.slides)) {
+      if (presentation.slides.length > count) {
+        presentation.slides = presentation.slides.slice(0, count);
+      } else if (presentation.slides.length < count) {
+        const pad = count - presentation.slides.length;
+        for (let i = 0; i < pad; i++) {
+          presentation.slides.push({
+            title: `Additional Insights ${i + 1}`,
+            layout: "bullets",
+            html: `<div style="width:960px;height:540px;overflow:hidden;position:relative;background:${t.bg};color:${t.text};font-family:'Inter',system-ui,sans-serif;display:flex;flex-direction:column;justify-content:center;padding:60px;"><h2 style="font-size:36px;font-weight:800;margin-bottom:16px;color:${t.accent};">Additional Insights</h2><p style="font-size:18px;color:${t.mutedText};">Expand on the topic with further detail in the editor.</p></div>`,
+            content: { heading: "Additional Insights", paragraphs: ["Add your own content here."] },
+            speakerNotes: "Placeholder slide added to satisfy the requested slide count.",
+          });
+        }
+      }
+    }
+
+    presentation.metadata = {
+      ...(presentation.metadata || {}),
+      effectiveStyle,
+      themeAutoSwitched,
+      requestedStyle,
+      audienceTier: isYoungAudience ? "young" : isAcademic ? "academic" : "general",
+    };
+
     return new Response(JSON.stringify(presentation), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
