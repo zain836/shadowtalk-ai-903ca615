@@ -23,7 +23,22 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const count = slideCount || 10;
-    const t = THEMES[style || "corporate"] || THEMES.corporate;
+    const requestedStyle = style || "corporate";
+
+    // Audience detection — auto-suggest a friendlier theme when the topic/context
+    // mentions children or students, even if the caller passed "corporate".
+    const audienceBlob = `${topic || ""} ${additionalContext || ""}`.toLowerCase();
+    const isYoungAudience = /\b(kids?|children|elementary|kindergarten|preschool|primary school|young students?|grade [1-6]\b|ages?\s*[3-9]|ages?\s*1[0-2])\b/.test(audienceBlob);
+    const isAcademic = /\b(university|college|academic|researchers?|phd|graduate students?|scholars?)\b/.test(audienceBlob);
+    let effectiveStyle = requestedStyle;
+    if (requestedStyle === "corporate" && isYoungAudience) effectiveStyle = "creative";
+    else if (requestedStyle === "corporate" && isAcademic) effectiveStyle = "academic";
+    const t = THEMES[effectiveStyle] || THEMES.corporate;
+    const themeAutoSwitched = effectiveStyle !== requestedStyle;
+
+    const audienceGuidance = isYoungAudience
+      ? `\n\nAUDIENCE ADAPTATION (CRITICAL): The audience is YOUNG CHILDREN / elementary students.\n- Use simple, playful language at a 2nd–4th grade reading level.\n- Replace technical percentages, citations, and jargon with friendly comparisons (e.g. "more than half of your body" instead of "55–78%").\n- Prefer big icons, emojis, bright accent colors, and short sentences (max ~12 words).\n- NO academic citations on slides. Save sources for speaker notes only.`
+      : "";
 
     // Single powerful call with Manus-level instructions
     // The prompt forces the model to THINK like Manus: research first, then code
@@ -110,7 +125,11 @@ CONTENT QUALITY:
 - Short punchy descriptions (2-3 lines max per card)
 - Speaker notes: 4-6 sentences with delivery cues and transitions
 
-SLIDE SEQUENCE (${count} slides, narrative arc):
+SLIDE COUNT (STRICT): You MUST output EXACTLY ${count} slides — no more, no less. Plan the narrative arc to fit precisely into ${count} slides. If a topic has more ideas than ${count} slides, MERGE related concepts. If fewer, expand with deeper detail. Count your slides before returning.
+
+VISUAL–DATA CONSISTENCY (STRICT): Whenever a slide states a NUMBER or RANGE in the text (e.g. "5–8 glasses", "3 steps", "7 benefits"), the icon/visual representation MUST match that number exactly. For ranges like "5–8", render the MAXIMUM (8 icons) and visually highlight the MINIMUM (5 filled, 3 outlined) — never reverse this. Never let icon counts contradict the written number.${audienceGuidance}
+
+SLIDE SEQUENCE (${count} slides, narrative arc — adapt to fit EXACTLY ${count}):
 1. Title — Cinematic, full-gradient, bold provocative positioning statement
 2. Problem — What's broken, backed by hard data
 3. Solution overview — 3 key pillars with icon cards
@@ -121,7 +140,7 @@ SLIDE SEQUENCE (${count} slides, narrative arc):
 8. Business model / Pricing — Tier cards or table
 9. Roadmap — Phased timeline with status indicators
 10. Closing/CTA — Cinematic, contact info, next steps
-Adapt this to ${count} slides. Merge or split as needed.
+Adapt this to ${count} slides. Merge or split as needed. FINAL OUTPUT MUST CONTAIN EXACTLY ${count} SLIDE OBJECTS.
 
 OUTPUT FORMAT:
 {
@@ -214,6 +233,32 @@ For "content" field (PPTX fallback):
         return slide;
       });
     }
+
+    // STRICT slide-count enforcement — trim or pad to exactly `count` slides
+    if (Array.isArray(presentation.slides)) {
+      if (presentation.slides.length > count) {
+        presentation.slides = presentation.slides.slice(0, count);
+      } else if (presentation.slides.length < count) {
+        const pad = count - presentation.slides.length;
+        for (let i = 0; i < pad; i++) {
+          presentation.slides.push({
+            title: `Additional Insights ${i + 1}`,
+            layout: "bullets",
+            html: `<div style="width:960px;height:540px;overflow:hidden;position:relative;background:${t.bg};color:${t.text};font-family:'Inter',system-ui,sans-serif;display:flex;flex-direction:column;justify-content:center;padding:60px;"><h2 style="font-size:36px;font-weight:800;margin-bottom:16px;color:${t.accent};">Additional Insights</h2><p style="font-size:18px;color:${t.mutedText};">Expand on the topic with further detail in the editor.</p></div>`,
+            content: { heading: "Additional Insights", paragraphs: ["Add your own content here."] },
+            speakerNotes: "Placeholder slide added to satisfy the requested slide count.",
+          });
+        }
+      }
+    }
+
+    presentation.metadata = {
+      ...(presentation.metadata || {}),
+      effectiveStyle,
+      themeAutoSwitched,
+      requestedStyle,
+      audienceTier: isYoungAudience ? "young" : isAcademic ? "academic" : "general",
+    };
 
     return new Response(JSON.stringify(presentation), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

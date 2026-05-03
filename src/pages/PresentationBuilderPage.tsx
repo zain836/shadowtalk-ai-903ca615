@@ -203,6 +203,11 @@ const PresentationBuilderPage = () => {
       setCurrentSlide(0);
       setActiveTab("editor");
       setUrlWorkflowStep("idle");
+      const meta = data?.metadata;
+      if (meta?.themeAutoSwitched && meta.effectiveStyle && meta.effectiveStyle in THEMES) {
+        setStyle(meta.effectiveStyle as ThemeKey);
+        toast.info(`Theme auto-adjusted to "${meta.effectiveStyle}" for your audience`);
+      }
       toast.success(`Generated ${slides.length} elite slides from website analysis!`);
     } catch (err) {
       phaseTimers.forEach(clearTimeout);
@@ -245,6 +250,12 @@ const PresentationBuilderPage = () => {
       setPresentation({ ...data, slides });
       setCurrentSlide(0);
       setActiveTab("editor");
+      // Surface theme auto-switch from edge function (e.g. "corporate" → "creative" for kids)
+      const meta = data?.metadata;
+      if (meta?.themeAutoSwitched && meta.effectiveStyle && meta.effectiveStyle in THEMES) {
+        setStyle(meta.effectiveStyle as ThemeKey);
+        toast.info(`Theme auto-adjusted to "${meta.effectiveStyle}" for your audience`);
+      }
       toast.success(`Generated ${slides.length} Manus-quality slides with real research!`);
     } catch (err) {
       phaseTimers.forEach(clearTimeout);
@@ -259,6 +270,7 @@ const PresentationBuilderPage = () => {
   const exportToPPTX = useCallback(async () => {
     if (!presentation) return;
     setIsExporting(true);
+    const exportToastId = toast.loading(`Preparing PPTX (${presentation.slides.length} slides)…`);
     try {
       const pptxgenjs = await import("pptxgenjs");
       const PptxGenJS = pptxgenjs.default;
@@ -268,6 +280,7 @@ const PresentationBuilderPage = () => {
       pptx.author = "ShadowTalk AI";
       pptx.title = presentation.title;
       pptx.layout = "LAYOUT_WIDE";
+      toast.loading(`Building slides…`, { id: exportToastId });
 
       for (const slide of presentation.slides) {
         const pptSlide = pptx.addSlide();
@@ -468,11 +481,12 @@ const PresentationBuilderPage = () => {
       }
 
       const filename = `${presentation.title.replace(/[^a-zA-Z0-9]/g, '_')}.pptx`;
+      toast.loading(`Writing ${filename}…`, { id: exportToastId });
       await pptx.writeFile({ fileName: filename });
-      toast.success("Professional PPTX downloaded!");
+      toast.success("Professional PPTX downloaded!", { id: exportToastId });
     } catch (err) {
       console.error("PPTX export error:", err);
-      toast.error("Export failed: " + (err instanceof Error ? err.message : "Unknown error"));
+      toast.error("Export failed: " + (err instanceof Error ? err.message : "Unknown error"), { id: exportToastId });
     } finally {
       setIsExporting(false);
     }
