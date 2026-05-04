@@ -53,34 +53,10 @@ export const usePrivacyScore = () => {
     }
   }, []);
 
-  // Simulate real-time privacy monitoring
-  useEffect(() => {
-    const simulateBlocking = () => {
-      const types: PrivacyEvent['type'][] = ['tracker_blocked', 'cookie_blocked', 'fingerprint_blocked', 'data_request_blocked'];
-      const sources = ['analytics.google.com', 'facebook.net', 'doubleclick.net', 'ads.twitter.com', 'clarity.ms', 'hotjar.com', 'segment.io', 'mixpanel.com'];
-      const categories = ['Analytics', 'Advertising', 'Fingerprinting', 'Social Tracking'];
-
-      const event: PrivacyEvent = {
-        id: crypto.randomUUID(),
-        type: types[Math.floor(Math.random() * types.length)],
-        source: sources[Math.floor(Math.random() * sources.length)],
-        timestamp: new Date(),
-        category: categories[Math.floor(Math.random() * categories.length)],
-      };
-
-      addEvent(event);
-    };
-
-    // Simulate blocking events periodically
-    const interval = setInterval(simulateBlocking, 30000 + Math.random() * 60000);
-    
-    // Initial events
-    for (let i = 0; i < 5; i++) {
-      setTimeout(() => simulateBlocking(), i * 2000);
-    }
-
-    return () => clearInterval(interval);
-  }, []);
+  // NOTE: We intentionally do NOT fabricate "tracker blocked" events here.
+  // Real privacy events are pushed via `addEvent` / `logLocalProcessing` from
+  // the call-sites that actually performed the work (kill-switch, AI router,
+  // service worker). The dashboard reflects only true, recorded activity.
 
   const recalculateScore = useCallback((events: PrivacyEvent[]) => {
     const trackersBlocked = events.filter(e => e.type === 'tracker_blocked').length;
