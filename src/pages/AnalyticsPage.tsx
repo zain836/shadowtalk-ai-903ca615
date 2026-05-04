@@ -300,7 +300,9 @@ const AnalyticsPage = () => {
                         </div>
                         <div className="text-right">
                           <p className="font-medium">{model.value}%</p>
-                          <p className="text-xs text-muted-foreground">~{(Math.random() * 2 + 0.5).toFixed(2)}s avg</p>
+                          <p className="text-xs text-muted-foreground">
+                            {model.avgSeconds ? `~${model.avgSeconds.toFixed(2)}s avg` : "—"}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -313,19 +315,16 @@ const AnalyticsPage = () => {
           <TabsContent value="regions" className="space-y-6">
             <motion.div custom={0} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}>
               <Card className="card-glass overflow-hidden">
-                <CardHeader className="relative z-10"><CardTitle>Geographic Distribution</CardTitle><CardDescription>User distribution by region</CardDescription></CardHeader>
-                <CardContent className="relative z-10 space-y-4">
-                  {regionData.map((region, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>{region.region}</span>
-                        <span className="text-muted-foreground">{region.users.toLocaleString()} users ({region.percentage}%)</span>
-                      </div>
-                      <div className="h-2 glass-subtle rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all" style={{ width: `${region.percentage}%` }} />
-                      </div>
-                    </div>
-                  ))}
+                <CardHeader className="relative z-10">
+                  <CardTitle>Geographic Distribution</CardTitle>
+                  <CardDescription>User distribution by region</CardDescription>
+                </CardHeader>
+                <CardContent className="relative z-10">
+                  <div className="text-center py-12 text-muted-foreground text-sm">
+                    <Globe className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                    <p>Per-region analytics aren't collected yet.</p>
+                    <p className="text-xs mt-1">We don't track user locations — this view will appear once opt-in regional analytics ship.</p>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
