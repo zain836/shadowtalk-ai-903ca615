@@ -196,8 +196,8 @@ const AnalyticsPage = () => {
                     <div>
                       <p className="text-sm text-muted-foreground">{stat.title}</p>
                       <p className="text-3xl font-bold mt-1">{stat.value}</p>
-                      <Badge variant={stat.change.startsWith("+") ? "default" : "secondary"} className="mt-2 text-xs">
-                        <TrendingUp className="h-3 w-3 mr-1" />{stat.change} this week
+                      <Badge variant="secondary" className="mt-2 text-xs">
+                        <TrendingUp className="h-3 w-3 mr-1" />Last 7 days
                       </Badge>
                     </div>
                     <div className={`p-3 rounded-xl glass-subtle ${stat.color}`}>
