@@ -23,55 +23,127 @@ const fadeUp = {
   }),
 };
 
+interface UsageRow { date: string; messages: number; tokens: number; users: number }
+interface ModelRow { name: string; value: number; color: string; avgSeconds: number }
+interface FeatureRow { feature: string; usage: number }
+
+const MODEL_COLORS: Record<string, string> = {
+  default: "hsl(var(--primary))",
+};
+const COLOR_PALETTE = [
+  "hsl(var(--primary))",
+  "hsl(var(--secondary))",
+  "hsl(var(--accent))",
+  "hsl(var(--muted))",
+  "hsl(var(--success))",
+  "hsl(var(--warning))",
+];
+
+const FEATURE_LABEL: Record<string, string> = {
+  chat: "Chat",
+  message: "Chat",
+  image: "Image Gen",
+  image_generation: "Image Gen",
+  code: "Code Canvas",
+  code_generation: "Code Canvas",
+  voice: "Voice",
+  search: "Web Search",
+  web_search: "Web Search",
+  deep_research: "Deep Research",
+  file_upload: "Files",
+};
+
 const AnalyticsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ totalMessages: 0, activeUsers: 0, tokensUsed: 0, avgResponseTime: 0 });
-
-  const usageData = [
-    { date: "Jan 1", messages: 120, tokens: 15000, users: 45 },
-    { date: "Jan 2", messages: 180, tokens: 22000, users: 52 },
-    { date: "Jan 3", messages: 150, tokens: 18500, users: 48 },
-    { date: "Jan 4", messages: 220, tokens: 28000, users: 65 },
-    { date: "Jan 5", messages: 190, tokens: 24000, users: 58 },
-    { date: "Jan 6", messages: 280, tokens: 35000, users: 72 },
-    { date: "Jan 7", messages: 310, tokens: 38000, users: 80 },
-  ];
-
-  const modelUsage = [
-    { name: "Gemini 2.5 Pro", value: 45, color: "hsl(var(--primary))" },
-    { name: "Gemini 2.5 Flash", value: 35, color: "hsl(var(--secondary))" },
-    { name: "GPT-5", value: 15, color: "hsl(var(--accent))" },
-    { name: "Other", value: 5, color: "hsl(var(--muted))" },
-  ];
-
-  const featureUsage = [
-    { feature: "Chat", usage: 85 },
-    { feature: "Image Gen", usage: 45 },
-    { feature: "Code Canvas", usage: 62 },
-    { feature: "Voice", usage: 28 },
-    { feature: "Web Search", usage: 38 },
-  ];
-
-  const regionData = [
-    { region: "North America", users: 1250, percentage: 35 },
-    { region: "Europe", users: 980, percentage: 27 },
-    { region: "Asia Pacific", users: 850, percentage: 24 },
-    { region: "Latin America", users: 320, percentage: 9 },
-    { region: "Other", users: 180, percentage: 5 },
-  ];
+  const [usageData, setUsageData] = useState<UsageRow[]>([]);
+  const [modelUsage, setModelUsage] = useState<ModelRow[]>([]);
+  const [featureUsage, setFeatureUsage] = useState<FeatureRow[]>([]);
 
   useEffect(() => {
     const fetchStats = async () => {
       if (!user) { setLoading(false); return; }
       try {
-        const [messagesRes, usageRes] = await Promise.all([
-          supabase.from("messages").select("id", { count: "exact" }).eq("user_id", user.id),
-          supabase.from("usage_analytics").select("tokens_used").eq("user_id", user.id),
+        const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+
+        const [messagesRes, usageRes, dailyRes, recentMsgsRes] = await Promise.all([
+          supabase.from("messages").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+          supabase.from("usage_analytics").select("tokens_used, feature_used, created_at").eq("user_id", user.id),
+          supabase.from("daily_usage").select("usage_date, messages, code_generations, image_generations, web_searches, deep_research").eq("user_id", user.id).gte("usage_date", sevenDaysAgo.slice(0, 10)).order("usage_date", { ascending: true }),
+          supabase.from("messages").select("created_at, personality").eq("user_id", user.id).gte("created_at", sevenDaysAgo).order("created_at", { ascending: true }),
         ]);
+
         const totalTokens = usageRes.data?.reduce((sum, item) => sum + (item.tokens_used || 0), 0) || 0;
-        setStats({ totalMessages: messagesRes.count || 0, activeUsers: 1, tokensUsed: totalTokens, avgResponseTime: 1.2 });
+
+        // Compute avg response time: assistant created_at - prior user msg created_at within same conversation.
+        // Cheap approximation using consecutive timestamps in recent window.
+        let avgResponseTime = 0;
+        const msgs = recentMsgsRes.data || [];
+        if (msgs.length >= 2) {
+          const deltas: number[] = [];
+          for (let i = 1; i < msgs.length; i++) {
+            const d = (new Date(msgs[i].created_at).getTime() - new Date(msgs[i - 1].created_at).getTime()) / 1000;
+            if (d > 0 && d < 60) deltas.push(d);
+          }
+          if (deltas.length) avgResponseTime = +(deltas.reduce((a, b) => a + b, 0) / deltas.length).toFixed(2);
+        }
+
+        setStats({
+          totalMessages: messagesRes.count || 0,
+          activeUsers: 1,
+          tokensUsed: totalTokens,
+          avgResponseTime,
+        });
+
+        // Daily usage chart from daily_usage table
+        const usageRows: UsageRow[] = (dailyRes.data || []).map((d) => ({
+          date: new Date(d.usage_date).toLocaleDateString("en", { month: "short", day: "numeric" }),
+          messages: d.messages || 0,
+          tokens: 0,
+          users: 1,
+        }));
+        // Fold tokens per day from usage_analytics
+        (usageRes.data || []).forEach((u) => {
+          const day = new Date(u.created_at).toLocaleDateString("en", { month: "short", day: "numeric" });
+          const row = usageRows.find((r) => r.date === day);
+          if (row) row.tokens += u.tokens_used || 0;
+        });
+        setUsageData(usageRows);
+
+        // Model usage from messages.personality
+        const modelCounts: Record<string, number> = {};
+        msgs.forEach((m) => {
+          const key = m.personality || "default";
+          modelCounts[key] = (modelCounts[key] || 0) + 1;
+        });
+        const modelTotal = Object.values(modelCounts).reduce((a, b) => a + b, 0) || 1;
+        const modelRows: ModelRow[] = Object.entries(modelCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 6)
+          .map(([name, count], i) => ({
+            name,
+            value: Math.round((count / modelTotal) * 100),
+            color: COLOR_PALETTE[i % COLOR_PALETTE.length],
+            avgSeconds: avgResponseTime,
+          }));
+        setModelUsage(modelRows);
+
+        // Feature usage from usage_analytics.feature_used
+        const featureCounts: Record<string, number> = {};
+        (usageRes.data || []).forEach((u) => {
+          if (!u.feature_used) return;
+          const label = FEATURE_LABEL[u.feature_used] || u.feature_used;
+          featureCounts[label] = (featureCounts[label] || 0) + 1;
+        });
+        const featureMax = Math.max(1, ...Object.values(featureCounts));
+        setFeatureUsage(
+          Object.entries(featureCounts)
+            .map(([feature, count]) => ({ feature, usage: Math.round((count / featureMax) * 100) }))
+            .sort((a, b) => b.usage - a.usage)
+            .slice(0, 8)
+        );
       } catch (error) {
         console.error("Error fetching stats:", error);
       } finally { setLoading(false); }
@@ -80,10 +152,10 @@ const AnalyticsPage = () => {
   }, [user]);
 
   const statCards = [
-    { title: "Total Messages", value: stats.totalMessages.toLocaleString(), change: "+12%", icon: MessageSquare, color: "text-primary" },
-    { title: "Active Users", value: stats.activeUsers.toLocaleString(), change: "+8%", icon: Users, color: "text-secondary" },
-    { title: "Tokens Used", value: stats.tokensUsed.toLocaleString(), change: "+23%", icon: Zap, color: "text-accent" },
-    { title: "Avg Response Time", value: `${stats.avgResponseTime}s`, change: "-5%", icon: Clock, color: "text-success" },
+    { title: "Total Messages", value: stats.totalMessages.toLocaleString(), icon: MessageSquare, color: "text-primary" },
+    { title: "Your Account", value: stats.activeUsers.toLocaleString(), icon: Users, color: "text-secondary" },
+    { title: "Tokens Used", value: stats.tokensUsed.toLocaleString(), icon: Zap, color: "text-accent" },
+    { title: "Avg Response Time", value: stats.avgResponseTime ? `${stats.avgResponseTime}s` : "—", icon: Clock, color: "text-success" },
   ];
 
   return (
