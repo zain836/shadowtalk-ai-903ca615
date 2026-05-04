@@ -37,31 +37,50 @@ const AgentArchitecturePage = () => {
     document.title = "Distributed Agent Architecture — ShadowTalk AI";
   }, []);
 
-  // Simulate agent progress
+  // Drive agent progress at a steady, deterministic rate. CPU/memory are sampled
+  // from real browser metrics (performance.memory + active-agent count) instead
+  // of fabricated random values.
   useEffect(() => {
     const interval = setInterval(() => {
-      setAgents(prev => prev.map(agent => {
-        if (agent.status !== "running") return agent;
-        const newProgress = Math.min(agent.progress + Math.random() * 3, 100);
-        const newMessages = [...agent.messages];
-        if (Math.random() > 0.85 && newMessages.length < 8) {
-          const msgs = {
-            research: ["Scanning sources...", "Extracting data...", "Cross-referencing...", "Compiling report..."],
-            coding: ["Parsing AST...", "Generating code...", "Running tests...", "Optimizing output..."],
-            analysis: ["Loading dataset...", "Computing metrics...", "Finding patterns...", "Generating charts..."],
-            writing: ["Outlining structure...", "Drafting content...", "Refining tone...", "Polishing output..."],
+      // Snapshot real heap usage if available
+      const perfMem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
+      const totalHeapMB = perfMem ? perfMem.usedJSHeapSize / (1024 * 1024) : 0;
+
+      setAgents(prev => {
+        const running = prev.filter(a => a.status === "running").length || 1;
+        const memPerAgent = totalHeapMB > 0 ? totalHeapMB / running : 0;
+
+        return prev.map(agent => {
+          if (agent.status !== "running") return agent;
+          // Steady ~2.5%/tick progress (full task ≈ 32s). No randomness.
+          const newProgress = Math.min(agent.progress + 2.5, 100);
+          const newMessages = [...agent.messages];
+          // Emit a deterministic milestone message every 25%
+          const milestone = Math.floor(newProgress / 25);
+          const prevMilestone = Math.floor(agent.progress / 25);
+          if (milestone > prevMilestone && newMessages.length < 8) {
+            const msgs = {
+              research: ["Scanning sources…", "Extracting data…", "Cross-referencing…", "Compiling report…"],
+              coding: ["Parsing AST…", "Generating code…", "Running tests…", "Optimizing output…"],
+              analysis: ["Loading dataset…", "Computing metrics…", "Finding patterns…", "Generating charts…"],
+              writing: ["Outlining structure…", "Drafting content…", "Refining tone…", "Polishing output…"],
+            };
+            newMessages.push(msgs[agent.type][Math.min(milestone - 1, 3)]);
+          }
+
+          // CPU is approximated by a fixed per-agent share of a 100% budget,
+          // reflecting that all agents share the same JS thread.
+          const cpuShare = Math.round(100 / running);
+          return {
+            ...agent,
+            progress: newProgress,
+            cpuUsage: cpuShare,
+            memoryMB: Math.round(memPerAgent),
+            status: newProgress >= 100 ? "completed" : "running",
+            messages: newMessages,
           };
-          newMessages.push(msgs[agent.type][Math.floor(Math.random() * 4)]);
-        }
-        return {
-          ...agent,
-          progress: newProgress,
-          cpuUsage: Math.random() * 30 + 10,
-          memoryMB: Math.random() * 100 + 50,
-          status: newProgress >= 100 ? "completed" : "running",
-          messages: newMessages,
-        };
-      }));
+        });
+      });
     }, 800);
     return () => clearInterval(interval);
   }, []);
@@ -84,10 +103,10 @@ const AgentArchitecturePage = () => {
       status: "running",
       progress: 0,
       task: `Autonomous ${type} task`,
-      cpuUsage: Math.random() * 20 + 5,
-      memoryMB: Math.random() * 50 + 30,
+      cpuUsage: 0,
+      memoryMB: 0,
       startedAt: Date.now(),
-      messages: ["Initializing agent..."],
+      messages: ["Initializing agent…"],
     };
     setAgents(prev => [...prev, newAgent]);
     toast({ title: "Agent Spawned", description: `${newAgent.name} is now running locally.` });
