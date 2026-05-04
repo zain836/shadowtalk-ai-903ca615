@@ -171,7 +171,11 @@ const ChatWidget = () => {
             </div>
             <div>
               <h3 className="font-semibold">AI Assistant <span className="text-success">●</span></h3>
-              <p className="text-xs text-muted-foreground counter-glow">{onlineUsers.toLocaleString()} users online • Real-time responses</p>
+              <p className="text-xs text-muted-foreground counter-glow">
+                {onlineUsers === null
+                  ? "Connecting…"
+                  : `${onlineUsers.toLocaleString()} registered users • Real-time responses`}
+              </p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
