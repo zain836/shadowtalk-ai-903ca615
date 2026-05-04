@@ -11,7 +11,25 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const ChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [onlineUsers] = useState(Math.floor(Math.random() * 1000) + 47000);
+  const [onlineUsers, setOnlineUsers] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        // Real total registered users — no fabricated count.
+        const { count } = await supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true });
+        if (!cancelled) setOnlineUsers(count ?? 0);
+      } catch {
+        if (!cancelled) setOnlineUsers(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState([
@@ -153,7 +171,11 @@ const ChatWidget = () => {
             </div>
             <div>
               <h3 className="font-semibold">AI Assistant <span className="text-success">●</span></h3>
-              <p className="text-xs text-muted-foreground counter-glow">{onlineUsers.toLocaleString()} users online • Real-time responses</p>
+              <p className="text-xs text-muted-foreground counter-glow">
+                {onlineUsers === null
+                  ? "Connecting…"
+                  : `${onlineUsers.toLocaleString()} registered users • Real-time responses`}
+              </p>
             </div>
           </div>
           <div className="flex items-center space-x-2">

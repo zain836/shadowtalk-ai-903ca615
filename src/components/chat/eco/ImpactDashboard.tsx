@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ImpactData {
   co2Saved: number;
@@ -83,16 +84,56 @@ const ProgressRing = ({ progress, size = 80, strokeWidth = 6, color }: {
 };
 
 const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ impact, level, xp, streak }) => {
-  // Generate mock history based on current impact
-  const history: ImpactHistory[] = Array.from({ length: 7 }, (_, i) => {
-    const dayFactor = (7 - i) / 7;
-    return {
-      date: new Date(Date.now() - (6 - i) * 86400000).toLocaleDateString('en', { weekday: 'short' }),
-      co2: +(impact.co2Saved * dayFactor * (0.8 + Math.random() * 0.4) / 7).toFixed(1),
-      water: +(impact.waterSaved * dayFactor * (0.8 + Math.random() * 0.4) / 7).toFixed(0),
-      energy: +(impact.energySaved * dayFactor * (0.8 + Math.random() * 0.4) / 7).toFixed(1),
-    };
-  });
+  // Real history aggregated from eco_actions for the current user (last 7 days).
+  const [history, setHistory] = useState<ImpactHistory[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+
+      // Build 7 empty buckets keyed by weekday.
+      const buckets: ImpactHistory[] = Array.from({ length: 7 }, (_, i) => ({
+        date: new Date(Date.now() - (6 - i) * 86400000).toLocaleDateString('en', { weekday: 'short' }),
+        co2: 0,
+        water: 0,
+        energy: 0,
+      }));
+
+      if (!userId) {
+        if (!cancelled) setHistory(buckets);
+        return;
+      }
+
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      const { data, error } = await supabase
+        .from('eco_actions')
+        .select('co2_saved, water_saved, energy_saved, completed_at')
+        .eq('user_id', userId)
+        .gte('completed_at', sevenDaysAgo);
+
+      if (!error && data) {
+        data.forEach((row) => {
+          const d = new Date(row.completed_at);
+          const idx = 6 - Math.floor((Date.now() - d.getTime()) / 86400000);
+          if (idx >= 0 && idx < 7) {
+            buckets[idx].co2 += Number(row.co2_saved) || 0;
+            buckets[idx].water += Number(row.water_saved) || 0;
+            buckets[idx].energy += Number(row.energy_saved) || 0;
+          }
+        });
+        buckets.forEach((b) => {
+          b.co2 = +b.co2.toFixed(1);
+          b.water = +b.water.toFixed(0);
+          b.energy = +b.energy.toFixed(1);
+        });
+      }
+
+      if (!cancelled) setHistory(buckets);
+    })();
+    return () => { cancelled = true; };
+  }, [impact.actionsCompleted]);
 
   const pieData = [
     { name: 'CO₂', value: impact.co2Saved || 1, color: '#22c55e' },
