@@ -41,26 +41,29 @@ export type GenerateOptions = {
 };
 
 export const GEMMA_MODELS = {
-  // Hugging Face transformers.js compatible Gemma checkpoints (ONNX/q4).
-  // We default to the 2B-IT model because the 4B q4 weights are still ~2.5GB
-  // and many devices can't allocate that much GPU memory; the engine still
-  // supports the larger model when the user explicitly opts in.
-  small: {
-    id: "onnx-community/gemma-3-270m-it-ONNX",
-    label: "Gemma 3 270M (Instruct)",
-    sizeMB: 220,
-    minMemoryGB: 2,
-  },
+  // Real, publicly hosted Gemma 3n ONNX checkpoints from HuggingFace
+  // (multimodal text-generation, q4 quantization for browser inference).
+  // Verified URLs:
+  //   https://huggingface.co/onnx-community/gemma-3n-E2B-it-ONNX
+  //   https://huggingface.co/onnx-community/gemma-3n-E4B-it-ONNX
+  // The 'default' alias maps to E2B for compatibility with the previous
+  // routing preference key.
   default: {
-    id: "onnx-community/gemma-3-1b-it-ONNX",
-    label: "Gemma 3 1B (Instruct)",
-    sizeMB: 900,
+    id: "onnx-community/gemma-3n-E2B-it-ONNX",
+    label: "Gemma 3n E2B (Instruct)",
+    sizeMB: 1700,
     minMemoryGB: 4,
   },
-  large: {
-    id: "onnx-community/gemma-3-4b-it-ONNX",
-    label: "Gemma 3 4B (Instruct)",
-    sizeMB: 2600,
+  e2b: {
+    id: "onnx-community/gemma-3n-E2B-it-ONNX",
+    label: "Gemma 3n E2B (Instruct)",
+    sizeMB: 1700,
+    minMemoryGB: 4,
+  },
+  e4b: {
+    id: "onnx-community/gemma-3n-E4B-it-ONNX",
+    label: "Gemma 3n E4B (Instruct)",
+    sizeMB: 3200,
     minMemoryGB: 8,
   },
 } as const;
