@@ -1,20 +1,18 @@
 /**
- * Gemma WebGPU Inference Engine
+ * Gemma 3n Offline Inference Engine
  * --------------------------------------------------
- * Wraps @huggingface/transformers' text-generation pipeline with:
- *  - WebGPU acceleration (auto-fallback to WASM CPU when unavailable)
- *  - q4 quantization for the Gemma 4B family
- *  - Streaming token callback
- *  - Progress reporting during model load
+ * Wraps @huggingface/transformers v4 with the real Gemma 3n E2B/E4B ONNX
+ * checkpoints from `onnx-community`. Uses WebGPU when available with
+ * automatic WASM CPU fallback. Streaming token output via TextStreamer.
  *
- * Used by the Hybrid Router (Option B from Shadowoffline blueprint) when the
- * device is offline OR the user has explicitly forced local inference.
+ * The engine is a module-level singleton so background downloads survive
+ * across route changes (the React tree only subscribes to its progress bus).
  */
 
 import {
-  pipeline,
+  AutoProcessor,
+  AutoModelForImageTextToText,
   TextStreamer,
-  type PretrainedModelOptions,
 } from "@huggingface/transformers";
 
 export type EngineCapabilities = {
@@ -25,29 +23,18 @@ export type EngineCapabilities = {
 };
 
 export type LoadProgress = {
-  stage: "init" | "model" | "ready";
+  stage: "init" | "model" | "ready" | "error";
   percent: number;
   message?: string;
 };
 
 export type GenerateOptions = {
   maxNewTokens?: number;
-  temperature?: number;
-  topP?: number;
-  topK?: number;
-  repetitionPenalty?: number;
-  stopSequences?: string[];
+  doSample?: boolean;
   onToken?: (token: string) => void;
 };
 
 export const GEMMA_MODELS = {
-  // Real, publicly hosted Gemma 3n ONNX checkpoints from HuggingFace
-  // (multimodal text-generation, q4 quantization for browser inference).
-  // Verified URLs:
-  //   https://huggingface.co/onnx-community/gemma-3n-E2B-it-ONNX
-  //   https://huggingface.co/onnx-community/gemma-3n-E4B-it-ONNX
-  // The 'default' alias maps to E2B for compatibility with the previous
-  // routing preference key.
   default: {
     id: "onnx-community/gemma-3n-E2B-it-ONNX",
     label: "Gemma 3n E2B (Instruct)",
@@ -85,14 +72,18 @@ export async function detectCapabilities(): Promise<EngineCapabilities> {
   const memoryGB = (navigator.deviceMemory as number | undefined) ?? 4;
   return {
     webgpu,
-    wasm: true, // Always available in modern browsers
+    wasm: true,
     recommendedDevice: webgpu ? "webgpu" : "wasm",
     memoryGB,
   };
 }
 
+type ChatRole = "system" | "user" | "assistant";
+type ChatMessage = { role: ChatRole; content: string };
+
 export class GemmaEngine {
-  private generator: any | null = null;
+  private processor: any | null = null;
+  private model: any | null = null;
   private modelKey: GemmaModelKey = "default";
   private device: "webgpu" | "wasm" = "wasm";
   private loading = false;
@@ -101,7 +92,7 @@ export class GemmaEngine {
   private listeners = new Set<(p: LoadProgress) => void>();
 
   get isReady() {
-    return this.generator !== null;
+    return this.model !== null && this.processor !== null;
   }
   get isLoading() {
     return this.loading;
@@ -109,20 +100,19 @@ export class GemmaEngine {
   get progress() {
     return this.lastProgress;
   }
-
   get activeModel() {
     return GEMMA_MODELS[this.modelKey];
   }
-
   get activeDevice() {
     return this.device;
   }
 
-  /** Subscribe to background progress events. Returns an unsubscribe fn. */
   subscribe(fn: (p: LoadProgress) => void): () => void {
     this.listeners.add(fn);
     if (this.lastProgress) fn(this.lastProgress);
-    return () => this.listeners.delete(fn);
+    return () => {
+      this.listeners.delete(fn);
+    };
   }
 
   private emit(p: LoadProgress) {
@@ -136,22 +126,19 @@ export class GemmaEngine {
     modelKey: GemmaModelKey = "default",
     onProgress?: (p: LoadProgress) => void,
   ): Promise<boolean> {
-    if (this.generator && this.modelKey === modelKey) {
+    if (this.isReady && this.modelKey === modelKey) {
       onProgress?.({ stage: "ready", percent: 100, message: "Model already loaded" });
       return true;
     }
-    // Already downloading — just attach listener and await the in-flight promise.
     if (this.currentLoad) {
-      if (onProgress) {
-        const off = this.subscribe(onProgress);
-        try { return await this.currentLoad; } finally { off(); }
-      }
-      return await this.currentLoad;
+      const off = onProgress ? this.subscribe(onProgress) : null;
+      try { return await this.currentLoad; } finally { off?.(); }
     }
 
     this.loading = true;
     this.modelKey = modelKey;
     const off = onProgress ? this.subscribe(onProgress) : null;
+    const modelId = GEMMA_MODELS[modelKey].id;
 
     this.currentLoad = (async () => {
       try {
@@ -159,34 +146,46 @@ export class GemmaEngine {
         this.device = caps.recommendedDevice;
         this.emit({ stage: "init", percent: 0, message: `Initializing ${this.device.toUpperCase()}` });
 
-        const opts: PretrainedModelOptions & Record<string, unknown> = {
-          dtype: "q4",
-          device: this.device,
-          progress_callback: (data: any) => {
-            if (data?.status === "progress" && typeof data.progress === "number") {
-              this.emit({
-                stage: "model",
-                percent: Math.round(data.progress),
-                message: data.file,
-              });
-            } else if (data?.status === "done" && data.file) {
-              this.emit({ stage: "model", percent: 100, message: `Saved ${data.file}` });
-            }
-          },
+        const fileProgress = new Map<string, number>();
+        const onPC = (data: any) => {
+          if (data?.status === "progress" && data?.file) {
+            fileProgress.set(data.file, Math.round(data.progress ?? 0));
+            const avg = Math.round(
+              [...fileProgress.values()].reduce((a, b) => a + b, 0) /
+                Math.max(1, fileProgress.size),
+            );
+            this.emit({ stage: "model", percent: avg, message: data.file });
+          } else if (data?.status === "done" && data?.file) {
+            fileProgress.set(data.file, 100);
+            this.emit({ stage: "model", percent: 100, message: `Cached ${data.file}` });
+          }
         };
 
-        this.generator = await pipeline(
-          "text-generation",
-          GEMMA_MODELS[modelKey].id,
-          opts as any,
-        );
+        // Processor (tokenizer + image/audio preprocessing) — small
+        this.processor = await AutoProcessor.from_pretrained(modelId, {
+          progress_callback: onPC,
+        });
+
+        // Multimodal model — large weight files
+        this.model = await AutoModelForImageTextToText.from_pretrained(modelId, {
+          dtype: {
+            audio_encoder: this.device === "webgpu" ? "fp32" : "q4",
+            vision_encoder: this.device === "webgpu" ? "fp32" : "q4",
+            embed_tokens: "q4",
+            decoder_model_merged: "q4",
+          },
+          device: this.device,
+          progress_callback: onPC,
+        } as any);
 
         this.emit({ stage: "ready", percent: 100, message: "Model loaded" });
         return true;
       } catch (err) {
         console.error("[GemmaEngine] Load failed:", err);
-        this.generator = null;
-        this.emit({ stage: "init", percent: 0, message: err instanceof Error ? err.message : "Load failed" });
+        this.processor = null;
+        this.model = null;
+        const msg = err instanceof Error ? err.message : "Load failed";
+        this.emit({ stage: "error", percent: 0, message: msg });
         throw err;
       } finally {
         this.loading = false;
@@ -198,52 +197,61 @@ export class GemmaEngine {
     return this.currentLoad;
   }
 
-  /** Conversational completion using Gemma's chat template. */
-  async chat(
-    messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
-    options: GenerateOptions = {},
-  ): Promise<string> {
-    if (!this.generator) throw new Error("GemmaEngine not loaded");
+  /** Streaming text-only chat completion using Gemma 3n's chat template. */
+  async chat(messages: ChatMessage[], options: GenerateOptions = {}): Promise<string> {
+    if (!this.isReady) throw new Error("GemmaEngine not loaded");
 
-    const streamer = options.onToken
-      ? new TextStreamer(this.generator.tokenizer, {
-          skip_prompt: true,
-          skip_special_tokens: true,
-          callback_function: (text: string) => options.onToken!(text),
-        })
-      : undefined;
+    // Convert plain text messages to multimodal content blocks expected by 3n
+    const mm = messages.map((m) => ({
+      role: m.role,
+      content: [{ type: "text", text: m.content }],
+    }));
 
-    const out = await this.generator(messages, {
+    const prompt = this.processor.apply_chat_template(mm, {
+      add_generation_prompt: true,
+    });
+    const inputs = await this.processor(prompt, null, null, {
+      add_special_tokens: false,
+    });
+
+    let collected = "";
+    const streamer = new TextStreamer(this.processor.tokenizer, {
+      skip_prompt: true,
+      skip_special_tokens: true,
+      callback_function: (text: string) => {
+        collected += text;
+        options.onToken?.(text);
+      },
+    });
+
+    const outputs = await this.model.generate({
+      ...inputs,
       max_new_tokens: options.maxNewTokens ?? 512,
-      temperature: options.temperature ?? 0.7,
-      top_p: options.topP ?? 0.9,
-      top_k: options.topK ?? 40,
-      repetition_penalty: options.repetitionPenalty ?? 1.05,
-      do_sample: true,
+      do_sample: options.doSample ?? false,
       streamer,
     });
 
-    // transformers.js returns [{ generated_text: [...messages, {role:'assistant', content}] }]
-    const last = out?.[0]?.generated_text;
-    if (Array.isArray(last)) {
-      const final = last[last.length - 1];
-      return typeof final?.content === "string" ? final.content : "";
+    if (collected) return collected;
+    // Fallback: decode if streaming yielded nothing
+    try {
+      const decoded = this.processor.batch_decode(
+        outputs.slice(null, [inputs.input_ids.dims.at(-1), null]),
+        { skip_special_tokens: true },
+      );
+      return decoded?.[0] ?? "";
+    } catch {
+      return "";
     }
-    if (typeof last === "string") return last;
-    return "";
   }
 
   async dispose() {
-    try {
-      if (this.generator?.dispose) await this.generator.dispose();
-    } catch {
-      /* ignore */
-    }
-    this.generator = null;
+    try { await this.model?.dispose?.(); } catch { /* ignore */ }
+    this.model = null;
+    this.processor = null;
+    this.lastProgress = null;
   }
 }
 
-// Module-level singleton to share the loaded model across the app.
 let singleton: GemmaEngine | null = null;
 export function getGemmaEngine(): GemmaEngine {
   if (!singleton) singleton = new GemmaEngine();
