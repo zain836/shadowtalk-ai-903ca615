@@ -101,7 +101,7 @@ export function useGemmaOffline() {
   }, []);
 
   const updatePreferredModel = useCallback((key: GemmaModelKey) => {
-    setPreferredLocalModel(key as "small" | "default" | "large");
+    setPreferredLocalModel(key as any);
     setPreferredModelState(key);
   }, []);
 
