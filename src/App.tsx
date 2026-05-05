@@ -204,6 +204,26 @@ const App = () => {
       setShowBootScreen(false);
       setHasBooted(true);
     }
+
+    // Auto-resume any previously-started on-device model download.
+    // The engine singleton outlives every route, so once load() is called
+    // the fetch+cache pipeline keeps running even after the user navigates away.
+    if (localStorage.getItem('shadowtalk_offline_autoresume') === '1') {
+      (async () => {
+        try {
+          const [{ getGemmaEngine }, { getPreferredLocalModel }, { requestPersistentStorage }] = await Promise.all([
+            import('@/lib/offline/gemmaEngine'),
+            import('@/lib/offline/hybridRouter'),
+            import('@/lib/offline/opfsModelStore'),
+          ]);
+          await requestPersistentStorage();
+          const key = getPreferredLocalModel() as any;
+          getGemmaEngine().load(key).catch((e) => console.warn('[Offline] auto-resume failed', e));
+        } catch (e) {
+          console.warn('[Offline] auto-resume bootstrap failed', e);
+        }
+      })();
+    }
   }, []);
 
   const handleBootComplete = () => {
