@@ -121,13 +121,13 @@ export const OfflineAISettings = () => {
 
         {/* Model picker */}
         <div className="space-y-2">
-          <Label>Model size</Label>
+          <Label>Model</Label>
           <RadioGroup
-            value={preferredModel}
+            value={preferredModel === "default" ? "e2b" : preferredModel}
             onValueChange={(v) => updatePreferredModel(v as GemmaModelKey)}
-            className="grid sm:grid-cols-3 gap-2"
+            className="grid sm:grid-cols-2 gap-2"
           >
-            {(Object.keys(models) as GemmaModelKey[]).map((key) => {
+            {(["e2b", "e4b"] as GemmaModelKey[]).map((key) => {
               const m = models[key];
               return (
                 <label
@@ -139,11 +139,14 @@ export const OfflineAISettings = () => {
                     <RadioGroupItem id={`model-${key}`} value={key} />
                     <span className="font-medium text-sm">{m.label}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">~{m.sizeMB} MB · needs {m.minMemoryGB} GB RAM</span>
+                  <span className="text-xs text-muted-foreground">~{(m.sizeMB / 1024).toFixed(1)} GB · needs {m.minMemoryGB} GB RAM</span>
                 </label>
               );
             })}
           </RadioGroup>
+          <p className="text-[11px] text-muted-foreground">
+            Real Gemma 3n weights from Hugging Face (onnx-community). Downloads run in the background — you can navigate away and come back.
+          </p>
         </div>
 
         {/* Routing mode */}
