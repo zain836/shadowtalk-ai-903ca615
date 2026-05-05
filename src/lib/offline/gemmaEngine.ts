@@ -96,9 +96,18 @@ export class GemmaEngine {
   private modelKey: GemmaModelKey = "default";
   private device: "webgpu" | "wasm" = "wasm";
   private loading = false;
+  private currentLoad: Promise<boolean> | null = null;
+  private lastProgress: LoadProgress | null = null;
+  private listeners = new Set<(p: LoadProgress) => void>();
 
   get isReady() {
     return this.generator !== null;
+  }
+  get isLoading() {
+    return this.loading;
+  }
+  get progress() {
+    return this.lastProgress;
   }
 
   get activeModel() {
@@ -109,50 +118,84 @@ export class GemmaEngine {
     return this.device;
   }
 
+  /** Subscribe to background progress events. Returns an unsubscribe fn. */
+  subscribe(fn: (p: LoadProgress) => void): () => void {
+    this.listeners.add(fn);
+    if (this.lastProgress) fn(this.lastProgress);
+    return () => this.listeners.delete(fn);
+  }
+
+  private emit(p: LoadProgress) {
+    this.lastProgress = p;
+    this.listeners.forEach((fn) => {
+      try { fn(p); } catch { /* ignore */ }
+    });
+  }
+
   async load(
     modelKey: GemmaModelKey = "default",
     onProgress?: (p: LoadProgress) => void,
   ): Promise<boolean> {
-    if (this.loading) return false;
-    if (this.generator && this.modelKey === modelKey) return true;
+    if (this.generator && this.modelKey === modelKey) {
+      onProgress?.({ stage: "ready", percent: 100, message: "Model already loaded" });
+      return true;
+    }
+    // Already downloading — just attach listener and await the in-flight promise.
+    if (this.currentLoad) {
+      if (onProgress) {
+        const off = this.subscribe(onProgress);
+        try { return await this.currentLoad; } finally { off(); }
+      }
+      return await this.currentLoad;
+    }
 
     this.loading = true;
     this.modelKey = modelKey;
-    const caps = await detectCapabilities();
-    this.device = caps.recommendedDevice;
+    const off = onProgress ? this.subscribe(onProgress) : null;
 
-    onProgress?.({ stage: "init", percent: 0, message: `Initializing ${this.device.toUpperCase()}` });
+    this.currentLoad = (async () => {
+      try {
+        const caps = await detectCapabilities();
+        this.device = caps.recommendedDevice;
+        this.emit({ stage: "init", percent: 0, message: `Initializing ${this.device.toUpperCase()}` });
 
-    try {
-      const opts: PretrainedModelOptions & Record<string, unknown> = {
-        dtype: "q4",
-        device: this.device,
-        progress_callback: (data: any) => {
-          if (data?.status === "progress" && typeof data.progress === "number") {
-            onProgress?.({
-              stage: "model",
-              percent: Math.round(data.progress),
-              message: data.file,
-            });
-          }
-        },
-      };
+        const opts: PretrainedModelOptions & Record<string, unknown> = {
+          dtype: "q4",
+          device: this.device,
+          progress_callback: (data: any) => {
+            if (data?.status === "progress" && typeof data.progress === "number") {
+              this.emit({
+                stage: "model",
+                percent: Math.round(data.progress),
+                message: data.file,
+              });
+            } else if (data?.status === "done" && data.file) {
+              this.emit({ stage: "model", percent: 100, message: `Saved ${data.file}` });
+            }
+          },
+        };
 
-      this.generator = await pipeline(
-        "text-generation",
-        GEMMA_MODELS[modelKey].id,
-        opts as any,
-      );
+        this.generator = await pipeline(
+          "text-generation",
+          GEMMA_MODELS[modelKey].id,
+          opts as any,
+        );
 
-      onProgress?.({ stage: "ready", percent: 100, message: "Model loaded" });
-      return true;
-    } catch (err) {
-      console.error("[GemmaEngine] Load failed:", err);
-      this.generator = null;
-      throw err;
-    } finally {
-      this.loading = false;
-    }
+        this.emit({ stage: "ready", percent: 100, message: "Model loaded" });
+        return true;
+      } catch (err) {
+        console.error("[GemmaEngine] Load failed:", err);
+        this.generator = null;
+        this.emit({ stage: "init", percent: 0, message: err instanceof Error ? err.message : "Load failed" });
+        throw err;
+      } finally {
+        this.loading = false;
+        this.currentLoad = null;
+        off?.();
+      }
+    })();
+
+    return this.currentLoad;
   }
 
   /** Conversational completion using Gemma's chat template. */
