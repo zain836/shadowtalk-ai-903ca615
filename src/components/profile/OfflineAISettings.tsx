@@ -58,6 +58,13 @@ export const OfflineAISettings = () => {
     );
     if (!ok) return;
 
+    // Persist intent so the download auto-resumes if user navigates/reloads.
+    localStorage.setItem("shadowtalk_offline_autoresume", "1");
+    toast({
+      title: "⬇️ Download started",
+      description: "Model downloads in the background. You can navigate away — it'll keep going.",
+    });
+
     const success = await loadModel(preferredModel);
     if (success) {
       toast({
@@ -75,6 +82,7 @@ export const OfflineAISettings = () => {
 
   const onDelete = async () => {
     if (!window.confirm("Remove the downloaded model from this device?")) return;
+    localStorage.removeItem("shadowtalk_offline_autoresume");
     await unloadModel();
     await deleteModel(models[preferredModel].id);
     setStoredStatus(null);
