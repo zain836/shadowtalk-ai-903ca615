@@ -51,7 +51,7 @@ export function useGemmaOffline() {
   const [error, setError] = useState<string | null>(null);
   const [routingMode, setRoutingModeState] = useState<RoutingMode>(getRoutingMode());
   const [preferredModel, setPreferredModelState] = useState<GemmaModelKey>(
-    getPreferredLocalModel(),
+    getPreferredLocalModel() as GemmaModelKey,
   );
 
   useEffect(() => {
@@ -60,20 +60,33 @@ export function useGemmaOffline() {
     const onOffline = () => setIsOnline(false);
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
+
+    // Re-attach to any background download still running on the engine singleton
+    const engine = getGemmaEngine();
+    setIsReady(engine.isReady);
+    setIsLoading(engine.isLoading);
+    if (engine.progress) setProgress(engine.progress);
+    const off = engine.subscribe((p) => {
+      setProgress(p);
+      setIsLoading(engine.isLoading);
+      if (p.stage === "ready") setIsReady(true);
+    });
+
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
+      off();
     };
   }, []);
 
   const loadModel = useCallback(
     async (modelKey: GemmaModelKey = preferredModel) => {
-      if (isLoading) return false;
+      const engine = getGemmaEngine();
+      if (engine.isLoading) return false;
       setIsLoading(true);
       setError(null);
       try {
         await requestPersistentStorage();
-        const engine = getGemmaEngine();
         await engine.load(modelKey, (p) => setProgress(p));
         setIsReady(true);
         return true;
@@ -86,7 +99,7 @@ export function useGemmaOffline() {
         setIsLoading(false);
       }
     },
-    [isLoading, preferredModel],
+    [preferredModel],
   );
 
   const unloadModel = useCallback(async () => {
