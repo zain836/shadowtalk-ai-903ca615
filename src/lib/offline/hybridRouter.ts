@@ -39,12 +39,16 @@ export function setRoutingMode(mode: RoutingMode) {
   localStorage.setItem(PREF_KEY, mode);
 }
 
-export function getPreferredLocalModel(): "small" | "default" | "large" {
+export type LocalModelKey = "default" | "e2b" | "e4b";
+
+export function getPreferredLocalModel(): LocalModelKey {
   const v = localStorage.getItem(PREF_MODEL_KEY);
-  return v === "small" || v === "large" ? v : "default";
+  if (v === "e2b" || v === "e4b" || v === "default") return v;
+  // Migrate legacy values
+  return "e2b";
 }
 
-export function setPreferredLocalModel(key: "small" | "default" | "large") {
+export function setPreferredLocalModel(key: LocalModelKey) {
   localStorage.setItem(PREF_MODEL_KEY, key);
 }
 
