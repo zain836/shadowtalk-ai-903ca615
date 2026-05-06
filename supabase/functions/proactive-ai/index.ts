@@ -96,9 +96,10 @@ Return ONLY the message text, nothing else.`;
     });
   } catch (e) {
     console.error("proactive-ai error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    // Soft-fail: never surface as runtime error to the client.
+    return new Response(JSON.stringify({ message: "" }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
