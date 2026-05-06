@@ -227,9 +227,9 @@ export const ModeSelector = ({ mode, onModeChange, disabled }: ModeSelectorProps
   const { canAccess, getUpgradeMessage, isPremiumOrHigher, isElite } = useFeatureGating();
   const { toast } = useToast();
   const currentMode = modes.find(m => m.value === mode) || modes[0];
-  const standardModes = modes.filter(m => !['ppag', 'hsca', 'research', 'math', 'camera', 'organize', 'academic'].includes(m.value));
+  const standardModes = modes.filter(m => !['ppag', 'hsca', 'uncensored', 'research', 'math', 'camera', 'organize', 'academic'].includes(m.value));
   const specialModes = modes.filter(m => ['research', 'math', 'camera', 'organize', 'academic'].includes(m.value));
-   const advancedModes = modes.filter(m => ['ppag', 'hsca'].includes(m.value));
+   const advancedModes = modes.filter(m => ['ppag', 'hsca', 'uncensored'].includes(m.value));
 
   const handleModeSelect = (selectedMode: ChatMode) => {
     const featureKey = modeFeatureMap[selectedMode];
