@@ -1534,9 +1534,11 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
                  // Math mode uses chat with LaTeX rendering - no separate UI
                } else if (mode === 'ppag') {
                  // Will be handled by the eco actions in chat
-               } else if (mode === 'hsca') {
-                 // Security audit mode - could open dedicated panel if needed
-               }
+                } else if (mode === 'hsca') {
+                  // Security audit mode - could open dedicated panel if needed
+                } else if (mode === 'uncensored') {
+                  setShowUncensoredArena(true);
+                }
              }}
             personality={personality}
           />
