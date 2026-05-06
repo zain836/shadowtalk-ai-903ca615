@@ -50,6 +50,7 @@ import { VisionAgent } from "@/components/chat/VisionAgent";
 import { CommandPalette } from "@/components/chat/CommandPalette";
 import { KnowledgeVault } from "@/components/chat/KnowledgeVault";
 import { IntelligenceHub } from "@/components/chat/IntelligenceHub";
+import { UncensoredArena } from "@/components/chat/UncensoredArena";
 import { useIntelligenceHub } from "@/hooks/useIntelligenceHub";
 import { MemoryPanel } from "@/components/chat/MemoryPanel";
 import { MissionControl } from "@/components/chat/MissionControl";
