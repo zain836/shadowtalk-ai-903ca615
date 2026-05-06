@@ -2248,6 +2248,14 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
           </div>
         </div>
       )}
+
+      <UncensoredArena
+        open={showUncensoredArena}
+        onClose={() => {
+          setShowUncensoredArena(false);
+          if (chatMode === 'uncensored') setChatMode('general');
+        }}
+      />
     </motion.div>
   );
 };
