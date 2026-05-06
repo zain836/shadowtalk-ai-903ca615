@@ -201,6 +201,7 @@ const ChatbotPage = () => {
   const [showCognitiveLoop, setShowCognitiveLoop] = useState(false);
   const [showPluginsManager, setShowPluginsManager] = useState(false);
   const [showIntelligenceHub, setShowIntelligenceHub] = useState(false);
+  const [showUncensoredArena, setShowUncensoredArena] = useState(false);
   
   // Tool params for auto-execution
   const [imageGeneratorPrompt, setImageGeneratorPrompt] = useState<string | undefined>(undefined);
