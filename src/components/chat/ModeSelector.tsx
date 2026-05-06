@@ -1,4 +1,4 @@
- import { Code, Languages, FileText, Bug, Lightbulb, Image, MessageSquare, Pen, Music, Brain, Leaf, Shield, Search, Camera, Table, Calculator, GraduationCap, Mail, FileCheck, Lock, Sparkles, Crown } from "lucide-react";
+ import { Code, Languages, FileText, Bug, Lightbulb, Image, MessageSquare, Pen, Music, Brain, Leaf, Shield, Search, Camera, Table, Calculator, GraduationCap, Mail, FileCheck, Lock, Sparkles, Crown, Skull } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
