@@ -31,8 +31,8 @@ export type ChatMode =
   | "organize"
   | "academic"
   | "email"
-   | "proofread"
-   | "hsca";
+  | "proofread"
+  | "uncensored";
 
 interface ModeSelectorProps {
   mode: ChatMode;
