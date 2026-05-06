@@ -50,6 +50,7 @@ import { VisionAgent } from "@/components/chat/VisionAgent";
 import { CommandPalette } from "@/components/chat/CommandPalette";
 import { KnowledgeVault } from "@/components/chat/KnowledgeVault";
 import { IntelligenceHub } from "@/components/chat/IntelligenceHub";
+import { UncensoredArena } from "@/components/chat/UncensoredArena";
 import { useIntelligenceHub } from "@/hooks/useIntelligenceHub";
 import { MemoryPanel } from "@/components/chat/MemoryPanel";
 import { MissionControl } from "@/components/chat/MissionControl";
@@ -201,6 +202,7 @@ const ChatbotPage = () => {
   const [showCognitiveLoop, setShowCognitiveLoop] = useState(false);
   const [showPluginsManager, setShowPluginsManager] = useState(false);
   const [showIntelligenceHub, setShowIntelligenceHub] = useState(false);
+  const [showUncensoredArena, setShowUncensoredArena] = useState(false);
   
   // Tool params for auto-execution
   const [imageGeneratorPrompt, setImageGeneratorPrompt] = useState<string | undefined>(undefined);
@@ -1533,9 +1535,11 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
                  // Math mode uses chat with LaTeX rendering - no separate UI
                } else if (mode === 'ppag') {
                  // Will be handled by the eco actions in chat
-               } else if (mode === 'hsca') {
-                 // Security audit mode - could open dedicated panel if needed
-               }
+                } else if (mode === 'hsca') {
+                  // Security audit mode - could open dedicated panel if needed
+                } else if (mode === 'uncensored') {
+                  setShowUncensoredArena(true);
+                }
              }}
             personality={personality}
           />
@@ -2244,6 +2248,14 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
           </div>
         </div>
       )}
+
+      <UncensoredArena
+        open={showUncensoredArena}
+        onClose={() => {
+          setShowUncensoredArena(false);
+          if (chatMode === 'uncensored') setChatMode('general');
+        }}
+      />
     </motion.div>
   );
 };

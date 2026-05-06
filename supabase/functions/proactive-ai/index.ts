@@ -78,22 +78,12 @@ Return ONLY the message text, nothing else.`;
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limited" }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Credits exhausted" }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const text = await response.text();
-      console.error("AI gateway error:", response.status, text);
-      return new Response(JSON.stringify({ error: "AI error" }), {
-        status: 500,
+      // Soft-fail: proactive nudges are non-essential. Log server-side and
+      // return an empty 200 so the client never surfaces a runtime error.
+      const text = await response.text().catch(() => "");
+      console.warn("[proactive-ai] gateway non-ok", response.status, text.slice(0, 200));
+      return new Response(JSON.stringify({ message: "" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -106,9 +96,10 @@ Return ONLY the message text, nothing else.`;
     });
   } catch (e) {
     console.error("proactive-ai error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    // Soft-fail: never surface as runtime error to the client.
+    return new Response(JSON.stringify({ message: "" }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
