@@ -1,9 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 
 const THEMES: Record<string, { bg: string; accent: string; accentEnd: string; text: string; secondaryBg: string; cardBg: string; mutedText: string }> = {
   corporate: { bg: "#FFFFFF", accent: "#1E40AF", accentEnd: "#3B82F6", text: "#111827", secondaryBg: "#F3F4F6", cardBg: "#F8FAFC", mutedText: "#6B7280" },
@@ -15,7 +11,11 @@ const THEMES: Record<string, { bg: string; accent: string; accentEnd: string; te
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const origin = req.headers.get("origin");
+
+  if (req.method === "OPTIONS") return handleCorsOptions(origin);
+
+  const corsHeaders = getCorsHeaders(origin);
 
   try {
     const { topic, slideCount, style, additionalContext } = await req.json();

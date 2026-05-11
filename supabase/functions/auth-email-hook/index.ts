@@ -9,8 +9,10 @@ import { RecoveryEmail } from '../_shared/email-templates/recovery.tsx'
 import { EmailChangeEmail } from '../_shared/email-templates/email-change.tsx'
 import { ReauthenticationEmail } from '../_shared/email-templates/reauthentication.tsx'
 
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  ...getCorsHeaders(null),
   'Access-Control-Allow-Headers':
     'authorization, x-client-info, apikey, content-type, x-lovable-signature, x-lovable-timestamp, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
@@ -80,13 +82,14 @@ const SAMPLE_DATA: Record<string, object> = {
 
 // Preview endpoint handler - returns rendered HTML without sending email
 async function handlePreview(req: Request): Promise<Response> {
+  const origin = req.headers.get("origin");
   const previewCorsHeaders = {
-    'Access-Control-Allow-Origin': '*',
+    ...getCorsHeaders(origin),
     'Access-Control-Allow-Headers': 'authorization, content-type',
   }
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: previewCorsHeaders })
+    return handleCorsOptions(origin);
   }
 
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
@@ -279,11 +282,14 @@ async function handleWebhook(req: Request): Promise<Response> {
 
 Deno.serve(async (req) => {
   const url = new URL(req.url)
+  const origin = req.headers.get("origin");
 
   // Handle CORS preflight for main endpoint
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return handleCorsOptions(origin);
   }
+
+  const currentCorsHeaders = getCorsHeaders(origin);
 
   // Route to preview handler for /preview path
   if (url.pathname.endsWith('/preview')) {
