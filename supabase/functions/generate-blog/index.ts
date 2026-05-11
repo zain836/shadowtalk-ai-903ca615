@@ -1,11 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 
 const TOPICS = [
   { category: "AI & Technology", themes: ["Edge AI deployment strategies", "LLM fine-tuning best practices", "AI agent architectures", "Privacy-preserving machine learning", "Multi-model orchestration patterns", "RAG pipeline optimization", "AI-powered code generation trends", "On-device AI inference breakthroughs"] },
@@ -16,9 +11,13 @@ const TOPICS = [
 ];
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsOptions(origin);
   }
+
+  const corsHeaders = getCorsHeaders(origin);
 
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

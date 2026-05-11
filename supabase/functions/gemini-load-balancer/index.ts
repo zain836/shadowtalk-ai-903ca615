@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 
 interface GeminiApiKey {
   id: string;
@@ -60,9 +56,13 @@ interface ChatMessage {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsOptions(origin);
   }
+
+  const corsHeaders = getCorsHeaders(origin);
 
   const startTime = Date.now();
 
@@ -117,8 +117,13 @@ serve(async (req) => {
     }
 
     if (!apiKeys || apiKeys.length === 0) {
+      console.error('[GEMINI-LOAD-BALANCER] Critical: All API keys exhausted or disabled.');
       return new Response(
-        JSON.stringify({ error: 'No available API keys. All keys are exhausted or disabled.' }),
+        JSON.stringify({
+          error: 'Service Temporarily Unavailable',
+          message: 'All Gemini API keys are currently exhausted or disabled. Please check the gemini_api_keys table or add new keys in the Admin Dashboard.',
+          code: 'ALL_KEYS_EXHAUSTED'
+        }),
         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -306,8 +311,13 @@ serve(async (req) => {
     }
 
     if (!responseText) {
+      console.error('[GEMINI-LOAD-BALANCER] All API keys failed to return a response.');
       return new Response(
-        JSON.stringify({ error: 'All API keys exhausted or failed' }),
+        JSON.stringify({
+          error: 'Service Temporarily Unavailable',
+          message: 'All available API keys failed to process the request. Please check the gemini_api_keys analytics for details.',
+          code: 'ALL_KEYS_FAILED'
+        }),
         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

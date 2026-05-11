@@ -482,7 +482,7 @@ Be thorough, professional, and precise. Use bullet points for clarity.`
       });
     }
 
-    // AI Agent Workflows - Execute multi-step workflows (existing code continues)
+    // AI Agent Workflows - Execute multi-step workflows
     if (agentWorkflow) {
       console.log("[CHAT] Executing agent workflow:", agentWorkflow.workflowId);
       
@@ -493,51 +493,76 @@ Be thorough, professional, and precise. Use bullet points for clarity.`
         const step = steps[i];
         console.log(`[CHAT] Executing step ${i + 1}/${steps.length}:`, step.name);
         
-        // Execute each step with AI
-        const stepResponse: Response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { 
-                role: "system", 
-                content: `You are an AI agent executing step "${step.name}" of a "${agentWorkflow.workflowId}" workflow.
-Context from previous steps: ${JSON.stringify(workflowResults)}
-Task: ${agentWorkflow.input}
-Execute this step thoroughly and provide actionable, detailed results.`
-              },
-              { role: "user", content: `Execute step: ${step.name}\nInput: ${agentWorkflow.input}` }
-            ],
-          }),
-        });
-        
-        if (!stepResponse.ok) {
+        try {
+          // Execute each step with AI
+          const stepResponse: Response = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                {
+                  role: "system",
+                  content: `You are an AI agent executing step "${step.name}" (${i + 1}/${steps.length}) of a "${agentWorkflow.workflowId}" workflow.
+
+TASK INPUT: ${agentWorkflow.input}
+
+PREVIOUS STEPS CONTEXT:
+${workflowResults.length > 0 ? workflowResults.map(r => `Step "${r.step}": ${r.result.substring(0, 1000)}`).join('\n---\n') : 'No previous steps.'}
+
+INSTRUCTIONS:
+1. Focus specifically on the objective of this step: "${step.name}"
+2. Use the context from previous steps to inform your work.
+3. Provide a thorough, actionable, and detailed result for this specific step.
+4. Return your response in clear markdown format.`
+                },
+                { role: "user", content: `Execute step: ${step.name}\nObjective: ${step.description || 'Complete the step mission.'}` }
+              ],
+            }),
+          });
+
+          if (!stepResponse.ok) {
+            const errorText = await stepResponse.text().catch(() => "Unknown error");
+            console.error(`[CHAT] Step "${step.name}" failed:`, stepResponse.status, errorText);
+            workflowResults.push({
+              step: step.name,
+              result: `Step failed with status ${stepResponse.status}: ${errorText.substring(0, 200)}`,
+              status: "error",
+            });
+            // Continue to next step even if one fails, or could break here
+            continue;
+          }
+
+          const stepResult = await stepResponse.json();
+          const stepContent = stepResult.choices?.[0]?.message?.content || "";
+
           workflowResults.push({
             step: step.name,
-            result: `Step failed: ${stepResponse.statusText}`,
+            result: stepContent,
+            status: "completed",
+          });
+        } catch (stepErr) {
+          console.error(`[CHAT] Exception in step "${step.name}":`, stepErr);
+          workflowResults.push({
+            step: step.name,
+            result: `Step failed due to exception: ${stepErr instanceof Error ? stepErr.message : String(stepErr)}`,
             status: "error",
           });
-          continue;
         }
-        
-        const stepResult: { choices?: Array<{ message?: { content?: string } }> } = await stepResponse.json();
-        const stepContent: string = stepResult.choices?.[0]?.message?.content || "";
-        
-        workflowResults.push({
-          step: step.name,
-          result: stepContent,
-          status: "completed",
-        });
       }
       
+      const overallStatus = workflowResults.every(s => s.status === "completed") ? "completed"
+        : workflowResults.some(s => s.status === "completed") ? "partial"
+        : "failed";
+
       return new Response(JSON.stringify({ 
         workflowId: agentWorkflow.workflowId,
         steps: workflowResults,
-        status: workflowResults.every(s => s.status === "completed") ? "completed" : "partial"
+        status: overallStatus,
+        summary: `Workflow ${overallStatus} with ${workflowResults.filter(s => s.status === 'completed').length}/${steps.length} steps successful.`
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
