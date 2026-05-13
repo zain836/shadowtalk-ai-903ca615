@@ -462,7 +462,7 @@
    ];
    
    // Use template
-   const useTemplate = (templateKey: string) => {
+   const handleUseTemplate = (templateKey: string) => {
      const template = PROJECT_TEMPLATES[templateKey];
      if (template) {
        setInput(`Build a ${template.name}: ${template.description}. Use ${template.stack.join(", ")} as the tech stack. Set up Firebase as the backend and make it production-ready.`);
@@ -717,7 +717,7 @@
                {Object.entries(PROJECT_TEMPLATES).map(([key, template]) => (
                  <button
                    key={key}
-                   onClick={() => useTemplate(key)}
+                   onClick={() => handleUseTemplate(key)}
                    className="w-full p-4 bg-muted/30 hover:bg-accent/50 rounded-lg border border-border text-left transition-colors"
                  >
                    <div className="flex items-center gap-3 mb-2">
