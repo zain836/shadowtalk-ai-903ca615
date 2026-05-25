@@ -140,7 +140,7 @@ const GEMINI_LB_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gemini-
 
 const ChatbotPage = () => {
   const navigate = useNavigate();
-  const { user, userPlan, signOut, checkSubscription } = useAuth();
+  const { user, userPlan, signOut, checkSubscription, isOffline } = useAuth();
   const { toast } = useToast();
   const e2ee = useE2EE();
   const [e2eePassphrase, setE2EEPassphrase] = useState("");
@@ -233,7 +233,7 @@ const ChatbotPage = () => {
   
   // Hooks
   const { checkAccess, getDailyMessageLimit, isProOrHigher, isElite } = useFeatureGating();
-  const { isOffline, checkSubscription } = useAuth();
+  const { isOffline } = useAuth();
   const { requestPermission } = usePushNotifications();
   const { trackChatMessage, trackVoiceInput, trackTextToSpeech, trackConversationCreated, trackFileUpload, trackModeSwitch } = useUsageTracking();
   const { getOfflineSession } = useOfflineAuth();
