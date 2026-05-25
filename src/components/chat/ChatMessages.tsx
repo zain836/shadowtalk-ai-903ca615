@@ -70,7 +70,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
   return (
     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth">
-      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-6 sm:space-y-7">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8 sm:space-y-12">
         {/* Suggested prompts */}
         {showSuggestions && (
           <div className="min-h-[calc(100dvh-13rem)] flex items-center justify-center">

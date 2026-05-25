@@ -88,43 +88,60 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         ease: [0.25, 0.46, 0.45, 0.94],
         delay: Math.min(index * 0.02, 0.1)
       }}
-      className={`group flex items-start gap-3.5 md:gap-5 py-2.5 ${isUser ? 'flex-row-reverse' : ''}`}
+      className={`group flex items-start gap-4 md:gap-6 py-4 ${isUser ? 'flex-row-reverse' : ''}`}
     >
       {/* Avatar */}
-      <div className={`w-8 h-8 sm:w-[34px] sm:h-[34px] rounded-full flex items-center justify-center shrink-0 transition-all duration-200 select-none ${
+      <div className={`w-8 h-8 sm:w-[36px] sm:h-[36px] rounded-full flex items-center justify-center shrink-0 transition-all duration-300 select-none ${
         isUser 
-          ? 'bg-muted/30 border border-border/10' 
-          : 'bg-gradient-to-tr from-blue-500 via-indigo-500 to-pink-500 shadow-sm shadow-primary/10'
+          ? 'bg-[#1e1f20]/60 border border-border/15' 
+          : 'bg-transparent'
       }`}>
         {isUser 
-          ? <User className="h-4.5 w-4.5 text-muted-foreground/80" /> 
-          : <Sparkles className="h-[17px] w-[17px] text-white animate-pulse" />
+          ? <User className="h-5 w-5 text-muted-foreground/70" /> 
+          : (
+            <div className="relative flex items-center justify-center">
+              <motion.div
+                animate={{ 
+                  scale: [1, 1.15, 1],
+                  rotate: [0, 5, -5, 0],
+                  opacity: [0.8, 1, 0.8]
+                }}
+                transition={{ 
+                  duration: 4, 
+                  repeat: Infinity, 
+                  ease: "easeInOut" 
+                }}
+              >
+                <Sparkles className="h-7 w-7 text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]" />
+              </motion.div>
+            </div>
+          )
         }
       </div>
 
       {/* Content */}
-      <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[76%]`} style={{ width: '100%' }}>
+      <div className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[80%]`} style={{ width: '100%' }}>
         {/* Image attachment */}
         {message.attachment?.type === 'image' && (
           <img 
             src={message.attachment.data} 
             alt={message.attachment.name} 
-            className="max-w-[200px] sm:max-w-xs rounded-2xl border border-border/15 shadow-sm mb-1.5" 
+            className="max-w-[200px] sm:max-w-md rounded-2xl border border-border/10 shadow-lg mb-2" 
           />
         )}
 
         {/* AI Generated Image */}
         {message.imageUrl && (
-          <div className="relative rounded-2xl overflow-hidden border border-border/15 shadow-sm max-w-md mb-1.5">
+          <div className="relative rounded-2xl overflow-hidden border border-border/10 shadow-lg max-w-xl mb-3 group/image">
             <img 
               src={message.imageUrl} 
               alt="AI Generated" 
-              className="w-full h-auto object-contain"
+              className="w-full h-auto object-contain transition-transform duration-500 group-hover/image:scale-[1.02]"
             />
             <a 
               href={message.imageUrl} 
               download={`shadowtalk-${Date.now()}.png`}
-              className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm text-xs px-2 py-1 rounded-lg hover:bg-background transition-colors"
+              className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md text-white text-[12px] font-medium px-4 py-2 rounded-full hover:bg-black/80 transition-all opacity-0 group-hover/image:opacity-100 translate-y-2 group-hover/image:translate-y-0 shadow-lg"
             >
               Download
             </a>
@@ -132,15 +149,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
 
         {/* Message bubble */}
-        <div className={`w-full overflow-hidden transition-all duration-300 ${
+        <div className={`w-full transition-all duration-300 ${
           isUser 
-            ? 'bg-[#1e1f20]/45 border border-border/15 text-foreground rounded-2xl rounded-tr-sm px-4 py-2.5 shadow-sm max-w-max' 
-            : 'bg-transparent border-none shadow-none px-0 py-0.5'
+            ? 'bg-[#1e1f20]/45 border border-border/10 text-foreground rounded-[28px] rounded-tr-sm px-6 py-3.5 shadow-sm max-w-max' 
+            : 'bg-transparent border-none shadow-none px-0 py-1'
         }`}>
           {isUser ? (
-            <p className="text-[14.5px] leading-relaxed whitespace-pre-wrap break-words">{typeof message.content === 'string' ? message.content : String(message.content || '')}</p>
+            <p className="text-[15.5px] leading-relaxed whitespace-pre-wrap break-words font-normal tracking-wide">{typeof message.content === 'string' ? message.content : String(message.content || '')}</p>
           ) : (
-            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2.5 prose-headings:mt-5 prose-headings:mb-2 prose-headings:first:mt-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-hr:my-4 prose-hr:border-border/30 [&_.katex]:text-foreground [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto overflow-hidden">
+            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-4 prose-headings:mt-8 prose-headings:mb-4 prose-headings:first:mt-0 prose-ul:my-5 prose-ol:my-5 prose-li:my-1.5 prose-hr:my-8 prose-hr:border-border/10 [&_.katex]:text-foreground [&_.katex-display]:my-8 [&_.katex-display]:overflow-x-auto overflow-hidden">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
@@ -156,7 +173,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     }
                     if (inline || isShortSnippet) {
                       return (
-                        <code className="bg-primary/8 text-primary border border-primary/10 px-1.5 py-0.5 rounded-md text-[13px] font-mono font-medium" {...props}>
+                        <code className="bg-muted/50 text-foreground/90 px-1.5 py-0.5 rounded text-[14px] font-mono" {...props}>
                           {children}
                         </code>
                       );
@@ -164,8 +181,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     }
                     return <CodeBlock code={codeString} language="text" onOpenCanvas={onOpenCodeCanvas} onOpenIDE={onOpenIDE} onLaunchWebsite={onLaunchWebsite} />;
                   },
-                  ul({ children }) { return <ul className="list-disc pl-5 space-y-1.5 my-3 marker:text-primary/30">{children}</ul>; },
-                  ol({ children }) { return <ol className="list-decimal pl-5 space-y-1.5 my-3 marker:text-primary/40 marker:font-semibold">{children}</ol>; },
+                  ul({ children }) { return <ul className="list-disc pl-7 space-y-2.5 my-5 marker:text-foreground/20">{children}</ul>; },
+                  ol({ children }) { return <ol className="list-decimal pl-7 space-y-2.5 my-5 marker:text-foreground/30 marker:font-medium">{children}</ol>; },
                   li({ children, ...props }: any) {
                     // Task list checkbox support
                     const text = String(children);
@@ -174,8 +191,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     
                     if (isChecked || isUnchecked) {
                       return (
-                        <li className="flex items-start gap-2 list-none -ml-5 my-1" {...props}>
-                          <span className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center text-[10px] shrink-0 ${
+                        <li className="flex items-start gap-3 list-none -ml-6 my-2" {...props}>
+                          <span className={`mt-1 w-4.5 h-4.5 rounded-md border flex items-center justify-center text-[11px] shrink-0 ${
                             isChecked ? 'bg-primary/20 border-primary/40 text-primary' : 'border-border/40'
                           }`}>
                             {isChecked && '✓'}
@@ -187,30 +204,29 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                       );
                     }
                     return (
-                      <li className="text-[14.5px] leading-relaxed pl-1" {...props}>{children}</li>
+                      <li className="text-[15.5px] leading-relaxed pl-1" {...props}>{children}</li>
                     ); 
                   },
                   h1({ children }) { 
                     return (
-                      <h1 className="text-xl font-bold tracking-tight border-b border-border/10 pb-2.5 mb-4 text-foreground">
+                      <h1 className="text-3xl font-semibold tracking-tight mb-6 text-foreground/95">
                         {children}
                       </h1>
                     ); 
                   },
                   h2({ children }) { 
                     return (
-                      <h2 className="text-[17px] font-bold tracking-tight mt-6 first:mt-0 mb-2 text-foreground flex items-center gap-2">
-                        <span className="w-1 h-4.5 bg-primary/40 rounded-full" />
+                      <h2 className="text-2xl font-semibold tracking-tight mt-10 first:mt-0 mb-4 text-foreground/90">
                         {children}
                       </h2>
                     ); 
                   },
-                  h3({ children }) { return <h3 className="text-base font-semibold mt-4 first:mt-0 text-foreground/90">{children}</h3>; },
-                  h4({ children }) { return <h4 className="text-sm font-medium text-muted-foreground mt-3">{children}</h4>; },
-                  p({ children }) { return <p className="text-[15px] leading-relaxed mb-3.5 last:mb-0 text-foreground/85">{children}</p>; },
-                  strong({ children }) { return <strong className="font-semibold text-foreground">{children}</strong>; },
-                  em({ children }) { return <em className="italic text-foreground/70">{children}</em>; },
-                  hr() { return <hr className="my-5 border-border/30" />; },
+                  h3({ children }) { return <h3 className="text-xl font-medium mt-8 first:mt-0 text-foreground/85">{children}</h3>; },
+                  h4({ children }) { return <h4 className="text-lg font-medium text-muted-foreground mt-4">{children}</h4>; },
+                  p({ children }) { return <p className="text-[16px] leading-relaxed mb-5 last:mb-0 text-foreground/85 font-normal tracking-wide">{children}</p>; },
+                  strong({ children }) { return <strong className="font-semibold text-foreground/95">{children}</strong>; },
+                  em({ children }) { return <em className="italic text-foreground/60">{children}</em>; },
+                  hr() { return <hr className="my-10 border-border/5" />; },
                   a({ children, href }) { 
                     return (
                       <a 
@@ -218,10 +234,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                         target="_blank" 
                         rel="noopener noreferrer" 
                         onClick={(e) => { e.preventDefault(); if (href) openInBrowser(href); }}
-                        className="text-primary font-medium underline underline-offset-3 decoration-primary/30 hover:decoration-primary/80 cursor-pointer inline-flex items-center gap-0.5 transition-all duration-200"
+                        className="text-blue-400 font-medium hover:text-blue-300 underline underline-offset-4 decoration-blue-400/20 hover:decoration-blue-400/60 cursor-pointer transition-all duration-200"
                       >
                         {children}
-                        <ExternalLink className="h-3 w-3 inline-block ml-0.5 opacity-40" />
                       </a>
                     ); 
                   },
@@ -237,33 +252,33 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     const bgColor = isWarning ? 'bg-amber-500/[0.04]' : isSuccess ? 'bg-emerald-500/[0.04]' : isKey ? 'bg-violet-500/[0.04]' : isTip ? 'bg-sky-500/[0.04]' : 'bg-primary/[0.03]';
                     
                     return (
-                      <blockquote className={`border-l-[3px] ${borderColor} pl-4 py-2.5 my-4 ${bgColor} rounded-r-xl text-foreground/80 not-italic [&_p]:mb-1.5 [&_p]:last:mb-0 [&_p]:text-[13px] [&_p]:leading-relaxed`}>
+                      <blockquote className={`border-l-[4px] ${borderColor} pl-6 py-4 my-6 ${bgColor} rounded-r-2xl text-foreground/85 not-italic [&_p]:mb-2 [&_p]:last:mb-0 [&_p]:text-[15px] [&_p]:leading-relaxed font-medium`}>
                         {children}
                       </blockquote>
                     ); 
                   },
                   table({ children }) { 
                     return (
-                      <div className="overflow-x-auto my-4 rounded-xl border border-border/30 shadow-sm bg-card/30">
-                        <table className="min-w-full divide-y divide-border/20">{children}</table>
+                      <div className="overflow-x-auto my-6 rounded-2xl border border-border/10 shadow-md bg-[#1e1f20]/20">
+                        <table className="min-w-full divide-y divide-border/10">{children}</table>
                       </div>
                     ); 
                   },
                   thead({ children }) {
-                    return <thead className="bg-muted/30">{children}</thead>;
+                    return <thead className="bg-muted/20">{children}</thead>;
                   },
                   th({ children }) { 
                     return (
-                      <th className="px-3.5 py-2.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      <th className="px-5 py-3 text-left text-[12px] font-semibold text-muted-foreground uppercase tracking-widest">
                         {children}
                       </th>
                     ); 
                   },
                   td({ children }) { 
-                    return <td className="border-t border-border/15 px-3.5 py-2.5 text-sm text-foreground/80">{children}</td>; 
+                    return <td className="border-t border-border/10 px-5 py-3.5 text-[15px] text-foreground/80">{children}</td>; 
                   },
                   tr({ children }) {
-                    return <tr className="hover:bg-muted/10 transition-colors duration-150">{children}</tr>;
+                    return <tr className="hover:bg-muted/5 transition-colors duration-150">{children}</tr>;
                   },
                   // Enhanced image rendering
                   img({ src, alt }) {
@@ -271,7 +286,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                       <img 
                         src={src} 
                         alt={alt || ''} 
-                        className="rounded-xl border border-border/20 shadow-lg max-w-full h-auto my-4"
+                        className="rounded-2xl border border-border/10 shadow-xl max-w-full h-auto my-6"
                         loading="lazy"
                       />
                     );
@@ -310,20 +325,20 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           const displayUrls = urls.slice(0, 3);
           
           return (
-            <div className="flex flex-wrap items-center gap-1 mt-0.5">
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
               {displayUrls.map((url, idx) => {
                 let domain = '';
                 try { domain = new URL(url).hostname.replace('www.', ''); } catch { domain = url.slice(0, 30); }
                 
                 return (
-                  <div key={idx} className="flex items-center gap-0.5">
+                  <div key={idx} className="flex items-center gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => openInBrowser(url)}
-                      className="h-6 px-2 text-[10px] gap-1 text-muted-foreground/60 hover:text-primary rounded-lg"
+                      className="h-7 px-3 text-[11px] gap-1.5 text-muted-foreground/60 hover:text-blue-400 rounded-full bg-muted/20 hover:bg-muted/40 transition-all"
                     >
-                      <ExternalLink className="h-2.5 w-2.5" />
+                      <ExternalLink className="h-3 w-3" />
                       {domain.length > 20 ? domain.slice(0, 20) + '...' : domain}
                     </Button>
                     {onOpenInBrowser && (
@@ -331,17 +346,17 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                         variant="ghost"
                         size="sm"
                         onClick={() => onOpenInBrowser(url)}
-                        className="h-6 px-1 text-[10px] text-muted-foreground/40 hover:text-sky-400 rounded-lg"
+                        className="h-7 px-2 text-[11px] text-muted-foreground/40 hover:text-cyan-400 rounded-full transition-all"
                         title="Open in ShadowBrowser"
                       >
-                        <Compass className="h-2.5 w-2.5" />
+                        <Compass className="h-3 w-3" />
                       </Button>
                     )}
                   </div>
                 );
               })}
               {urls.length > 3 && (
-                <span className="text-[10px] text-muted-foreground/40">+{urls.length - 3}</span>
+                <span className="text-[11px] text-muted-foreground/30 px-2 font-medium">+{urls.length - 3} more sources</span>
               )}
             </div>
           );
@@ -349,16 +364,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {/* Actions */}
         {!isWelcome && (
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0">
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0 mt-2">
             {isUser ? (
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => onEdit(index, message.content)} 
                 disabled={isLoading} 
-                className="h-6 px-2 text-[10px] text-muted-foreground/50 hover:text-foreground rounded-lg"
+                className="h-8 px-3 text-[11px] text-muted-foreground/60 hover:text-foreground rounded-full hover:bg-muted/40"
               >
-                <Edit2 className="h-2.5 w-2.5 mr-1" />
+                <Edit2 className="h-3 w-3 mr-1.5" />
                 Edit
               </Button>
             ) : (
@@ -368,15 +383,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   size="sm" 
                   onClick={() => onTextToSpeech(message.content, message.id)} 
                   disabled={isLoading} 
-                  className={`h-6 px-2 text-[10px] text-muted-foreground/50 hover:text-foreground rounded-lg ${
+                  className={`h-8 px-3 text-[11px] text-muted-foreground/60 hover:text-foreground rounded-full hover:bg-muted/40 ${
                     userPlan !== 'pro' && userPlan !== 'elite' ? 'opacity-40' : ''
                   }`}
                 >
                   {speakingMessageId === message.id && isSpeaking 
-                    ? <VolumeX className="h-2.5 w-2.5 mr-1" /> 
-                    : <Volume2 className="h-2.5 w-2.5 mr-1" />
+                    ? <VolumeX className="h-3 w-3 mr-1.5" /> 
+                    : <Volume2 className="h-3 w-3 mr-1.5" />
                   }
-                  {userPlan !== 'pro' && userPlan !== 'elite' && <Lock className="h-2 w-2 mr-0.5" />}
+                  {userPlan !== 'pro' && userPlan !== 'elite' && <Lock className="h-2.5 w-2.5 mr-1" />}
                   {speakingMessageId === message.id && isSpeaking ? 'Stop' : 'Listen'}
                 </Button>
                 <Button 
@@ -384,9 +399,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   size="sm" 
                   onClick={() => onRegenerate(index)} 
                   disabled={isLoading} 
-                  className="h-6 px-2 text-[10px] text-muted-foreground/50 hover:text-foreground rounded-lg"
+                  className="h-8 px-3 text-[11px] text-muted-foreground/60 hover:text-foreground rounded-full hover:bg-muted/40"
                 >
-                  <RefreshCw className={`h-2.5 w-2.5 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-3 w-3 mr-1.5 ${isLoading ? 'animate-spin' : ''}`} />
                   Retry
                 </Button>
               </>
@@ -395,9 +410,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               variant="ghost" 
               size="sm" 
               onClick={handleCopy} 
-              className="h-6 px-2 text-[10px] text-muted-foreground/50 hover:text-foreground rounded-lg"
+              className="h-8 px-3 text-[11px] text-muted-foreground/60 hover:text-foreground rounded-full hover:bg-muted/40"
             >
-              <Copy className="h-2.5 w-2.5 mr-1" />
+              <Copy className="h-3 w-3 mr-1.5" />
               Copy
             </Button>
           </div>

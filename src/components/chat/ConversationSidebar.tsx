@@ -85,56 +85,29 @@ export const ConversationSidebar = ({
   const groupOrder = ['Today', 'Yesterday', 'This Week', 'This Month', 'Older'];
 
   return (
-    <div className="w-[280px] shrink-0 bg-background/70 backdrop-blur-2xl border-r border-border/15 flex flex-col max-md:absolute max-md:left-0 max-md:top-0 max-md:h-full max-md:z-50 max-md:shadow-2xl max-md:shadow-black/40">
-      {/* Header */}
-      <div className="p-3 pb-2 space-y-2.5">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-[10px] bg-gradient-to-br from-primary via-primary/80 to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
-              <Sparkles className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <div>
-              <h2 className="text-[13px] font-semibold text-foreground tracking-tight">Conversations</h2>
-              <p className="text-[10px] text-muted-foreground font-medium">{conversations.length} chats</p>
-            </div>
-          </div>
-        </div>
-
+    <div className="w-[280px] shrink-0 bg-[#1e1f20]/95 backdrop-blur-2xl border-r border-border/10 flex flex-col max-md:absolute max-md:left-0 max-md:top-0 max-md:h-full max-md:z-50 max-md:shadow-2xl max-md:shadow-black/40">
+      {/* Header with New Chat Button */}
+      <div className="p-4 space-y-4">
         <Button
           onClick={onCreateNew}
-          className="w-full h-10 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30 transition-all duration-300 text-[13px] font-semibold gap-2"
+          className="w-[140px] h-10 rounded-full bg-muted/40 hover:bg-muted/60 text-foreground border border-border/10 shadow-sm transition-all duration-300 text-[14px] font-medium gap-2.5 justify-center"
         >
-          <Plus className="h-4 w-4" /> New Conversation
+          <Plus className="h-4.5 w-4.5 text-muted-foreground" /> New chat
         </Button>
-
-        {/* Search */}
-        {conversations.length > 2 && (
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
-            <Input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search conversations..."
-              className="h-9 pl-9 text-xs rounded-xl bg-muted/30 border-border/30 focus:border-primary/40 focus:bg-muted/50 transition-all duration-200 placeholder:text-muted-foreground/40"
-            />
-          </div>
-        )}
       </div>
 
       {/* Conversations List */}
-      <ScrollArea className="flex-1 px-2">
-        <div className="pb-3 space-y-3">
+      <ScrollArea className="flex-1 px-3">
+        <div className="pb-4 space-y-6">
           {groupOrder.map(group => {
             const items = grouped[group];
             if (!items || items.length === 0) return null;
             return (
-              <div key={group}>
-                <div className="flex items-center gap-2 px-2 py-1.5 mb-0.5">
-                  <Clock className="h-3 w-3 text-muted-foreground/40" />
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+              <div key={group} className="space-y-1">
+                <div className="px-3 py-1 mb-1">
+                  <span className="text-[12px] font-semibold text-foreground/80 tracking-wide">
                     {group}
                   </span>
-                  <div className="flex-1 h-px bg-border/20" />
                 </div>
                 <AnimatePresence initial={false}>
                   <div className="space-y-0.5">
@@ -144,61 +117,44 @@ export const ConversationSidebar = ({
                       return (
                         <motion.div
                           key={conv.id}
-                          initial={{ opacity: 0, y: 4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: i * 0.03, duration: 0.25, ease: 'easeOut' }}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: i * 0.02, duration: 0.2 }}
                           className="relative"
                           onMouseEnter={() => setHoveredId(conv.id)}
                           onMouseLeave={() => setHoveredId(null)}
                         >
-                          {/* Active indicator bar */}
-                          {isActive && (
-                            <motion.div
-                              layoutId="activeIndicator"
-                              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.6)]"
-                              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                            />
-                          )}
                           <div
-                            className={`relative flex items-start gap-3 pl-4 pr-2 py-2.5 rounded-xl cursor-pointer transition-all duration-200 ${
+                            className={`relative flex items-center gap-3 px-3 py-2 rounded-full cursor-pointer transition-all duration-200 ${
                               isActive
-                                ? 'bg-primary/8 border border-primary/15'
-                                : 'hover:bg-muted/40 border border-transparent'
+                                ? 'bg-muted/60 text-foreground'
+                                : 'hover:bg-muted/30 text-foreground/70'
                             }`}
                             onClick={() => onSelect(conv.id)}
                           >
-                            <div className={`mt-0.5 w-[30px] h-[30px] rounded-lg flex items-center justify-center shrink-0 transition-all duration-200 ${
-                              isActive
-                                ? 'bg-primary/15 text-primary'
-                                : 'bg-muted/40 text-muted-foreground/50'
-                            }`}>
-                              <MessageSquare className="h-3.5 w-3.5" />
-                            </div>
-                            <div className="flex-1 min-w-0 space-y-0.5">
-                              <span className={`text-[13px] leading-snug line-clamp-2 block transition-colors ${
-                                isActive ? 'font-medium text-foreground' : 'text-foreground/70'
+                            <MessageSquare className="h-4 w-4 shrink-0 opacity-70" />
+                            <div className="flex-1 min-w-0">
+                              <span className={`text-[13.5px] leading-snug truncate block ${
+                                isActive ? 'font-medium' : 'font-normal'
                               }`}>
                                 {conv.title}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground/40 font-mono tabular-nums">
-                                {formatTime(conv.created_at)}
                               </span>
                             </div>
                             <AnimatePresence>
                               {(isHovered || isActive) && (
                                 <motion.div
-                                  initial={{ opacity: 0, scale: 0.8 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  exit={{ opacity: 0, scale: 0.8 }}
-                                  transition={{ duration: 0.15 }}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.1 }}
                                 >
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-all"
+                                    className="h-7 w-7 rounded-full hover:bg-muted/80 transition-all"
                                     onClick={(e) => { e.stopPropagation(); onDelete(conv.id); }}
                                   >
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <Trash2 className="h-3.5 w-3.5 opacity-60" />
                                   </Button>
                                 </motion.div>
                               )}
@@ -212,6 +168,22 @@ export const ConversationSidebar = ({
               </div>
             );
           })}
+        </div>
+      </ScrollArea>
+
+      {/* Sidebar Footer Search */}
+      <div className="p-4 border-t border-border/10 space-y-3">
+        {conversations.length > 2 && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search history"
+              className="h-9 pl-9 text-xs rounded-full bg-muted/20 border-transparent focus:bg-muted/30 focus:border-transparent transition-all duration-200 placeholder:text-muted-foreground/30"
+            />
+          </div>
+        )}
 
           {filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
