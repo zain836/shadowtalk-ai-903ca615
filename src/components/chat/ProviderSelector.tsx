@@ -14,6 +14,7 @@ interface ProviderSelectorProps {
   provider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
   disabled?: boolean;
+  variant?: "header" | "inline";
 }
 
 const providers = [
@@ -31,8 +32,9 @@ const providers = [
   },
 ];
 
-export const ProviderSelector = ({ provider, onProviderChange, disabled }: ProviderSelectorProps) => {
+export const ProviderSelector = ({ provider, onProviderChange, disabled, variant = "header" }: ProviderSelectorProps) => {
   const currentProvider = providers.find(p => p.value === provider) || providers[0];
+  const shortLabel = currentProvider.value === "lovable" ? "Pro" : "Gemini";
 
   return (
     <DropdownMenu>
@@ -40,11 +42,18 @@ export const ProviderSelector = ({ provider, onProviderChange, disabled }: Provi
         <Button 
           variant="ghost" 
           size="sm" 
-          className="gap-1 h-9 px-2 bg-transparent hover:bg-muted/15 border-none shadow-none text-base md:text-[17px] font-semibold text-foreground/80 hover:text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 rounded-xl"
+          className={
+            variant === "inline"
+              ? "gap-1.5 h-9 px-2.5 rounded-full bg-transparent hover:bg-muted/20 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:ring-0"
+              : "gap-1 h-9 px-2 bg-transparent hover:bg-muted/15 border-none shadow-none text-base md:text-[17px] font-semibold text-foreground/80 hover:text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 rounded-xl"
+          }
           disabled={disabled}
         >
-          <span>{currentProvider.value === "lovable" ? "ShadowTalk Pro" : "ShadowTalk API"}</span>
-          <ChevronDown className="h-4 w-4 text-muted-foreground/60 ml-0.5" />
+          {variant === "inline" && (
+            <span className="h-2 w-2 rounded-full bg-primary shrink-0" aria-hidden />
+          )}
+          <span>{variant === "inline" ? shortLabel : currentProvider.value === "lovable" ? "ShadowTalk Pro" : "ShadowTalk API"}</span>
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/60" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64 p-1.5 bg-[#1e1f20]/95 backdrop-blur-2xl border border-border/10 rounded-2xl shadow-2xl">

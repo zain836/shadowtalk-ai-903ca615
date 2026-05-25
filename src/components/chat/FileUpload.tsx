@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ImagePlus, File, X, Loader2 } from "lucide-react";
+import { ImagePlus, File, X, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -8,9 +8,10 @@ interface FileUploadProps {
   selectedFile: { type: 'image' | 'file'; data: string; name: string; mimeType: string } | null;
   onClear: () => void;
   disabled?: boolean;
+  variant?: "default" | "gemini";
 }
 
-export const FileUpload = ({ onFileSelect, selectedFile, onClear, disabled }: FileUploadProps) => {
+export const FileUpload = ({ onFileSelect, selectedFile, onClear, disabled, variant = "default" }: FileUploadProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
@@ -103,6 +104,21 @@ export const FileUpload = ({ onFileSelect, selectedFile, onClear, disabled }: Fi
             <X className="h-3 w-3" />
           </Button>
         </div>
+      ) : variant === "gemini" ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={disabled || isProcessing}
+          className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/30 relative"
+          aria-label="Attach file"
+        >
+          {isProcessing ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <Plus className="h-5 w-5" />
+          )}
+        </Button>
       ) : (
         <Button
           variant="outline"

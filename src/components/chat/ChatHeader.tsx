@@ -81,7 +81,87 @@ interface ChatHeaderProps {
   onProviderChange: (provider: AIProvider) => void;
   maxChats: string;
   dailyChats: number;
+  variant?: "full" | "minimal";
+  toolsMenuOpen?: boolean;
+  onToolsMenuOpenChange?: (open: boolean) => void;
 }
+
+const ToolsHubMenu = ({
+  open,
+  onOpenChange,
+  onOpenDeepResearch,
+  onOpenAgenticRunner,
+  onOpenVisualReasoning,
+  onOpenCreativeSynthesis,
+  onOpenShadowTalkLive,
+  onOpenBrowser,
+  onOpenCanvas,
+}: {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onOpenDeepResearch: () => void;
+  onOpenAgenticRunner: () => void;
+  onOpenVisualReasoning: () => void;
+  onOpenCreativeSynthesis: () => void;
+  onOpenShadowTalkLive: () => void;
+  onOpenBrowser: () => void;
+  onOpenCanvas: (type: "document" | "code") => void;
+}) => (
+  <DropdownMenu open={open} onOpenChange={onOpenChange}>
+    <DropdownMenuTrigger asChild>
+      <Button variant="ghost" size="icon" className="sr-only" aria-hidden tabIndex={-1}>
+        <LayoutGrid className="h-5 w-5" />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end" side="bottom" className="w-72 p-2 bg-[#1e1f20]/98 backdrop-blur-3xl border border-white/10 rounded-[24px] shadow-2xl">
+      <div className="px-3 py-3 mb-1">
+        <h3 className="text-[11px] font-bold text-muted-foreground/40 uppercase tracking-widest flex items-center gap-2">
+          <Sparkles className="h-3 w-3" /> Tools
+        </h3>
+      </div>
+      <div className="grid grid-cols-2 gap-1 mb-2">
+        <DropdownMenuItem onClick={onOpenDeepResearch} className="flex-col items-start gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all cursor-pointer">
+          <Search className="h-4 w-4 text-blue-400" />
+          <span className="text-[12px] font-semibold">Deep Research</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onOpenAgenticRunner} className="flex-col items-start gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all cursor-pointer">
+          <Play className="h-4 w-4 text-green-400" />
+          <span className="text-[12px] font-semibold">Agentic Runner</span>
+        </DropdownMenuItem>
+      </div>
+      <DropdownMenuSeparator className="bg-white/5 my-2" />
+      <div className="space-y-1">
+        <DropdownMenuItem onClick={onOpenVisualReasoning} className="gap-3 rounded-xl py-2.5 px-3">
+          <Eye className="h-4 w-4 text-purple-400" />
+          <span className="text-[13px] font-medium">Visual Reasoning</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onOpenCreativeSynthesis} className="gap-3 rounded-xl py-2.5 px-3">
+          <Wand2 className="h-4 w-4 text-pink-400" />
+          <span className="text-[13px] font-medium">Creative Studio</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onOpenShadowTalkLive} className="gap-3 rounded-xl py-2.5 px-3">
+          <Mic className="h-4 w-4 text-blue-400" />
+          <span className="text-[13px] font-medium">ShadowTalk Live</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onOpenBrowser} className="gap-3 rounded-xl py-2.5 px-3">
+          <Compass className="h-4 w-4 text-cyan-400" />
+          <span className="text-[13px] font-medium">AI Browser</span>
+        </DropdownMenuItem>
+      </div>
+      <DropdownMenuSeparator className="bg-white/5 my-2" />
+      <div className="space-y-1">
+        <DropdownMenuItem onClick={() => onOpenCanvas("document")} className="gap-3 rounded-xl py-2.5 px-3">
+          <FileText className="h-4 w-4 text-amber-400" />
+          <span className="text-[13px] font-medium">New Artifact</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onOpenCanvas("code")} className="gap-3 rounded-xl py-2.5 px-3">
+          <Zap className="h-4 w-4 text-primary" />
+          <span className="text-[13px] font-medium">Code Canvas</span>
+        </DropdownMenuItem>
+      </div>
+    </DropdownMenuContent>
+  </DropdownMenu>
+);
 
 export const ChatHeader = ({
   userPlan,
@@ -108,11 +188,66 @@ export const ChatHeader = ({
   onOpenBrowser,
   aiProvider,
   onProviderChange,
+  variant = "full",
+  toolsMenuOpen,
+  onToolsMenuOpenChange,
 }: ChatHeaderProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
   const userInitials = user?.email ? user.email.charAt(0).toUpperCase() : "G";
+  const showUpgrade = userPlan === "free" || userPlan === "pro";
+
+  if (variant === "minimal") {
+    return (
+      <>
+        <div className="flex items-center justify-between px-4 py-3 md:px-8 bg-transparent relative z-20 shrink-0">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleSidebar}
+              className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/20 md:hidden"
+              aria-label="Menu"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onToolsMenuOpenChange?.(true)}
+              className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/20 md:hidden"
+              aria-label="Tools"
+            >
+              <LayoutGrid className="h-5 w-5 text-primary" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            {showUpgrade && (
+              <Button
+                onClick={() => navigate("/pricing")}
+                className="rounded-full h-9 px-4 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium shadow-sm"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Upgrade
+              </Button>
+            )}
+          </div>
+        </div>
+        <ToolsHubMenu
+          open={toolsMenuOpen}
+          onOpenChange={onToolsMenuOpenChange}
+          onOpenDeepResearch={onOpenDeepResearch}
+          onOpenAgenticRunner={onOpenAgenticRunner}
+          onOpenVisualReasoning={onOpenVisualReasoning}
+          onOpenCreativeSynthesis={onOpenCreativeSynthesis}
+          onOpenShadowTalkLive={onOpenShadowTalkLive}
+          onOpenBrowser={onOpenBrowser}
+          onOpenCanvas={onOpenCanvas}
+        />
+      </>
+    );
+  }
 
   return (
     <div className="flex items-center justify-between px-4 py-3 md:px-6 bg-transparent relative z-20">
@@ -151,70 +286,26 @@ export const ChatHeader = ({
           </SelectContent>
         </Select>
 
-        {/* Combined Tools Hub - Neural Expressive */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all">
-              <LayoutGrid className="h-5 w-5 text-blue-400" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-72 p-2 bg-[#1e1f20]/98 backdrop-blur-3xl border border-white/10 rounded-[24px] shadow-2xl">
-            <div className="px-3 py-3 mb-1">
-              <h3 className="text-[11px] font-bold text-muted-foreground/40 uppercase tracking-widest flex items-center gap-2">
-                <Sparkles className="h-3 w-3" /> Combined Tools Hub
-              </h3>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-1 mb-2">
-              <DropdownMenuItem onClick={onOpenDeepResearch} className="flex-col items-start gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all cursor-pointer">
-                <Search className="h-4 w-4 text-blue-400" />
-                <span className="text-[12px] font-semibold">Deep Research</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onOpenAgenticRunner} className="flex-col items-start gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all cursor-pointer">
-                <Play className="h-4 w-4 text-green-400" />
-                <span className="text-[12px] font-semibold">Agentic Runner</span>
-              </DropdownMenuItem>
-            </div>
-
-            <DropdownMenuSeparator className="bg-white/5 my-2" />
-
-            <div className="space-y-1">
-              <DropdownMenuItem onClick={onOpenVisualReasoning} className="gap-3 rounded-xl py-2.5 px-3">
-                <Eye className="h-4 w-4 text-purple-400" />
-                <span className="text-[13px] font-medium">Visual Reasoning</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onOpenCreativeSynthesis} className="gap-3 rounded-xl py-2.5 px-3">
-                <Wand2 className="h-4 w-4 text-pink-400" />
-                <span className="text-[13px] font-medium">Creative Studio</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onOpenShadowTalkLive} className="gap-3 rounded-xl py-2.5 px-3">
-                <Mic className="h-4 w-4 text-blue-400" />
-                <span className="text-[13px] font-medium">ShadowTalk Live</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onOpenBrowser} className="gap-3 rounded-xl py-2.5 px-3">
-                <Compass className="h-4 w-4 text-cyan-400" />
-                <span className="text-[13px] font-medium">AI Browser</span>
-              </DropdownMenuItem>
-            </div>
-
-            <DropdownMenuSeparator className="bg-white/5 my-2" />
-            
-            <div className="px-3 py-2">
-              <h4 className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-widest">Workspace</h4>
-            </div>
-
-            <div className="space-y-1">
-              <DropdownMenuItem onClick={() => onOpenCanvas("document")} className="gap-3 rounded-xl py-2.5 px-3">
-                <FileText className="h-4 w-4 text-amber-400" />
-                <span className="text-[13px] font-medium">New Artifact</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onOpenCanvas("code")} className="gap-3 rounded-xl py-2.5 px-3">
-                <Zap className="h-4 w-4 text-primary" />
-                <span className="text-[13px] font-medium">Code Canvas</span>
-              </DropdownMenuItem>
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onToolsMenuOpenChange?.(true)}
+          className="h-10 w-10 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all"
+          aria-label="Tools"
+        >
+          <LayoutGrid className="h-5 w-5 text-primary" />
+        </Button>
+        <ToolsHubMenu
+          open={toolsMenuOpen}
+          onOpenChange={onToolsMenuOpenChange}
+          onOpenDeepResearch={onOpenDeepResearch}
+          onOpenAgenticRunner={onOpenAgenticRunner}
+          onOpenVisualReasoning={onOpenVisualReasoning}
+          onOpenCreativeSynthesis={onOpenCreativeSynthesis}
+          onOpenShadowTalkLive={onOpenShadowTalkLive}
+          onOpenBrowser={onOpenBrowser}
+          onOpenCanvas={onOpenCanvas}
+        />
 
         {/* User Profile / Unified Settings */}
         <DropdownMenu>

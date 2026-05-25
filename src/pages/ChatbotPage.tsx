@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ChatMode, getModePrompt } from "@/components/chat/ModeSelector";
 import { AIProvider } from "@/components/chat/ProviderSelector";
 import { ChatHeader } from "@/components/chat/ChatHeader";
+import { ChatIconRail } from "@/components/chat/ChatIconRail";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
@@ -150,7 +151,8 @@ const ChatbotPage = () => {
   const [personality, setPersonality] = useState<Personality>("friendly");
   const [chatMode, setChatMode] = useState<ChatMode>("general");
   const [aiProvider, setAiProvider] = useState<AIProvider>("lovable");
-  const [showSidebar, setShowSidebar] = useState(false); // Default to hidden on mobile
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   
   // Voice state
   const [isListening, setIsListening] = useState(false);
@@ -1373,10 +1375,44 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
   const maxChats = isProOrHigher ? "∞" : "50";
   const showSuggestions = messages.length <= 1;
   const isSpecialMode = ['ppag', 'hsca'].includes(chatMode);
+  const isEmptyChat = messages.length <= 1;
+  const userDisplayName =
+    user?.user_metadata?.full_name?.split(" ")[0] ||
+    user?.email?.split("@")[0] ||
+    "there";
+  const userInitials = user?.email ? user.email.charAt(0).toUpperCase() : "G";
+
+  const geminiChatInputProps = {
+    message,
+    onMessageChange: setMessage,
+    onSend: () => handleSendMessage(),
+    onKeyPress: (e: React.KeyboardEvent) => e.key === "Enter" && !e.shiftKey && handleSendMessage(),
+    isLoading,
+    isListening,
+    isSpeaking,
+    onToggleVoice: toggleVoiceInput,
+    onOpenImageGenerator: () => setShowImageGenerator(true),
+    onStopGeneration: stopGeneration,
+    selectedFile,
+    onFileSelect: (file: typeof selectedFile) => {
+      setSelectedFile(file);
+      if (file) trackFileUpload(file.mimeType);
+    },
+    chatMode,
+    onModeChange: (mode: ChatMode) => {
+      setChatMode(mode);
+      trackModeSwitch(mode);
+      shadowMemory.log("feature", "Switched chat mode", mode);
+    },
+    personality,
+    layout: "gemini" as const,
+    aiProvider,
+    onProviderChange: setAiProvider,
+  };
 
   return (
     <motion.div 
-      className="min-h-screen neural-bg relative overflow-hidden"
+      className="min-h-screen gemini-chat-shell relative overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
@@ -1393,43 +1429,54 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         )}
       </AnimatePresence>
       
-      <div className="flex h-screen w-full relative z-10">
-        {/* Mobile Sidebar Overlay */}
+      <div className="flex h-screen w-full relative z-10 gemini-chat-main">
+        <ChatIconRail
+          userInitials={userInitials}
+          onNewChat={() => {
+            createNewConversation();
+            setShowSidebar(false);
+          }}
+          onOpenHistory={() => setShowSidebar(true)}
+          onOpenTools={() => setToolsMenuOpen(true)}
+          onOpenSettings={() => navigate("/profile")}
+        />
+
         <AnimatePresence>
           {showSidebar && (
-            <motion.div 
-              className="fixed inset-0 bg-black/60 backdrop-blur-md z-40 md:hidden"
-              onClick={() => setShowSidebar(false)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
-          )}
-        </AnimatePresence>
-        
-        {/* Sidebar */}
-        <AnimatePresence>
-          {showSidebar && (
-            <motion.div
-              initial={{ x: -280, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -280, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 400, damping: 40 }}
-              className="z-50"
-            >
-              <ConversationSidebar
-                conversations={conversations}
-                currentConversationId={currentConversationId}
-                onCreateNew={() => { createNewConversation(); setShowSidebar(false); }}
-                onSelect={(id) => { loadConversation(id); setShowSidebar(false); }}
-                onDelete={deleteConversation}
-                onClearAll={clearAllConversations}
+            <>
+              <motion.div
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+                onClick={() => setShowSidebar(false)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
               />
-            </motion.div>
+              <motion.div
+                initial={{ x: -280, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -280, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 40 }}
+                className="fixed left-0 top-0 bottom-0 z-50 md:left-[72px]"
+              >
+                <ConversationSidebar
+                  conversations={conversations}
+                  currentConversationId={currentConversationId}
+                  onCreateNew={() => {
+                    createNewConversation();
+                    setShowSidebar(false);
+                  }}
+                  onSelect={(id) => {
+                    loadConversation(id);
+                    setShowSidebar(false);
+                  }}
+                  onDelete={deleteConversation}
+                  onClearAll={clearAllConversations}
+                />
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
 
-        {/* Main Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
           <ChatHeader
             userPlan={userPlan}
@@ -1458,48 +1505,40 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             onProviderChange={setAiProvider}
             maxChats={maxChats}
             dailyChats={dailyChats}
+            variant="minimal"
+            toolsMenuOpen={toolsMenuOpen}
+            onToolsMenuOpenChange={setToolsMenuOpen}
           />
 
-          <div className="flex-1 overflow-hidden relative">
+          <div className={`flex-1 overflow-hidden relative flex flex-col ${isEmptyChat ? "justify-center" : ""}`}>
             <AnimatePresence mode="wait">
-              {messages.length <= 1 ? (
-                <motion.div 
+              {isEmptyChat ? (
+                <motion.div
                   key="home"
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                  className="home-centered-content pb-32"
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  className="home-centered-content"
                 >
-                  <div className="relative group mb-8">
-                    <div className="absolute -inset-8 bg-gradient-to-r from-blue-500/20 via-violet-500/20 to-pink-500/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-                    <div className="relative w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-blue-500 via-violet-500 to-pink-500 rounded-[32px] flex items-center justify-center shadow-2xl shadow-blue-500/20 ring-1 ring-white/10 group-hover:scale-105 transition-transform duration-500">
-                      <Sparkles className="w-12 h-12 md:w-16 md:h-16 text-white drop-shadow-glow animate-pulse" />
-                    </div>
-                  </div>
-                  
-                  <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-4">
-                    <span className="bg-gradient-to-r from-blue-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">
-                      ShadowTalk
-                    </span>
+                  <h1 className="text-3xl md:text-[2.75rem] font-normal text-foreground tracking-tight leading-tight">
+                    Over to you, {userDisplayName}.
                   </h1>
-                  
-                  <p className="text-2xl md:text-3xl font-medium text-muted-foreground/60 tracking-tight max-w-2xl mx-auto">
-                    Hello, {user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || "Friend"}. 
-                    How can I help you today?
-                  </p>
+                  <div className="floating-prompt-bar w-full">
+                    <ChatInput {...geminiChatInputProps} isEmptyState />
+                  </div>
                 </motion.div>
               ) : (
-                <motion.div 
+                <motion.div
                   key="chat"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="h-full flex flex-col"
+                  className="h-full flex flex-col min-h-0"
                 >
                   <ChatMessages
                     messages={messages}
                     isLoading={isLoading}
-                    showSuggestions={false} // Removed suggestion chips per redesign
+                    showSuggestions={false}
                     personality={personality}
                     userPlan={userPlan}
                     speakingMessageId={speakingMessageId}
@@ -1522,28 +1561,11 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             </AnimatePresence>
           </div>
 
-          <div className={`${messages.length <= 1 ? 'floating-prompt-bar' : 'w-full max-w-4xl mx-auto'}`}>
-            <ChatInput
-              message={message}
-              onMessageChange={setMessage}
-              onSend={() => handleSendMessage()}
-              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-              isLoading={isLoading}
-              isListening={isListening}
-              onToggleVoice={toggleVoiceInput}
-              onOpenImageGenerator={() => setShowImageGenerator(true)}
-              onStopGeneration={stopGeneration}
-              selectedFile={selectedFile}
-              onFileSelect={(file) => { setSelectedFile(file); if (file) trackFileUpload(file.mimeType); }}
-              chatMode={chatMode}
-              onModeChange={(mode) => { 
-                setChatMode(mode); 
-                trackModeSwitch(mode);
-                shadowMemory.log('feature', 'Switched chat mode', mode);
-              }}
-              personality={personality}
-            />
-          </div>
+          {!isEmptyChat && (
+            <div className="shrink-0 border-t border-border/30 bg-background/80 backdrop-blur-sm">
+              <ChatInput {...geminiChatInputProps} />
+            </div>
+          )}
         </div>
       </div>
 
