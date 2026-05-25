@@ -431,6 +431,11 @@
 
   /* Article Style Responses */
   .article-response {
-    @apply prose-headings:font-bold prose-headings:tracking-tight prose-p:leading-relaxed prose-p:text-lg;
+    h1, h2, h3, h4, h5, h6 {
+      @apply font-bold tracking-tight;
+    }
+    p {
+      @apply leading-relaxed text-lg;
+    }
   }
 }
