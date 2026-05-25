@@ -59,6 +59,19 @@ interface ChatMessage {
   parts: { text: string }[];
 }
 
+interface SettingData {
+  setting_key: string;
+  setting_value: string;
+}
+
+interface ErrorData {
+  error?: { code?: number; status?: string };
+}
+
+interface GeminiResponseData {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -93,7 +106,7 @@ serve(async (req) => {
       alert_email: ''
     };
 
-    settingsData?.forEach(s => {
+    settingsData?.forEach((s: SettingData) => {
       if (s.setting_key === 'exhaustion_threshold') settings.exhaustion_threshold = parseInt(s.setting_value) || 5;
       if (s.setting_key === 'usage_alert_threshold') settings.usage_alert_threshold = parseInt(s.setting_value) || 100;
       if (s.setting_key === 'alerts_enabled') settings.alerts_enabled = s.setting_value === 'true';
@@ -124,7 +137,7 @@ serve(async (req) => {
     }
 
     // Fetch or create session history
-    let { data: session, error: sessionError } = await supabase
+    const { data: session, error: sessionError } = await supabase
       .from('gemini_sessions')
       .select('*')
       .eq('session_id', sessionId)
@@ -163,7 +176,6 @@ serve(async (req) => {
     // Try each available key until one works
     let responseText = '';
     let successfulKeyId = '';
-    let wasExhausted = false;
 
     for (const key of apiKeys as GeminiApiKey[]) {
       try {
@@ -189,7 +201,7 @@ serve(async (req) => {
         );
 
         if (!geminiResponse.ok) {
-          const errorData = await geminiResponse.json();
+          const errorData = await geminiResponse.json() as ErrorData;
           console.error(`API error with key ${key.id}:`, errorData);
 
           // Check for rate limit / resource exhausted error (429)
@@ -199,7 +211,6 @@ serve(async (req) => {
             
             const newExhaustionCount = (key.exhaustion_count || 0) + 1;
             console.log(`Key ${key.id} exhausted (count: ${newExhaustionCount}), marking as exhausted`);
-            wasExhausted = true;
             
             // Check if key should be auto-disabled due to too many exhaustions
             const shouldAutoDisable = newExhaustionCount >= settings.exhaustion_threshold;
@@ -256,7 +267,7 @@ serve(async (req) => {
           throw new Error(`Gemini API error: ${JSON.stringify(errorData)}`);
         }
 
-        const data = await geminiResponse.json();
+        const data = await geminiResponse.json() as GeminiResponseData;
         responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
         successfulKeyId = key.id;
 

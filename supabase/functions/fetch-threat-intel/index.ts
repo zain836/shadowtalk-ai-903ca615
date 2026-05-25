@@ -6,6 +6,39 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+interface CVE {
+  cve_id: string;
+  severity: string;
+  cvss_score: number;
+  product: string;
+  description: string;
+  exploit_available: boolean;
+  attack_vector: string;
+  attack_complexity: string;
+  auth_required: string;
+  published_at: string;
+}
+
+interface NVDVulnerability {
+  cve: CVEData;
+}
+
+interface CVEData {
+  id: string;
+  metrics?: {
+    cvssMetricV31?: Array<{ cvssData: { baseScore?: number; attackVector?: string; attackComplexity?: string; privilegesRequired?: string } }>;
+    cvssMetricV30?: Array<{ cvssData: { baseScore?: number; attackVector?: string; attackComplexity?: string; privilegesRequired?: string } }>;
+  };
+  descriptions?: Array<{ lang: string; value: string }>;
+  configurations?: Array<{ nodes?: Array<{ cpeMatch?: Array<{ criteria: string }> }> }>;
+  references?: Array<{ tags?: string[] }>;
+  published?: string;
+}
+
+interface ScanResult {
+  files?: Array<{ content?: string }>;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -45,21 +78,21 @@ serve(async (req) => {
       
       console.log(`[ThreatIntel] Fetching CVEs from NVD...`);
       
-      let cves: any[] = [];
+      const cves: CVE[] = [];
       try {
         const nvdResp = await fetch(nvdUrl, {
           headers: { 'User-Agent': 'ShadowTalk-CyberCommand/1.0' },
         });
         
         if (nvdResp.ok) {
-          const nvdData = await nvdResp.json();
-          cves = (nvdData.vulnerabilities || []).map((item: any) => {
+          const nvdData = await nvdResp.json() as { vulnerabilities?: NVDVulnerability[] };
+          const mappedCves = (nvdData.vulnerabilities || []).map((item: NVDVulnerability) => {
             const cve = item.cve;
             const metrics = cve.metrics?.cvssMetricV31?.[0]?.cvssData || 
                            cve.metrics?.cvssMetricV30?.[0]?.cvssData || {};
             const cvss = metrics.baseScore || 0;
             const severity = cvss >= 9 ? 'critical' : cvss >= 7 ? 'high' : cvss >= 4 ? 'medium' : 'low';
-            const desc = cve.descriptions?.find((d: any) => d.lang === 'en')?.value || 'No description';
+            const desc = cve.descriptions?.find((d: { lang: string; value: string }) => d.lang === 'en')?.value || 'No description';
             // Extract affected product from configurations or description
             const product = extractProduct(cve);
             
@@ -69,15 +102,16 @@ serve(async (req) => {
               cvss_score: cvss,
               product,
               description: desc.substring(0, 500),
-              exploit_available: cve.references?.some((r: any) => 
+              exploit_available: cve.references?.some((r: { tags?: string[] }) => 
                 r.tags?.includes('Exploit') || r.tags?.includes('Third Party Advisory')
               ) || false,
               attack_vector: metrics.attackVector || 'NETWORK',
               attack_complexity: metrics.attackComplexity || 'LOW',
               auth_required: metrics.privilegesRequired || 'NONE',
               published_at: cve.published || new Date().toISOString(),
-            };
+            } as CVE;
           });
+          cves.push(...mappedCves);
         } else {
           console.warn(`[ThreatIntel] NVD API returned ${nvdResp.status}, using cached data`);
         }
@@ -165,7 +199,7 @@ serve(async (req) => {
           body: JSON.stringify({ url, scanDepth }),
         });
 
-        const scanResult = await scanResp.json();
+        const scanResult = await scanResp.json() as ScanResult;
         
         // Update scan record with results
         await supabase
@@ -232,7 +266,7 @@ function getDateDaysAgo(days: number): string {
   return d.toISOString();
 }
 
-function extractProduct(cve: any): string {
+function extractProduct(cve: CVEData): string {
   // Try to extract from configurations
   const configs = cve.configurations;
   if (configs?.length > 0) {
@@ -248,12 +282,12 @@ function extractProduct(cve: any): string {
     }
   }
   // Fallback: extract from description
-  const desc = cve.descriptions?.find((d: any) => d.lang === 'en')?.value || '';
+  const desc = cve.descriptions?.find((d: { lang: string; value: string }) => d.lang === 'en')?.value || '';
   const match = desc.match(/^([\w\s.-]+?)(?:\s+(?:before|through|in|allows|is|has|does|contains))/i);
   return match?.[1]?.trim().substring(0, 50) || 'Unknown Product';
 }
 
-function countVulnerabilities(result: any): number {
+function countVulnerabilities(result: ScanResult): number {
   if (!result.files) return 0;
   let count = 0;
   for (const file of result.files) {
@@ -265,7 +299,7 @@ function countVulnerabilities(result: any): number {
   return count;
 }
 
-function calculateRiskScore(result: any): number {
+function calculateRiskScore(result: ScanResult): number {
   if (!result.files) return 0;
   let score = 0;
   for (const file of result.files) {

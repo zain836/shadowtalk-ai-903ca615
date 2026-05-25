@@ -48,7 +48,7 @@ serve(async (req) => {
     const branding = validation.data;
 
     // Verify user has access to workspace (or is the owner)
-    let workspaceId = branding.workspaceId;
+    const workspaceId = branding.workspaceId;
     
     // Check if workspace exists and user has access
     const { data: member } = await supabase
