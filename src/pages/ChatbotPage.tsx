@@ -393,7 +393,11 @@ const ChatbotPage = () => {
       setConversations(prev => prev.filter(c => c.id !== conversationId));
       if (currentConversationId === conversationId) {
         const remaining = conversations.filter(c => c.id !== conversationId);
-        remaining.length > 0 ? loadConversation(remaining[0].id) : createNewConversation();
+        if (remaining.length > 0) {
+          loadConversation(remaining[0].id);
+        } else {
+          createNewConversation();
+        }
       }
       toast({ title: "Conversation deleted" });
     }
