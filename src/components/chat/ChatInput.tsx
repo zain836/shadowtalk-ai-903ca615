@@ -1,4 +1,4 @@
-import { Send, Mic, MicOff, Square, Image as ImageIcon, Sparkles, Search, Camera, Table, Command } from "lucide-react";
+import { Send, Mic, MicOff, Square, Image as ImageIcon, Sparkles, Search, Camera, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FileUpload } from "@/components/chat/FileUpload";
@@ -52,13 +52,13 @@ export const ChatInput = ({
   };
 
   return (
-    <div className="relative border-t border-border/10">
-      {/* Gradient fade above input */}
+    <div className="relative border-t border-transparent bg-background/20 backdrop-blur-sm">
+      {/* Soft gradient fade above input area */}
       <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none z-10" />
       
-      <div className="max-w-3xl mx-auto px-3 py-3 md:px-4 md:py-4">
-        {/* Mode Bar */}
-        <div className="flex items-center gap-2 mb-2 overflow-x-auto scrollbar-none">
+      <div className="max-w-3xl mx-auto px-4 py-4 md:py-6">
+        {/* Sleek Mode Chips above input */}
+        <div className="flex items-center gap-2 mb-3.5 overflow-x-auto scrollbar-none px-1">
           <ModeSelector 
             mode={chatMode} 
             onModeChange={(mode) => {
@@ -70,25 +70,25 @@ export const ChatInput = ({
           {chatMode === 'research' && (
             <SearchHistory onSelectQuery={(query) => onMessageChange(query)} />
           )}
-          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50 shrink-0 font-mono ml-auto">
-            {chatMode === 'research' && <Search className="h-3 w-3 text-violet-400" />}
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/35 shrink-0 font-mono ml-auto">
+            {chatMode === 'research' && <Search className="h-3 w-3 text-blue-400" />}
             {chatMode === 'camera' && <Camera className="h-3 w-3 text-teal-400" />}
             {chatMode === 'organize' && <Table className="h-3 w-3 text-amber-400" />}
-            {!['research', 'camera', 'organize'].includes(chatMode) && <Sparkles className="h-3 w-3 text-primary/40" />}
+            {!['research', 'camera', 'organize'].includes(chatMode) && <Sparkles className="h-3 w-3 text-primary/30" />}
             <span className="capitalize">{chatMode}</span>
-            <span className="hidden sm:inline opacity-30">·</span>
-            <span className="capitalize hidden sm:inline">{personality}</span>
+            <span className="opacity-25">·</span>
+            <span className="capitalize">{personality}</span>
           </div>
         </div>
 
-        {/* Input Container — Sovereign glassmorphism */}
+        {/* Input Bar — Gemini Rounded Pill */}
         <div className="relative group">
-          {/* Glow effect on focus */}
-          <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-primary/20 via-secondary/10 to-primary/20 opacity-0 group-focus-within:opacity-100 blur-md transition-opacity duration-500" />
+          {/* Subtle Outer Focus Glow */}
+          <div className="absolute -inset-[1px] rounded-[32px] bg-gradient-to-r from-primary/15 via-secondary/5 to-primary/15 opacity-0 group-focus-within:opacity-100 blur-sm transition-opacity duration-500" />
           
-          <div className="relative flex items-end gap-1.5 bg-card/60 backdrop-blur-xl rounded-2xl border border-border/30 p-2 shadow-xl shadow-black/10 group-focus-within:border-primary/25 group-focus-within:shadow-primary/5 transition-all duration-300">
-            {/* Left: File Upload */}
-            <div className="flex items-center pb-0.5 shrink-0">
+          <div className="relative flex items-end gap-2 bg-[#1e1f20]/45 backdrop-blur-xl rounded-[30px] border border-border/15 p-2 px-3.5 shadow-xl group-focus-within:border-primary/20 group-focus-within:bg-[#1e1f20]/65 transition-all duration-300">
+            {/* Far Left: File Upload */}
+            <div className="flex items-center pb-1 shrink-0">
               <FileUpload
                 onFileSelect={onFileSelect}
                 selectedFile={selectedFile}
@@ -97,21 +97,21 @@ export const ChatInput = ({
               />
             </div>
             
-            {/* Textarea */}
+            {/* Center Area: Textarea */}
             <Textarea 
               value={message} 
               onChange={(e) => onMessageChange(e.target.value)} 
               onKeyDown={handleKeyDown}
-              placeholder={isListening ? "Listening..." : "Ask anything..."}
-              className={`flex-1 min-h-[42px] md:min-h-[46px] max-h-[180px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2.5 px-2 text-sm placeholder:text-muted-foreground/35 ${
+              placeholder={isListening ? "Listening..." : "Enter a prompt here"}
+              className={`flex-1 min-h-[44px] max-h-[220px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-3.5 px-2 text-[15px] placeholder:text-muted-foreground/35 leading-relaxed overflow-y-auto custom-scrollbar ${
                 isListening ? 'placeholder:text-primary placeholder:animate-pulse' : ''
               }`}
               disabled={isLoading}
               rows={1}
             />
             
-            {/* Right Actions */}
-            <div className="flex items-center gap-1 pb-0.5 shrink-0">
+            {/* Right: Audio Control & Send Action */}
+            <div className="flex items-center gap-1.5 pb-1 shrink-0">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -119,17 +119,17 @@ export const ChatInput = ({
                       onClick={onToggleVoice} 
                       variant="ghost"
                       size="icon"
-                      className={`h-8 w-8 rounded-xl transition-all duration-200 ${
+                      className={`h-9 w-9 rounded-full transition-all duration-300 ${
                         isListening 
-                          ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30 scale-105' 
-                          : 'text-muted-foreground/60 hover:text-foreground hover:bg-muted/50'
+                          ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105' 
+                          : 'text-muted-foreground/60 hover:text-foreground hover:bg-muted/40'
                       }`}
                       disabled={isLoading}
                     >
-                      {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                      {isListening ? <MicOff className="h-4.5 w-4.5" /> : <Mic className="h-4.5 w-4.5" />}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="text-xs">Voice input</TooltipContent>
+                  <TooltipContent side="top" className="text-xs">Use microphone</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               
@@ -140,10 +140,10 @@ export const ChatInput = ({
                       onClick={onOpenImageGenerator}
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 rounded-xl text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 hidden sm:flex"
+                      className="h-9 w-9 rounded-full text-muted-foreground/60 hover:text-foreground hover:bg-muted/40 hidden sm:flex"
                       disabled={isLoading}
                     >
-                      <ImageIcon className="h-4 w-4" />
+                      <ImageIcon className="h-4.5 w-4.5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="text-xs">Generate image</TooltipContent>
@@ -154,7 +154,7 @@ export const ChatInput = ({
                 <Button 
                   onClick={onStopGeneration} 
                   size="icon" 
-                  className="h-9 w-9 rounded-xl bg-destructive/90 hover:bg-destructive text-destructive-foreground shadow-lg shadow-destructive/20"
+                  className="h-9 w-9 rounded-full bg-destructive/90 hover:bg-destructive text-destructive-foreground shadow-md shadow-destructive/15 scale-95"
                 >
                   <Square className="h-3.5 w-3.5" />
                 </Button>
@@ -162,7 +162,7 @@ export const ChatInput = ({
                 <Button 
                   onClick={onSend} 
                   size="icon"
-                  className="h-9 w-9 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-primary/35 transition-all duration-200 disabled:opacity-20 disabled:shadow-none hover:scale-105 active:scale-95"
+                  className="h-9 w-9 rounded-full bg-primary hover:bg-primary/95 text-primary-foreground shadow-md shadow-primary/15 transition-all duration-200 disabled:opacity-15 disabled:bg-muted/30 disabled:text-muted-foreground/40 disabled:shadow-none hover:scale-105 active:scale-95"
                   disabled={!message.trim() && !selectedFile}
                 >
                   <Send className="h-4 w-4" />
@@ -172,11 +172,10 @@ export const ChatInput = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-center gap-3 mt-2 text-[10px] text-muted-foreground/30 font-mono">
-          <span className="hidden sm:inline">Enter to send · Shift+Enter for new line</span>
-          <span className="sm:hidden">Tap send or press Enter</span>
-        </div>
+        {/* Disclaimer Footer (Gemini-style) */}
+        <p className="text-[11px] text-muted-foreground/35 font-normal tracking-wide text-center mt-3 select-none leading-relaxed">
+          ShadowTalk may display inaccurate info, including about people, so double-check its responses. Your privacy & ShadowTalk Apps
+        </p>
       </div>
     </div>
   );

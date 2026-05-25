@@ -88,34 +88,34 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         ease: [0.25, 0.46, 0.45, 0.94],
         delay: Math.min(index * 0.02, 0.1)
       }}
-      className={`group flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}
+      className={`group flex items-start gap-3.5 md:gap-5 py-2.5 ${isUser ? 'flex-row-reverse' : ''}`}
     >
       {/* Avatar */}
-      <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 ${
+      <div className={`w-8 h-8 sm:w-[34px] sm:h-[34px] rounded-full flex items-center justify-center shrink-0 transition-all duration-200 select-none ${
         isUser 
-          ? 'bg-primary/8 border border-primary/15' 
-          : 'bg-gradient-to-br from-primary via-primary/90 to-secondary shadow-lg shadow-primary/15'
+          ? 'bg-muted/30 border border-border/10' 
+          : 'bg-gradient-to-tr from-blue-500 via-indigo-500 to-pink-500 shadow-sm shadow-primary/10'
       }`}>
         {isUser 
-          ? <User className="h-4 w-4 text-primary/80" /> 
-          : <Sparkles className="h-4 w-4 text-primary-foreground" />
+          ? <User className="h-4.5 w-4.5 text-muted-foreground/80" /> 
+          : <Sparkles className="h-[17px] w-[17px] text-white animate-pulse" />
         }
       </div>
 
       {/* Content */}
-      <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[78%]`}>
+      <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[76%]`} style={{ width: '100%' }}>
         {/* Image attachment */}
         {message.attachment?.type === 'image' && (
           <img 
             src={message.attachment.data} 
             alt={message.attachment.name} 
-            className="max-w-[200px] sm:max-w-xs rounded-xl border border-border/30 shadow-sm" 
+            className="max-w-[200px] sm:max-w-xs rounded-2xl border border-border/15 shadow-sm mb-1.5" 
           />
         )}
 
         {/* AI Generated Image */}
         {message.imageUrl && (
-          <div className="relative rounded-xl overflow-hidden border border-border/30 shadow-sm max-w-md">
+          <div className="relative rounded-2xl overflow-hidden border border-border/15 shadow-sm max-w-md mb-1.5">
             <img 
               src={message.imageUrl} 
               alt="AI Generated" 
@@ -132,13 +132,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
 
         {/* Message bubble */}
-        <div className={`rounded-2xl px-4 py-3 w-full overflow-hidden transition-all duration-300 ${
+        <div className={`w-full overflow-hidden transition-all duration-300 ${
           isUser 
-            ? 'bg-primary text-primary-foreground rounded-tr-md shadow-lg shadow-primary/15' 
-            : 'bg-card/50 backdrop-blur-md border border-border/20 rounded-tl-md hover:border-border/40 hover:bg-card/60'
+            ? 'bg-[#1e1f20]/45 border border-border/15 text-foreground rounded-2xl rounded-tr-sm px-4 py-2.5 shadow-sm max-w-max' 
+            : 'bg-transparent border-none shadow-none px-0 py-0.5'
         }`}>
           {isUser ? (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{typeof message.content === 'string' ? message.content : String(message.content || '')}</p>
+            <p className="text-[14.5px] leading-relaxed whitespace-pre-wrap break-words">{typeof message.content === 'string' ? message.content : String(message.content || '')}</p>
           ) : (
             <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2.5 prose-headings:mt-5 prose-headings:mb-2 prose-headings:first:mt-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-hr:my-4 prose-hr:border-border/30 [&_.katex]:text-foreground [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto overflow-hidden">
               <ReactMarkdown
@@ -160,6 +160,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                           {children}
                         </code>
                       );
+                      
                     }
                     return <CodeBlock code={codeString} language="text" onOpenCanvas={onOpenCodeCanvas} onOpenIDE={onOpenIDE} onLaunchWebsite={onLaunchWebsite} />;
                   },
@@ -186,27 +187,27 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                       );
                     }
                     return (
-                      <li className="text-sm leading-[1.75] pl-1" {...props}>{children}</li>
+                      <li className="text-[14.5px] leading-relaxed pl-1" {...props}>{children}</li>
                     ); 
                   },
                   h1({ children }) { 
                     return (
-                      <h1 className="text-lg font-bold tracking-tight border-b border-border/20 pb-2.5 mb-3.5 text-foreground">
+                      <h1 className="text-xl font-bold tracking-tight border-b border-border/10 pb-2.5 mb-4 text-foreground">
                         {children}
                       </h1>
                     ); 
                   },
                   h2({ children }) { 
                     return (
-                      <h2 className="text-[15px] font-bold tracking-tight mt-6 first:mt-0 mb-2 text-foreground flex items-center gap-2">
-                        <span className="w-1 h-4 bg-primary/40 rounded-full" />
+                      <h2 className="text-[17px] font-bold tracking-tight mt-6 first:mt-0 mb-2 text-foreground flex items-center gap-2">
+                        <span className="w-1 h-4.5 bg-primary/40 rounded-full" />
                         {children}
                       </h2>
                     ); 
                   },
-                  h3({ children }) { return <h3 className="text-sm font-semibold mt-4 first:mt-0 text-foreground/90">{children}</h3>; },
+                  h3({ children }) { return <h3 className="text-base font-semibold mt-4 first:mt-0 text-foreground/90">{children}</h3>; },
                   h4({ children }) { return <h4 className="text-sm font-medium text-muted-foreground mt-3">{children}</h4>; },
-                  p({ children }) { return <p className="text-sm leading-[1.8] mb-3 last:mb-0 text-foreground/85">{children}</p>; },
+                  p({ children }) { return <p className="text-[15px] leading-relaxed mb-3.5 last:mb-0 text-foreground/85">{children}</p>; },
                   strong({ children }) { return <strong className="font-semibold text-foreground">{children}</strong>; },
                   em({ children }) { return <em className="italic text-foreground/70">{children}</em>; },
                   hr() { return <hr className="my-5 border-border/30" />; },
