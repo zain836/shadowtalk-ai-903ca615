@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Shield, Zap, ArrowRight, Search } from "lucide-react";
+import { MessageCircle, Bot, Zap, ArrowRight, Search, Workflow, Target } from "lucide-react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import heroImg from "@/assets/hero-bg.jpg";
 import { useNavigate } from "react-router-dom";
@@ -111,8 +111,8 @@ const HeroSection = () => {
             variants={fadeSlideUp}
             className="inline-flex items-center space-x-2 glass-subtle rounded-full px-5 py-2.5 mb-10"
           >
-            <Shield className="h-4 w-4 text-destructive" />
-            <span className="text-sm text-foreground/90 font-medium tracking-wide">The Anti-Spyware AI — Your Data Never Leaves Your Device</span>
+            <Bot className="h-4 w-4 text-primary" />
+            <span className="text-sm text-foreground/90 font-medium tracking-wide">Agentic AI Workspace — Plan, Execute, Deliver</span>
             <motion.div
               animate={{ scale: [1, 1.4, 1], opacity: [1, 0.6, 1] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
@@ -130,7 +130,7 @@ const HeroSection = () => {
               whileHover={{ scale: 1.02 }}
               transition={{ type: "spring", stiffness: 300 }}
             >
-              The On-Device AI
+              The Agentic AI
             </motion.span>{" "}
             <br className="hidden md:block" />
             <motion.span
@@ -139,7 +139,7 @@ const HeroSection = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.5, duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
-              Operating System
+              That Gets Work Done
             </motion.span>
           </motion.h1>
 
@@ -148,7 +148,7 @@ const HeroSection = () => {
             variants={fadeSlideUp}
             className="text-lg md:text-xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed"
           >
-            Sovereign Intelligence for creators, coders & CEOs. Runs <strong className="text-foreground font-medium">100% on your device</strong> — no cloud dependency, no data harvesting. 50% more features at <strong className="text-foreground font-medium">75% less cost</strong> than ChatGPT.
+            Autonomous agents, <strong className="text-foreground font-medium">30+ integrated tools</strong>, and multi-step missions for creators, coders & teams. Human-in-the-loop safety built in. <strong className="text-foreground font-medium">Optional on-device AI</strong> when privacy matters. More capability at a fraction of ChatGPT Pro.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -200,18 +200,18 @@ const HeroSection = () => {
               whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 300 }}
             >
-              <Shield className="h-4 w-4 text-success" />
-              <span className="text-sm font-medium">100% On-Device Processing</span>
+              <Workflow className="h-4 w-4 text-success" />
+              <span className="text-sm font-medium">Multi-Step Agents</span>
             </motion.div>
             <div className="hidden sm:block w-px h-4 bg-border"></div>
             <div className="flex items-center space-x-2">
               <Zap className="h-4 w-4 text-warning" />
-              <span className="text-sm font-medium">Zero Data Collection</span>
+              <span className="text-sm font-medium">30+ Tool Orchestration</span>
             </div>
             <div className="hidden sm:block w-px h-4 bg-border"></div>
             <div className="flex items-center space-x-2">
-              <MessageCircle className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Multi-Model AI Engine</span>
+              <Target className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Mission Control</span>
             </div>
           </motion.div>
 
@@ -220,7 +220,7 @@ const HeroSection = () => {
             variants={scaleFadeIn}
             className="mt-16 flex items-center justify-center gap-3"
           >
-            {["🛡️ Anti-Spyware AI", "⚡ Zero Cloud Dependency", "🧠 Edge AI Powered", "🚀 Built for Privacy"].map((badge, i) => (
+            {["🤖 Agentic Task Runner", "⚡ Tool Orchestration", "🎯 Mission Control", "🛡️ Privacy-Aware (Optional Local AI)"].map((badge, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}

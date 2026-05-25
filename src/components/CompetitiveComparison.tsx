@@ -1,4 +1,4 @@
-import { Shield, ShieldOff, Wifi, WifiOff, DollarSign, Server, Smartphone, Lock, Eye, EyeOff, Image, Search, MessageCircle, Sparkles } from "lucide-react";
+import { Shield, Wifi, WifiOff, Server, Lock, Eye, Image, Search, MessageCircle, Sparkles, Brain, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion, useInView } from "framer-motion";
@@ -38,62 +38,62 @@ const CompetitiveComparison = () => {
   const detailedComparisons = [
     {
       competitor: "ChatGPT",
-      weaknesses: ["Conversations may be used for training (depends on settings)", "Requires internet — no on-device model", "Pro tier costs $200/mo"],
-      shadowAdvantages: ["Client-side encrypted Stealth Vault", "Optional offline AI via WebGPU", "Elite tier: $50/mo vs ChatGPT Pro $200/mo"],
-      priceDiff: "Elite tier 75% cheaper than ChatGPT Pro",
+      weaknesses: ["Agent features locked behind expensive tiers", "Limited tool orchestration in free tier", "Pro tier costs $200/mo"],
+      shadowAdvantages: ["Agentic Task Runner + Mission Control", "30+ tools from natural language", "Elite tier at a fraction of ChatGPT Pro"],
+      priceDiff: "More agents, lower cost",
+    },
+    {
+      competitor: "Manus",
+      weaknesses: ["Sandbox-only execution model", "No optional on-device privacy mode", "Premium agent pricing"],
+      shadowAdvantages: ["Human-in-the-loop safety controls", "Multi-model consensus + tool graph", "Optional local AI when privacy matters"],
+      priceDiff: "Agents + privacy choice",
     },
     {
       competitor: "Claude",
-      weaknesses: ["Limited image generation in free tier", "No native offline mode", "No autonomous agent framework"],
-      shadowAdvantages: ["4 free images/day", "Optional on-device engine", "Strategy Agent + Smart Scripts"],
-      priceDiff: "More generous free tier",
-    },
-    {
-      competitor: "Perplexity",
-      weaknesses: ["Cloud-only — data leaves your device", "Pro plan $20/mo", "No local inference option"],
-      shadowAdvantages: ["Privacy-first architecture", "Pay-per-solution options available", "Optional on-device model"],
-      priceDiff: "Privacy-first alternative",
+      weaknesses: ["No visual mission dashboard", "Partial agent workflows only", "No native offline option"],
+      shadowAdvantages: ["Full agentic task runner", "Strategy Agent + Smart Scripts", "Optional on-device Gemma"],
+      priceDiff: "Deeper agent stack",
     },
   ];
 
   const architectureComparisons = [
     {
-      feature: "Data Control",
-      shadowtalk: { label: "User-Owned (Stealth Vault)", icon: Lock, advantage: true },
-      competitors: { label: "Corporate Servers (High Risk)", icon: Eye },
+      feature: "Agentic Execution",
+      shadowtalk: { label: "Task Runner + Mission Control", icon: Sparkles, advantage: true },
+      competitors: { label: "Chat-only or limited agents", icon: MessageCircle },
     },
     {
-      feature: "Availability",
-      shadowtalk: { label: "100% Offline (Resilient)", icon: Wifi, advantage: true },
-      competitors: { label: "Requires Internet (Fragile)", icon: WifiOff },
+      feature: "Tool Orchestration",
+      shadowtalk: { label: "30+ tools, NL triggers", icon: Zap, advantage: true },
+      competitors: { label: "Fewer integrated actions", icon: Server },
     },
     {
-      feature: "Cost Scalability",
-      shadowtalk: { label: "Zero Marginal Inference Cost", icon: DollarSign, advantage: true },
-      competitors: { label: "High Marginal Cost per User", icon: DollarSign },
+      feature: "Human-in-the-Loop",
+      shadowtalk: { label: "Approve / reject agent steps", icon: Shield, advantage: true },
+      competitors: { label: "Often auto-run only", icon: Eye },
     },
     {
-      feature: "Architecture",
-      shadowtalk: { label: "On-Device AI OS / Platform", icon: Smartphone, advantage: true },
-      competitors: { label: "SaaS Application", icon: Server },
+      feature: "Multi-Model",
+      shadowtalk: { label: "Gemini + GPT-class + modes", icon: Brain, advantage: true },
+      competitors: { label: "Single vendor stack", icon: Server },
     },
     {
       feature: "Privacy Model",
-      shadowtalk: { label: "Zero-Knowledge, E2E Encrypted", icon: EyeOff, advantage: true },
-      competitors: { label: "Data Harvested for Training", icon: Eye },
+      shadowtalk: { label: "Vault + optional on-device AI", icon: Lock, advantage: true },
+      competitors: { label: "Cloud-only by default", icon: Eye },
     },
     {
-      feature: "Security Posture",
-      shadowtalk: { label: "Air-Gapped Capable", icon: Shield, advantage: true },
-      competitors: { label: "Cloud-Dependent", icon: ShieldOff },
+      feature: "Offline Option",
+      shadowtalk: { label: "Opt-in Gemma via WebGPU", icon: Wifi, advantage: true },
+      competitors: { label: "Requires internet", icon: WifiOff },
     },
   ];
 
   const freeFeatures = [
+    { icon: Sparkles, label: "Agentic Task Runner", competitor: "ChatGPT: paid agents" },
     { icon: MessageCircle, label: "50 messages/day", competitor: "ChatGPT: 20/day" },
-    { icon: Image, label: "4 images/day", competitor: "Claude: 0 free" },
     { icon: Search, label: "5 deep research/day", competitor: "Perplexity: 3/day" },
-    { icon: Sparkles, label: "Offline AI included", competitor: "Others: $20+/mo" },
+    { icon: Image, label: "4 images/day", competitor: "Claude: 0 free" },
   ];
 
   return (
@@ -106,9 +106,9 @@ const CompetitiveComparison = () => {
             viewport={{ once: true }}
             transition={{ type: "spring", stiffness: 300 }}
           >
-            <Badge variant="outline" className="mb-4 px-4 py-1.5 text-sm border-destructive/50 text-destructive">
-              <EyeOff className="h-3.5 w-3.5 mr-2" />
-              The Anti-Spyware AI
+            <Badge variant="outline" className="mb-4 px-4 py-1.5 text-sm border-primary/50 text-primary">
+              <Sparkles className="h-3.5 w-3.5 mr-2" />
+              Agentic AI Workspace
             </Badge>
           </motion.div>
           <motion.h2
@@ -128,7 +128,7 @@ const CompetitiveComparison = () => {
             transition={{ delay: 0.15, duration: 0.6 }}
             className="text-xl text-muted-foreground max-w-3xl mx-auto"
           >
-            ChatGPT's market share dropped from 87% to 68% as users seek privacy-first alternatives. ShadowTalk delivers <strong className="text-foreground">Sovereign Intelligence</strong> — cloud-quality AI without the cloud.
+            Teams are moving from chat-only bots to <strong className="text-foreground">agentic AI</strong> that plans, runs tools, and finishes work — with optional privacy controls when data sensitivity matters.
           </motion.p>
         </div>
 
@@ -310,8 +310,8 @@ const CompetitiveComparison = () => {
                   $102.97B
                 </motion.div>
                 <div className="text-left">
-                  <p className="font-semibold text-foreground">Edge AI Market by 2030</p>
-                  <p className="text-sm text-muted-foreground">ShadowTalk is built for this shift — the On-Device AI OS for the post-cloud era.</p>
+                  <p className="font-semibold text-foreground">Agentic AI is the next wave</p>
+                  <p className="text-sm text-muted-foreground">ShadowTalk combines autonomous agents, tool orchestration, and optional on-device privacy — not just another chat box.</p>
                 </div>
               </CardContent>
             </Card>

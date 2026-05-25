@@ -152,12 +152,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         <div className={`w-full transition-all duration-300 ${
           isUser 
             ? 'bg-[#1e1f20]/45 border border-border/10 text-foreground rounded-[28px] rounded-tr-sm px-6 py-3.5 shadow-sm max-w-max' 
-            : 'bg-transparent border-none shadow-none px-0 py-1'
+            : 'bg-transparent border-none shadow-none px-0 py-1 article-response'
         }`}>
           {isUser ? (
             <p className="text-[15.5px] leading-relaxed whitespace-pre-wrap break-words font-normal tracking-wide">{typeof message.content === 'string' ? message.content : String(message.content || '')}</p>
           ) : (
-            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-4 prose-headings:mt-8 prose-headings:mb-4 prose-headings:first:mt-0 prose-ul:my-5 prose-ol:my-5 prose-li:my-1.5 prose-hr:my-8 prose-hr:border-border/10 [&_.katex]:text-foreground [&_.katex-display]:my-8 [&_.katex-display]:overflow-x-auto overflow-hidden">
+            <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none prose-p:my-5 prose-headings:mt-10 prose-headings:mb-5 prose-headings:first:mt-0 prose-ul:my-6 prose-ol:my-6 prose-li:my-2 prose-hr:my-10 prose-hr:border-border/10 [&_.katex]:text-foreground [&_.katex-display]:my-10 [&_.katex-display]:overflow-x-auto overflow-hidden">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
@@ -173,7 +173,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     }
                     if (inline || isShortSnippet) {
                       return (
-                        <code className="bg-muted/50 text-foreground/90 px-1.5 py-0.5 rounded text-[14px] font-mono" {...props}>
+                        <code className="bg-muted/50 text-foreground/90 px-1.5 py-0.5 rounded text-[14.5px] font-mono" {...props}>
                           {children}
                         </code>
                       );
@@ -181,8 +181,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     }
                     return <CodeBlock code={codeString} language="text" onOpenCanvas={onOpenCodeCanvas} onOpenIDE={onOpenIDE} onLaunchWebsite={onLaunchWebsite} />;
                   },
-                  ul({ children }) { return <ul className="list-disc pl-7 space-y-2.5 my-5 marker:text-foreground/20">{children}</ul>; },
-                  ol({ children }) { return <ol className="list-decimal pl-7 space-y-2.5 my-5 marker:text-foreground/30 marker:font-medium">{children}</ol>; },
+                  ul({ children }) { return <ul className="list-disc pl-7 space-y-3 my-6 marker:text-foreground/30">{children}</ul>; },
+                  ol({ children }) { return <ol className="list-decimal pl-7 space-y-3 my-6 marker:text-foreground/40 marker:font-bold">{children}</ol>; },
                   li({ children, ...props }: any) {
                     // Task list checkbox support
                     const text = String(children);
@@ -191,42 +191,42 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     
                     if (isChecked || isUnchecked) {
                       return (
-                        <li className="flex items-start gap-3 list-none -ml-6 my-2" {...props}>
-                          <span className={`mt-1 w-4.5 h-4.5 rounded-md border flex items-center justify-center text-[11px] shrink-0 ${
-                            isChecked ? 'bg-primary/20 border-primary/40 text-primary' : 'border-border/40'
+                        <li className="flex items-start gap-4 list-none -ml-6 my-3" {...props}>
+                          <span className={`mt-1.5 w-5 h-5 rounded-md border flex items-center justify-center text-[12px] shrink-0 ${
+                            isChecked ? 'bg-primary/30 border-primary/50 text-primary' : 'border-border/60'
                           }`}>
                             {isChecked && '✓'}
                           </span>
-                          <span className={isChecked ? 'line-through text-muted-foreground/50' : ''}>
+                          <span className={isChecked ? 'line-through text-muted-foreground/40' : ''}>
                             {text.replace(/^\[[ x]\]\s*/i, '')}
                           </span>
                         </li>
                       );
                     }
                     return (
-                      <li className="text-[15.5px] leading-relaxed pl-1" {...props}>{children}</li>
+                      <li className="text-[16.5px] leading-relaxed pl-1" {...props}>{children}</li>
                     ); 
                   },
                   h1({ children }) { 
                     return (
-                      <h1 className="text-3xl font-semibold tracking-tight mb-6 text-foreground/95">
+                      <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-8 text-foreground/95 border-b border-border/5 pb-4">
                         {children}
                       </h1>
                     ); 
                   },
                   h2({ children }) { 
                     return (
-                      <h2 className="text-2xl font-semibold tracking-tight mt-10 first:mt-0 mb-4 text-foreground/90">
+                      <h2 className="text-2xl md:text-3xl font-bold tracking-tight mt-12 first:mt-0 mb-6 text-foreground/90">
                         {children}
                       </h2>
                     ); 
                   },
-                  h3({ children }) { return <h3 className="text-xl font-medium mt-8 first:mt-0 text-foreground/85">{children}</h3>; },
-                  h4({ children }) { return <h4 className="text-lg font-medium text-muted-foreground mt-4">{children}</h4>; },
-                  p({ children }) { return <p className="text-[16px] leading-relaxed mb-5 last:mb-0 text-foreground/85 font-normal tracking-wide">{children}</p>; },
-                  strong({ children }) { return <strong className="font-semibold text-foreground/95">{children}</strong>; },
-                  em({ children }) { return <em className="italic text-foreground/60">{children}</em>; },
-                  hr() { return <hr className="my-10 border-border/5" />; },
+                  h3({ children }) { return <h3 className="text-xl md:text-2xl font-semibold mt-10 first:mt-0 text-foreground/85 tracking-tight">{children}</h3>; },
+                  h4({ children }) { return <h4 className="text-lg md:text-xl font-medium text-muted-foreground mt-6">{children}</h4>; },
+                  p({ children }) { return <p className="text-[16.5px] md:text-[17.5px] leading-relaxed mb-6 last:mb-0 text-foreground/85 font-normal tracking-wide">{children}</p>; },
+                  strong({ children }) { return <strong className="font-bold text-foreground/95">{children}</strong>; },
+                  em({ children }) { return <em className="italic text-foreground/70">{children}</em>; },
+                  hr() { return <hr className="my-12 border-border/10" />; },
                   a({ children, href }) { 
                     return (
                       <a 
@@ -234,7 +234,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                         target="_blank" 
                         rel="noopener noreferrer" 
                         onClick={(e) => { e.preventDefault(); if (href) openInBrowser(href); }}
-                        className="text-blue-400 font-medium hover:text-blue-300 underline underline-offset-4 decoration-blue-400/20 hover:decoration-blue-400/60 cursor-pointer transition-all duration-200"
+                        className="text-blue-400 font-semibold hover:text-blue-300 underline underline-offset-4 decoration-blue-400/30 hover:decoration-blue-400/70 cursor-pointer transition-all duration-300"
                       >
                         {children}
                       </a>

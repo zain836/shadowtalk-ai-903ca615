@@ -1,4 +1,4 @@
-import { Code, Wifi, Brain, Shield, Zap, Download, ArrowUpRight } from "lucide-react";
+import { Code, Wifi, Brain, Shield, Zap, Download, ArrowUpRight, Bot, Target } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 
@@ -37,51 +37,67 @@ const FeaturesSection = () => {
 
   const features = [
     {
-      icon: Brain,
-      title: "Smart Conversations",
-      description: "Advanced AI that understands context and provides intelligent responses to any question.",
+      icon: Bot,
+      title: "Agentic Task Runner",
+      description: "Give a goal — ShadowTalk plans steps, runs tools, and delivers results with human-in-the-loop approval when you want it.",
       gradient: "from-primary/20 to-primary/5",
       iconColor: "text-primary",
       span: "sm:col-span-2 md:col-span-2",
     },
     {
-      icon: Code,
-      title: "Code Generator",
-      description: "Generate, debug, and optimize code in any programming language.",
+      icon: Target,
+      title: "Mission Control",
+      description: "Launch autonomous missions that research, draft, and execute multi-step workflows while you focus on what matters.",
       gradient: "from-secondary/20 to-secondary/5",
       iconColor: "text-secondary",
       span: "",
     },
     {
       icon: Zap,
-      title: "Smart Scripts",
-      description: "Automate repetitive tasks with AI-powered script generation.",
+      title: "30+ Tool Orchestration",
+      description: "Natural language triggers code, research, calendar, vault, and more — no manual tool-switching.",
       gradient: "from-accent/20 to-accent/5",
       iconColor: "text-accent",
       span: "",
     },
     {
-      icon: Wifi,
-      title: "Optional On-Device AI",
-      description: "Opt in to download Google's Gemma model and run it offline via WebGPU on Chrome/Edge. CPU fallback works elsewhere but is slower.",
+      icon: Brain,
+      title: "Multi-Model AI Chat",
+      description: "Gemini, GPT-class models, and specialized modes in one workspace — context-aware conversations for any task.",
       gradient: "from-warning/20 to-warning/5",
       iconColor: "text-warning",
       span: "sm:col-span-2 md:col-span-2",
     },
     {
+      icon: Code,
+      title: "Code Generator",
+      description: "Generate, debug, and optimize code in any programming language with an in-browser IDE.",
+      gradient: "from-destructive/20 to-destructive/5",
+      iconColor: "text-destructive",
+      span: "",
+    },
+    {
       icon: Shield,
-      title: "Privacy First",
-      description: "Conversations are encrypted end-to-end. Zero data harvesting.",
+      title: "Privacy-Aware by Design",
+      description: "Encrypted vault, privacy score, and optional on-device Gemma inference when you need data to stay local.",
       gradient: "from-success/20 to-success/5",
       iconColor: "text-success",
       span: "",
     },
     {
+      icon: Wifi,
+      title: "Optional On-Device AI",
+      description: "Opt in to download Gemma and run offline via WebGPU on Chrome/Edge — your choice, not a requirement.",
+      gradient: "from-primary/10 to-secondary/5",
+      iconColor: "text-primary",
+      span: "",
+    },
+    {
       icon: Download,
       title: "Export Everything",
-      description: "Download chats, code, and scripts in multiple formats.",
-      gradient: "from-destructive/20 to-destructive/5",
-      iconColor: "text-destructive",
+      description: "Download chats, code, agent outputs, and scripts in multiple formats.",
+      gradient: "from-muted/30 to-muted/10",
+      iconColor: "text-muted-foreground",
       span: "",
     },
   ];
@@ -112,7 +128,7 @@ const FeaturesSection = () => {
             >
               <Zap className="h-4 w-4 text-primary" />
             </motion.div>
-            <span className="text-sm text-muted-foreground font-medium">On-Device AI OS</span>
+            <span className="text-sm text-muted-foreground font-medium">Agentic AI Workspace</span>
           </motion.div>
           <motion.h2
             initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
@@ -121,7 +137,7 @@ const FeaturesSection = () => {
             transition={{ delay: 0.1, duration: 0.7 }}
             className="text-4xl md:text-6xl font-bold mb-6 tracking-tight"
           >
-            Sovereign Intelligence.{" "}
+            Agents That Execute.{" "}
             <span className="gradient-text">One Platform.</span>
           </motion.h2>
           <motion.p
@@ -131,7 +147,7 @@ const FeaturesSection = () => {
             transition={{ delay: 0.2, duration: 0.6 }}
             className="text-lg text-muted-foreground max-w-2xl mx-auto"
           >
-            From on-device inference to autonomous agents — zero cloud dependency, zero marginal cost, 100% yours.
+            From multi-step task runners to mission control — ship real work, not just chat replies. Privacy-aware tools when you need them.
           </motion.p>
         </div>
 
@@ -184,10 +200,10 @@ const FeaturesSection = () => {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20 max-w-4xl mx-auto">
           {[
-            { value: "100%", label: "On-Device", sub: "Zero cloud dependency", subColor: "text-success" },
-            { value: "10+", label: "AI Models", sub: "Multi-model engine", subColor: "text-primary" },
-            { value: "E2E", label: "Encrypted", sub: "Military-grade security", subColor: "text-accent" },
-            { value: "<2s", label: "Response Time", sub: "Lightning fast", subColor: "text-warning" },
+            { value: "30+", label: "Integrated Tools", sub: "Natural-language triggers", subColor: "text-primary" },
+            { value: "24/7", label: "Mission Control", sub: "Autonomous workflows", subColor: "text-secondary" },
+            { value: "HITL", label: "Human-in-the-Loop", sub: "Approve agent actions", subColor: "text-success" },
+            { value: "Opt-in", label: "On-Device AI", sub: "Privacy when you need it", subColor: "text-warning" },
           ].map((stat, i) => (
             <motion.div
               key={i}
@@ -213,10 +229,10 @@ const FeaturesSection = () => {
         {/* Trust Indicators */}
         <div className="mt-16 flex items-center justify-center gap-4 flex-wrap">
           {[
-            "🛡️ Anti-Spyware Architecture",
-            "🔒 End-to-End Encrypted",
-            "⚡ Edge AI Powered",
-            "🧠 Multi-Model Engine",
+            "🤖 Agentic Task Runner",
+            "⚡ Tool Orchestration",
+            "🎯 Mission Control",
+            "🛡️ Privacy-Aware Controls",
           ].map((badge, i) => (
             <motion.div
               key={i}

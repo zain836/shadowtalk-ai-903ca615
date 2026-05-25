@@ -28,18 +28,23 @@ const FAQSection = () => {
 
   const faqs = [
     {
+      question: "What is agentic AI in ShadowTalk?",
+      answer: "Agentic AI means you give a goal and ShadowTalk plans multi-step work, runs integrated tools (research, code, calendar, vault, and more), and reports back — with optional human approval before each action. Use the Agentic Task Runner or Mission Control from the chat workspace.",
+      category: "General",
+    },
+    {
       question: "How does the AI chatbot work?",
-      answer: "Our AI chatbot uses advanced machine learning models to understand natural language and provide intelligent responses. It can help with coding, automation, general questions, and much more while learning from context to provide better answers.",
+      answer: "Chat uses cloud models (Gemini and others) by default for power and speed. You can also trigger 30+ tools from natural language, open the Agentic Task Runner, or switch to optional on-device Gemma when you've downloaded it in Settings.",
       category: "General",
     },
     {
       question: "Can I use it offline?",
-      answer: "Yes! Elite plan users have access to offline mode, allowing you to continue working with the AI assistant even without an internet connection. Your data syncs when you're back online.",
+      answer: "Yes, optionally. Download the Gemma on-device model in Settings → On-Device AI to run inference locally via WebGPU (best on Chrome/Edge). Cloud chat and agents need internet; local mode is opt-in for privacy-sensitive work.",
       category: "Features",
     },
     {
       question: "Is my data secure and private?",
-      answer: "Absolutely. We use end-to-end encryption for all conversations. Your data is never shared with third parties, and you can delete your chat history at any time. We're committed to maintaining your privacy.",
+      answer: "ShadowTalk is privacy-aware: encrypted Stealth Vault, privacy score tools, and optional on-device AI so sensitive work can stay local. Cloud features process data on secure infrastructure — you control when to use local vs cloud modes.",
       category: "Security",
     },
     {

@@ -10,30 +10,30 @@ const ONBOARDING_KEY = "shadowtalk-onboarded";
 
 const steps = [
   {
-    icon: Shield,
-    title: "Your Data, Your Rules",
-    description: "Everything runs on YOUR device. No cloud uploads, no data harvesting. ShadowTalk AI is the anti-spyware AI.",
-    highlight: "100% On-Device",
-    color: "from-emerald-500 to-teal-500",
-  },
-  {
     icon: Brain,
-    title: "Sovereign Intelligence",
-    description: "Spawn unlimited AI agents for research, coding, analysis & writing — all running locally in parallel.",
-    highlight: "Multi-Agent System",
+    title: "Agentic Task Runner",
+    description: "Describe a goal — ShadowTalk plans steps, runs 30+ tools, and delivers results. Approve actions when you want human-in-the-loop control.",
+    highlight: "Plan → Execute → Deliver",
     color: "from-blue-500 to-cyan-500",
   },
   {
     icon: Target,
     title: "Mission Control",
-    description: "Set autonomous missions and let AI agents work 24/7. Track progress with real-time proof-of-action logs.",
+    description: "Set autonomous missions for research, drafting, and multi-step workflows. Track progress with real-time execution logs.",
     highlight: "24/7 Autonomous",
     color: "from-amber-500 to-orange-500",
   },
   {
+    icon: Shield,
+    title: "Privacy When You Need It",
+    description: "Encrypted vault, privacy score, and optional on-device Gemma — not cloud-only, but your choice when sensitivity matters.",
+    highlight: "Privacy-Aware",
+    color: "from-emerald-500 to-teal-500",
+  },
+  {
     icon: Rocket,
     title: "You're Ready!",
-    description: "Start chatting, launch agents, or explore the platform. Use ⌘K anytime to navigate instantly.",
+    description: "Start chatting, launch the Agentic Task Runner, or open Mission Control. Use ⌘K anytime to navigate instantly.",
     highlight: "Let's Go",
     color: "from-primary to-purple-500",
   },

@@ -107,9 +107,9 @@
  // Page-specific SEO configurations
 export const PAGE_SEO: Record<string, PageMeta> = {
   home: {
-    title: 'Free AI Chatbot with Voice, Image Generation & Offline Mode',
-    description: 'Chat with ShadowTalk AI - the advanced AI assistant with voice input, image generation, code execution, offline mode, and 10+ specialized modes. Free to use.',
-    keywords: ['AI chatbot', 'free AI', 'voice assistant', 'image generation AI', 'offline AI'],
+    title: 'Agentic AI Workspace — Autonomous Agents, 30+ Tools & Optional On-Device Privacy',
+    description: 'ShadowTalk AI: agentic task runner, mission control, 30+ tool orchestration, and multi-model chat. Plan and execute multi-step work with human-in-the-loop safety. Optional on-device AI for privacy.',
+    keywords: ['agentic AI', 'AI agents', 'AI task automation', 'AI chatbot', 'autonomous AI', 'offline AI', 'privacy-aware AI'],
     canonical: 'https://www.shadowtalk-ai.com/',
   },
   pricing: {

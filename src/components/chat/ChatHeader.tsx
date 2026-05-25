@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { Bot, ArrowLeft, LogOut, Settings, Download, Lock, Crown, Star, Zap, Menu, Search, Image, Play, Eye, Wand2, Compass, FileText, Mic, MoreVertical } from "lucide-react";
+import { 
+  Bot, ArrowLeft, LogOut, Settings, Download, Lock, Crown, Star, Zap, Menu, 
+  Search, Image, Play, Eye, Wand2, Compass, FileText, Mic, MoreVertical,
+  LayoutGrid, Sparkles, MessageCircle, Briefcase, Heart, Laugh, Lightbulb,
+  Scale, Target, HelpCircle, Share2, Plus, Pin
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,8 +33,8 @@ import {
   DropdownMenuSubContent,
   DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
-import { Heart, Laugh, Briefcase, Lightbulb, Scale, MessageCircle, Target, HelpCircle } from "lucide-react";
 import { ProviderSelector, AIProvider } from "./ProviderSelector";
+import { motion } from "framer-motion";
 
 type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive" | "spicy";
 type UserPlan = 'free' | 'pro' | 'premium' | 'lifetime' | 'elite' | 'enterprise';
@@ -78,17 +83,6 @@ interface ChatHeaderProps {
   dailyChats: number;
 }
 
-const getPlanBadgeStyle = (plan: UserPlan) => {
-  switch (plan) {
-    case 'elite':
-      return 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 border-amber-500/30';
-    case 'pro':
-      return 'bg-gradient-to-r from-primary/20 to-secondary/20 text-primary border-primary/30';
-    default:
-      return 'bg-muted text-muted-foreground border-border';
-  }
-};
-
 export const ChatHeader = ({
   userPlan,
   personality,
@@ -111,168 +105,169 @@ export const ChatHeader = ({
   onOpenCreativeSynthesis,
   onOpenImageGenerator,
   onOpenShadowTalkLive,
-  onOpenOfflineTools,
   onOpenBrowser,
   aiProvider,
   onProviderChange,
-  maxChats,
-  dailyChats,
 }: ChatHeaderProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isProOrHigher = userPlan === 'pro' || userPlan === 'elite';
-
-  // Get user initials for avatar
-  const userInitials = user?.email
-    ? user.email.charAt(0).toUpperCase()
-    : "G";
+  
+  const userInitials = user?.email ? user.email.charAt(0).toUpperCase() : "G";
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 md:px-5 border-b border-border/10 bg-background/40 backdrop-blur-xl">
-      {/* Left Area: Sidebar Toggle & Model Switched Picker */}
-      <div className="flex items-center gap-2 md:gap-3.5">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={onToggleSidebar} 
-                className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
-              >
-                <Menu className="h-[21px] w-[21px]" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-xs">Main menu</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
+    <div className="flex items-center justify-between px-4 py-3 md:px-6 bg-transparent relative z-20">
+      {/* Left: Menu & Model */}
+      <div className="flex items-center gap-3">
         <Button 
           variant="ghost" 
           size="icon" 
-          onClick={() => navigate('/')} 
-          className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/40 hidden sm:flex transition-colors"
+          onClick={onToggleSidebar} 
+          className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
         >
-          <ArrowLeft className="h-4.5 w-4.5" />
+          <Menu className="h-[22px] w-[22px]" />
         </Button>
-
-        {/* Gemini-style Model Selector Dropdown */}
-        <div className="flex items-center gap-1.5">
-          <ProviderSelector provider={aiProvider} onProviderChange={onProviderChange} />
-        </div>
+        
+        <div className="hidden xs:block h-4 w-px bg-white/10 mx-1" />
+        
+        <ProviderSelector provider={aiProvider} onProviderChange={onProviderChange} />
       </div>
 
-      {/* Right Area: Controls, Plan Badges & Unified User Dropdown */}
-      <div className="flex items-center gap-2">
+      {/* Right: Tools & User */}
+      <div className="flex items-center gap-2 md:gap-4">
         {/* Personality Selector */}
         <Select value={personality} onValueChange={(v) => onPersonalityChange(v as Personality)}>
-          <SelectTrigger className="w-[105px] md:w-[125px] h-8.5 text-xs rounded-xl border-border/15 bg-muted/20 hover:bg-muted/30 focus:ring-0 focus:ring-offset-0 hidden xs:flex transition-colors">
+          <SelectTrigger className="w-[110px] md:w-[130px] h-9 rounded-full border-white/10 bg-white/5 hover:bg-white/10 transition-all focus:ring-0 focus:ring-offset-0 hidden sm:flex">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="rounded-xl bg-[#1e1f20]/95 backdrop-blur-2xl border border-border/10">
+          <SelectContent className="rounded-2xl bg-[#1e1f20]/95 backdrop-blur-2xl border-white/10 shadow-2xl">
             {personalities.map(p => (
-              <SelectItem key={p.value} value={p.value} className="rounded-lg py-2 cursor-pointer">
-                <div className="flex items-center gap-2">
+              <SelectItem key={p.value} value={p.value} className="rounded-xl py-2.5 cursor-pointer">
+                <div className="flex items-center gap-2.5">
                   {p.icon}
-                  <span>{p.label}</span>
+                  <span className="text-[13px] font-medium">{p.label}</span>
                 </div>
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        {/* Plan badge */}
-        <Badge className={`hidden lg:flex gap-1 px-3 py-1 rounded-xl border text-[10px] font-semibold ${getPlanBadgeStyle(userPlan)}`}>
-          {userPlan === 'elite' && <Crown className="h-3 w-3" />}
-          {userPlan === 'pro' && <Star className="h-3 w-3" />}
-          <span className="capitalize">{userPlan}</span>
-        </Badge>
-
-        {/* Dynamic Tools Icon Menu */}
+        {/* Combined Tools Hub - Neural Expressive */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
-              <MoreVertical className="h-4.5 w-4.5" />
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all">
+              <LayoutGrid className="h-5 w-5 text-blue-400" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 p-1.5 bg-[#1e1f20]/95 backdrop-blur-2xl border border-border/10 rounded-2xl shadow-2xl">
-            {/* Quick AI Tools */}
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="gap-2 rounded-xl py-2.5">
-                <Zap className="h-4 w-4 text-violet-400" />
-                <span>AI Tools</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent className="p-1.5 bg-[#1e1f20]/95 border border-border/10 rounded-xl shadow-xl">
-                  <DropdownMenuItem onClick={onOpenDeepResearch} className="gap-2 rounded-lg py-2">
-                    <Search className="h-4 w-4 text-blue-400" /> Deep Research
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onOpenAgenticRunner} className="gap-2 rounded-lg py-2">
-                    <Play className="h-4 w-4 text-green-400" /> Task Runner
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onOpenVisualReasoning} className="gap-2 rounded-lg py-2">
-                    <Eye className="h-4 w-4 text-purple-400" /> Visual Reasoning
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onOpenCreativeSynthesis} className="gap-2 rounded-lg py-2">
-                    <Wand2 className="h-4 w-4 text-pink-400" /> Creative Studio
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onOpenImageGenerator} className="gap-2 rounded-lg py-2">
-                    <Image className="h-4 w-4 text-orange-400" /> Image Generator
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onOpenShadowTalkLive} className="gap-2 rounded-lg py-2">
-                    <Mic className="h-4 w-4 text-violet-400" /> Voice Chat
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onOpenBrowser} className="gap-2 rounded-lg py-2">
-                    <Compass className="h-4 w-4 text-cyan-400" /> Browser
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="gap-2 rounded-xl py-2.5">
-                <FileText className="h-4 w-4 text-muted-foreground/60" />
-                <span>Canvas</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent className="p-1.5 bg-[#1e1f20]/95 border border-border/10 rounded-xl shadow-xl">
-                  <DropdownMenuItem onClick={() => onOpenCanvas("document")} className="gap-2 rounded-lg py-2">
-                    <FileText className="h-4 w-4 text-muted-foreground/60" /> New Document
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onOpenCanvas("code")} className="gap-2 rounded-lg py-2">
-                    <Zap className="h-4 w-4 text-primary" /> New Code
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-
-            <DropdownMenuSeparator className="bg-border/10 my-1" />
-
-            <DropdownMenuItem onClick={onOpenAnalytics} className="gap-2 rounded-xl py-2.5">
-              <Settings className="h-4 w-4 text-muted-foreground/60" /> Analytics
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onExport} disabled={!isProOrHigher} className="gap-2 rounded-xl py-2.5">
-              <Download className="h-4 w-4 text-muted-foreground/60" /> Export Chat
-              {!isProOrHigher && <Lock className="h-3 w-3 ml-auto text-muted-foreground/45" />}
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator className="bg-border/10 my-1" />
-
-            {isProOrHigher && (
-              <DropdownMenuItem onClick={onManageSubscription} className="gap-2 rounded-xl py-2.5">
-                <Settings className="h-4 w-4 text-muted-foreground/60" /> Subscription
+          <DropdownMenuContent align="end" className="w-72 p-2 bg-[#1e1f20]/98 backdrop-blur-3xl border border-white/10 rounded-[24px] shadow-2xl">
+            <div className="px-3 py-3 mb-1">
+              <h3 className="text-[11px] font-bold text-muted-foreground/40 uppercase tracking-widest flex items-center gap-2">
+                <Sparkles className="h-3 w-3" /> Combined Tools Hub
+              </h3>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-1 mb-2">
+              <DropdownMenuItem onClick={onOpenDeepResearch} className="flex-col items-start gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all cursor-pointer">
+                <Search className="h-4 w-4 text-blue-400" />
+                <span className="text-[12px] font-semibold">Deep Research</span>
               </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={onSignOut} className="gap-2 rounded-xl py-2.5 text-destructive hover:bg-destructive/10 hover:text-destructive">
-              <LogOut className="h-4 w-4" /> Sign Out
-            </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenAgenticRunner} className="flex-col items-start gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all cursor-pointer">
+                <Play className="h-4 w-4 text-green-400" />
+                <span className="text-[12px] font-semibold">Agentic Runner</span>
+              </DropdownMenuItem>
+            </div>
+
+            <DropdownMenuSeparator className="bg-white/5 my-2" />
+
+            <div className="space-y-1">
+              <DropdownMenuItem onClick={onOpenVisualReasoning} className="gap-3 rounded-xl py-2.5 px-3">
+                <Eye className="h-4 w-4 text-purple-400" />
+                <span className="text-[13px] font-medium">Visual Reasoning</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenCreativeSynthesis} className="gap-3 rounded-xl py-2.5 px-3">
+                <Wand2 className="h-4 w-4 text-pink-400" />
+                <span className="text-[13px] font-medium">Creative Studio</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenShadowTalkLive} className="gap-3 rounded-xl py-2.5 px-3">
+                <Mic className="h-4 w-4 text-blue-400" />
+                <span className="text-[13px] font-medium">ShadowTalk Live</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenBrowser} className="gap-3 rounded-xl py-2.5 px-3">
+                <Compass className="h-4 w-4 text-cyan-400" />
+                <span className="text-[13px] font-medium">AI Browser</span>
+              </DropdownMenuItem>
+            </div>
+
+            <DropdownMenuSeparator className="bg-white/5 my-2" />
+            
+            <div className="px-3 py-2">
+              <h4 className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-widest">Workspace</h4>
+            </div>
+
+            <div className="space-y-1">
+              <DropdownMenuItem onClick={() => onOpenCanvas("document")} className="gap-3 rounded-xl py-2.5 px-3">
+                <FileText className="h-4 w-4 text-amber-400" />
+                <span className="text-[13px] font-medium">New Artifact</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onOpenCanvas("code")} className="gap-3 rounded-xl py-2.5 px-3">
+                <Zap className="h-4 w-4 text-primary" />
+                <span className="text-[13px] font-medium">Code Canvas</span>
+              </DropdownMenuItem>
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Far Right: Circular User Avatar */}
-        <div className="w-8.5 h-8.5 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-[12.5px] font-bold text-primary-foreground border border-border/10 shadow-md ml-1 select-none shrink-0 cursor-pointer">
-          {userInitials}
-        </div>
+        {/* User Profile / Unified Settings */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="relative group cursor-pointer">
+              <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-blue-500 to-violet-500 blur-sm opacity-0 group-hover:opacity-40 transition-all duration-500" />
+              <div className="relative w-10 h-10 rounded-full bg-gradient-to-tr from-[#1e1f20] to-[#2b2c2d] border border-white/10 flex items-center justify-center text-[14px] font-bold text-white shadow-xl">
+                {userInitials}
+              </div>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64 p-2 bg-[#1e1f20]/98 backdrop-blur-3xl border border-white/10 rounded-[24px] shadow-2xl">
+            <div className="px-4 py-4 mb-1 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-violet-500 flex items-center justify-center text-[14px] font-bold text-white">
+                {userInitials}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[14px] font-bold truncate">{user?.email?.split('@')[0]}</span>
+                <Badge className="w-fit mt-1 h-5 text-[9px] px-2 bg-blue-500/10 text-blue-400 border-blue-500/20 uppercase tracking-widest font-bold">
+                  {userPlan}
+                </Badge>
+              </div>
+            </div>
+            
+            <DropdownMenuSeparator className="bg-white/5 my-1" />
+            
+            <div className="space-y-0.5">
+              <DropdownMenuItem onClick={onOpenAnalytics} className="gap-3 rounded-xl py-3 px-4">
+                <Target className="h-4 w-4 text-muted-foreground/60" />
+                <span className="text-[14px] font-medium">Performance Hub</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onManageSubscription} className="gap-3 rounded-xl py-3 px-4">
+                <Crown className="h-4 w-4 text-amber-400" />
+                <span className="text-[14px] font-medium">Subscription</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenGeminiAnalytics} className="gap-3 rounded-xl py-3 px-4">
+                <Settings className="h-4 w-4 text-muted-foreground/60" />
+                <span className="text-[14px] font-medium">Neural Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onExport} className="gap-3 rounded-xl py-3 px-4">
+                <Download className="h-4 w-4 text-muted-foreground/60" />
+                <span className="text-[14px] font-medium">Export History</span>
+              </DropdownMenuItem>
+            </div>
+            
+            <DropdownMenuSeparator className="bg-white/5 my-1" />
+            
+            <DropdownMenuItem onClick={onSignOut} className="gap-3 rounded-xl py-3 px-4 text-destructive hover:bg-destructive/10 hover:text-destructive transition-all">
+              <LogOut className="h-4 w-4" />
+              <span className="text-[14px] font-bold">Sign Out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

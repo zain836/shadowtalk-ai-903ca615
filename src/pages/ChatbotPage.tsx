@@ -1376,26 +1376,33 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
 
   return (
     <motion.div 
-      className="min-h-screen bg-background relative overflow-hidden"
+      className="min-h-screen neural-bg relative overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
     >
-      {/* Ambient background glow */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/3 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-secondary/3 rounded-full blur-[100px] pointer-events-none" />
+      {/* Neural Expressive Thinking Glow */}
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="neural-thinking-glow"
+          />
+        )}
+      </AnimatePresence>
       
       <div className="flex h-screen w-full relative z-10">
         {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
           {showSidebar && (
             <motion.div 
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
+              className="fixed inset-0 bg-black/60 backdrop-blur-md z-40 md:hidden"
               onClick={() => setShowSidebar(false)}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
             />
           )}
         </AnimatePresence>
@@ -1407,7 +1414,8 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
               initial={{ x: -280, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -280, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              transition={{ type: "spring", stiffness: 400, damping: 40 }}
+              className="z-50"
             >
               <ConversationSidebar
                 conversations={conversations}
@@ -1422,12 +1430,7 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
         </AnimatePresence>
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0 bg-background/50">
-        {/* Main content with optional browse panel */}
-        <div className="flex-1 flex min-w-0 h-full">
         <div className="flex-1 flex flex-col min-w-0">
-          <AdBanner />
-          
           <ChatHeader
             userPlan={userPlan}
             personality={personality}
@@ -1457,93 +1460,92 @@ Your AI credits have been used up for now. Don't worry - they refresh regularly!
             dailyChats={dailyChats}
           />
 
-          {/* Offline AI Indicator — disabled while a new offline mode is being built. */}
-          {/* {(isOffline || robustOfflineAI.isReady || robustOfflineAI.isLoading || robustOfflineAI.hasCachedModel) && (
-            <div className="px-2 py-1.5 md:px-4 md:py-2 border-b border-border/50">
-              <OfflineAIIndicator />
-            </div>
-          )} */}
+          <div className="flex-1 overflow-hidden relative">
+            <AnimatePresence mode="wait">
+              {messages.length <= 1 ? (
+                <motion.div 
+                  key="home"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                  className="home-centered-content pb-32"
+                >
+                  <div className="relative group mb-8">
+                    <div className="absolute -inset-8 bg-gradient-to-r from-blue-500/20 via-violet-500/20 to-pink-500/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                    <div className="relative w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-blue-500 via-violet-500 to-pink-500 rounded-[32px] flex items-center justify-center shadow-2xl shadow-blue-500/20 ring-1 ring-white/10 group-hover:scale-105 transition-transform duration-500">
+                      <Sparkles className="w-12 h-12 md:w-16 md:h-16 text-white drop-shadow-glow animate-pulse" />
+                    </div>
+                  </div>
+                  
+                  <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-4">
+                    <span className="bg-gradient-to-r from-blue-400 via-violet-400 to-pink-400 bg-clip-text text-transparent">
+                      ShadowTalk
+                    </span>
+                  </h1>
+                  
+                  <p className="text-2xl md:text-3xl font-medium text-muted-foreground/60 tracking-tight max-w-2xl mx-auto">
+                    Hello, {user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || "Friend"}. 
+                    How can I help you today?
+                  </p>
+                </motion.div>
+              ) : (
+                <motion.div 
+                  key="chat"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="h-full flex flex-col"
+                >
+                  <ChatMessages
+                    messages={messages}
+                    isLoading={isLoading}
+                    showSuggestions={false} // Removed suggestion chips per redesign
+                    personality={personality}
+                    userPlan={userPlan}
+                    speakingMessageId={speakingMessageId}
+                    isSpeaking={isSpeaking}
+                    onSelectPrompt={setMessage}
+                    onEdit={(index, content) => setEditingMessage({ index, content })}
+                    onRegenerate={handleRegenerate}
+                    onTextToSpeech={handleTextToSpeech}
+                    onOpenCodeCanvas={(code, lang) => setCodeCanvas({ code, language: lang })}
+                    onOpenIDE={(code, lang) => setCodeWorkspace({ code, language: lang })}
+                    onLaunchWebsite={(code, lang) => setCodeWorkspace({ code, language: lang })}
+                    onOpenInBrowser={(url) => {
+                      setBrowserInitialUrl(url);
+                      setShowShadowBrowser(true);
+                    }}
+                    messagesEndRef={messagesEndRef}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
-          {/* Special Mode Panels */}
-          {chatMode === 'ppag' && <PlanetaryActionPanel onGetActions={handleGetEcoActions} isLoading={isLoadingEcoActions} />}
-          {chatMode === 'hsca' && <SecurityAuditPanel onAnalyze={handleSecurityAudit} isAnalyzing={isAnalyzingSecurity} />}
-
-          {/* Thinking Transparency - Claude-style reasoning display */}
-          {isLoading && thinkingSteps.steps.length > 0 && (
-            <div className="px-2 py-1.5 md:px-4 md:py-2 border-b border-border/50">
-              <ThinkingTransparency
-                isThinking={thinkingSteps.isThinking}
-                steps={thinkingSteps.steps}
-                isExpanded={showThinkingPanel}
-                onToggleExpand={() => setShowThinkingPanel(!showThinkingPanel)}
-              />
-            </div>
-          )}
-
-
-          {/* <NetworkTransitionOverlay />  — disabled while offline mode is being rebuilt */}
-          {/* Messages */}
-          {!isSpecialMode && (
-            <ChatMessages
-              messages={messages}
+          <div className={`${messages.length <= 1 ? 'floating-prompt-bar' : 'w-full max-w-4xl mx-auto'}`}>
+            <ChatInput
+              message={message}
+              onMessageChange={setMessage}
+              onSend={() => handleSendMessage()}
+              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
               isLoading={isLoading}
-              showSuggestions={showSuggestions}
-              personality={personality}
-              userPlan={userPlan}
-              speakingMessageId={speakingMessageId}
-              isSpeaking={isSpeaking}
-              onSelectPrompt={setMessage}
-              onEdit={(index, content) => setEditingMessage({ index, content })}
-              onRegenerate={handleRegenerate}
-              onTextToSpeech={handleTextToSpeech}
-              onOpenCodeCanvas={(code, lang) => setCodeCanvas({ code, language: lang })}
-              onOpenIDE={(code, lang) => setCodeWorkspace({ code, language: lang })}
-              onLaunchWebsite={(code, lang) => setCodeWorkspace({ code, language: lang })}
-              onOpenInBrowser={(url) => {
-                setBrowserInitialUrl(url);
-                setShowShadowBrowser(true);
-              }}
-              messagesEndRef={messagesEndRef}
-            />
-          )}
-
-          <ChatInput
-            message={message}
-            onMessageChange={setMessage}
-            onSend={() => handleSendMessage()}
-            onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-            isLoading={isLoading}
-            isListening={isListening}
-            onToggleVoice={toggleVoiceInput}
-            onOpenImageGenerator={() => setShowImageGenerator(true)}
-            onStopGeneration={stopGeneration}
-            selectedFile={selectedFile}
-            onFileSelect={(file) => { setSelectedFile(file); if (file) trackFileUpload(file.mimeType); }}
-            chatMode={chatMode}
-             onModeChange={(mode) => { 
-               setChatMode(mode); 
+              isListening={isListening}
+              onToggleVoice={toggleVoiceInput}
+              onOpenImageGenerator={() => setShowImageGenerator(true)}
+              onStopGeneration={stopGeneration}
+              selectedFile={selectedFile}
+              onFileSelect={(file) => { setSelectedFile(file); if (file) trackFileUpload(file.mimeType); }}
+              chatMode={chatMode}
+              onModeChange={(mode) => { 
+                setChatMode(mode); 
                 trackModeSwitch(mode);
                 shadowMemory.log('feature', 'Switched chat mode', mode);
-               // Open dedicated UI for advanced modes
-               if (mode === 'camera') {
-                 setShowCameraCapture(true);
-               } else if (mode === 'organize') {
-                 setShowDataOrganizer(true);
-               } else if (mode === 'research' || mode === 'academic') {
-                 setShowDeepResearch(true);
-               } else if (mode === 'math') {
-                 // Math mode uses chat with LaTeX rendering - no separate UI
-               } else if (mode === 'ppag') {
-                 // Will be handled by the eco actions in chat
-                } else if (mode === 'hsca') {
-                  // Security audit mode - could open dedicated panel if needed
-                } else if (mode === 'uncensored') {
-                  setShowUncensoredArena(true);
-                }
-             }}
-            personality={personality}
-          />
+              }}
+              personality={personality}
+            />
+          </div>
         </div>
+      </div>
 
         {/* Manus-style Browse Activity Panel - Right Side */}
         <BrowseActivityPanel
