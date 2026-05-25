@@ -9,7 +9,10 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest --run"
+    "test": "vitest --run",
+    "desktop:build": "npm run build && npx cap copy electron",
+    "desktop:start": "npm run desktop:build && cd electron && npm run electron:start",
+    "desktop:make": "npm run desktop:build && cd electron && npm run electron:make"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.73.0",
@@ -97,6 +100,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@capacitor-community/electron": "^5.0.1",
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22.16.5",
