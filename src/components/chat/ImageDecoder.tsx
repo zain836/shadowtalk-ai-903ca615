@@ -1,3 +1,4 @@
+import { stringifyChatBody } from "@/lib/chatRequest";
  import { useState, useEffect, useRef } from "react";
  import { Scan, Loader2, Download, X, Image as ImageIcon, FileText, Sparkles } from "lucide-react";
  import { Button } from "@/components/ui/button";
@@ -68,7 +69,7 @@
            "Content-Type": "application/json",
            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
          },
-         body: JSON.stringify({
+         body: stringifyChatBody({
            decodeImage: true,
            imageToAnalyze: imageData,
            messages: [],
@@ -90,7 +91,7 @@
            "Content-Type": "application/json",
            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
          },
-         body: JSON.stringify({
+         body: stringifyChatBody({
            generateImage: true,
            imagePrompt: `Based on this analysis, recreate this image with enhanced clarity, higher quality, and photorealistic detail: ${analysisText.substring(0, 500)}`,
            messages: [],

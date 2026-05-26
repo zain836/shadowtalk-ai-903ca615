@@ -7,6 +7,7 @@ import {
   PROFESSIONAL_DOCUMENT_STANDARDS,
   polishProfessionalMarkdown,
 } from "./professionalDocument";
+import { stringifyChatBody } from "@/lib/chatRequest";
 
 export type KimiDocumentType =
   | "article" | "email" | "report" | "proposal" | "blog" | "resume" | "letter"
@@ -138,14 +139,14 @@ The output must be clean Markdown only — suitable for immediate export to Word
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({
-      messages: [{ role: "user", content: userPrompt }],
-      personality: "professional",
-      mode: "document",
-      documentGeneration: true,
-      documentType: docType,
-      documentTone: tone,
-      documentLength: length,
+    body: stringifyChatBody({
+        messages: [{ role: "user", content: userPrompt }],
+        personality: "professional",
+        mode: "document",
+        documentGeneration: true,
+        documentType: docType,
+        documentTone: tone,
+        documentLength: length,
     }),
     signal,
   });

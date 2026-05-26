@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
+import { stringifyChatBody } from "@/lib/chatRequest";
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -139,7 +140,7 @@ export const MultiModalFusion = ({
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
         },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           messages: [{ role: "user", content: promptContent }],
           personality: "professional",
           mode: "general"

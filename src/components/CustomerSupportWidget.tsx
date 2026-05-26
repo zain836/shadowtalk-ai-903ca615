@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { stringifyChatBody } from "@/lib/chatRequest";
 
 interface Message {
   role: "user" | "assistant";
@@ -44,7 +45,7 @@ const CustomerSupportWidget = () => {
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           messages: [
             {
               role: "system",

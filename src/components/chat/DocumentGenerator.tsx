@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { buildChatRequestBody , stringifyChatBody} from "@/lib/chatRequest";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -147,7 +148,7 @@ export const DocumentGenerator = ({
     setPreviousContent(generatedContent);
     try {
       const { data, error } = await supabase.functions.invoke("document-ai", {
-        body: { action, content: generatedContent },
+        body: buildChatRequestBody({ action, content: generatedContent }),
       });
       if (error) throw error;
       if (data?.result) {

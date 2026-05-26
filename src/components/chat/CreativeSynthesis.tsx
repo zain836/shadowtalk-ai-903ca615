@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { stringifyChatBody } from "@/lib/chatRequest";
 
 // ──────────────────────────────────────────────
 // Types
@@ -179,7 +180,7 @@ export const CreativeSynthesis = ({ isOpen, onClose, onInsertToChat, initialProm
         "Content-Type": "application/json",
         Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({
+      body: stringifyChatBody({
         messages: [{ role: "user", content: prompt }],
         personality: "professional",
         mode: "general",

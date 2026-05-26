@@ -70,13 +70,15 @@ export const ChatRequestSchema = z.object({
       status: z.enum(["pending", "running", "completed", "error"]).optional(),
     })).optional(),
   }).optional(),
-  documentGeneration: z.boolean().optional(),
-  documentType: z.string().max(50).optional(),
-  documentTone: z.enum(["professional", "casual", "academic", "persuasive", "creative"]).optional(),
-  documentLength: z.enum(["brief", "short", "medium", "long", "comprehensive", "epic"]).optional(),
+  /** User-provided API key (BYOK) — processed in-memory only, never stored server-side */
+  customAi: z.object({
+    provider: z.enum(["lovable", "gemini", "openrouter", "kimi"]),
+    apiKey: z.string().min(10).max(512),
+    model: z.string().max(120).optional(),
+  }).optional(),
 }).refine(
-  (data) => data.messages || data.analyzeTask || data.getEcoActions || data.securityAudit || data.agentWorkflow || data.deepResearch || data.webSearch || data.generateImage || data.imageEdit || data.decodeImage || data.documentGeneration,
-  { message: "Either messages or a special mode (analyzeTask, getEcoActions, securityAudit, agentWorkflow, deepResearch, webSearch, generateImage, imageEdit, decodeImage, documentGeneration) must be provided" }
+  (data) => data.messages || data.analyzeTask || data.getEcoActions || data.securityAudit || data.agentWorkflow || data.deepResearch || data.webSearch || data.generateImage || data.imageEdit || data.decodeImage,
+  { message: "Either messages or a special mode (analyzeTask, getEcoActions, securityAudit, agentWorkflow, deepResearch, webSearch, generateImage, imageEdit, decodeImage) must be provided" }
 );
 
 // SSO Configuration validation

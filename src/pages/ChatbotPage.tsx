@@ -35,6 +35,9 @@ import { OfflineAIIndicator } from "@/components/chat/OfflineAIIndicator";
 import { OfflineModeIndicator } from "@/components/chat/OfflineModeIndicator";
 import { useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
 import { Button } from "@/components/ui/button";
+import { CustomApiKeysDialog } from "@/components/chat/CustomApiKeysDialog";
+import { useCustomApiKeys } from "@/hooks/useCustomApiKeys";
+import { buildChatRequestBody , stringifyChatBody} from "@/lib/chatRequest";
 
 // Types
 interface Message { 
@@ -63,6 +66,7 @@ const ChatbotPage = () => {
   const { getOfflineSession, isOffline: authOffline } = useOfflineAuth();
   const toolOrchestrator = useToolOrchestrator();
   const gemmaOffline = useGemmaOffline();
+  const customApiKeys = useCustomApiKeys();
   const offlineMode = useOfflineMode();
   const offlineHistory = useOfflineChatHistory();
   const robustOffline = useRobustOfflineAI();
@@ -82,6 +86,18 @@ const ChatbotPage = () => {
   const [personality, setPersonality] = useState<Personality>("friendly");
   const [chatMode, setChatMode] = useState<ChatMode>("general");
   const [aiProvider, setAiProvider] = useState<AIProvider>("lovable");
+
+  const handleProviderChange = (provider: AIProvider) => {
+    setAiProvider(provider);
+    if (provider !== "lovable") {
+      customApiKeys.persist({
+        ...customApiKeys.config,
+        provider: provider as typeof customApiKeys.config.provider,
+        usePlatformDefault: false,
+      });
+      customApiKeys.openSetup();
+    }
+  };
   const [showSidebar, setShowSidebar] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -412,7 +428,8 @@ const ChatbotPage = () => {
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ messages: chatMessages, personality, mode: chatMode }),
+        body: stringifyChatBody({ messages: chatMessages, personality, mode: chatMode }),
+      
       });
 
       if (!resp.ok) throw new Error("Failed");
@@ -498,10 +515,14 @@ const ChatbotPage = () => {
         </AnimatePresence>
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex items-center gap-2 px-3 pt-2 flex-wrap">
-            <OfflineModeIndicator />
+<Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs" onClick={customApiKeys.openSetup}>
+            <Key className="h-3.5 w-3.5" />
+            {customApiKeys.hasCustomKey ? "API key connected" : "Add API key"}
+          </Button>
+          <OfflineModeIndicator />
             <OfflineAIIndicator />
           </div>
-          <ChatHeader userPlan={userPlan} personality={personality} onPersonalityChange={setPersonality} onToggleSidebar={() => setShowSidebar(!showSidebar)} onExport={() => {}} onManageSubscription={() => {}} onSignOut={signOut} onOpenAnalytics={() => setShowAnalytics(true)} onOpenDeepResearch={() => setShowDeepResearch(true)} onOpenImageGenerator={() => setShowImageGenerator(true)} onOpenShadowTalkLive={() => setShowShadowTalkLive(true)} onOpenBrowser={() => setShowShadowBrowser(true)} aiProvider={aiProvider} onProviderChange={setAiProvider} maxChats="∞" dailyChats={dailyChats} />
+          <ChatHeader userPlan={userPlan} personality={personality} onPersonalityChange={setPersonality} onToggleSidebar={() => setShowSidebar(!showSidebar)} onExport={() => {}} onManageSubscription={() => {}} onSignOut={signOut} onOpenAnalytics={() => setShowAnalytics(true)} onOpenDeepResearch={() => setShowDeepResearch(true)} onOpenImageGenerator={() => setShowImageGenerator(true)} onOpenShadowTalkLive={() => setShowShadowTalkLive(true)} onOpenBrowser={() => setShowShadowBrowser(true)} aiProvider={aiProvider} onProviderChange={handleProviderChange} maxChats="∞" dailyChats={dailyChats} />
           <div className={`flex-1 overflow-hidden relative flex flex-col ${isEmptyChat ? "justify-center" : ""}`}>
             <AnimatePresence mode="wait">
               {isEmptyChat ? (
@@ -545,6 +566,14 @@ const ChatbotPage = () => {
           autoGenerate={presentationAutoGenerate}
         />
       )}
+      <CustomApiKeysDialog
+        open={customApiKeys.showSetupDialog}
+        onOpenChange={customApiKeys.setShowSetupDialog}
+        config={customApiKeys.config}
+        onSave={customApiKeys.saveKeys}
+        onUsePlatformDefault={customApiKeys.usePlatformDefault}
+        onDismiss={customApiKeys.dismissSetup}
+      />
       <CommandPalette
         open={showCommandPalette}
         onOpenChange={setShowCommandPalette}

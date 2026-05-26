@@ -1,24 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { PROFESSIONAL_DOCUMENT_STANDARDS } from "../_shared/kimiDocumentPrompts.ts";
+import { parseCustomAi, customAiChatCompletions } from "../_shared/custom-ai-provider.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
-const REVISE_ACTIONS: Record<string, string> = {
-  rewrite: `Rewrite as a client-ready document. ${PROFESSIONAL_DOCUMENT_STANDARDS} Return ONLY the full Markdown document.`,
-  summarize: "Summarize preserving section structure. Return ONLY Markdown.",
-  expand: `Expand with substantive detail (no filler). ${PROFESSIONAL_DOCUMENT_STANDARDS} Return ONLY the full Markdown document.`,
-  translate: "Translate preserving Markdown structure. Return ONLY the translated document.",
-  fix_grammar: "Fix grammar and punctuation. Return ONLY the corrected Markdown document.",
-  make_formal: `Rewrite in formal executive tone. ${PROFESSIONAL_DOCUMENT_STANDARDS} Return ONLY the full Markdown document.`,
-  make_casual: "Rewrite in clear approachable tone (still professional). Return ONLY the full Markdown document.",
-  bullet_points: "Convert to structured bullets while keeping headings. Return ONLY Markdown.",
-  shorten: "Reduce length ~25% without losing sections. Return ONLY the shortened Markdown document.",
-  lengthen: "Add substantive detail to each section. Return ONLY the expanded Markdown document.",
-  add_toc: "Add or fix ## Table of Contents and heading hierarchy. Return ONLY the full Markdown document.",
-  polish_professional: `Edit into publication-ready form: remove filler, emojis, duplicate headings, and AI preambles. ${PROFESSIONAL_DOCUMENT_STANDARDS} Return ONLY the polished Markdown document.`,
 };
 
 serve(async (req) => {
@@ -27,6 +12,14 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const { action, content, instruction, language } = body;
+    const customAi = parseCustomAi(body);
+
+    if (!content || typeof content !== "string" || content.length > 50000) {
+      return new Response(JSON.stringify({ error: "Invalid content" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -36,37 +29,41 @@ serve(async (req) => {
       });
     }
 
-    if (!content || typeof content !== "string" || content.length > 80000) {
-      return new Response(JSON.stringify({ error: "Invalid content" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const actionPrompts: Record<string, string> = {
+      rewrite: "Rewrite the following text to be clearer, more professional, and well-structured. Preserve the original meaning. Return ONLY the rewritten text, no explanations.",
+      summarize: "Summarize the following text concisely. Capture all key points in a brief format. Return ONLY the summary.",
+      expand: "Expand the following text with more detail, examples, and depth. Maintain the same tone and style. Return ONLY the expanded text.",
+      translate: `Translate the following text to ${language || "English"}. Return ONLY the translation.`,
+      fix_grammar: "Fix all grammar, spelling, and punctuation errors in the following text. Return ONLY the corrected text.",
+      make_formal: "Rewrite the following text in a formal, professional tone. Return ONLY the rewritten text.",
+      make_casual: "Rewrite the following text in a casual, conversational tone. Return ONLY the rewritten text.",
+      bullet_points: "Convert the following text into a well-organized bullet point list. Return ONLY the bullet points.",
+      custom: instruction || "Improve the following text. Return ONLY the improved text.",
+    };
 
-    let systemPrompt = REVISE_ACTIONS[action] || REVISE_ACTIONS.rewrite;
-    if (action === "translate") {
-      systemPrompt = `Translate to ${language || "English"}. Preserve Markdown. Return ONLY the document.`;
-    }
-    if (action === "custom" && instruction) {
-      systemPrompt = `${instruction}\n\nReturn ONLY the full revised Markdown document.`;
-    }
+    const systemPrompt = actionPrompts[action] || actionPrompts.custom;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: action === "polish_professional" || action === "make_formal" ? "openai/gpt-5" : "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content },
-        ],
-      }),
+    const response = await customAiChatCompletions(customAi, LOVABLE_API_KEY, {
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content },
+      ],
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limited. Try again shortly." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "Credits exhausted." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const t = await response.text();
       console.error("document-ai error:", response.status, t);
       return new Response(JSON.stringify({ error: "AI processing failed" }), {
