@@ -83,6 +83,14 @@ const ChatbotPage = () => {
   const [showShadowTalkLive, setShowShadowTalkLive] = useState(false);
   const [showShadowBrowser, setShowShadowBrowser] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showDocumentGenerator, setShowDocumentGenerator] = useState(false);
+  const [documentStudioPrompt, setDocumentStudioPrompt] = useState("");
+  const [documentStudioType, setDocumentStudioType] = useState<KimiDocumentType | undefined>();
+  const [documentAutoGenerate, setDocumentAutoGenerate] = useState(false);
+  const [showPresentationStudio, setShowPresentationStudio] = useState(false);
+  const [presentationStudioTopic, setPresentationStudioTopic] = useState("");
+  const [presentationStudioMode, setPresentationStudioMode] = useState<"adaptive" | "visual">("adaptive");
+  const [presentationAutoGenerate, setPresentationAutoGenerate] = useState(false);
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -191,6 +199,13 @@ const ChatbotPage = () => {
     setDocumentAutoGenerate(autoGen);
     setShowDocumentGenerator(true);
   };
+  const openPresentationStudio = (prompt: string, presMode?: "adaptive" | "visual", autoGen = true) => {
+    setPresentationStudioTopic(prompt);
+    setPresentationStudioMode(presMode ?? inferPresentationMode(prompt));
+    setPresentationAutoGenerate(autoGen);
+    setShowPresentationStudio(true);
+  };
+
 
   const handleSendMessage = async () => {
     if ((!message.trim() && !selectedFile) || isLoading || !currentConversationId) return;
@@ -210,6 +225,20 @@ const ChatbotPage = () => {
         id: crypto.randomUUID(),
         type: "ai",
         content: "Opening **Document Studio** (Kimi-class) — generating your document with live preview and Word/PDF export.",
+        timestamp: new Date(),
+      }]);
+      return;
+    }
+
+    if (toolDetection.tool === "presentation_builder") {
+      const presTopic = toolDetection.params?.topic || extractPresentationTopic(msgContent);
+      const presMode = toolDetection.params?.mode === "visual" ? "visual" : "adaptive";
+      setIsLoading(false);
+      openPresentationStudio(presTopic, presMode, true);
+      setMessages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        type: "ai",
+        content: "Opening **Slide Studio** (Kimi K2.6) — researching your topic, building SmartArt layouts, and preparing an editable PPTX deck.",
         timestamp: new Date(),
       }]);
       return;
@@ -330,7 +359,36 @@ const ChatbotPage = () => {
       </div>
       {showImageGenerator && <ImageGenerator onClose={() => setShowImageGenerator(false)} onImageGenerated={(url) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: '🎨 Generated image', timestamp: new Date(), imageUrl: url }])} />}
       {showDeepResearch && <DeepResearchPanel isOpen={showDeepResearch} onClose={() => setShowDeepResearch(false)} onInsertToChat={(c) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: c, timestamp: new Date() }])} />}
-      <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} onAction={() => {}} />
+      {showDocumentGenerator && (
+        <DocumentGenerator
+          isOpen={showDocumentGenerator}
+          onClose={() => { setShowDocumentGenerator(false); setDocumentAutoGenerate(false); }}
+          initialPrompt={documentStudioPrompt}
+          initialDocType={documentStudioType}
+          autoGenerate={documentAutoGenerate}
+          onDocumentGenerated={(content) => {
+            setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content, timestamp: new Date() }]);
+            saveMessage(content, "assistant");
+          }}
+        />
+      )}
+      {showPresentationStudio && (
+        <PresentationStudio
+          isOpen={showPresentationStudio}
+          onClose={() => { setShowPresentationStudio(false); setPresentationAutoGenerate(false); }}
+          initialTopic={presentationStudioTopic}
+          initialMode={presentationStudioMode}
+          autoGenerate={presentationAutoGenerate}
+        />
+      )}
+      <CommandPalette
+        open={showCommandPalette}
+        onOpenChange={setShowCommandPalette}
+        onAction={(action) => {
+          if (action === "document") openDocumentStudio("", undefined, false);
+          if (action === "presentation" || action === "presentations") openPresentationStudio("", "adaptive", false);
+        }}
+      />
     </motion.div>
   );
 };

@@ -76,86 +76,20 @@ serve(async (req) => {
       ? `\n\nAUDIENCE ADAPTATION (CRITICAL): The audience is YOUNG CHILDREN / elementary students.\n- Use simple, playful language at a 2nd–4th grade reading level.\n- Replace technical percentages with simple fractions or "out of X".\n- Add emoji, friendly illustrations, animated transitions.\n- Make topics relatable to their daily lives (toys, games, friends, families).\n- Avoid scary topics; spin negatives into learning opportunities.`
       : "";
 
-    // Single powerful call with Manus-level instructions
-    // The prompt forces the model to THINK like Manus: research first, then code
-    const systemPrompt = `You are MANUS-LEVEL presentation designer and researcher. You follow a strict 4-phase internal process:
+    const presentationMode: PresentationMode = mode === "visual" ? "visual" : "adaptive";
+    const themeBlock = `DESIGN SYSTEM (theme: ${effectiveStyle}):
+- Canvas: 960×540px | BG: ${t.bg} | Text: ${t.text} | Muted: ${t.mutedText}
+- Accent: ${t.accent} | AccentEnd: ${t.accentEnd} | Gradient: linear-gradient(135deg, ${t.accent}, ${t.accentEnd})
+- SecondaryBG: ${t.secondaryBg} | CardBG: ${t.cardBg} | Font: Inter, system-ui`;
 
-PHASE 1 — RESEARCH: Before writing any HTML, mentally research the topic. Gather REAL, specific data points, market sizes, growth rates, company names, and statistics. Use precise non-round numbers to sound credible.
+    const systemPrompt = getKimiSlidesSystemPrompt(count, presentationMode, effectiveStyle, themeBlock);
 
-PHASE 2 — NARRATIVE: Structure a compelling story arc. Open with provocation, build tension with data, resolve with solution, close with urgency.
+    const userContent = sourceDocument
+      ? `Create a Kimi Slides–quality presentation from this source material.\n\nSOURCE:\n${sourceDocument.slice(0, 12000)}\n\nPresentation focus: ${topic}${additionalContext ? `\n\nExtra instructions: ${additionalContext}` : ""}`
+      : `Create a Kimi Slides–quality presentation about: ${topic}${additionalContext ? `\n\nContext: ${additionalContext}` : ""}`;
 
-PHASE 3 — CODE: Design and code every slide as bespoke HTML. Each slide is a unique visual masterpiece.
-
-PHASE 4 — POLISH: Ensure visual variety, data accuracy, and narrative flow.
-
-RETURN ONLY VALID JSON. No markdown fences. No text before or after.
-
-DESIGN SYSTEM:
-- Canvas: 960×540px, overflow hidden
-- BG: ${t.bg} | Text: ${t.text} | Muted: ${t.mutedText}
-- Accent: ${t.accent} | AccentEnd: ${t.accentEnd}
-- Gradient: linear-gradient(135deg, ${t.accent}, ${t.accentEnd})
-- SecondaryBG: ${t.secondaryBg} | CardBG: ${t.cardBg}
-- Font: 'Inter','Segoe UI',system-ui,sans-serif
-
-CRITICAL VISUAL STANDARDS:
-
-1. **INLINE SVG ICONS** — Every feature card, metric card, and section MUST include a relevant inline SVG icon (24-32px). Use clean geometric SVG paths.
-
-2. **DATA VISUALIZATION** — Include SVG-based charts when presenting metrics.
-
-3. **CARD-BASED LAYOUTS**:
-   - border-radius: 16px; padding: 24px
-   - border: 1px solid ${t.accent}20
-   - background: ${t.cardBg}
-
-4. **CINEMATIC TITLE SLIDES**:
-   - Full-bleed gradient background
-   - Large bold typography (48-56px, weight 900)
-   - Subtle tagline (18px, opacity 0.8)
-
-5. **COMPARISON TABLES**:
-   - Gradient header row
-   - Alternating row backgrounds
-
-6. **TIMELINES/ROADMAPS**:
-   - Connected nodes with SVG lines/circles
-   - Color-coded phases
-
-LAYOUT RULES:
-- Root: <div style="width:960px;height:540px;overflow:hidden;position:relative;background:${t.bg};color:${t.text};font-family:'Inter','Segoe UI',system-ui,sans-serif;">
-- ALL styles MUST be inline. Use SINGLE QUOTES for HTML attributes.
-- NO <style> tags, NO CSS classes, NO external resources
-- Use flexbox (display:flex) and grid (display:grid) for layouts
-- Generous padding (40-60px) and consistent spacing
-- Every slide MUST be visually UNIQUE
-
-CONTENT QUALITY:
-- Bold, provocative titles
-- Specific data with precise numbers and sources
-- Real company names and research citations
-- Short punchy descriptions (2-3 lines max per card)
-- Speaker notes: 4-6 sentences with delivery cues
-
-SLIDE COUNT (STRICT): You MUST output EXACTLY ${count} slides — no more, no less.
-
-OUTPUT FORMAT:
-{
-  "title": "Presentation Title",
-  "slides": [
-    {
-      "title": "Slide Title",
-      "subtitle": "Optional subtitle",
-      "layout": "descriptive_name",
-      "html": "<div style=\\"...complete slide HTML...\\"></div>",
-      "speakerNotes": "4-6 sentences...",
-      "content": { ... }
-    }
-  ],
-  "metadata": { "estimatedDuration": ${count * 2}, ... }
-}`;
-
-    console.log("Generating Manus-quality presentation...");
+    const model = presentationMode === "adaptive" ? "openai/gpt-5" : "google/gemini-3-pro-preview";
+    console.log(`Generating Kimi Slides presentation (${presentationMode}, ${model})...`);
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -163,12 +97,12 @@ OUTPUT FORMAT:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Create a MANUS-QUALITY coded presentation about: ${topic}${additionalContext ? `\n\nContext: ${additionalContext}` : ''}${audienceGuidance}\n\nIMPORTANT: Return ONLY valid JSON, no markdown.` },
+          { role: "user", content: `${userContent}${audienceGuidance}\n\nReturn ONLY valid JSON.` },
         ],
-        temperature: 0.75,
+        temperature: 0.7,
       }),
     });
 
