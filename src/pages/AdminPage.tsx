@@ -65,6 +65,11 @@ import { AdminAlerts } from '@/components/admin/AdminAlerts';
 import { AnalyticsExport } from '@/components/admin/AnalyticsExport';
 import { ManualPaymentsManager } from '@/components/admin/ManualPaymentsManager';
 import { BroadcastManager } from '@/components/admin/BroadcastManager';
+import { ChangelogManager } from '@/components/admin/ChangelogManager';
+import { AdminFAQManager } from '@/components/admin/AdminFAQManager';
+import { AdminLayout } from '@/components/admin/AdminLayout';
+import { AdminDashboard } from '@/components/admin/AdminDashboard';
+
 import { BusinessInsightsDashboard } from '@/components/admin/BusinessInsightsDashboard';
 import { TimezoneInsights } from '@/components/admin/TimezoneInsights';
 import { cn } from '@/lib/utils';
@@ -108,60 +113,6 @@ interface FeedbackData {
   created_at: string;
   updated_at: string;
 }
-
-// --- Nav structure ---
-interface NavItem {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-interface NavGroup {
-  title: string;
-  items: NavItem[];
-}
-
-const navGroups: NavGroup[] = [
-  {
-    title: 'Overview',
-    items: [
-      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { id: 'alerts', label: 'Alerts', icon: Bell },
-    ],
-  },
-  {
-    title: 'Monitoring',
-    items: [
-      { id: 'realtime', label: 'Live Users', icon: Radio },
-      { id: 'health', label: 'Web Health', icon: Server },
-      { id: 'live-feedback', label: 'Live Feedback', icon: Activity },
-      { id: 'geo-tracking', label: 'User Map', icon: Globe },
-      { id: 'journeys', label: 'Journeys', icon: Route },
-      { id: 'timezone', label: 'Timezones', icon: Clock },
-      { id: 'business', label: 'Business Insights', icon: BarChart3 },
-    ],
-  },
-  {
-    title: 'Management',
-    items: [
-      { id: 'payments', label: 'Payments', icon: CreditCard },
-      { id: 'feedback', label: 'Feedback', icon: MessageSquareHeart },
-      { id: 'subscribers', label: 'Subscribers', icon: Crown },
-      { id: 'conversations', label: 'Conversations', icon: MessageSquare },
-    ],
-  },
-  {
-    title: 'Configuration',
-    items: [
-      { id: 'gemini-keys', label: 'API Keys', icon: Key },
-      { id: 'roles', label: 'Roles', icon: Shield },
-      { id: 'profiles', label: 'Profiles', icon: User },
-      { id: 'announcements', label: 'Announcements', icon: Megaphone },
-      { id: 'broadcast', label: 'Broadcast', icon: Send },
-      { id: 'export', label: 'Export Data', icon: Download },
-    ],
-  },
-];
 
 // --- Helpers ---
 const getCategoryIcon = (category: string) => {
@@ -330,15 +281,11 @@ const AdminPage = () => {
 
   if (!isAdmin) return null;
 
-  const currentLabel = navGroups
-    .flatMap(g => g.items)
-    .find(i => i.id === activeSection)?.label || 'Dashboard';
-
   // --- Render content ---
   const renderContent = () => {
     switch (activeSection) {
       case 'dashboard':
-        return <DashboardOverview stats={stats} loadingData={loadingData} pendingFeedback={stats.pendingFeedback} />;
+        return <AdminDashboard stats={stats} loading={loadingData} onNavigate={setActiveSection} />;
       case 'alerts':
         return <AdminAlerts />;
       case 'realtime':
@@ -371,6 +318,8 @@ const AdminPage = () => {
         );
       case 'subscribers':
         return <SubscribersList subscribers={subscribers} loadingData={loadingData} />;
+      case 'faq':
+        return <AdminFAQManager />;
       case 'conversations':
         return <ConversationsList conversations={conversations} loadingData={loadingData} onDelete={handleDeleteConversation} />;
       case 'gemini-keys':
@@ -379,6 +328,8 @@ const AdminPage = () => {
         return <UserRoleManager />;
       case 'profiles':
         return <ProfileManager />;
+      case 'changelog':
+        return <ChangelogManager />;
       case 'announcements':
         return <AnnouncementManager />;
       case 'broadcast':
@@ -391,113 +342,26 @@ const AdminPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          'h-screen sticky top-0 border-r border-border bg-sidebar flex flex-col transition-all duration-300 z-40',
-          sidebarCollapsed ? 'w-16' : 'w-60'
-        )}
-      >
-        {/* Sidebar header */}
-        <div className="h-14 flex items-center justify-between px-3 border-b border-border shrink-0">
-          {!sidebarCollapsed && (
-            <div className="flex items-center gap-2 min-w-0">
-              <Shield className="h-5 w-5 text-primary shrink-0" />
-              <span className="font-semibold text-sm truncate">Admin Panel</span>
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          >
-            {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
-        </div>
-
-        {/* Nav groups */}
-        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-4">
-          {navGroups.map(group => (
-            <div key={group.title}>
-              {!sidebarCollapsed && (
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2 mb-1">
-                  {group.title}
-                </p>
-              )}
-              <div className="space-y-0.5">
-                {group.items.map(item => {
-                  const isActive = activeSection === item.id;
-                  const Icon = item.icon;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveSection(item.id)}
-                      title={sidebarCollapsed ? item.label : undefined}
-                      className={cn(
-                        'w-full flex items-center gap-2.5 rounded-lg text-sm transition-colors',
-                        sidebarCollapsed ? 'justify-center px-0 py-2.5' : 'px-2.5 py-2',
-                        isActive
-                          ? 'bg-primary/10 text-primary font-medium'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                      )}
-                    >
-                      <Icon className={cn('h-4 w-4 shrink-0', isActive && 'text-primary')} />
-                      {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
-                      {!sidebarCollapsed && item.id === 'feedback' && stats.pendingFeedback > 0 && (
-                        <Badge variant="destructive" className="ml-auto h-5 min-w-5 px-1 flex items-center justify-center text-[10px]">
-                          {stats.pendingFeedback}
-                        </Badge>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
-
-        {/* Back button */}
-        <div className="p-2 border-t border-border shrink-0">
-          <button
-            onClick={() => navigate('/chatbot')}
-            className={cn(
-              'w-full flex items-center gap-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors',
-              sidebarCollapsed ? 'justify-center px-0 py-2.5' : 'px-2.5 py-2'
-            )}
-          >
-            <ArrowLeft className="h-4 w-4 shrink-0" />
-            {!sidebarCollapsed && <span>Back to App</span>}
-          </button>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <main className="flex-1 min-w-0">
-        {/* Top bar */}
-        <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-30 flex items-center justify-between px-6">
-          <h1 className="text-lg font-semibold">{currentLabel}</h1>
-          <Badge variant="outline" className="border-primary/30 text-primary text-xs">
-            {user?.email}
-          </Badge>
-        </header>
-
-        <div className="p-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeSection}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
-            >
-              {renderContent()}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </main>
-    </div>
+    <AdminLayout
+      activeSection={activeSection}
+      onSectionChange={setActiveSection}
+      adminEmail={user?.email}
+      pendingFeedback={stats.pendingFeedback}
+      sidebarCollapsed={sidebarCollapsed}
+      onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeSection}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.15 }}
+        >
+          {renderContent()}
+        </motion.div>
+      </AnimatePresence>
+    </AdminLayout>
   );
 };
 
