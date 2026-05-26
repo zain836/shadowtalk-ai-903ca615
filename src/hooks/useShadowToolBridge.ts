@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useToolOrchestrator, type ToolType } from "@/hooks/useToolOrchestrator";
 import { executeShadowTool } from "@/lib/shadowTools/executeShadowTool";
+import { SHADOWTALK_SELF_KNOWLEDGE_BRIEF } from "@/lib/shadowTalkProductKnowledge";
 import type { ShadowToolResult } from "@/lib/shadowTools/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -162,7 +163,9 @@ export function useShadowToolBridge(handlers: ShadowToolUIHandlers) {
   );
 
   const listAvailableTools = useCallback((): string => {
-    return `### ShadowTalk tools (ask naturally or use keywords)
+    return `${SHADOWTALK_SELF_KNOWLEDGE_BRIEF}
+
+### Chat-routable tools (ask naturally)
 
 | Area | Examples |
 |------|----------|
@@ -177,7 +180,7 @@ export function useShadowToolBridge(handlers: ShadowToolUIHandlers) {
 | **Productivity** | "read my calendar", "draft an email", "plan my day" |
 | **Apps** | strategy, workspace, vault, analytics, knowledge graph — say "open …" |
 
-I route your message to the right tool automatically when confidence is high.`;
+Ask **"what is ShadowTalk?"**, **"what plans do you offer?"**, or **"how do I use …?"** for full product answers.`;
   }, []);
 
   return { detectTool, runDetectedTool, listAvailableTools };

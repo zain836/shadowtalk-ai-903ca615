@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useShadowToolBridge } from "@/hooks/useShadowToolBridge";
 import type { ChatMode } from "@/components/chat/ModeSelector";
+import { SHADOWTALK_SELF_KNOWLEDGE_BRIEF } from "@/lib/shadowTalkProductKnowledge";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
@@ -110,7 +111,21 @@ export function useChatToolRouter(handlers: Parameters<typeof useShadowToolBridg
       const { msgContent, messages, personality, chatMode, attachment, onMessagesUpdate, saveAssistant } =
         params;
 
-      if (/\b(what tools|list tools|what can you do|show (me )?features|available tools)\b/i.test(msgContent)) {
+      if (
+        /\b(what is shadowtalk|about shadowtalk|tell me about (yourself|shadowtalk)|who (made|created|built) you|your (features|pricing|plans)|shadowtalk (features|pricing|plans))\b/i.test(
+          msgContent
+        )
+      ) {
+        const about = `${SHADOWTALK_SELF_KNOWLEDGE_BRIEF}\n\nAsk a specific question (e.g. "How do missions work?" or "What's in Elite?") for more detail.`;
+        onMessagesUpdate((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), type: "ai", content: about, timestamp: new Date() },
+        ]);
+        await saveAssistant(about);
+        return;
+      }
+
+            if (/\b(what tools|list tools|what can you do|show (me )?features|available tools)\b/i.test(msgContent)) {
         const help = toolBridge.listAvailableTools();
         onMessagesUpdate((prev) => [
           ...prev,
