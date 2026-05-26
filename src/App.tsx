@@ -11,6 +11,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { SecurityProvider } from "@/components/SecurityProvider";
 import { ShadowMemoryProvider } from "@/contexts/ShadowMemoryContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import BootScreen from "@/components/BootScreen";
 import CommandPalette from "@/components/CommandPalette";
 import { createContext, useContext } from "react";
 
@@ -76,12 +77,15 @@ const TrustPage = lazy(() => import("./pages/TrustPage"));
 const CreativeStudioPage = lazy(() => import("./pages/CreativeStudioPage"));
 const CyberCommandPage = lazy(() => import("./pages/CyberCommandPage"));
 const PersonalLLMPage = lazy(() => import("./pages/PersonalLLMPage"));
+const PWABanner = lazy(() => import("./components/PWABanner"));
+const AnnouncementBanner = lazy(() => import("./components/AnnouncementBanner"));
+const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
 const ShadowMemoryTracker = lazy(() => import("./components/ShadowMemoryTracker"));
 const JourneyTracker = lazy(() => import("./components/JourneyTracker").then(m => ({ default: m.JourneyTracker })));
 const VoiceCommandSystem = lazy(() => import("./components/VoiceCommandSystem"));
+const OnboardingFlow = lazy(() => import("./components/OnboardingFlow"));
 import { useReferralCapture } from "./hooks/useReferralTracking";
-import { UpdateNotificationProvider } from "@/components/notifications/UpdateNotificationProvider";
 // ElevenLabs Agent ID is now configured via the backend secret ELEVENLABS_AGENT_ID
 
  // Configure React Query with production-ready settings
@@ -190,9 +194,18 @@ const AnimatedRoutes = () => {
 };
 
 const App = () => {
+  const [showBootScreen, setShowBootScreen] = useState(true);
+  const [hasBooted, setHasBooted] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
 
   useEffect(() => {
+    // Check if user has seen boot screen this session
+    const hasSeenBoot = sessionStorage.getItem('shadowtalk-booted');
+    if (hasSeenBoot) {
+      setShowBootScreen(false);
+      setHasBooted(true);
+    }
+
     // Auto-resume any previously-started on-device model download.
     // The engine singleton outlives every route, so once load() is called
     // the fetch+cache pipeline keeps running even after the user navigates away.
@@ -214,6 +227,11 @@ const App = () => {
     }
   }, []);
 
+  const handleBootComplete = () => {
+    sessionStorage.setItem('shadowtalk-booted', 'true');
+    setShowBootScreen(false);
+    setHasBooted(true);
+  };
 
   return (
     <ErrorBoundary>
@@ -221,19 +239,27 @@ const App = () => {
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <TooltipProvider>
             <AuthProvider>
-              <UpdateNotificationProvider />
               <SecurityProvider>
               <ShadowMemoryProvider>
               <CommandPaletteContext.Provider value={{ open: () => setCmdOpen(true) }}>
+              {showBootScreen && !hasBooted && (
+                <BootScreen onComplete={handleBootComplete} />
+              )}
               <Toaster />
               <Sonner />
                <BrowserRouter>
+                 <Suspense fallback={null}>
+                   <AnnouncementBanner />
+                 </Suspense>
                  <AnimatedRoutes />
                  <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
                   <Suspense fallback={null}>
+                    <OnboardingFlow />
                     <VoiceCommandSystem />
                     <ShadowMemoryTracker />
                    <JourneyTracker />
+                   <PWABanner />
+                   <CookieConsent />
                    <CustomerSupportWidget />
                  </Suspense>
                </BrowserRouter>

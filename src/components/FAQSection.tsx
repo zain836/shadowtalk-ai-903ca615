@@ -137,7 +137,7 @@ const FAQSection = () => {
             >
               <h3 className="font-semibold">Still have questions?</h3>
               <p className="text-sm text-muted-foreground">
-                Our support team responds within 2 hours.
+                We aim to reply within one business day. Premium and Elite plans get priority queue handling.
               </p>
               <div className="flex flex-col gap-2">
                 <Button size="sm" className="btn-glow justify-start gap-2" asChild>

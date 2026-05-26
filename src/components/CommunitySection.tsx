@@ -23,12 +23,19 @@ const CommunitySection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
 
-  const communityStats = [
-    { icon: Users, value: "15,000+", label: "Community Members", gradient: "from-primary/20 to-primary/5" },
-    { icon: MessageSquare, value: "2,500+", label: "Daily Discussions", gradient: "from-secondary/20 to-secondary/5" },
-    { icon: Star, value: "500+", label: "Shared Templates", gradient: "from-accent/20 to-accent/5" },
-    { icon: TrendingUp, value: "99%", label: "Satisfaction Rate", gradient: "from-success/20 to-success/5" },
-  ];
+  const statIcons = [Users, Mail, Star, Heart];
+  const communityStats = COMMUNITY_HIGHLIGHTS.map((item, i) => ({
+    icon: statIcons[i] ?? Users,
+    value: item.value,
+    label: item.label,
+    description: item.description,
+    gradient: [
+      "from-primary/20 to-primary/5",
+      "from-secondary/20 to-secondary/5",
+      "from-accent/20 to-accent/5",
+      "from-success/20 to-success/5",
+    ][i],
+  }));
 
   const events = [
     { date: "Feb 20", title: "AI Automation Workshop", type: "Workshop", participants: 200, live: true },

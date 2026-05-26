@@ -27,17 +27,10 @@ import { Shield, Lock, Key, Loader2, Sparkles } from "lucide-react";
 import { useShadowMemoryContext } from "@/contexts/ShadowMemoryContext";
 import { useIntelligenceHub } from "@/hooks/useIntelligenceHub";
 import { useGemmaOffline } from "@/hooks/useGemmaOffline";
-import { useOfflineMode } from "@/hooks/useOfflineMode";
-import { useRobustOfflineAI } from "@/hooks/useRobustOfflineAI";
-import { runOfflineCompletion } from "@/lib/offline/runOfflineCompletion";
-import type { RouterMessage } from "@/lib/offline/hybridRouter";
-import { OfflineAIIndicator } from "@/components/chat/OfflineAIIndicator";
-import { OfflineModeIndicator } from "@/components/chat/OfflineModeIndicator";
 import { useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
 import { Button } from "@/components/ui/button";
-import { CustomApiKeysDialog } from "@/components/chat/CustomApiKeysDialog";
-import { useCustomApiKeys } from "@/hooks/useCustomApiKeys";
-import { buildChatRequestBody , stringifyChatBody} from "@/lib/chatRequest";
+import { ShareDialog } from "@/components/chat/ShareDialog";
+import { useVoiceSessionLimits } from "@/hooks/useVoiceSessionLimits";
 
 // Types
 interface Message { 
@@ -63,16 +56,10 @@ const ChatbotPage = () => {
   const { checkAccess, isElite } = useFeatureGating();
   const { requestPermission } = usePushNotifications();
   const { trackChatMessage, trackConversationCreated } = useUsageTracking();
-  const { getOfflineSession, isOffline: authOffline } = useOfflineAuth();
+  const { getOfflineSession } = useOfflineAuth();
   const toolOrchestrator = useToolOrchestrator();
   const gemmaOffline = useGemmaOffline();
-  const customApiKeys = useCustomApiKeys();
-  const offlineMode = useOfflineMode();
-  const offlineHistory = useOfflineChatHistory();
-  const robustOffline = useRobustOfflineAI();
-  const offlineSession = getOfflineSession();
-  const isNetworkOffline = isOffline || authOffline || !gemmaOffline.isOnline;
-  const useOfflineWorkspace = isNetworkOffline;
+  const voiceLimits = useVoiceSessionLimits();
   
   // State
   const [e2eePassphrase, setE2EEPassphrase] = useState("");
@@ -86,18 +73,6 @@ const ChatbotPage = () => {
   const [personality, setPersonality] = useState<Personality>("friendly");
   const [chatMode, setChatMode] = useState<ChatMode>("general");
   const [aiProvider, setAiProvider] = useState<AIProvider>("lovable");
-
-  const handleProviderChange = (provider: AIProvider) => {
-    setAiProvider(provider);
-    if (provider !== "lovable") {
-      customApiKeys.persist({
-        ...customApiKeys.config,
-        provider: provider as typeof customApiKeys.config.provider,
-        usePlatformDefault: false,
-      });
-      customApiKeys.openSetup();
-    }
-  };
   const [showSidebar, setShowSidebar] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -111,60 +86,19 @@ const ChatbotPage = () => {
   const [showShadowTalkLive, setShowShadowTalkLive] = useState(false);
   const [showShadowBrowser, setShowShadowBrowser] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const [showDocumentGenerator, setShowDocumentGenerator] = useState(false);
-  const [documentStudioPrompt, setDocumentStudioPrompt] = useState("");
-  const [documentStudioType, setDocumentStudioType] = useState<KimiDocumentType | undefined>();
-  const [documentAutoGenerate, setDocumentAutoGenerate] = useState(false);
-  const [showPresentationStudio, setShowPresentationStudio] = useState(false);
-  const [presentationStudioTopic, setPresentationStudioTopic] = useState("");
-  const [presentationStudioMode, setPresentationStudioMode] = useState<"adaptive" | "visual">("adaptive");
-  const [presentationAutoGenerate, setPresentationAutoGenerate] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useGeoLocation();
 
-  const getOfflineWelcomeMessage = () =>
-    gemmaOffline.isReady || robustOffline.isReady
-      ? "You're in **offline mode** with on-device AI. Messages stay on this device until you're back online."
-      : "You're **offline**. Download a model in Profile → Offline AI for full local chat, or I'll use basic replies until then.";
-
-  const ensureOfflineConversation = async () => {
-    if (!offlineHistory.isReady) return;
-    const cached = await offlineHistory.getCachedConversations();
-    if (cached.length > 0 && !currentConversationId) {
-      setCurrentConversationId(cached[0].id);
-      const msgs = await offlineHistory.getCachedMessages(cached[0].id);
-      setMessages(
-        msgs.length > 0
-          ? msgs
-          : [{ id: 'welcome', type: 'ai', content: getOfflineWelcomeMessage(), timestamp: new Date() }],
-      );
-      setConversations(cached.map((c) => ({ id: c.id, title: c.title, created_at: c.created_at })));
-      return;
-    }
-    if (!currentConversationId) {
-      const id = `offline-${crypto.randomUUID()}`;
-      const now = new Date().toISOString();
-      await offlineHistory.cacheConversation({ id, title: 'Offline chat', created_at: now, updated_at: now });
-      setCurrentConversationId(id);
-      setConversations([{ id, title: 'Offline chat', created_at: now }]);
-      setMessages([{ id: 'welcome', type: 'ai', content: getOfflineWelcomeMessage(), timestamp: new Date() }]);
-    }
-  };
-
   useEffect(() => {
-    if (useOfflineWorkspace && offlineHistory.isReady) {
-      ensureOfflineConversation();
-      return;
-    }
+    const offlineSession = getOfflineSession();
     if ((user || offlineSession) && e2ee.isUnlocked) {
       loadConversations();
-      if (!isNetworkOffline) {
-        checkSubscription();
-        if (isElite) requestPermission();
-      }
+      checkSubscription();
+      if (isElite) requestPermission();
     } else if (!user && !offlineSession && !isOffline) {
       const guestConvId = 'guest-' + Date.now();
       setCurrentConversationId(guestConvId);
@@ -176,7 +110,7 @@ const ChatbotPage = () => {
       }]);
       setConversations([{ id: guestConvId, title: 'Guest Conversation', created_at: new Date().toISOString() }]);
     }
-  }, [user, e2ee.isUnlocked, useOfflineWorkspace, offlineHistory.isReady, isNetworkOffline]);
+  }, [user, e2ee.isUnlocked]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -208,12 +142,6 @@ const ChatbotPage = () => {
   };
 
   const loadConversation = async (conversationId: string) => {
-    if (useOfflineWorkspace && offlineHistory.isReady) {
-      setCurrentConversationId(conversationId);
-      const msgs = await offlineHistory.getCachedMessages(conversationId);
-      setMessages(msgs.length > 0 ? msgs : [{ id: 'welcome', type: 'ai', content: getOfflineWelcomeMessage(), timestamp: new Date() }]);
-      return;
-    }
     if (!e2ee.isUnlocked) return;
     setCurrentConversationId(conversationId);
     const { data, error } = await supabase
@@ -239,22 +167,7 @@ const ChatbotPage = () => {
     return "👋 Welcome back! Your connection is fully End-to-End Encrypted.";
   };
 
-  const saveMessageOffline = async (content: string, role: 'user' | 'assistant') => {
-    if (!currentConversationId || !offlineHistory.isReady) return;
-    await offlineHistory.cacheMessage(currentConversationId, {
-      id: crypto.randomUUID(),
-      type: role === 'user' ? 'user' : 'ai',
-      content,
-      timestamp: new Date(),
-    });
-    if (role === 'user') offlineMode.queueOfflineMessage(content);
-  };
-
   const saveMessage = async (content: string, role: 'user' | 'assistant') => {
-    if (useOfflineWorkspace) {
-      await saveMessageOffline(content, role);
-      return null;
-    }
     if (!user || !currentConversationId || !e2ee.isUnlocked) return null;
     let contentToSave = content;
     const encrypted = await e2ee.encryptData(content);
@@ -276,70 +189,6 @@ const ChatbotPage = () => {
     return data;
   };
 
-  const openDocumentStudio = (prompt: string, docType?: KimiDocumentType, autoGen = true) => {
-    setDocumentStudioPrompt(prompt);
-    setDocumentStudioType(docType ?? inferDocumentTypeFromMessage(prompt));
-    setDocumentAutoGenerate(autoGen);
-    setShowDocumentGenerator(true);
-  };
-  const openPresentationStudio = (prompt: string, presMode?: "adaptive" | "visual", autoGen = true) => {
-    setPresentationStudioTopic(prompt);
-    setPresentationStudioMode(presMode ?? inferPresentationMode(prompt));
-    setPresentationAutoGenerate(autoGen);
-    setShowPresentationStudio(true);
-  };
-
-
-  const buildRouterMessages = (msgContent: string): RouterMessage[] => {
-    const history = messages
-      .filter((m) => m.id !== "welcome")
-      .map((m) => ({
-        role: (m.type === "user" ? "user" : "assistant") as RouterMessage["role"],
-        content: m.content,
-      }));
-    history.push({ role: "user", content: msgContent });
-    return history;
-  };
-
-  const appendStreamingAiMessage = (aiMessageId: string, assistantContent: string) => {
-    setMessages((prev) => {
-      const exists = prev.find((m) => m.id === aiMessageId);
-      if (exists) {
-        return prev.map((m) => (m.id === aiMessageId ? { ...m, content: assistantContent } : m));
-      }
-      return [...prev, { id: aiMessageId, type: "ai", content: assistantContent, timestamp: new Date() }];
-    });
-  };
-
-  const runLocalChat = async (routerMessages: RouterMessage[], msgContent: string, aiMessageId: string) => {
-    let assistantContent = "";
-    const localResult = await runOfflineCompletion({
-      messages: routerMessages,
-      personality,
-      isOnline: gemmaOffline.isOnline,
-      onToken: (token) => {
-        assistantContent += token;
-        appendStreamingAiMessage(aiMessageId, assistantContent);
-      },
-      gemmaChat: gemmaOffline.chatLocal,
-      webLlmGenerate: robustOffline.generateResponse,
-      webLlmLoad: robustOffline.loadModel,
-    });
-    if (!localResult) return false;
-    if (!assistantContent) {
-      assistantContent = localResult.content;
-      appendStreamingAiMessage(aiMessageId, assistantContent);
-    }
-    await saveMessage(assistantContent, "assistant");
-    if (localResult.source === "fallback" && !gemmaOffline.isReady && !robustOffline.isReady) {
-      toast({
-        title: "Offline mode",
-        description: "Download a model in Profile → Offline AI for full local responses.",
-      });
-    }
-    return true;
-  };
-
   const handleSendMessage = async () => {
     if ((!message.trim() && !selectedFile) || isLoading || !currentConversationId) return;
     const msgContent = message;
@@ -348,93 +197,21 @@ const ChatbotPage = () => {
     setMessage(""); setSelectedFile(null); setIsLoading(true);
     await saveMessage(msgContent, 'user');
 
-    if (isNetworkOffline && /\b(document|slide|presentation|ppt|deck)\b/i.test(msgContent)) {
-      setIsLoading(false);
-      setMessages(prev => [...prev, {
-        id: crypto.randomUUID(),
-        type: "ai",
-        content: "Document and slide generation need internet. In offline mode you can still chat with your **on-device model** (Profile → Offline AI).",
-        timestamp: new Date(),
-      }]);
-      return;
-    }
-
-    if (!isNetworkOffline) {
-    const toolDetection = toolOrchestrator.detectTool(msgContent);
-    if (toolDetection.tool === "document_generator") {
-      const topic = toolDetection.params?.topic || msgContent;
-      const docType = (toolDetection.params?.docType as KimiDocumentType) || inferDocumentTypeFromMessage(msgContent);
-      setIsLoading(false);
-      openDocumentStudio(topic, docType, true);
-      setMessages(prev => [...prev, {
-        id: crypto.randomUUID(),
-        type: "ai",
-        content: "Opening **Document Studio** (Kimi-class) — generating your document with live preview and Word/PDF export.",
-        timestamp: new Date(),
-      }]);
-      return;
-    }
-
-    if (toolDetection.tool === "presentation_builder") {
-      const presTopic = toolDetection.params?.topic || extractPresentationTopic(msgContent);
-      const presMode = toolDetection.params?.mode === "visual" ? "visual" : "adaptive";
-      setIsLoading(false);
-      openPresentationStudio(presTopic, presMode, true);
-      setMessages(prev => [...prev, {
-        id: crypto.randomUUID(),
-        type: "ai",
-        content: "Opening **Slide Studio** (Kimi K2.6) — researching your topic, building SmartArt layouts, and preparing an editable PPTX deck.",
-        timestamp: new Date(),
-      }]);
-      return;
-    }
-    }
-
-    const routerMessages = buildRouterMessages(msgContent);
-    const aiMessageId = crypto.randomUUID();
-
     try {
-      if (!gemmaOffline.isOnline || gemmaOffline.routingMode === "local-only" || useOfflineWorkspace) {
-        const done = await runLocalChat(routerMessages, msgContent, aiMessageId);
-        if (done) return;
-      }
-
-      const preferLocal =
-        gemmaOffline.routingMode !== "cloud-only" &&
-        (gemmaOffline.isReady || robustOffline.isReady);
-      if (preferLocal) {
-        const autoLocal = await runOfflineCompletion({
-          messages: routerMessages,
-          personality,
-          isOnline: gemmaOffline.isOnline,
-          gemmaChat: gemmaOffline.chatLocal,
-          webLlmGenerate: robustOffline.generateResponse,
-          webLlmLoad: robustOffline.loadModel,
-        });
-        if (autoLocal) {
-          let assistantContent = autoLocal.content;
-          appendStreamingAiMessage(aiMessageId, assistantContent);
-          await saveMessage(assistantContent, "assistant");
-          return;
-        }
-      }
-
       const { data: { session } } = await supabase.auth.getSession();
-      const chatMessages = routerMessages.map((m) => ({
-        role: m.role === "system" ? "user" : m.role,
-        content: m.content,
-      }));
+      const chatMessages = messages.filter(m => m.id !== 'welcome').map(m => ({ role: m.type === "user" ? "user" : "assistant", content: m.content }));
+      chatMessages.push({ role: "user", content: msgContent });
 
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: stringifyChatBody({ messages: chatMessages, personality, mode: chatMode }),
-      
+        body: JSON.stringify({ messages: chatMessages, personality, mode: chatMode }),
       });
 
       if (!resp.ok) throw new Error("Failed");
       const reader = resp.body?.getReader();
       const decoder = new TextDecoder();
+      const aiMessageId = crypto.randomUUID();
       let assistantContent = "";
 
       while (reader) {
@@ -449,7 +226,11 @@ const ChatbotPage = () => {
               const delta = data.choices?.[0]?.delta?.content;
               if (delta) {
                 assistantContent += delta;
-                appendStreamingAiMessage(aiMessageId, assistantContent);
+                setMessages(prev => {
+                  const exists = prev.find(m => m.id === aiMessageId);
+                  if (exists) return prev.map(m => m.id === aiMessageId ? { ...m, content: assistantContent } : m);
+                  return [...prev, { id: aiMessageId, type: 'ai', content: assistantContent, timestamp: new Date() }];
+                });
               }
             } catch {}
           }
@@ -457,12 +238,7 @@ const ChatbotPage = () => {
       }
       if (assistantContent) await saveMessage(assistantContent, 'assistant');
     } catch {
-      const recovered = await runLocalChat(routerMessages, msgContent, aiMessageId);
-      if (!recovered) {
-        const fallback = offlineMode.getOfflineResponse(msgContent);
-        appendStreamingAiMessage(aiMessageId, fallback);
-        await saveMessage(fallback, "assistant");
-      }
+      setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: "Error connecting to neural host.", timestamp: new Date() }]);
     } finally { setIsLoading(false); }
   };
 
@@ -474,9 +250,9 @@ const ChatbotPage = () => {
     if (success) { setE2EEPassphrase(""); loadConversations(); }
   };
 
-  if (!user && !offlineSession && !isOffline) { navigate("/auth"); return null; }
+  if (!user && !isOffline) { navigate("/auth"); return null; }
 
-  if (!useOfflineWorkspace && !e2ee.isUnlocked) {
+  if (!e2ee.isUnlocked) {
     return (
       <div className="min-h-screen neural-bg flex items-center justify-center p-6">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md bg-[#1e1f20]/90 backdrop-blur-3xl border border-white/10 rounded-[40px] p-10 shadow-2xl text-center">
@@ -514,15 +290,14 @@ const ChatbotPage = () => {
           )}
         </AnimatePresence>
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex items-center gap-2 px-3 pt-2 flex-wrap">
-<Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs" onClick={customApiKeys.openSetup}>
-            <Key className="h-3.5 w-3.5" />
-            {customApiKeys.hasCustomKey ? "API key connected" : "Add API key"}
-          </Button>
-          <OfflineModeIndicator />
-            <OfflineAIIndicator />
-          </div>
-          <ChatHeader userPlan={userPlan} personality={personality} onPersonalityChange={setPersonality} onToggleSidebar={() => setShowSidebar(!showSidebar)} onExport={() => {}} onManageSubscription={() => {}} onSignOut={signOut} onOpenAnalytics={() => setShowAnalytics(true)} onOpenDeepResearch={() => setShowDeepResearch(true)} onOpenImageGenerator={() => setShowImageGenerator(true)} onOpenShadowTalkLive={() => setShowShadowTalkLive(true)} onOpenBrowser={() => setShowShadowBrowser(true)} aiProvider={aiProvider} onProviderChange={handleProviderChange} maxChats="∞" dailyChats={dailyChats} />
+          <ChatHeader userPlan={userPlan} personality={personality} onPersonalityChange={setPersonality} onToggleSidebar={() => setShowSidebar(!showSidebar)} onExport={() => setShowExportDialog(true)} onManageSubscription={() => navigate("/billing")} onSignOut={signOut} onOpenAnalytics={() => setShowAnalytics(true)} onOpenDeepResearch={() => setShowDeepResearch(true)} onOpenImageGenerator={() => setShowImageGenerator(true)} onOpenShadowTalkLive={() => {
+            if (!voiceLimits.canStart) {
+              toast({ title: "Voice limit reached", description: "Upgrade or try again tomorrow.", variant: "destructive" });
+              return;
+            }
+            voiceLimits.trackSession();
+            setShowShadowTalkLive(true);
+          }} onOpenBrowser={() => setShowShadowBrowser(true)} aiProvider={aiProvider} onProviderChange={setAiProvider} maxChats="∞" dailyChats={dailyChats} />
           <div className={`flex-1 overflow-hidden relative flex flex-col ${isEmptyChat ? "justify-center" : ""}`}>
             <AnimatePresence mode="wait">
               {isEmptyChat ? (
@@ -544,43 +319,12 @@ const ChatbotPage = () => {
       </div>
       {showImageGenerator && <ImageGenerator onClose={() => setShowImageGenerator(false)} onImageGenerated={(url) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: '🎨 Generated image', timestamp: new Date(), imageUrl: url }])} />}
       {showDeepResearch && <DeepResearchPanel isOpen={showDeepResearch} onClose={() => setShowDeepResearch(false)} onInsertToChat={(c) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: c, timestamp: new Date() }])} />}
-      {showDocumentGenerator && (
-        <DocumentGenerator
-          isOpen={showDocumentGenerator}
-          onClose={() => { setShowDocumentGenerator(false); setDocumentAutoGenerate(false); }}
-          initialPrompt={documentStudioPrompt}
-          initialDocType={documentStudioType}
-          autoGenerate={documentAutoGenerate}
-          onDocumentGenerated={(content) => {
-            setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content, timestamp: new Date() }]);
-            saveMessage(content, "assistant");
-          }}
-        />
-      )}
-      {showPresentationStudio && (
-        <PresentationStudio
-          isOpen={showPresentationStudio}
-          onClose={() => { setShowPresentationStudio(false); setPresentationAutoGenerate(false); }}
-          initialTopic={presentationStudioTopic}
-          initialMode={presentationStudioMode}
-          autoGenerate={presentationAutoGenerate}
-        />
-      )}
-      <CustomApiKeysDialog
-        open={customApiKeys.showSetupDialog}
-        onOpenChange={customApiKeys.setShowSetupDialog}
-        config={customApiKeys.config}
-        onSave={customApiKeys.saveKeys}
-        onUsePlatformDefault={customApiKeys.usePlatformDefault}
-        onDismiss={customApiKeys.dismissSetup}
-      />
-      <CommandPalette
-        open={showCommandPalette}
-        onOpenChange={setShowCommandPalette}
-        onAction={(action) => {
-          if (action === "document") openDocumentStudio("", undefined, false);
-          if (action === "presentation" || action === "presentations") openPresentationStudio("", "adaptive", false);
-        }}
+      <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} onAction={() => {}} />
+      <ShareDialog
+        isOpen={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        messages={messages}
+        conversationTitle={conversations.find((c) => c.id === currentConversationId)?.title}
       />
     </motion.div>
   );

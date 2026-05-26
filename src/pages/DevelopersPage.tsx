@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Code, Cpu, Shield, Zap, Terminal, Key, Globe, ArrowRight } from "lucide-react";
+import { Code, Cpu, Shield, Zap, Terminal, Key, Globe, ArrowRight, Construction } from "lucide-react";
+import { PRIVACY_COPY } from "@/lib/productClaims";
 import { useNavigate } from "react-router-dom";
 
 const codeExamples = {
@@ -22,7 +23,7 @@ const response = await shadow.chat({
   messages: [
     { role: 'user', content: 'Analyze Q3 revenue trends' }
   ],
-  privacy: 'sovereign', // data never leaves device
+  privacy: 'sovereign', // optional on-device path when SDK ships
 });
 
 console.log(response.content);`,
@@ -57,7 +58,7 @@ await agent.run({
 
 const sdkFeatures = [
   { icon: Cpu, title: "On-Device Inference", description: "Run 7B+ models locally via WebGPU. Zero cloud dependency." },
-  { icon: Shield, title: "Sovereign Privacy", description: "E2E encrypted. Data never leaves the user's device." },
+  { icon: Shield, title: "Sovereign Privacy", description: PRIVACY_COPY.vault },
   { icon: Zap, title: "Hybrid Mode", description: "Automatic fallback between local and cloud inference." },
   { icon: Globe, title: "Edge-First", description: "Optimized for low-latency, offline-capable applications." },
   { icon: Terminal, title: "Agent Framework", description: "Build autonomous agents with built-in tool orchestration." },
@@ -73,9 +74,9 @@ const DevelopersPage = () => {
       <div className="container mx-auto px-4 pt-24 pb-16">
         {/* Hero */}
         <div className="text-center mb-16">
-          <Badge variant="outline" className="mb-4">
-            <Code className="h-3.5 w-3.5 mr-1.5" />
-            Shadow SDK
+          <Badge variant="outline" className="mb-4 border-amber-500/40 text-amber-600 dark:text-amber-400">
+            <Construction className="h-3.5 w-3.5 mr-1.5" />
+            Shadow SDK — Roadmap (preview docs)
           </Badge>
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
             The <span className="gradient-text">"Intel Inside"</span> for On-Device AI
