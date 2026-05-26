@@ -55,3 +55,9 @@ project_id = "axsudmhjpfzffcicfvuj"
     verify_jwt = false
   [functions.generate-blog]
     verify_jwt = false
+  [functions.elevenlabs-tts]
+    verify_jwt = false
+  [functions.elevenlabs-audio]
+    verify_jwt = false
+  [functions.elevenlabs-conversation-token]
+    verify_jwt = false

@@ -289,43 +289,30 @@
    }, []);
    
    // Speak using ElevenLabs TTS
-   const speak = useCallback(async (text: string, voiceId?: string): Promise<void> => {
-     try {
-       const response = await fetch(
-         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-         {
-           method: 'POST',
-           headers: {
-             'Content-Type': 'application/json',
-             'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
-           },
-           body: JSON.stringify({
-             text,
-             voiceId: voiceId || state.currentPersonality.voiceSettings.voiceId
-           })
-         }
-       );
-       
-       if (!response.ok) {
-         throw new Error('TTS failed');
-       }
-       
-       const data = await response.json();
-       const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
-       
-       if (audioRef.current) {
-         audioRef.current.pause();
-       }
-       
-       audioRef.current = new Audio(audioUrl);
-       await audioRef.current.play();
-       
-       setState(prev => ({ ...prev, lastSpokenAt: Date.now() }));
-     } catch (error) {
-       console.error('Speech synthesis failed:', error);
-     }
-   }, [state.currentPersonality]);
+  const speak = useCallback(async (text: string, voiceId?: string): Promise<void> => {
+    try {
+      const { fetchElevenLabsSpeech } = await import("@/lib/elevenlabsTts");
+      const result = await fetchElevenLabsSpeech({
+        text,
+        voiceId: voiceId || state.currentPersonality.voiceSettings.voiceId,
+      });
+
+      if (!result.ok || !result.audio) {
+        console.warn("Speech synthesis skipped:", result.error);
+        return;
+      }
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      audioRef.current = result.audio;
+      await audioRef.current.play();
+      setState((prev) => ({ ...prev, lastSpokenAt: Date.now() }));
+    } catch (error) {
+      console.error("Speech synthesis failed:", error);
+    }
+  }, [state.currentPersonality]);
    
    // Cleanup on unmount
    useEffect(() => {
