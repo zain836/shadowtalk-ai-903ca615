@@ -32,14 +32,64 @@ export const useE2EE = () => {
     keyFingerprint: localStorage.getItem('shadowtalk_e2e_fingerprint'),
   });
 
-  // Initialize vault salt if it doesn't exist
+  const persistSessionKey = useCallback(async (key: CryptoKey) => {
+    try {
+      const raw = await crypto.subtle.exportKey("raw", key);
+      sessionStorage.setItem(
+        "shadowtalk_e2e_key",
+        arrayToBase64(new Uint8Array(raw))
+      );
+      sessionStorage.setItem("shadowtalk_e2e_active", "true");
+    } catch (e) {
+      console.warn("[E2EE] Could not persist session key:", e);
+    }
+  }, []);
+
+  const clearSessionKey = useCallback(() => {
+    sessionStorage.removeItem("shadowtalk_e2e_key");
+    sessionStorage.removeItem("shadowtalk_e2e_active");
+  }, []);
+
+  const tryRestoreSession = useCallback(async (salt: string) => {
+    const stored = sessionStorage.getItem("shadowtalk_e2e_key");
+    if (!stored || sessionStorage.getItem("shadowtalk_e2e_active") !== "true") return false;
+    try {
+      const raw = base64ToArray(stored);
+      const key = await crypto.subtle.importKey(
+        "raw",
+        raw,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+      const fingerprint = localStorage.getItem("shadowtalk_e2e_fingerprint");
+      setState((prev) => ({
+        ...prev,
+        isUnlocked: true,
+        masterKey: key,
+        masterSalt: salt,
+        keyFingerprint: fingerprint,
+      }));
+      return true;
+    } catch (e) {
+      console.warn("[E2EE] Session restore failed:", e);
+      clearSessionKey();
+      return false;
+    }
+  }, [clearSessionKey]);
+
+  // Initialize vault salt if it doesn't exist; restore session key when possible
   useEffect(() => {
     if (!state.masterSalt) {
       const newSalt = arrayToBase64(generateSalt());
-      localStorage.setItem('shadowtalk_e2e_salt', newSalt);
-      setState(prev => ({ ...prev, masterSalt: newSalt }));
+      localStorage.setItem("shadowtalk_e2e_salt", newSalt);
+      setState((prev) => ({ ...prev, masterSalt: newSalt }));
+      return;
     }
-  }, [state.masterSalt]);
+    if (!state.isUnlocked) {
+      void tryRestoreSession(state.masterSalt);
+    }
+  }, [state.masterSalt, state.isUnlocked, tryRestoreSession]);
 
   /**
    * Unlock the E2EE engine with the user's master passphrase

@@ -28,6 +28,7 @@ export interface RunChatTurnParams {
   attachment?: { type: string; data: string; mimeType: string };
   onMessagesUpdate: (updater: (prev: ChatToolRouterMessage[]) => ChatToolRouterMessage[]) => void;
   saveAssistant: (content: string) => Promise<void>;
+  signal?: AbortSignal;
 }
 
 export function useChatToolRouter(handlers: Parameters<typeof useShadowToolBridge>[0]) {
@@ -40,16 +41,18 @@ export function useChatToolRouter(handlers: Parameters<typeof useShadowToolBridg
       chatMode: string,
       bodyExtras: Record<string, unknown>,
       onMessagesUpdate: RunChatTurnParams["onMessagesUpdate"],
-      saveAssistant: (content: string) => Promise<void>
+      saveAssistant: (content: string) => Promise<void>,
+      signal?: AbortSignal
     ) => {
       const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       const aiMessageId = crypto.randomUUID();
 
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           messages: chatMessages,
@@ -57,9 +60,20 @@ export function useChatToolRouter(handlers: Parameters<typeof useShadowToolBridg
           mode: chatMode,
           ...bodyExtras,
         }),
+        signal,
       });
 
-      if (!resp.ok) throw new Error("Chat request failed");
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => "");
+        let msg = `Chat request failed (${resp.status})`;
+        try {
+          const parsed = JSON.parse(errText) as { error?: string };
+          if (parsed.error) msg = parsed.error;
+        } catch {
+          if (errText) msg = errText.slice(0, 200);
+        }
+        throw new Error(msg);
+      }
 
       const reader = resp.body?.getReader();
       const decoder = new TextDecoder();
@@ -108,7 +122,7 @@ export function useChatToolRouter(handlers: Parameters<typeof useShadowToolBridg
 
   const runChatTurn = useCallback(
     async (params: RunChatTurnParams) => {
-      const { msgContent, messages, personality, chatMode, attachment, onMessagesUpdate, saveAssistant } =
+      const { msgContent, messages, personality, chatMode, attachment, onMessagesUpdate, saveAssistant, signal } =
         params;
 
       if (
@@ -182,7 +196,7 @@ export function useChatToolRouter(handlers: Parameters<typeof useShadowToolBridg
         ]);
       }
 
-      await streamChat(chatMessages, personality, chatMode, bodyExtras, onMessagesUpdate, saveAssistant);
+      await streamChat(chatMessages, personality, chatMode, bodyExtras, onMessagesUpdate, saveAssistant, signal);
     },
     [streamChat, toolBridge]
   );

@@ -18,71 +18,48 @@ import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useUsageTracking, type QueryCategory } from "@/hooks/useUsageTracking";
 import { useOfflineAuth } from "@/hooks/useOfflineAuth";
-import { useOfflineChatHistory } from "@/hooks/useOfflineChatHistory";
 import { useGeoLocation } from "@/hooks/useGeoLocation";
-import { useGuestUsage, GUEST_LIMITS } from "@/hooks/useGuestUsage";
 import { useChatToolRouter } from "@/hooks/useChatToolRouter";
+import { useChatConversations, type ChatMessageRow } from "@/hooks/useChatConversations";
 import { AnalyticsDashboard } from "@/components/chat/AnalyticsDashboard";
 import { ShadowBrowser } from "@/components/chat/ShadowBrowser";
 import { ShadowTalkLive } from "@/components/chat/ShadowTalkLive";
 import { CodeCanvas } from "@/components/chat/CodeCanvas";
 import { useE2EE } from "@/hooks/useE2EE";
-import { Shield, Lock, Key, Loader2, Sparkles } from "lucide-react";
-import { useShadowMemoryContext } from "@/contexts/ShadowMemoryContext";
-import { useIntelligenceHub } from "@/hooks/useIntelligenceHub";
-import { useGemmaOffline } from "@/hooks/useGemmaOffline";
-import { useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
+import { Shield, Lock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Types
-interface Message { 
-  id: string; 
-  type: "user" | "ai"; 
-  content: string; 
-  timestamp: Date;
-  attachment?: { type: 'image' | 'file'; data: string; name: string; mimeType: string };
-  imageUrl?: string;
-  toolExecution?: {
-    tool: string;
-    status: "pending" | "running" | "complete" | "error" | "confirm";
-    params?: Record<string, string>;
-    result?: string;
-  };
-}
+type Message = ChatMessageRow;
 type Conversation = { id: string; title: string; created_at: string };
 type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive" | "spicy";
 
 function chatModeToCategory(mode: ChatMode): QueryCategory {
   const map: Partial<Record<ChatMode, QueryCategory>> = {
-    general: "general",
-    code: "code",
-    translate: "translate",
-    summarize: "summarize",
-    debug: "debug",
-    brainstorm: "brainstorm",
-    image: "image",
-    explain: "explain",
-    creative: "creative",
-    music: "music",
-    research: "search",
+    general: "general", code: "code", translate: "translate", summarize: "summarize",
+    debug: "debug", brainstorm: "brainstorm", image: "image", explain: "explain",
+    creative: "creative", music: "music", research: "search",
   };
   return map[mode] || "general";
 }
+
+const WELCOME = "👋 Welcome back! Your neural workspace is ready. Ask anything or say \"what tools do you have?\"";
 
 const ChatbotPage = () => {
   const navigate = useNavigate();
   const { user, userPlan, signOut, checkSubscription, isOffline } = useAuth();
   const { toast } = useToast();
   const e2ee = useE2EE();
-  
-  // Hooks
-  const { checkAccess, isElite } = useFeatureGating();
+  const { getOfflineSession } = useOfflineAuth();
+  const offlineSession = getOfflineSession();
+
+  const { isElite } = useFeatureGating();
   const { requestPermission } = usePushNotifications();
   const { trackChatMessage, trackConversationCreated, trackImageGeneration } = useUsageTracking();
-  const { getOfflineSession } = useOfflineAuth();
-  const gemmaOffline = useGemmaOffline();
-  
-  // State
+
+  const chatDb = useChatConversations(user?.id, e2ee, {
+    onConversationCreated: () => trackConversationCreated(),
+  });
+
   const [e2eePassphrase, setE2EEPassphrase] = useState("");
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [message, setMessage] = useState("");
@@ -98,9 +75,7 @@ const ChatbotPage = () => {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<{ type: 'image' | 'file'; data: string; name: string; mimeType: string } | null>(null);
-  
-  // Modals
+  const [selectedFile, setSelectedFile] = useState<{ type: "image" | "file"; data: string; name: string; mimeType: string } | null>(null);
   const [showImageGenerator, setShowImageGenerator] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showDeepResearch, setShowDeepResearch] = useState(false);
@@ -113,6 +88,7 @@ const ChatbotPage = () => {
   const [deepResearchQuery, setDeepResearchQuery] = useState("");
   const [deepResearchAuto, setDeepResearchAuto] = useState(false);
   const [browserInitialUrl, setBrowserInitialUrl] = useState<string | undefined>();
+  const [isBootstrapping, setIsBootstrapping] = useState(false);
 
   const chatRouter = useChatToolRouter({
     openImageGenerator: (prompt, autoGenerate) => {
@@ -138,152 +114,158 @@ const ChatbotPage = () => {
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const currentConversationIdRef = useRef<string | null>(null);
+  currentConversationIdRef.current = currentConversationId;
 
   useGeoLocation();
 
-  useEffect(() => {
-    const offlineSession = getOfflineSession();
-    if ((user || offlineSession) && e2ee.isUnlocked) {
-      loadConversations();
-      checkSubscription();
+  const openConversation = useCallback(
+    async (conversationId: string) => {
+      setCurrentConversationId(conversationId);
+      const loaded = await chatDb.loadMessages(conversationId);
+      setMessages(
+        loaded.length > 0
+          ? loaded
+          : [{ id: "welcome", type: "ai", content: WELCOME, timestamp: new Date() }]
+      );
+    },
+    [chatDb]
+  );
+
+  const startNewChat = useCallback(async () => {
+    const id = await chatDb.createConversation("New Chat");
+    if (!id) return;
+    const conv = { id, title: "New Chat", created_at: new Date().toISOString() };
+    setConversations((prev) => [conv, ...prev.filter((c) => c.id !== id)]);
+    setCurrentConversationId(id);
+    setMessages([{ id: "welcome", type: "ai", content: WELCOME, timestamp: new Date() }]);
+  }, [chatDb]);
+
+  const bootstrapChat = useCallback(async () => {
+    if (!user?.id || !e2ee.isUnlocked) return;
+    setIsBootstrapping(true);
+    try {
+      const list = await chatDb.loadConversations();
+      setConversations(list);
+      if (list.length > 0) {
+        await openConversation(list[0].id);
+      } else {
+        await startNewChat();
+      }
+      await checkSubscription();
       if (isElite) requestPermission();
-    } else if (!user && !offlineSession && !isOffline) {
-      const guestConvId = 'guest-' + Date.now();
-      setCurrentConversationId(guestConvId);
-      setMessages([{ 
-        id: 'welcome', 
-        type: 'ai', 
-        content: `👋 Welcome to ShadowTalk AI! Your neural workspace is ready for guest access.`, 
-        timestamp: new Date() 
-      }]);
-      setConversations([{ id: guestConvId, title: 'Guest Conversation', created_at: new Date().toISOString() }]);
+    } finally {
+      setIsBootstrapping(false);
     }
-  }, [user, e2ee.isUnlocked]);
+  }, [user?.id, e2ee.isUnlocked, chatDb, openConversation, startNewChat, checkSubscription, isElite, requestPermission]);
+
+  useEffect(() => {
+    if (user && e2ee.isUnlocked) {
+      void bootstrapChat();
+    }
+  }, [user?.id, e2ee.isUnlocked]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const loadConversations = async () => {
-    if (!user || !e2ee.isUnlocked) return;
-    const { data, error } = await supabase
-      .from('conversations')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('updated_at', { ascending: false });
-    
-    if (data && !error) {
-      const decryptedData = await Promise.all(data.map(async (c) => {
-        let title = c.title || 'Untitled';
-        if (e2ee.isEncrypted(title)) {
-          const unwrapped = e2ee.unwrapEncrypted(title);
-          if (unwrapped) {
-            const decrypted = await e2ee.decryptData(unwrapped.data, unwrapped.iv);
-            title = decrypted || 'Encrypted Chat';
-          }
-        }
-        return { ...c, title };
-      }));
-      setConversations(decryptedData);
-      if (decryptedData.length > 0 && !currentConversationId) loadConversation(decryptedData[0].id);
+  const ensureConversation = useCallback(async (): Promise<string | null> => {
+    if (currentConversationIdRef.current) return currentConversationIdRef.current;
+    const id = await chatDb.createConversation("New Chat");
+    if (!id) return null;
+    const conv = { id, title: "New Chat", created_at: new Date().toISOString() };
+    setConversations((prev) => [conv, ...prev]);
+    setCurrentConversationId(id);
+    if (messages.length === 0) {
+      setMessages([{ id: "welcome", type: "ai", content: WELCOME, timestamp: new Date() }]);
     }
-  };
+    return id;
+  }, [chatDb, messages.length]);
 
-  const loadConversation = async (conversationId: string) => {
-    if (!e2ee.isUnlocked) return;
-    setCurrentConversationId(conversationId);
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true });
-    
-    if (data && !error) {
-      const loadedMessages: Message[] = await Promise.all(data.map(async (m) => {
-        let content = m.content;
-        if (e2ee.isEncrypted(content)) {
-          const unwrapped = e2ee.unwrapEncrypted(content);
-          if (unwrapped) content = await e2ee.decryptData(unwrapped.data, unwrapped.iv) || "[DECRYPTION_FAILED]";
-        }
-        return { id: m.id, type: m.role === 'user' ? 'user' : 'ai', content, timestamp: new Date(m.created_at) };
-      }));
-      setMessages(loadedMessages.length === 0 ? [{ id: 'welcome', type: 'ai', content: getWelcomeMessage(), timestamp: new Date() }] : loadedMessages);
-    }
-  };
+  const saveMessage = useCallback(
+    async (content: string, role: "user" | "assistant", isFirstUserMessage: boolean) => {
+      const convId = currentConversationIdRef.current;
+      if (!convId) return;
+      await chatDb.saveMessage(convId, content, role, personality, {
+        updateTitleFromContent: isFirstUserMessage && role === "user",
+      });
+    },
+    [chatDb, personality]
+  );
 
-  const getWelcomeMessage = () => {
-    return "👋 Welcome back! Your connection is fully End-to-End Encrypted.";
-  };
-
-  const saveMessage = async (content: string, role: 'user' | 'assistant') => {
-    if (!user || !currentConversationId || !e2ee.isUnlocked) return null;
-    let contentToSave = content;
-    const encrypted = await e2ee.encryptData(content);
-    if (encrypted) contentToSave = e2ee.wrapEncrypted(encrypted.data, encrypted.iv);
-    
-    const { data } = await supabase
-      .from('messages')
-      .insert({ conversation_id: currentConversationId, user_id: user.id, content: contentToSave, role, personality })
-      .select().single();
-    
-    if (role === 'user' && messages.length <= 1) {
-      const title = content.trim().split(/\s+/).slice(0, 3).join(' ').slice(0, 25);
-      let titleToSave = title;
-      const encryptedTitle = await e2ee.encryptData(title);
-      if (encryptedTitle) titleToSave = e2ee.wrapEncrypted(encryptedTitle.data, encryptedTitle.iv);
-      await supabase.from('conversations').update({ title: titleToSave, updated_at: new Date().toISOString() }).eq('id', currentConversationId);
-      setConversations(prev => prev.map(c => c.id === currentConversationId ? { ...c, title } : c));
-    }
-    return data;
-  };
+  const handleStopGeneration = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsLoading(false);
+  }, []);
 
   const handleSendMessage = async () => {
-    if ((!message.trim() && !selectedFile) || isLoading || !currentConversationId) return;
-    const msgContent = message.trim() || (selectedFile ? "[attachment]" : "");
+    if ((!message.trim() && !selectedFile) || isLoading) return;
+
+    const convId = await ensureConversation();
+    if (!convId) {
+      toast({ title: "Cannot send", description: "Could not start a conversation.", variant: "destructive" });
+      return;
+    }
+
+    const attachmentSnapshot = selectedFile;
+    const msgContent = message.trim() || (attachmentSnapshot ? "[attachment]" : "");
+    const isFirstUserTurn = messages.filter((m) => m.type === "user").length === 0;
+
     const userMessage: Message = {
       id: crypto.randomUUID(),
       type: "user",
       content: msgContent,
       timestamp: new Date(),
-      attachment: selectedFile || undefined,
+      attachment: attachmentSnapshot || undefined,
     };
+
     setMessages((prev) => [...prev, userMessage]);
     setMessage("");
     setSelectedFile(null);
     setIsLoading(true);
-    await saveMessage(msgContent, "user");
+
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    await saveMessage(msgContent, "user", isFirstUserTurn);
     void trackChatMessage(
       chatModeToCategory(chatMode),
       personality,
       msgContent.length,
-      !!selectedFile,
-      selectedFile?.type
+      !!attachmentSnapshot,
+      attachmentSnapshot?.type
     );
 
     try {
       await chatRouter.runChatTurn({
         msgContent,
-        messages,
+        messages: [...messages, userMessage],
         personality,
         chatMode,
-        attachment: selectedFile
-          ? { type: selectedFile.type, data: selectedFile.data, mimeType: selectedFile.mimeType }
+        attachment: attachmentSnapshot
+          ? { type: attachmentSnapshot.type, data: attachmentSnapshot.data, mimeType: attachmentSnapshot.mimeType }
           : undefined,
         onMessagesUpdate: (updater) => setMessages(updater),
-        saveAssistant: (content) => saveMessage(content, "assistant"),
+        saveAssistant: (content) => saveMessage(content, "assistant", false),
+        signal: controller.signal,
       });
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      const errMsg = err instanceof Error ? err.message : "Unknown error";
       setMessages((prev) => [
         ...prev,
         {
           id: crypto.randomUUID(),
           type: "ai",
-          content: "Error connecting to neural host.",
+          content: `⚠️ ${errMsg}`,
           timestamp: new Date(),
         },
       ]);
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -292,67 +274,176 @@ const ChatbotPage = () => {
     setIsUnlocking(true);
     const success = await e2ee.unlock(e2eePassphrase);
     setIsUnlocking(false);
-    if (success) { setE2EEPassphrase(""); loadConversations(); }
+    if (success) {
+      setE2EEPassphrase("");
+      await bootstrapChat();
+    }
   };
 
-  if (!user && !isOffline) { navigate("/auth"); return null; }
+  const handleDeleteConversation = async (id: string) => {
+    const ok = await chatDb.deleteConversation(id);
+    if (!ok) return;
+    const remaining = conversations.filter((c) => c.id !== id);
+    setConversations(remaining);
+    if (currentConversationId === id) {
+      if (remaining.length > 0) await openConversation(remaining[0].id);
+      else await startNewChat();
+    }
+  };
+
+  if (!user && !isOffline && !offlineSession) {
+    navigate("/auth");
+    return null;
+  }
 
   if (!e2ee.isUnlocked) {
+    const isFirstSetup = !e2ee.isVaultConfigured;
     return (
       <div className="min-h-screen neural-bg flex items-center justify-center p-6">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md bg-[#1e1f20]/90 backdrop-blur-3xl border border-white/10 rounded-[40px] p-10 shadow-2xl text-center">
           <div className="mx-auto w-20 h-20 mb-8 bg-gradient-to-br from-blue-500 to-violet-600 rounded-3xl flex items-center justify-center shadow-xl">
             <Lock className="h-10 w-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight mb-4 text-white">Neural Vault Locked</h1>
-          <p className="text-muted-foreground/60 mb-10 leading-relaxed">Enter your Master Passphrase to decrypt your ShadowTalk workspace.</p>
+          <h1 className="text-3xl font-bold tracking-tight mb-4 text-white">
+            {isFirstSetup ? "Create Neural Vault" : "Neural Vault Locked"}
+          </h1>
+          <p className="text-muted-foreground/60 mb-10 leading-relaxed">
+            {isFirstSetup
+              ? "Choose a master passphrase to encrypt your chats. Store it safely — it cannot be recovered."
+              : "Enter your master passphrase to unlock your encrypted workspace."}
+          </p>
           <div className="space-y-4">
-            <input type="password" value={e2eePassphrase} onChange={(e) => setE2EEPassphrase(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUnlockE2EE()} placeholder="Passphrase" className="w-full h-16 bg-white/5 border border-white/10 rounded-[20px] px-6 text-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white font-mono tracking-widest" />
+            <input
+              type="password"
+              value={e2eePassphrase}
+              onChange={(e) => setE2EEPassphrase(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleUnlockE2EE()}
+              placeholder={isFirstSetup ? "Create passphrase" : "Passphrase"}
+              className="w-full h-16 bg-white/5 border border-white/10 rounded-[20px] px-6 text-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white font-mono tracking-widest"
+            />
             <Button onClick={handleUnlockE2EE} disabled={isUnlocking || !e2eePassphrase} className="w-full h-16 rounded-[20px] bg-white text-black hover:bg-white/90 text-lg font-bold">
-              {isUnlocking ? <Loader2 className="h-6 w-6 animate-spin" /> : "Unlock Workspace"}
+              {isUnlocking ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : isFirstSetup ? "Create & Enter Chat" : "Unlock Workspace"}
             </Button>
-            <p className="text-[10px] text-muted-foreground/30 font-bold uppercase tracking-[0.2em] pt-6 flex items-center justify-center gap-2"><Shield className="h-3 w-3" /> E2EE PROTECTED</p>
+            <p className="text-[10px] text-muted-foreground/30 font-bold uppercase tracking-[0.2em] pt-6 flex items-center justify-center gap-2">
+              <Shield className="h-3 w-3" /> E2EE PROTECTED
+            </p>
           </div>
         </motion.div>
       </div>
     );
   }
 
-  const isEmptyChat = messages.length <= 1;
+  if (isBootstrapping) {
+    return (
+      <div className="min-h-screen neural-bg flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-white/60" />
+      </div>
+    );
+  }
+
+  const isEmptyChat = messages.filter((m) => m.id !== "welcome").length === 0;
   const userDisplayName = user?.user_metadata?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "there";
   const userInitials = user?.email ? user.email.charAt(0).toUpperCase() : "G";
+
+  const inputProps = {
+    message,
+    onMessageChange: setMessage,
+    onSend: handleSendMessage,
+    onKeyPress: (e: React.KeyboardEvent) => e.key === "Enter" && !e.shiftKey && handleSendMessage(),
+    isLoading,
+    isListening,
+    onToggleVoice: () => {},
+    onOpenImageGenerator: () => setShowImageGenerator(true),
+    onStopGeneration: handleStopGeneration,
+    selectedFile,
+    onFileSelect: setSelectedFile,
+    chatMode,
+    onModeChange: setChatMode,
+    personality,
+  };
 
   return (
     <motion.div className="min-h-screen neural-bg relative overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <AnimatePresence>{isLoading && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="neural-thinking-glow" />}</AnimatePresence>
       <div className="flex h-screen w-full relative z-10">
-        <ChatIconRail userInitials={userInitials} onNewChat={() => { setCurrentConversationId(null); setMessages([]); }} onOpenHistory={() => setShowSidebar(true)} onOpenSettings={() => navigate("/profile")} />
+        <ChatIconRail
+          userInitials={userInitials}
+          onNewChat={() => void startNewChat()}
+          onOpenHistory={() => setShowSidebar(true)}
+          onOpenSettings={() => navigate("/profile")}
+        />
         <AnimatePresence>
           {showSidebar && (
             <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} className="fixed left-0 top-0 bottom-0 z-50 md:left-[72px]">
-              <ConversationSidebar conversations={conversations} currentConversationId={currentConversationId} onCreateNew={() => { setCurrentConversationId(null); setMessages([]); setShowSidebar(false); }} onSelect={(id) => { loadConversation(id); setShowSidebar(false); }} onDelete={() => {}} onClearAll={() => {}} />
+              <ConversationSidebar
+                conversations={conversations}
+                currentConversationId={currentConversationId}
+                onCreateNew={() => { void startNewChat(); setShowSidebar(false); }}
+                onSelect={(id) => { void openConversation(id); setShowSidebar(false); }}
+                onDelete={(id) => void handleDeleteConversation(id)}
+                onClearAll={async () => {
+                  for (const c of [...conversations]) await handleDeleteConversation(c.id);
+                }}
+              />
             </motion.div>
           )}
         </AnimatePresence>
         <div className="flex-1 flex flex-col min-w-0">
-          <ChatHeader userPlan={userPlan} personality={personality} onPersonalityChange={setPersonality} onToggleSidebar={() => setShowSidebar(!showSidebar)} onExport={() => {}} onManageSubscription={() => {}} onSignOut={signOut} onOpenAnalytics={() => setShowAnalytics(true)} onOpenDeepResearch={() => setShowDeepResearch(true)} onOpenImageGenerator={() => setShowImageGenerator(true)} onOpenShadowTalkLive={() => setShowShadowTalkLive(true)} onOpenBrowser={() => setShowShadowBrowser(true)} aiProvider={aiProvider} onProviderChange={setAiProvider} maxChats="∞" dailyChats={dailyChats} />
+          <ChatHeader
+            userPlan={userPlan}
+            personality={personality}
+            onPersonalityChange={setPersonality}
+            onToggleSidebar={() => setShowSidebar(!showSidebar)}
+            onExport={() => {}}
+            onManageSubscription={() => navigate("/pricing")}
+            onSignOut={signOut}
+            onOpenAnalytics={() => setShowAnalytics(true)}
+            onOpenDeepResearch={() => setShowDeepResearch(true)}
+            onOpenImageGenerator={() => setShowImageGenerator(true)}
+            onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
+            onOpenBrowser={() => setShowShadowBrowser(true)}
+            aiProvider={aiProvider}
+            onProviderChange={setAiProvider}
+            maxChats="∞"
+            dailyChats={dailyChats}
+          />
           <div className={`flex-1 overflow-hidden relative flex flex-col ${isEmptyChat ? "justify-center" : ""}`}>
             <AnimatePresence mode="wait">
               {isEmptyChat ? (
                 <motion.div key="home" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="home-centered-content">
                   <h1 className="text-5xl md:text-[4.5rem] font-bold text-white tracking-tight mb-8">Hello, {userDisplayName}.</h1>
                   <div className="w-full max-w-2xl px-4">
-                    <ChatInput message={message} onMessageChange={setMessage} onSend={handleSendMessage} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} isLoading={isLoading} isListening={isListening} onToggleVoice={() => {}} onOpenImageGenerator={() => setShowImageGenerator(true)} onStopGeneration={() => {}} selectedFile={selectedFile} onFileSelect={setSelectedFile} chatMode={chatMode} onModeChange={setChatMode} personality={personality} />
+                    <ChatInput {...inputProps} />
                   </div>
                 </motion.div>
               ) : (
                 <div className="h-full flex flex-col overflow-hidden">
-                  <ChatMessages messages={messages} isLoading={isLoading} showSuggestions={false} personality={personality} userPlan={userPlan} speakingMessageId={speakingMessageId} isSpeaking={isSpeaking} onSelectPrompt={setMessage} onEdit={() => {}} onRegenerate={() => {}} onTextToSpeech={() => {}} onOpenCodeCanvas={() => setShowCodeCanvas(true)} onOpenIDE={() => {}} onOpenInBrowser={(url) => { setBrowserInitialUrl(url); setShowShadowBrowser(true); }} messagesEndRef={messagesEndRef} />
+                  <ChatMessages
+                    messages={messages}
+                    isLoading={isLoading}
+                    showSuggestions={false}
+                    personality={personality}
+                    userPlan={userPlan}
+                    speakingMessageId={speakingMessageId}
+                    isSpeaking={isSpeaking}
+                    onSelectPrompt={setMessage}
+                    onEdit={() => {}}
+                    onRegenerate={() => {}}
+                    onTextToSpeech={() => {}}
+                    onOpenCodeCanvas={() => setShowCodeCanvas(true)}
+                    onOpenIDE={() => {}}
+                    onOpenInBrowser={(url) => { setBrowserInitialUrl(url); setShowShadowBrowser(true); }}
+                    messagesEndRef={messagesEndRef}
+                  />
                 </div>
               )}
             </AnimatePresence>
           </div>
-          {!isEmptyChat && <div className="p-4 max-w-4xl mx-auto w-full"><ChatInput message={message} onMessageChange={setMessage} onSend={handleSendMessage} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} isLoading={isLoading} isListening={isListening} onToggleVoice={() => {}} onOpenImageGenerator={() => setShowImageGenerator(true)} onStopGeneration={() => {}} selectedFile={selectedFile} onFileSelect={setSelectedFile} chatMode={chatMode} onModeChange={setChatMode} personality={personality} /></div>}
+          {!isEmptyChat && (
+            <div className="p-4 max-w-4xl mx-auto w-full">
+              <ChatInput {...inputProps} />
+            </div>
+          )}
         </div>
       </div>
       {showImageGenerator && (
@@ -419,4 +510,5 @@ const ChatbotPage = () => {
     </motion.div>
   );
 };
+
 export default ChatbotPage;
