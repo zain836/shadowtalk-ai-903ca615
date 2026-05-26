@@ -81,6 +81,7 @@ const ShadowMemoryTracker = lazy(() => import("./components/ShadowMemoryTracker"
 const JourneyTracker = lazy(() => import("./components/JourneyTracker").then(m => ({ default: m.JourneyTracker })));
 const VoiceCommandSystem = lazy(() => import("./components/VoiceCommandSystem"));
 import { useReferralCapture } from "./hooks/useReferralTracking";
+import { UpdateNotificationProvider } from "@/components/notifications/UpdateNotificationProvider";
 // ElevenLabs Agent ID is now configured via the backend secret ELEVENLABS_AGENT_ID
 
  // Configure React Query with production-ready settings
@@ -220,6 +221,7 @@ const App = () => {
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <TooltipProvider>
             <AuthProvider>
+              <UpdateNotificationProvider />
               <SecurityProvider>
               <ShadowMemoryProvider>
               <CommandPaletteContext.Provider value={{ open: () => setCmdOpen(true) }}>

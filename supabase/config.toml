@@ -9,6 +9,8 @@ project_id = "axsudmhjpfzffcicfvuj"
     verify_jwt = false
   [functions.auto-broadcast]
     verify_jwt = false
+  [functions.notify-app-update]
+    verify_jwt = false
   [functions.chat]
     verify_jwt = false
   [functions.gemini-key-alert]

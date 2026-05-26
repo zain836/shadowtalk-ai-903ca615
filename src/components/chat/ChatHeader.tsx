@@ -34,6 +34,7 @@ import {
   DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { ProviderSelector, AIProvider } from "./ProviderSelector";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { motion } from "framer-motion";
 
 type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive" | "spicy";
@@ -212,6 +213,7 @@ export const ChatHeader = ({
             >
               <Menu className="h-5 w-5" />
             </Button>
+            <NotificationBell iconClassName="h-4 w-4 text-white/80" />
             <ProviderSelector provider={aiProvider} onProviderChange={onProviderChange} />
             <Button
               variant="ghost"

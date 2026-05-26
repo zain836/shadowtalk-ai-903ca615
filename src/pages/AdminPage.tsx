@@ -46,6 +46,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
+  History,
   type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
