@@ -24,7 +24,7 @@ import { useGuestUsage, GUEST_LIMITS } from "@/hooks/useGuestUsage";
 import { useToolOrchestrator } from "@/hooks/useToolOrchestrator";
 import { useE2EE } from "@/hooks/useE2EE";
 import { Shield, Lock, Key, Loader2, Sparkles } from "lucide-react";
-import { useShadowMemoryContext } from "@/contexts/ShadowMemoryContext";
+import { useAutoImproveContext } from "@/contexts/AutoImproveContext";
 import { useIntelligenceHub } from "@/hooks/useIntelligenceHub";
 import { useGemmaOffline } from "@/hooks/useGemmaOffline";
 import { useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
@@ -57,7 +57,8 @@ const ChatbotPage = () => {
   const { getOfflineSession } = useOfflineAuth();
   const toolOrchestrator = useToolOrchestrator();
   const gemmaOffline = useGemmaOffline();
-  
+  const autoImprove = useAutoImproveContext();
+
   // State
   const [e2eePassphrase, setE2EEPassphrase] = useState("");
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -111,6 +112,25 @@ const ChatbotPage = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (!e2ee.isUnlocked) return;
+    autoImprove.applyChatDefaultsOnce((defaults) => {
+      if (defaults.mode) setChatMode(defaults.mode as ChatMode);
+      if (defaults.personality) setPersonality(defaults.personality as Personality);
+    });
+  }, [e2ee.isUnlocked, autoImprove]);
+
+  const handleModeChange = (mode: ChatMode) => {
+    setChatMode(mode);
+    void autoImprove.capture("mode_change", { mode });
+  };
+
+  const handlePersonalityChange = (p: Personality) => {
+    setPersonality(p);
+    void autoImprove.capture("personality_change", { personality: p });
+  };
+
 
   const loadConversations = async () => {
     if (!user || !e2ee.isUnlocked) return;
@@ -192,6 +212,7 @@ const ChatbotPage = () => {
     setMessages(prev => [...prev, userMessage]);
     setMessage(""); setSelectedFile(null); setIsLoading(true);
     await saveMessage(msgContent, 'user');
+    void autoImprove.captureChatSend(msgContent, chatMode, personality, Boolean(selectedFile));
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -201,7 +222,12 @@ const ChatbotPage = () => {
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ messages: chatMessages, personality, mode: chatMode }),
+        body: JSON.stringify({
+          messages: chatMessages,
+          personality,
+          mode: chatMode,
+          improvementHint: autoImprove.getChatDefaults()?.systemHintAddon,
+        }),
       });
 
       if (!resp.ok) throw new Error("Failed");
@@ -286,14 +312,14 @@ const ChatbotPage = () => {
           )}
         </AnimatePresence>
         <div className="flex-1 flex flex-col min-w-0">
-          <ChatHeader userPlan={userPlan} personality={personality} onPersonalityChange={setPersonality} onToggleSidebar={() => setShowSidebar(!showSidebar)} onExport={() => {}} onManageSubscription={() => {}} onSignOut={signOut} onOpenAnalytics={() => setShowAnalytics(true)} onOpenDeepResearch={() => setShowDeepResearch(true)} onOpenImageGenerator={() => setShowImageGenerator(true)} onOpenShadowTalkLive={() => setShowShadowTalkLive(true)} onOpenBrowser={() => setShowShadowBrowser(true)} aiProvider={aiProvider} onProviderChange={setAiProvider} maxChats="∞" dailyChats={dailyChats} />
+          <ChatHeader userPlan={userPlan} personality={personality} onPersonalityChange={handlePersonalityChange} onToggleSidebar={() => setShowSidebar(!showSidebar)} onExport={() => {}} onManageSubscription={() => {}} onSignOut={signOut} onOpenAnalytics={() => setShowAnalytics(true)} onOpenDeepResearch={() => setShowDeepResearch(true)} onOpenImageGenerator={() => setShowImageGenerator(true)} onOpenShadowTalkLive={() => setShowShadowTalkLive(true)} onOpenBrowser={() => setShowShadowBrowser(true)} aiProvider={aiProvider} onProviderChange={setAiProvider} maxChats="∞" dailyChats={dailyChats} />
           <div className={`flex-1 overflow-hidden relative flex flex-col ${isEmptyChat ? "justify-center" : ""}`}>
             <AnimatePresence mode="wait">
               {isEmptyChat ? (
                 <motion.div key="home" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="home-centered-content">
                   <h1 className="text-5xl md:text-[4.5rem] font-bold text-white tracking-tight mb-8">Hello, {userDisplayName}.</h1>
                   <div className="w-full max-w-2xl px-4">
-                    <ChatInput message={message} onMessageChange={setMessage} onSend={handleSendMessage} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} isLoading={isLoading} isListening={isListening} onToggleVoice={() => {}} onOpenImageGenerator={() => setShowImageGenerator(true)} onStopGeneration={() => {}} selectedFile={selectedFile} onFileSelect={setSelectedFile} chatMode={chatMode} onModeChange={setChatMode} personality={personality} />
+                    <ChatInput message={message} onMessageChange={setMessage} onSend={handleSendMessage} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} isLoading={isLoading} isListening={isListening} onToggleVoice={() => {}} onOpenImageGenerator={() => setShowImageGenerator(true)} onStopGeneration={() => {}} selectedFile={selectedFile} onFileSelect={setSelectedFile} chatMode={chatMode} onModeChange={handleModeChange} personality={personality} />
                   </div>
                 </motion.div>
               ) : (
@@ -303,23 +329,12 @@ const ChatbotPage = () => {
               )}
             </AnimatePresence>
           </div>
-          {!isEmptyChat && <div className="p-4 max-w-4xl mx-auto w-full"><ChatInput message={message} onMessageChange={setMessage} onSend={handleSendMessage} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} isLoading={isLoading} isListening={isListening} onToggleVoice={() => {}} onOpenImageGenerator={() => setShowImageGenerator(true)} onStopGeneration={() => {}} selectedFile={selectedFile} onFileSelect={setSelectedFile} chatMode={chatMode} onModeChange={setChatMode} personality={personality} /></div>}
+          {!isEmptyChat && <div className="p-4 max-w-4xl mx-auto w-full"><ChatInput message={message} onMessageChange={setMessage} onSend={handleSendMessage} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} isLoading={isLoading} isListening={isListening} onToggleVoice={() => {}} onOpenImageGenerator={() => setShowImageGenerator(true)} onStopGeneration={() => {}} selectedFile={selectedFile} onFileSelect={setSelectedFile} chatMode={chatMode} onModeChange={handleModeChange} personality={personality} /></div>}
         </div>
       </div>
-      {showImageGenerator && <ImageGenerator onClose={() => setShowImageGenerator(false)} onImageGenerated={(url) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: '🎨 Generated image', timestamp: new Date(), imageUrl: url }])} />}
-      {showDeepResearch && <DeepResearchPanel isOpen={showDeepResearch} onClose={() => setShowDeepResearch(false)} onInsertToChat={(c) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: c, timestamp: new Date() }])} />}
+      {showImageGenerator && <ImageGenerator onClose={() => setShowImageGenerator(false)} onImageGenerated={(url) => { void autoImprove.capture("image_gen", { hasResult: true }); setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: '🎨 Generated image', timestamp: new Date(), imageUrl: url }]); }} />}
+      {showDeepResearch && <DeepResearchPanel isOpen={showDeepResearch} onClose={() => setShowDeepResearch(false)} onInsertToChat={(c) => { void autoImprove.capture("deep_research", { inserted: true }); setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: c, timestamp: new Date() }]); }} />}
       <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} onAction={() => {}} />
-      <MissionControl
-        isOpen={showMissionControl}
-        onClose={() => setShowMissionControl(false)}
-        onMissionComplete={(result) => {
-          setMessages((prev) => [
-            ...prev,
-            { id: crypto.randomUUID(), type: "ai", content: `✅ S.E.E. mission deliverable:\n\n${result}`, timestamp: new Date() },
-          ]);
-          setShowMissionControl(false);
-        }}
-      />
     </motion.div>
   );
 };

@@ -382,7 +382,7 @@ serve(async (req) => {
       messages, personality, generateImage, imagePrompt, imageEdit, originalImage, editPrompt,
       mode, modePrompt, userContext, businessMemory, analyzeTask, getEcoActions, location, securityAudit, 
       webSearch, searchQuery, deepResearch, researchQuery, agentWorkflow, decodeImage, imageToAnalyze,
-      isResearch, industry
+      isResearch, industry, improvementHint
     } = validation.data;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
@@ -1594,6 +1594,10 @@ When a user asks you to write, create, draft, or generate any document (email, a
     
     if (modePrompt && mode !== 'general') {
       systemPrompt += `\n\n## Current Mode: ${mode?.toUpperCase() || 'GENERAL'}\n${modePrompt}`;
+    }
+
+    if (improvementHint && typeof improvementHint === "string" && improvementHint.length <= 500) {
+      systemPrompt += `\n\n## ADAPTIVE LEARNING (from this user's behavior)\n${improvementHint}`;
     }
 
     // === SPRINT 1: USE ROUTER V2 MODEL DECISION ===

@@ -58,6 +58,7 @@ export const ChatRequestSchema = z.object({
   deepResearch: z.boolean().optional(),
   isResearch: z.boolean().optional(), // Flag for research/strategy agent mode
   industry: z.string().max(50).optional(), // Industry specialization context
+  improvementHint: z.string().max(500).optional(), // Client-side adaptive learning hint
   researchQuery: z.string().max(500).optional(),
   decodeImage: z.boolean().optional(),
   imageToAnalyze: z.string().optional(),
