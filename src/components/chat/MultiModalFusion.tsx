@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import {
 import { stringifyChatBody } from "@/lib/chatRequest";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
