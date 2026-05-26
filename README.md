@@ -1,40 +1,58 @@
 # ShadowTalk AI
 
-**ShadowTalk** is a privacy-first, multimodal AI workspace: chat, voice, documents, presentations, code tools, and agent workflows in one app—with optional **offline AI**, **bring-your-own API keys** (BYOK), and encrypted conversations.
+**The AI workspace that doesn’t own you.**
 
-- **Website:** [shadowtalk-ai.com](https://www.shadowtalk-ai.com)
-- **Repository:** [github.com/zain836/shadowtalk-ai-903ca615](https://github.com/zain836/shadowtalk-ai-903ca615)
+Everyone else wants your data, your keys, and your attention. ShadowTalk gives you a full neural command center—chat, voice, documents, decks, agents, and offline intelligence—while **you** stay in control.
 
----
-
-## What is ShadowTalk?
-
-ShadowTalk is built for people who want a capable AI assistant without giving up control of their data or their model provider.
-
-| Capability | Description |
-|------------|-------------|
-| **Neural chat** | Streaming chat with personalities, modes (general, research, code, document, and more), and tool orchestration |
-| **Bring your own key (BYOK)** | Use your own **Google Gemini**, **OpenRouter**, or **Kimi (Moonshot)** API key; keys stay in the browser and are sent only with requests |
-| **Offline mode** | When the network is down, chat can fall back to on-device models (e.g. Gemma via WebGPU) where supported |
-| **Documents & decks** | Kimi-style long-form documents and presentation generation |
-| **Multimodal** | Images, files, voice, deep research, browser tools, and mission-style agents |
-| **Security** | Optional end-to-end encryption (E2EE) for conversations, guest limits, and Supabase-backed auth |
-
-ShadowTalk is **not** a single-model wrapper: the UI routes work to Supabase edge functions, which call the platform gateway or **your** provider when BYOK is configured.
+**[Launch ShadowTalk →](https://www.shadowtalk-ai.com)** · [Repository](https://github.com/zain836/shadowtalk-ai-903ca615)
 
 ---
 
-## Tech stack
+## Why people switch
 
-- **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui, PWA
-- **Backend:** Supabase (Auth, Postgres, Edge Functions)
-- **AI:** Lovable AI gateway (default) or user keys via OpenAI-compatible APIs (Gemini, OpenRouter, Moonshot)
+You’ve tried the big names. You’ve hit the paywalls, the rate limits, the “we updated our policy” emails. ShadowTalk is built for one thing: **make you dangerously productive without selling you out.**
+
+| You get | What that means for you |
+|--------|-------------------------|
+| **One workspace, not ten tabs** | Chat, research, code, images, long-form docs, presentations, and mission-style agents—no tab circus. |
+| **Your API keys, your bill** | Plug in **Gemini**, **OpenRouter**, or **Kimi** and run ShadowTalk on *your* quota. Keys never live on our servers. |
+| **Works when the internet doesn’t** | Offline routing to on-device models where supported—you’re not hostage to a outage banner. |
+| **Privacy that isn’t marketing fluff** | Optional encrypted conversations, guest access, and a stack designed so BYOK stays **yours**. |
+| **Updates that find you** | Ship a release in admin—every user gets notified. You’re not guessing what changed. |
+
+> **Stop renting intelligence.** Own how you work, what you pay, and who sees your prompts.
 
 ---
 
-## Quick start (local)
+## What ShadowTalk actually is
 
-**Requirements:** Node.js 18+ and npm
+ShadowTalk is a **privacy-first, multimodal AI operating layer**—not a thin ChatGPT skin.
+
+- **Neural chat** with personalities, pro modes, and tool orchestration that feels like a team, not a toy.
+- **Bring-your-own-key (BYOK)** so power users and builders aren’t trapped in platform credits.
+- **Document & presentation studio** for client-ready output in minutes, not hours.
+- **Deep research, browser tools, and agent workflows** for people who execute—not just prompt.
+- **Admin control panel** for releases, broadcasts, users, and platform ops—built in, not bolted on.
+
+Under the hood: **React + Supabase edge functions**, routing to the platform gateway or **your** provider when BYOK is on. This repo is the real product—not a demo template.
+
+---
+
+## Built for people who refuse to fall behind
+
+If you’re still copying prompts between five apps, you’re already behind. ShadowTalk compresses the stack:
+
+1. **Sign in** (or try as guest).
+2. **Add your API key** if you want unlimited-style usage on your terms.
+3. **Work in one place**—chat, create, research, present.
+4. **Go offline** when you need to.
+5. **Get pinged** when we ship—so you’re never the last to know.
+
+**[Open the app](https://www.shadowtalk-ai.com/chatbot)** — the workspace is live. The question isn’t whether you need an AI OS. It’s whether you’ll keep funding someone else’s.
+
+---
+
+## For developers & operators
 
 ```bash
 git clone https://github.com/zain836/shadowtalk-ai-903ca615.git
@@ -42,7 +60,7 @@ cd shadowtalk-ai-903ca615
 npm install
 ```
 
-Create a `.env` (or `.env.local`) with:
+`.env` / `.env.local`:
 
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
@@ -51,68 +69,39 @@ VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
 
 ```bash
 npm run dev
+npm run build
 ```
 
-Open the URL Vite prints (usually `http://localhost:5173`).
+| Area | Path |
+|------|------|
+| Admin panel | `/admin` (requires `admin` in `user_roles`) |
+| Edge functions | `supabase/functions/` |
+| Migrations | `supabase/migrations/` |
+| BYOK routing | `supabase/functions/_shared/custom-ai-provider.ts` |
+| Update notifications | `notify-app-update`, `app_updates` table |
 
-### Quality checks before deploy
-
-```bash
-npm run lint    # 0 errors expected
-npm run build   # production bundle
-npm run test    # unit tests (Vitest)
-```
-
----
-
-## Using your own Gemini (or other) API key
-
-1. Open the **Chatbot** page.
-2. Click **Add API key** (or complete the first-run dialog).
-3. Choose **Google Gemini**, paste an [AI Studio](https://aistudio.google.com/apikey) key (`AIza…`), then **Test & save**.
-
-Cloud chat, document revision, and presentation generation will use your key until you switch back to **ShadowTalk platform default**.
-
-> **Note:** Free-tier keys work well for **text chat**. Image generation and some advanced models may hit provider limits or unsupported features.
+**Deploy:** run migrations, deploy `chat`, `notify-app-update`, `assign-admin-role`, and related functions; set `LOVABLE_API_KEY` and integration secrets in Supabase.
 
 ---
 
-## Supabase & edge functions
-
-Apply migrations under `supabase/migrations`, then deploy functions including:
-
-| Function | Purpose |
-|----------|---------|
-| `chat` | Main streaming chat and tools |
-| `document-ai` | Document rewrite / revise |
-| `generate-presentation` | Slide deck generation |
-| `test-custom-ai-key` | Validates BYOK before save |
-
-Set `LOVABLE_API_KEY` (and other secrets) in the Supabase dashboard. BYOK requests still hit your edge functions; the user’s key is forwarded to the chosen provider, not stored server-side.
-
----
-
-## Active development branches
+## Active branches
 
 | Branch | Focus |
 |--------|--------|
-| `main` | Stable baseline |
-| `cursor/custom-api-keys-7adb` | BYOK (Gemini, OpenRouter, Kimi) |
-| `cursor/offline-mode-7adb` | Offline / hybrid chat routing |
-| `cursor/remove-popups-tutorials-7adb` | Cleaner UX (no boot/onboarding popups) |
+| `main` | Production baseline |
+| `cursor/custom-api-keys-7adb` | BYOK (Gemini / OpenRouter / Kimi) |
+| `cursor/update-notifications-7adb` | Auto update alerts + unified admin panel |
 
-Open pull requests on GitHub for the latest merge status.
-
----
-
-## Contributing
-
-1. Branch from `main` (use the `cursor/<feature>-7adb` naming convention for agent work).
-2. Run `npm run lint` and `npm run build`.
-3. Open a PR with a clear summary and deploy notes for any new edge functions.
+Open [Pull Requests](https://github.com/zain836/shadowtalk-ai-903ca615/pulls) for merge status.
 
 ---
 
-## License
+## The bottom line
 
-Private project. See repository owner for terms of use and distribution.
+Legacy AI tools were built to **capture** you. ShadowTalk was built so you can **command**—your models, your privacy, your pace.
+
+**[shadowtalk-ai.com](https://www.shadowtalk-ai.com)** — use it before your workflow becomes someone else’s product roadmap.
+
+---
+
+*ShadowTalk AI · Private repo. Contact the maintainer for licensing and distribution.*
