@@ -1,6 +1,7 @@
 import { Code, Wifi, Brain, Shield, Zap, Download, ArrowUpRight, Bot, Target } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
+import { BRAND } from "@/lib/brand";
 
 const cardVariants = {
   hidden: { opacity: 0, y: 50, scale: 0.95 },

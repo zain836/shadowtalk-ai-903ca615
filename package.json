@@ -1,8 +1,8 @@
 {
   "name": "shadowtalk-ai",
   "private": true,
-  "version": "0.0.0",
-  "description": "ShadowTalk AI — the privacy-first neural workspace. Your keys, your models, your pace. Chat, agents, docs, decks, offline mode, and admin control in one app.",
+  "version": "1.0.0",
+  "description": "Think AI. Think ShadowTalk. — Agentic AI workspace with Mission Control, 30+ tools, and optional on-device privacy.",
   "type": "module",
   "scripts": {
     "dev": "vite",
