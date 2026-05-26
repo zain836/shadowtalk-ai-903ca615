@@ -2,7 +2,7 @@
   "name": "shadowtalk-ai",
   "private": true,
   "version": "0.0.0",
-  "description": "ShadowTalk AI — privacy-first multimodal AI workspace with BYOK, offline mode, and Supabase edge functions",
+  "description": "ShadowTalk AI — the privacy-first neural workspace. Your keys, your models, your pace. Chat, agents, docs, decks, offline mode, and admin control in one app.",
   "type": "module",
   "scripts": {
     "dev": "vite",
