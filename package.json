@@ -1,7 +1,8 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "shadowtalk-ai",
   "private": true,
   "version": "0.0.0",
+  "description": "ShadowTalk AI — privacy-first multimodal AI workspace with BYOK, offline mode, and Supabase edge functions",
   "type": "module",
   "scripts": {
     "dev": "vite",
