@@ -1,7 +1,10 @@
 {
-  "appId": "com.yourdoamnin.yourapp",
+  "appId": "com.shadowtalk.ai",
+  "productName": "ShadowTalk AI",
+  "copyright": "Copyright © ShadowTalk AI",
   "directories": {
-    "buildResources": "resources"
+    "buildResources": "resources",
+    "output": "dist"
   },
   "files": [
     "assets/**/*",
@@ -10,19 +13,30 @@
     "app/**/*"
   ],
   "publish": {
-    "provider": "github"
+    "provider": "github",
+    "owner": "zain836",
+    "repo": "shadowtalk-ai-903ca615"
   },
   "nsis": {
     "allowElevation": true,
     "oneClick": false,
-    "allowToChangeInstallationDirectory": true
+    "allowToChangeInstallationDirectory": true,
+    "installerIcon": "assets/appIcon.ico",
+    "uninstallerIcon": "assets/appIcon.ico"
   },
   "win": {
-    "target": "nsis",
-    "icon": "assets/appIcon.ico"
+    "target": ["nsis"],
+    "icon": "assets/appIcon.ico",
+    "publisherName": "ShadowTalk AI"
   },
   "mac": {
-    "category": "your.app.category.type",
-    "target": "dmg"
+    "category": "public.app-category.productivity",
+    "target": ["dmg"],
+    "icon": "assets/appIcon.png",
+    "hardenedRuntime": true
+  },
+  "linux": {
+    "target": ["AppImage"],
+    "category": "Office"
   }
 }
