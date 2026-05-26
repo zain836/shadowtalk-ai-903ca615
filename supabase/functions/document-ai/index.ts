@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { getKimiDocumentSystemPrompt, type KimiDocumentType, type KimiToneType, type KimiLengthType } from "../_shared/kimiDocumentPrompts.ts";
+import { PROFESSIONAL_DOCUMENT_STANDARDS } from "../_shared/kimiDocumentPrompts.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,17 +7,18 @@ const corsHeaders = {
 };
 
 const REVISE_ACTIONS: Record<string, string> = {
-  rewrite: "Rewrite for clarity and professional structure. Return ONLY the full revised document in Markdown.",
-  summarize: "Summarize while preserving structure. Return ONLY the summary document in Markdown.",
-  expand: "Expand with more depth, examples, and sections. Return ONLY the expanded Markdown document.",
-  translate: "Translate the document. Return ONLY the translated Markdown.",
-  fix_grammar: "Fix grammar and spelling. Return ONLY the corrected Markdown document.",
-  make_formal: "Make more formal and executive-ready. Return ONLY the full Markdown document.",
-  make_casual: "Make more conversational while keeping structure. Return ONLY the full Markdown document.",
-  bullet_points: "Convert to structured bullet format. Return ONLY Markdown.",
-  shorten: "Reduce length by ~30% while keeping all key sections. Return ONLY the shortened Markdown document.",
-  lengthen: "Increase length with more detail and examples. Return ONLY the lengthened Markdown document.",
-  add_toc: "Add or improve Table of Contents and section hierarchy. Return ONLY the full Markdown document.",
+  rewrite: `Rewrite as a client-ready document. ${PROFESSIONAL_DOCUMENT_STANDARDS} Return ONLY the full Markdown document.`,
+  summarize: "Summarize preserving section structure. Return ONLY Markdown.",
+  expand: `Expand with substantive detail (no filler). ${PROFESSIONAL_DOCUMENT_STANDARDS} Return ONLY the full Markdown document.`,
+  translate: "Translate preserving Markdown structure. Return ONLY the translated document.",
+  fix_grammar: "Fix grammar and punctuation. Return ONLY the corrected Markdown document.",
+  make_formal: `Rewrite in formal executive tone. ${PROFESSIONAL_DOCUMENT_STANDARDS} Return ONLY the full Markdown document.`,
+  make_casual: "Rewrite in clear approachable tone (still professional). Return ONLY the full Markdown document.",
+  bullet_points: "Convert to structured bullets while keeping headings. Return ONLY Markdown.",
+  shorten: "Reduce length ~25% without losing sections. Return ONLY the shortened Markdown document.",
+  lengthen: "Add substantive detail to each section. Return ONLY the expanded Markdown document.",
+  add_toc: "Add or fix ## Table of Contents and heading hierarchy. Return ONLY the full Markdown document.",
+  polish_professional: `Edit into publication-ready form: remove filler, emojis, duplicate headings, and AI preambles. ${PROFESSIONAL_DOCUMENT_STANDARDS} Return ONLY the polished Markdown document.`,
 };
 
 serve(async (req) => {
@@ -25,7 +26,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, content, instruction, language, topic, docType, tone, length } = body;
+    const { action, content, instruction, language } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -35,57 +36,6 @@ serve(async (req) => {
       });
     }
 
-    // Kimi-class full document generation (non-streaming)
-    if (action === "generate") {
-      if (!topic || typeof topic !== "string" || topic.length > 5000) {
-        return new Response(JSON.stringify({ error: "Invalid topic" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const type = (docType as KimiDocumentType) || "article";
-      const docTone = (tone as KimiToneType) || "professional";
-      const docLength = (length as KimiLengthType) || "long";
-      const systemPrompt = getKimiDocumentSystemPrompt(type, docTone, docLength);
-      const userPrompt = `Create the complete document about: ${topic}${instruction ? `\n\nRequirements:\n${instruction}` : ""}`;
-
-      const model = docLength === "epic" || docLength === "comprehensive"
-        ? "openai/gpt-5"
-        : "google/gemini-3-pro-preview";
-
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-        }),
-      });
-
-      if (!response.ok) {
-        const t = await response.text();
-        console.error("document-ai generate error:", response.status, t);
-        return new Response(JSON.stringify({ error: "Document generation failed" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const data = await response.json();
-      const result = data.choices?.[0]?.message?.content || "";
-      return new Response(JSON.stringify({ result }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Revise / transform existing document (Kimi format conversion)
     if (!content || typeof content !== "string" || content.length > 80000) {
       return new Response(JSON.stringify({ error: "Invalid content" }), {
         status: 400,
@@ -93,9 +43,9 @@ serve(async (req) => {
       });
     }
 
-    let systemPrompt = REVISE_ACTIONS[action] || instruction || REVISE_ACTIONS.rewrite;
+    let systemPrompt = REVISE_ACTIONS[action] || REVISE_ACTIONS.rewrite;
     if (action === "translate") {
-      systemPrompt = `Translate the following document to ${language || "English"}. Preserve Markdown structure. Return ONLY the translated document.`;
+      systemPrompt = `Translate to ${language || "English"}. Preserve Markdown. Return ONLY the document.`;
     }
     if (action === "custom" && instruction) {
       systemPrompt = `${instruction}\n\nReturn ONLY the full revised Markdown document.`;
@@ -108,7 +58,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: action === "polish_professional" || action === "make_formal" ? "openai/gpt-5" : "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content },
@@ -117,12 +67,6 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limited. Try again shortly." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const t = await response.text();
       console.error("document-ai error:", response.status, t);
       return new Response(JSON.stringify({ error: "AI processing failed" }), {

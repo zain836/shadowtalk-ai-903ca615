@@ -25,6 +25,7 @@ import {
   type KimiToneType,
   type KimiLengthType,
 } from "@/lib/kimiDocumentGeneration";
+import { DOCUMENT_PROSE_CLASS } from "@/lib/professionalDocument";
 
 export interface DocumentGeneratorProps {
   isOpen: boolean;
@@ -50,6 +51,7 @@ const REVISE_ACTIONS = [
   { value: "shorten", label: "Shorten" },
   { value: "add_toc", label: "Add TOC" },
   { value: "fix_grammar", label: "Fix grammar" },
+  { value: "polish_professional", label: "Polish" },
 ] as const;
 
 export const DocumentGenerator = ({
@@ -239,9 +241,9 @@ export const DocumentGenerator = ({
           <div>
             <h2 className="font-semibold text-sm flex items-center gap-2">
               Document Studio
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Kimi-class</Badge>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Professional</Badge>
             </h2>
-            <p className="text-xs text-muted-foreground">Long-form docs · Word · PDF · Markdown</p>
+            <p className="text-xs text-muted-foreground">Client-ready layout · Word · PDF · Markdown</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -384,12 +386,14 @@ export const DocumentGenerator = ({
             )}
           </div>
 
-          <ScrollArea className="flex-1">
-            <div className="max-w-3xl mx-auto p-6">
+          <ScrollArea className="flex-1 bg-neutral-100/40 dark:bg-black/30">
+            <div className="max-w-[8.5in] mx-auto p-6 md:p-10">
               {generatedContent ? (
                 activeTab === "preview" ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-foreground prose-table:text-sm">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{generatedContent}</ReactMarkdown>
+                  <div className="bg-white dark:bg-neutral-900 shadow-xl border border-neutral-200/90 dark:border-neutral-800 rounded-sm px-8 py-10 md:px-12 md:py-14 min-h-[11in]">
+                    <div className={DOCUMENT_PROSE_CLASS}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{generatedContent}</ReactMarkdown>
+                    </div>
                   </div>
                 ) : (
                   <pre className="text-xs font-mono whitespace-pre-wrap bg-muted/50 p-4 rounded-lg border">{generatedContent}</pre>

@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { checkRateLimit, getRateLimitHeaders } from "../_shared/rate-limit.ts";
 import { ChatRequestSchema, validateInput } from "../_shared/validation.ts";
+import { getKimiDocumentSystemPrompt, KIMI_CHAT_DOCUMENT_APPENDIX, type KimiDocumentType, type KimiToneType, type KimiLengthType } from "../_shared/kimiDocumentPrompts.ts";
 
 // ============================================================================
 // SPRINT 1: CHAT INTELLIGENCE ENGINE
@@ -1362,7 +1363,22 @@ Return ONLY valid JSON in this exact format:
     );
 
     const hasMemoryContext = !!(businessMemory?.trim() || serverSideContext);
-    const routerDecision = smartModelRouter(lastUserText, hasImageContent, messages.length, hasMemoryContext);
+    let routerDecision = smartModelRouter(lastUserText, hasImageContent, messages.length, hasMemoryContext);
+
+    const isDocumentRequest =
+      documentGeneration === true ||
+      mode === "document" ||
+      /\b(write|create|generate|draft|compose)\s+(?:me\s+)?(?:a\s+)?(?:professional\s+)?(?:\d+k?\s*-?\s*word\s+)?(?:document|report|proposal|whitepaper|essay|thesis|business\s+plan|memo|brief)\b/i.test(lastUserText);
+
+    if (isDocumentRequest) {
+      routerDecision = {
+        model: "openai/gpt-5",
+        tier: "DOCUMENT",
+        score: 85,
+        reasoning: "professional_document_generation",
+      };
+      console.log("[CHAT] Professional document mode — model:", routerDecision.model);
+    }
     
     console.log(`[MODEL ROUTER V2] Tier: ${routerDecision.tier} | Score: ${routerDecision.score} | Model: ${routerDecision.model} | Signals: ${routerDecision.reasoning}`);
 
@@ -1593,8 +1609,26 @@ When a user asks you to write, create, draft, or generate any document (email, a
 
     let systemPrompt = personality && systemPrompts[personality as keyof typeof systemPrompts] ? systemPrompts[personality as keyof typeof systemPrompts] : systemPrompts.friendly;
     
-    if (modePrompt && mode !== 'general') {
+    if (modePrompt && mode !== 'general' && mode !== 'document') {
       systemPrompt += `\n\n## Current Mode: ${mode?.toUpperCase() || 'GENERAL'}\n${modePrompt}`;
+    }
+
+    if (isDocumentRequest) {
+      const docType = (documentType as KimiDocumentType) || "report";
+      const docTone = (documentTone as KimiToneType) || "professional";
+      const docLength = (documentLength as KimiLengthType) || (
+        /\b(10,?000|10000|epic|exhaustive)\b/i.test(lastUserText) ? "epic" :
+        /\b(comprehensive|in[- ]depth|detailed)\b/i.test(lastUserText) ? "comprehensive" :
+        /\b(long[- ]form|3500|3000)\b/i.test(lastUserText) ? "long" : "medium"
+      );
+      systemPrompt =
+        getKimiDocumentSystemPrompt(docType, docTone, docLength) +
+        currentDatePrompt +
+        (industryPrompt || "") +
+        developerCredit;
+      if (serverSideContext) systemPrompt += serverSideContext;
+      if (businessMemory?.trim()) systemPrompt += `\n\n## USER BUSINESS CONTEXT\n${businessMemory}`;
+      console.log("[CHAT] Professional doc:", docType, docTone, docLength);
     }
 
     // === SPRINT 1: USE ROUTER V2 MODEL DECISION ===
