@@ -298,7 +298,8 @@ export const MissionControl = ({ isOpen, onClose, onMissionComplete, initialGoal
       setTitle("");
       setGoal("");
       await consumeMission();
-      executeMission(mission);
+      const result = await executeMission(mission);
+      if (result && onMissionComplete) onMissionComplete(result);
     }
   };
 
