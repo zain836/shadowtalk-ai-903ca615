@@ -6,6 +6,7 @@ import { generateMissionPlan } from "@/lib/see/generateMissionPlan";
 import { executeMissionTool } from "@/lib/see/missionToolExecutor";
 import { streamChatCompletion } from "@/lib/see/chatCompletion";
 import type { MissionPlanStep } from "@/lib/see/types";
+import { trackAgenticEvent } from "@/lib/agenticMetrics";
 
 export interface PendingApproval {
   missionId: string;
@@ -166,7 +167,8 @@ Provide a comprehensive, actionable final report with citations where available.
         { model: "google/gemini-2.5-pro", signal: abortRef.current?.signal }
       );
 
-      await updateMissionStatus(mission.id, "completed", {
+      await trackAgenticEvent("mission_complete", { missionId: mission.id });
+          await updateMissionStatus(mission.id, "completed", {
         result: { output: finalResult, steps: results },
         progress: 100,
         completed_at: new Date().toISOString(),
@@ -196,7 +198,8 @@ Provide a comprehensive, actionable final report with citations where available.
         await persistSteps(ctx.missionId, steps);
       }
 
-      setIsExecuting(true);
+      trackAgenticEvent("mission_start", { missionId: mission.id });
+        setIsExecuting(true);
       setCurrentMissionId(mission.id);
       await updateMissionStatus(mission.id, "running");
 

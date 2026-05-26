@@ -34,6 +34,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import type { ToolType } from "@/hooks/useToolOrchestrator";
+import { executeShadowTool } from "@/lib/shadowTools";
+import { trackAgenticEvent } from "@/lib/agenticMetrics";
 
 interface Message {
   id: string;
@@ -175,6 +177,8 @@ const ChatbotPage = () => {
       });
 
       abortControllerRef.current?.abort();
+      trackAgenticEvent("chat_stream_start", { mode: chatMode });
+
       abortControllerRef.current = new AbortController();
 
       const resp = await fetch(CHAT_URL, {
@@ -213,11 +217,94 @@ const ChatbotPage = () => {
         });
       });
 
-      if (final) await saveMessage(final, "assistant");
+      if (final) {
+        await saveMessage(final, "assistant");
+        trackAgenticEvent("chat_stream_complete", { mode: chatMode });
+      }
       return final;
     },
     [messages, personality, chatMode, selectedFile]
   );
+
+  const updateMessageTool = useCallback(
+    (messageId: string, patch: Partial<NonNullable<Message["toolExecution"]>>) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId && m.toolExecution
+            ? { ...m, toolExecution: { ...m.toolExecution, ...patch } }
+            : m
+        )
+      );
+    },
+    []
+  );
+
+  const handleConfirmTool = useCallback(
+    async (messageId: string) => {
+      const msg = messages.find((m) => m.id === messageId);
+      if (!msg?.toolExecution || msg.toolExecution.status !== "confirm") return;
+
+      const tool = msg.toolExecution.tool as ToolType;
+      const params = msg.toolExecution.params;
+      updateMessageTool(messageId, { status: "running" });
+      trackAgenticEvent("tool_confirmed", { tool });
+      trackAgenticEvent("tool_run", { tool, source: "hitl" });
+
+      setIsLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const result = await executeShadowTool(
+          tool,
+          params,
+          params?.query || msg.content,
+          { accessToken: session?.access_token, personality, mode: chatMode }
+        );
+
+        if (result.kind === "inline") {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId
+                ? {
+                    ...m,
+                    content: result.content,
+                    toolExecution: {
+                      ...m.toolExecution!,
+                      status: "complete",
+                      result: result.content.slice(0, 300),
+                    },
+                  }
+                : m
+            )
+          );
+          trackAgenticEvent("tool_complete", { tool });
+        } else if (result.kind === "chat_flags") {
+          const flags = result.flags as {
+            webSearch?: boolean;
+            searchQuery?: string;
+            deepResearch?: boolean;
+            researchQuery?: string;
+          };
+          await streamChat(params?.query || "Continue", flags);
+          updateMessageTool(messageId, { status: "complete" });
+        } else if (result.kind === "ui" && result.path) {
+          navigate(result.path);
+          updateMessageTool(messageId, { status: "complete", result: result.message });
+        }
+      } catch {
+        updateMessageTool(messageId, { status: "error" });
+        trackAgenticEvent("tool_error", { tool });
+        toast({ title: "Tool failed", description: "Could not run tool. Try again.", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [messages, personality, chatMode, navigate, streamChat, toast, updateMessageTool]
+  );
+
+  const handleCancelTool = useCallback((messageId: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+  }, []);
+
 
   useEffect(() => {
     const offlineSession = getOfflineSession();
@@ -383,6 +470,7 @@ const ChatbotPage = () => {
 
     try {
       const outcome = dispatchDetection(msgContent, toolUi());
+      if (outcome.handled) trackAgenticEvent("tool_run", { source: "dispatch" });
       if (outcome.handled) {
         return;
       }
@@ -681,6 +769,8 @@ const ChatbotPage = () => {
                     onOpenCodeCanvas={noop}
                     onOpenIDE={noop}
                     onOpenInBrowser={() => setShowShadowBrowser(true)}
+                    onConfirmTool={handleConfirmTool}
+                    onCancelTool={handleCancelTool}
                     messagesEndRef={messagesEndRef}
                     thinkingStage={isLoading ? "reasoning" : null}
                   />

@@ -55,6 +55,7 @@ export const ChatRequestSchema = z.object({
   securityAudit: z.string().max(100000).optional(),
   webSearch: z.boolean().optional(),
   searchQuery: z.string().max(500).optional(),
+  agenticReact: z.boolean().optional(),
   deepResearch: z.boolean().optional(),
   isResearch: z.boolean().optional(), // Flag for research/strategy agent mode
   industry: z.string().max(50).optional(), // Industry specialization context
@@ -69,12 +70,6 @@ export const ChatRequestSchema = z.object({
       name: z.string(),
       status: z.enum(["pending", "running", "completed", "error"]).optional(),
     })).optional(),
-  }).optional(),
-  /** User-provided API key (BYOK) — processed in-memory only, never stored server-side */
-  customAi: z.object({
-    provider: z.enum(["lovable", "gemini", "openrouter", "kimi"]),
-    apiKey: z.string().min(10).max(512),
-    model: z.string().max(120).optional(),
   }).optional(),
 }).refine(
   (data) => data.messages || data.analyzeTask || data.getEcoActions || data.securityAudit || data.agentWorkflow || data.deepResearch || data.webSearch || data.generateImage || data.imageEdit || data.decodeImage,

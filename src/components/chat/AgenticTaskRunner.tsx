@@ -14,7 +14,6 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { stringifyChatBody } from "@/lib/chatRequest";
 
 interface TaskStep {
   id: string;
@@ -96,7 +95,7 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete, initialGoal
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
         },
-        body: stringifyChatBody({
+        body: JSON.stringify({
           messages: [{ 
             role: "user", 
             content: `Break down this task into 4-6 numbered steps. Only list the steps, nothing else:\n\n${goal}` 
@@ -175,7 +174,7 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete, initialGoal
               "Content-Type": "application/json",
               Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
             },
-            body: stringifyChatBody({
+            body: JSON.stringify({
               messages: [{ role: "user", content: `Execute this step for the goal "${goal}": ${step.action}. Provide a concise result.` }],
               personality: "professional",
               mode: "general"
@@ -217,7 +216,7 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete, initialGoal
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
         },
-        body: stringifyChatBody({
+        body: JSON.stringify({
           messages: [{ role: "user", content: goal }],
           personality: "professional",
           mode: "general"
@@ -226,26 +225,7 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete, initialGoal
 
       if (!resultResp.ok) throw new Error("Result generation failed");
 
-      // Parse streaming response for result
-      const resultReader = resultResp.body?.getReader();
-      let resultContent = "";
-
-      while (resultReader) {
-        const { done, value } = await resultReader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        
-        const lines = chunk.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-            try {
-              const data = JSON.parse(line.slice(6));
-              const content = data.choices?.[0]?.delta?.content;
-              if (content) resultContent += content;
-            } catch {}
-          }
-        }
-      }
+      const resultContent = await consumeChatSSE(resultResp, () => {});
 
       setCurrentTask(prev => prev ? { ...prev, status: "completed", endTime: new Date() } : null);
       addLog("Task completed successfully!");

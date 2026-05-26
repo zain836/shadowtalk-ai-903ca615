@@ -13,6 +13,7 @@ export interface AgenticChatBody {
   decodeImage?: boolean;
   imageToAnalyze?: string;
   modePrompt?: string;
+  agenticReact?: boolean;
 }
 
 export function buildAgenticChatBody(
@@ -50,6 +51,7 @@ export function buildAgenticChatBody(
   if (opts.agenticSystemHint) {
     body.modePrompt =
       "You are ShadowTalk, a top-tier agentic AI. Break hard problems into steps, name tools you would use, and deliver finished work (drafts, plans, code, tables)—not vague advice. Be direct and execution-focused.";
+    body.agenticReact = true;
   }
 
   return body;
