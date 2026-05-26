@@ -1,4 +1,3 @@
-import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,13 +5,11 @@ import { CreditSystem } from "@/components/monetization/CreditSystem";
 import { AffiliateProgram } from "@/components/monetization/AffiliateProgram";
 import { UsageBasedBilling } from "@/components/monetization/UsageBasedBilling";
 import { RevenueStreams } from "@/components/monetization/RevenueStreams";
-import { VideoTutorials } from "@/components/onboarding/VideoTutorials";
 import { Button } from "@/components/ui/button";
 import { 
   Coins, 
   Users, 
   Activity, 
-  PlayCircle,
   Crown,
   Sparkles,
   LayoutGrid
@@ -23,8 +20,6 @@ import { useNavigate } from "react-router-dom";
 const MonetizationPage = () => {
   const { user, userPlan } = useAuth();
   const navigate = useNavigate();
-  const [showTutorials, setShowTutorials] = useState(false);
-
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -46,10 +41,6 @@ const MonetizationPage = () => {
             
             {/* Quick Actions */}
             <div className="flex flex-wrap justify-center gap-3">
-              <Button variant="outline" className="gap-2" onClick={() => setShowTutorials(true)}>
-                <PlayCircle className="h-4 w-4" />
-                Video Tutorials
-              </Button>
               {userPlan === 'free' && (
                 <Button className="gap-2" onClick={() => navigate('/founder-access')}>
                   <Crown className="h-4 w-4" />
@@ -101,10 +92,6 @@ const MonetizationPage = () => {
       
       <Footer />
       
-      <VideoTutorials 
-        open={showTutorials} 
-        onOpenChange={setShowTutorials} 
-      />
     </div>
   );
 };
