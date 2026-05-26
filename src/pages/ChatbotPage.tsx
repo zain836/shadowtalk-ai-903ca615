@@ -27,6 +27,12 @@ import { Shield, Lock, Key, Loader2, Sparkles } from "lucide-react";
 import { useShadowMemoryContext } from "@/contexts/ShadowMemoryContext";
 import { useIntelligenceHub } from "@/hooks/useIntelligenceHub";
 import { useGemmaOffline } from "@/hooks/useGemmaOffline";
+import { useOfflineMode } from "@/hooks/useOfflineMode";
+import { useRobustOfflineAI } from "@/hooks/useRobustOfflineAI";
+import { runOfflineCompletion } from "@/lib/offline/runOfflineCompletion";
+import type { RouterMessage } from "@/lib/offline/hybridRouter";
+import { OfflineAIIndicator } from "@/components/chat/OfflineAIIndicator";
+import { OfflineModeIndicator } from "@/components/chat/OfflineModeIndicator";
 import { useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
 import { Button } from "@/components/ui/button";
 
@@ -54,9 +60,15 @@ const ChatbotPage = () => {
   const { checkAccess, isElite } = useFeatureGating();
   const { requestPermission } = usePushNotifications();
   const { trackChatMessage, trackConversationCreated } = useUsageTracking();
-  const { getOfflineSession } = useOfflineAuth();
+  const { getOfflineSession, isOffline: authOffline } = useOfflineAuth();
   const toolOrchestrator = useToolOrchestrator();
   const gemmaOffline = useGemmaOffline();
+  const offlineMode = useOfflineMode();
+  const offlineHistory = useOfflineChatHistory();
+  const robustOffline = useRobustOfflineAI();
+  const offlineSession = getOfflineSession();
+  const isNetworkOffline = isOffline || authOffline || !gemmaOffline.isOnline;
+  const useOfflineWorkspace = isNetworkOffline;
   
   // State
   const [e2eePassphrase, setE2EEPassphrase] = useState("");
@@ -97,12 +109,46 @@ const ChatbotPage = () => {
 
   useGeoLocation();
 
+  const getOfflineWelcomeMessage = () =>
+    gemmaOffline.isReady || robustOffline.isReady
+      ? "You're in **offline mode** with on-device AI. Messages stay on this device until you're back online."
+      : "You're **offline**. Download a model in Profile → Offline AI for full local chat, or I'll use basic replies until then.";
+
+  const ensureOfflineConversation = async () => {
+    if (!offlineHistory.isReady) return;
+    const cached = await offlineHistory.getCachedConversations();
+    if (cached.length > 0 && !currentConversationId) {
+      setCurrentConversationId(cached[0].id);
+      const msgs = await offlineHistory.getCachedMessages(cached[0].id);
+      setMessages(
+        msgs.length > 0
+          ? msgs
+          : [{ id: 'welcome', type: 'ai', content: getOfflineWelcomeMessage(), timestamp: new Date() }],
+      );
+      setConversations(cached.map((c) => ({ id: c.id, title: c.title, created_at: c.created_at })));
+      return;
+    }
+    if (!currentConversationId) {
+      const id = `offline-${crypto.randomUUID()}`;
+      const now = new Date().toISOString();
+      await offlineHistory.cacheConversation({ id, title: 'Offline chat', created_at: now, updated_at: now });
+      setCurrentConversationId(id);
+      setConversations([{ id, title: 'Offline chat', created_at: now }]);
+      setMessages([{ id: 'welcome', type: 'ai', content: getOfflineWelcomeMessage(), timestamp: new Date() }]);
+    }
+  };
+
   useEffect(() => {
-    const offlineSession = getOfflineSession();
+    if (useOfflineWorkspace && offlineHistory.isReady) {
+      ensureOfflineConversation();
+      return;
+    }
     if ((user || offlineSession) && e2ee.isUnlocked) {
       loadConversations();
-      checkSubscription();
-      if (isElite) requestPermission();
+      if (!isNetworkOffline) {
+        checkSubscription();
+        if (isElite) requestPermission();
+      }
     } else if (!user && !offlineSession && !isOffline) {
       const guestConvId = 'guest-' + Date.now();
       setCurrentConversationId(guestConvId);
@@ -114,7 +160,7 @@ const ChatbotPage = () => {
       }]);
       setConversations([{ id: guestConvId, title: 'Guest Conversation', created_at: new Date().toISOString() }]);
     }
-  }, [user, e2ee.isUnlocked]);
+  }, [user, e2ee.isUnlocked, useOfflineWorkspace, offlineHistory.isReady, isNetworkOffline]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -146,6 +192,12 @@ const ChatbotPage = () => {
   };
 
   const loadConversation = async (conversationId: string) => {
+    if (useOfflineWorkspace && offlineHistory.isReady) {
+      setCurrentConversationId(conversationId);
+      const msgs = await offlineHistory.getCachedMessages(conversationId);
+      setMessages(msgs.length > 0 ? msgs : [{ id: 'welcome', type: 'ai', content: getOfflineWelcomeMessage(), timestamp: new Date() }]);
+      return;
+    }
     if (!e2ee.isUnlocked) return;
     setCurrentConversationId(conversationId);
     const { data, error } = await supabase
@@ -171,7 +223,22 @@ const ChatbotPage = () => {
     return "👋 Welcome back! Your connection is fully End-to-End Encrypted.";
   };
 
+  const saveMessageOffline = async (content: string, role: 'user' | 'assistant') => {
+    if (!currentConversationId || !offlineHistory.isReady) return;
+    await offlineHistory.cacheMessage(currentConversationId, {
+      id: crypto.randomUUID(),
+      type: role === 'user' ? 'user' : 'ai',
+      content,
+      timestamp: new Date(),
+    });
+    if (role === 'user') offlineMode.queueOfflineMessage(content);
+  };
+
   const saveMessage = async (content: string, role: 'user' | 'assistant') => {
+    if (useOfflineWorkspace) {
+      await saveMessageOffline(content, role);
+      return null;
+    }
     if (!user || !currentConversationId || !e2ee.isUnlocked) return null;
     let contentToSave = content;
     const encrypted = await e2ee.encryptData(content);
@@ -207,6 +274,56 @@ const ChatbotPage = () => {
   };
 
 
+  const buildRouterMessages = (msgContent: string): RouterMessage[] => {
+    const history = messages
+      .filter((m) => m.id !== "welcome")
+      .map((m) => ({
+        role: (m.type === "user" ? "user" : "assistant") as RouterMessage["role"],
+        content: m.content,
+      }));
+    history.push({ role: "user", content: msgContent });
+    return history;
+  };
+
+  const appendStreamingAiMessage = (aiMessageId: string, assistantContent: string) => {
+    setMessages((prev) => {
+      const exists = prev.find((m) => m.id === aiMessageId);
+      if (exists) {
+        return prev.map((m) => (m.id === aiMessageId ? { ...m, content: assistantContent } : m));
+      }
+      return [...prev, { id: aiMessageId, type: "ai", content: assistantContent, timestamp: new Date() }];
+    });
+  };
+
+  const runLocalChat = async (routerMessages: RouterMessage[], msgContent: string, aiMessageId: string) => {
+    let assistantContent = "";
+    const localResult = await runOfflineCompletion({
+      messages: routerMessages,
+      personality,
+      isOnline: gemmaOffline.isOnline,
+      onToken: (token) => {
+        assistantContent += token;
+        appendStreamingAiMessage(aiMessageId, assistantContent);
+      },
+      gemmaChat: gemmaOffline.chatLocal,
+      webLlmGenerate: robustOffline.generateResponse,
+      webLlmLoad: robustOffline.loadModel,
+    });
+    if (!localResult) return false;
+    if (!assistantContent) {
+      assistantContent = localResult.content;
+      appendStreamingAiMessage(aiMessageId, assistantContent);
+    }
+    await saveMessage(assistantContent, "assistant");
+    if (localResult.source === "fallback" && !gemmaOffline.isReady && !robustOffline.isReady) {
+      toast({
+        title: "Offline mode",
+        description: "Download a model in Profile → Offline AI for full local responses.",
+      });
+    }
+    return true;
+  };
+
   const handleSendMessage = async () => {
     if ((!message.trim() && !selectedFile) || isLoading || !currentConversationId) return;
     const msgContent = message;
@@ -215,6 +332,18 @@ const ChatbotPage = () => {
     setMessage(""); setSelectedFile(null); setIsLoading(true);
     await saveMessage(msgContent, 'user');
 
+    if (isNetworkOffline && /\b(document|slide|presentation|ppt|deck)\b/i.test(msgContent)) {
+      setIsLoading(false);
+      setMessages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        type: "ai",
+        content: "Document and slide generation need internet. In offline mode you can still chat with your **on-device model** (Profile → Offline AI).",
+        timestamp: new Date(),
+      }]);
+      return;
+    }
+
+    if (!isNetworkOffline) {
     const toolDetection = toolOrchestrator.detectTool(msgContent);
     if (toolDetection.tool === "document_generator") {
       const topic = toolDetection.params?.topic || msgContent;
@@ -243,11 +372,42 @@ const ChatbotPage = () => {
       }]);
       return;
     }
+    }
+
+    const routerMessages = buildRouterMessages(msgContent);
+    const aiMessageId = crypto.randomUUID();
 
     try {
+      if (!gemmaOffline.isOnline || gemmaOffline.routingMode === "local-only" || useOfflineWorkspace) {
+        const done = await runLocalChat(routerMessages, msgContent, aiMessageId);
+        if (done) return;
+      }
+
+      const preferLocal =
+        gemmaOffline.routingMode !== "cloud-only" &&
+        (gemmaOffline.isReady || robustOffline.isReady);
+      if (preferLocal) {
+        const autoLocal = await runOfflineCompletion({
+          messages: routerMessages,
+          personality,
+          isOnline: gemmaOffline.isOnline,
+          gemmaChat: gemmaOffline.chatLocal,
+          webLlmGenerate: robustOffline.generateResponse,
+          webLlmLoad: robustOffline.loadModel,
+        });
+        if (autoLocal) {
+          let assistantContent = autoLocal.content;
+          appendStreamingAiMessage(aiMessageId, assistantContent);
+          await saveMessage(assistantContent, "assistant");
+          return;
+        }
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
-      const chatMessages = messages.filter(m => m.id !== 'welcome').map(m => ({ role: m.type === "user" ? "user" : "assistant", content: m.content }));
-      chatMessages.push({ role: "user", content: msgContent });
+      const chatMessages = routerMessages.map((m) => ({
+        role: m.role === "system" ? "user" : m.role,
+        content: m.content,
+      }));
 
       const resp = await fetch(CHAT_URL, {
         method: "POST",
@@ -258,7 +418,6 @@ const ChatbotPage = () => {
       if (!resp.ok) throw new Error("Failed");
       const reader = resp.body?.getReader();
       const decoder = new TextDecoder();
-      const aiMessageId = crypto.randomUUID();
       let assistantContent = "";
 
       while (reader) {
@@ -273,11 +432,7 @@ const ChatbotPage = () => {
               const delta = data.choices?.[0]?.delta?.content;
               if (delta) {
                 assistantContent += delta;
-                setMessages(prev => {
-                  const exists = prev.find(m => m.id === aiMessageId);
-                  if (exists) return prev.map(m => m.id === aiMessageId ? { ...m, content: assistantContent } : m);
-                  return [...prev, { id: aiMessageId, type: 'ai', content: assistantContent, timestamp: new Date() }];
-                });
+                appendStreamingAiMessage(aiMessageId, assistantContent);
               }
             } catch {}
           }
@@ -285,7 +440,12 @@ const ChatbotPage = () => {
       }
       if (assistantContent) await saveMessage(assistantContent, 'assistant');
     } catch {
-      setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: "Error connecting to neural host.", timestamp: new Date() }]);
+      const recovered = await runLocalChat(routerMessages, msgContent, aiMessageId);
+      if (!recovered) {
+        const fallback = offlineMode.getOfflineResponse(msgContent);
+        appendStreamingAiMessage(aiMessageId, fallback);
+        await saveMessage(fallback, "assistant");
+      }
     } finally { setIsLoading(false); }
   };
 
@@ -297,9 +457,9 @@ const ChatbotPage = () => {
     if (success) { setE2EEPassphrase(""); loadConversations(); }
   };
 
-  if (!user && !isOffline) { navigate("/auth"); return null; }
+  if (!user && !offlineSession && !isOffline) { navigate("/auth"); return null; }
 
-  if (!e2ee.isUnlocked) {
+  if (!useOfflineWorkspace && !e2ee.isUnlocked) {
     return (
       <div className="min-h-screen neural-bg flex items-center justify-center p-6">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md bg-[#1e1f20]/90 backdrop-blur-3xl border border-white/10 rounded-[40px] p-10 shadow-2xl text-center">
@@ -337,6 +497,10 @@ const ChatbotPage = () => {
           )}
         </AnimatePresence>
         <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex items-center gap-2 px-3 pt-2 flex-wrap">
+            <OfflineModeIndicator />
+            <OfflineAIIndicator />
+          </div>
           <ChatHeader userPlan={userPlan} personality={personality} onPersonalityChange={setPersonality} onToggleSidebar={() => setShowSidebar(!showSidebar)} onExport={() => {}} onManageSubscription={() => {}} onSignOut={signOut} onOpenAnalytics={() => setShowAnalytics(true)} onOpenDeepResearch={() => setShowDeepResearch(true)} onOpenImageGenerator={() => setShowImageGenerator(true)} onOpenShadowTalkLive={() => setShowShadowTalkLive(true)} onOpenBrowser={() => setShowShadowBrowser(true)} aiProvider={aiProvider} onProviderChange={setAiProvider} maxChats="∞" dailyChats={dailyChats} />
           <div className={`flex-1 overflow-hidden relative flex flex-col ${isEmptyChat ? "justify-center" : ""}`}>
             <AnimatePresence mode="wait">
