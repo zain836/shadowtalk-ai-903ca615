@@ -201,28 +201,36 @@ export const ChatHeader = ({
   if (variant === "minimal") {
     return (
       <>
-        <div className="flex items-center justify-between px-4 py-3 md:px-8 bg-transparent relative z-20 shrink-0">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between px-4 py-3 md:px-6 bg-transparent relative z-20 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
             <Button
               variant="ghost"
               size="icon"
               onClick={onToggleSidebar}
-              className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/20 md:hidden"
+              className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/20 md:hidden shrink-0"
               aria-label="Menu"
             >
               <Menu className="h-5 w-5" />
             </Button>
+            <ProviderSelector provider={aiProvider} onProviderChange={onProviderChange} />
             <Button
               variant="ghost"
               size="icon"
               onClick={() => onToolsMenuOpenChange?.(true)}
-              className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/20 md:hidden"
+              className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/20 md:hidden shrink-0"
               aria-label="Tools"
             >
               <LayoutGrid className="h-5 w-5 text-primary" />
             </Button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <Badge
+              variant="outline"
+              className="hidden sm:flex h-8 px-3 rounded-full border-primary/25 bg-primary/5 text-primary/90 text-[11px] font-medium gap-1.5"
+            >
+              <Lock className="h-3 w-3" />
+              E2EE
+            </Badge>
             {showUpgrade && (
               <Button
                 onClick={() => navigate("/pricing")}
@@ -232,6 +240,32 @@ export const ChatHeader = ({
                 Upgrade
               </Button>
             )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-secondary/80 text-xs font-bold text-primary-foreground shadow-md ring-1 ring-border/30"
+                  aria-label="Account"
+                >
+                  {userInitials}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 p-2 bg-card/95 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-2xl">
+                <DropdownMenuItem onClick={onManageSubscription} className="gap-3 rounded-xl py-2.5">
+                  <Crown className="h-4 w-4 text-amber-400" />
+                  <span className="text-sm font-medium">Subscription</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onOpenGeminiAnalytics} className="gap-3 rounded-xl py-2.5">
+                  <Settings className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-border/40" />
+                <DropdownMenuItem onClick={onSignOut} className="gap-3 rounded-xl py-2.5 text-destructive focus:text-destructive">
+                  <LogOut className="h-4 w-4" />
+                  <span className="text-sm font-medium">Sign out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         <ToolsHubMenu

@@ -224,7 +224,18 @@ export const ChatInput = ({
                 </Tooltip>
               </TooltipProvider>
 
-              {!isGemini && (
+              {isGemini ? (
+                (message.trim() || selectedFile) && !isLoading && (
+                  <Button
+                    onClick={onSend}
+                    size="icon"
+                    className="h-9 w-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all disabled:opacity-40"
+                    disabled={!message.trim() && !selectedFile}
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                )
+              ) : (
                 <>
                   {isLoading ? (
                     <Button
