@@ -257,6 +257,8 @@ interface ShadowTalkLiveProps {
   isOpen: boolean;
   onClose: () => void;
   onInsertToChat?: (content: string) => void;
+  autoConnect?: boolean;
+  onSessionEnd?: (transcriptMarkdown: string) => void;
 }
 
 interface TranscriptItem {
@@ -270,7 +272,7 @@ interface TranscriptItem {
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    MAIN COMPONENT
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLiveProps) => {
+export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat, autoConnect = false, onSessionEnd }: ShadowTalkLiveProps) => {
   const { toast } = useToast();
 
   const [isConnecting, setIsConnecting] = useState(false);
@@ -376,22 +378,33 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
 
   const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
-  const startConnection = async () => {
+  const startConnection = useCallback(async () => {
+    if (isConnecting || isConnected) return;
     setIsConnecting(true);
     setConnectionError(null);
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
-      const { data, error } = await supabase.functions.invoke('elevenlabs-conversation-token');
+      const { data, error } = await supabase.functions.invoke("elevenlabs-conversation-token");
       if (error) throw new Error(error.message || "Failed to get conversation token");
       if (!data?.token) throw new Error(data?.error || "No token received.");
       await conversation.startSession({ conversationToken: data.token, connectionType: "webrtc" });
     } catch (error) {
       setConnectionError(error instanceof Error ? error.message : "Could not start voice session");
-      toast({ title: "Connection Failed", description: error instanceof Error ? error.message : "Could not start voice session", variant: "destructive" });
+      toast({
+        title: "Connection Failed",
+        description: error instanceof Error ? error.message : "Could not start voice session",
+        variant: "destructive",
+      });
     } finally {
       setIsConnecting(false);
     }
-  };
+  }, [conversation, isConnected, isConnecting, toast]);
+
+  useEffect(() => {
+    if (isOpen && autoConnect && !isConnected && !isConnecting) {
+      void startConnection();
+    }
+  }, [isOpen, autoConnect, isConnected, isConnecting, startConnection]);
 
   const endConnection = useCallback(async () => {
     try { await conversation.endSession(); } catch { /* */ }
@@ -409,21 +422,42 @@ export const ShadowTalkLive = ({ isOpen, onClose, onInsertToChat }: ShadowTalkLi
     try { await conversation.setVolume({ volume: newValue ? 1 : 0 }); } catch { /* */ }
   }, [isSpeakerOn, conversation]);
 
+  const buildTranscriptMarkdown = useCallback(() => {
+    if (transcript.length === 0) return "";
+    const content = transcript
+      .map(
+        (t) =>
+          `[${t.timestamp.toLocaleTimeString()}] **${t.role === "user" ? "You" : "ShadowTalk"}:** ${t.text}`
+      )
+      .join("\n\n");
+    return `## 🎙️ ShadowTalk Live Transcript\n\n${content}`;
+  }, [transcript]);
+
   const exportTranscript = () => {
-    if (transcript.length === 0) return;
-    const content = transcript.map(t =>
-      `[${t.timestamp.toLocaleTimeString()}] ${t.role === 'user' ? 'You' : 'ShadowTalk'}: ${t.text}`
-    ).join('\n\n');
+    const md = buildTranscriptMarkdown();
+    if (!md) return;
     if (onInsertToChat) {
-      onInsertToChat(`## 🎙️ ShadowTalk Live Transcript\n\n${content}`);
-      toast({ title: "Transcript exported to chat" });
+      onInsertToChat(md);
+      toast({ title: "Transcript added to chat" });
     }
   };
 
   const handleClose = useCallback(() => {
-    if (isConnected) conversation.endSession();
+    const md = buildTranscriptMarkdown();
+    if (md && onSessionEnd) onSessionEnd(md);
+    else if (md && onInsertToChat) onInsertToChat(md);
+    if (isConnected) {
+      try {
+        void conversation.endSession();
+      } catch {
+        /* ignore */
+      }
+    }
+    setTranscript([]);
+    lastUserTranscriptRef.current = "";
+    lastAgentResponseRef.current = "";
     onClose();
-  }, [isConnected, conversation, onClose]);
+  }, [buildTranscriptMarkdown, isConnected, conversation, onClose, onInsertToChat, onSessionEnd]);
 
   if (!isOpen) return null;
 

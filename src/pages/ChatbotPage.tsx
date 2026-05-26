@@ -26,6 +26,10 @@ import { ShadowBrowser } from "@/components/chat/ShadowBrowser";
 import { ShadowTalkLive } from "@/components/chat/ShadowTalkLive";
 import { CodeCanvas } from "@/components/chat/CodeCanvas";
 import { useE2EE } from "@/hooks/useE2EE";
+import { useChatSpeech } from "@/hooks/useChatSpeech";
+import { useChatCommandActions } from "@/hooks/useChatCommandActions";
+import { PersonalIDE } from "@/components/chat/PersonalIDE";
+import { CreativeSynthesis } from "@/components/chat/CreativeSynthesis";
 import { Shield, Lock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -72,9 +76,6 @@ const ChatbotPage = () => {
   const [chatMode, setChatMode] = useState<ChatMode>("general");
   const [aiProvider, setAiProvider] = useState<AIProvider>("lovable");
   const [showSidebar, setShowSidebar] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<{ type: "image" | "file"; data: string; name: string; mimeType: string } | null>(null);
   const [showImageGenerator, setShowImageGenerator] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -89,6 +90,26 @@ const ChatbotPage = () => {
   const [deepResearchAuto, setDeepResearchAuto] = useState(false);
   const [browserInitialUrl, setBrowserInitialUrl] = useState<string | undefined>();
   const [isBootstrapping, setIsBootstrapping] = useState(false);
+  const [liveAutoConnect, setLiveAutoConnect] = useState(false);
+  const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
+  const [showPersonalIDE, setShowPersonalIDE] = useState(false);
+  const [ideCode, setIdeCode] = useState("");
+  const [ideLanguage, setIdeLanguage] = useState("typescript");
+  const [showCreativeSynthesis, setShowCreativeSynthesis] = useState(false);
+  const [codeCanvasCode, setCodeCanvasCode] = useState("");
+  const [codeCanvasLanguage, setCodeCanvasLanguage] = useState("typescript");
+
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const currentConversationIdRef = useRef<string | null>(null);
+  currentConversationIdRef.current = currentConversationId;
+
+  const speech = useChatSpeech();
+
+  const openShadowTalkLive = useCallback((autoConnect = false) => {
+    setLiveAutoConnect(autoConnect);
+    setShowShadowTalkLive(true);
+  }, []);
 
   const chatRouter = useChatToolRouter({
     openImageGenerator: (prompt, autoGenerate) => {
@@ -105,17 +126,12 @@ const ChatbotPage = () => {
       setBrowserInitialUrl(url);
       setShowShadowBrowser(true);
     },
-    openShadowTalkLive: () => setShowShadowTalkLive(true),
+    openShadowTalkLive: () => openShadowTalkLive(true),
     openAnalytics: () => setShowAnalytics(true),
     openCommandPalette: () => setShowCommandPalette(true),
     openCodeCanvas: () => setShowCodeCanvas(true),
     setChatMode: (mode) => setChatMode(mode as ChatMode),
   });
-
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const currentConversationIdRef = useRef<string | null>(null);
-  currentConversationIdRef.current = currentConversationId;
 
   useGeoLocation();
 
@@ -199,7 +215,121 @@ const ChatbotPage = () => {
     setIsLoading(false);
   }, []);
 
-  const handleSendMessage = async () => {
+  const handleExportHistory = useCallback(() => {
+    const exportable = messages.filter((m) => m.id !== "welcome");
+    if (exportable.length === 0) {
+      toast({ title: "Nothing to export", description: "Start a conversation first." });
+      return;
+    }
+    const body = exportable
+      .map((m) => `**${m.type === "user" ? "You" : "ShadowTalk"}** (${m.timestamp.toLocaleString()}):\n${m.content}`)
+      .join("\n\n---\n\n");
+    const blob = new Blob([body], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `shadowtalk-chat-${new Date().toISOString().slice(0, 10)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Exported", description: "Chat history downloaded." });
+  }, [messages, toast]);
+
+  const handleEditMessage = useCallback((index: number, content: string) => {
+    setMessages((prev) => prev.map((m, i) => (i === index ? { ...m, content } : m)));
+    toast({ title: "Message updated" });
+  }, [toast]);
+
+  const handleOpenCodeCanvas = useCallback((code: string, language: string) => {
+    setCodeCanvasCode(code);
+    setCodeCanvasLanguage(language || "typescript");
+    setShowCodeCanvas(true);
+  }, []);
+
+  const handleOpenIDE = useCallback((code: string, language: string) => {
+    setIdeCode(code);
+    setIdeLanguage(language || "typescript");
+    setShowPersonalIDE(true);
+  }, []);
+
+  const insertLiveTranscript = useCallback(
+    async (markdown: string) => {
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), type: "ai", content: markdown, timestamp: new Date() },
+      ]);
+      await saveMessage(markdown, "assistant", false);
+      toast({ title: "Live session saved to chat" });
+    },
+    [saveMessage, toast]
+  );
+
+  const handleCommandAction = useChatCommandActions({
+    startNewChat,
+    openDeepResearch: () => setShowDeepResearch(true),
+    openImageGenerator: () => setShowImageGenerator(true),
+    openShadowTalkLive,
+    openShadowBrowser: () => setShowShadowBrowser(true),
+    openAnalytics: () => setShowAnalytics(true),
+    openCodeCanvas: () => setShowCodeCanvas(true),
+    setChatMode,
+  });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setShowCommandPalette((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const handleRegenerate = useCallback(
+    async (index: number) => {
+      const target = messages[index];
+      if (!target || target.type !== "ai") return;
+      const priorUser = [...messages].slice(0, index).reverse().find((m) => m.type === "user");
+      if (!priorUser) return;
+
+      setMessages((prev) => prev.filter((_, i) => i !== index));
+      setIsLoading(true);
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      const history = messages
+        .slice(0, index)
+        .filter((m) => m.id !== "welcome" && m.content)
+        .map((m) => ({ role: m.type === "user" ? "user" : "assistant", content: m.content }));
+
+      try {
+        await chatRouter.runChatTurn({
+          msgContent: priorUser.content,
+          messages: history.map((h, i) => ({
+            id: `h-${i}`,
+            type: h.role === "user" ? "user" : "ai",
+            content: h.content,
+            timestamp: new Date(),
+          })),
+          personality,
+          chatMode,
+          onMessagesUpdate: (updater) => setMessages(updater),
+          saveAssistant: (content) => saveMessage(content, "assistant", false),
+          signal: controller.signal,
+        });
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        toast({ title: "Regenerate failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+        abortControllerRef.current = null;
+      }
+    },
+    [messages, chatRouter, personality, chatMode, saveMessage, toast]
+  );
+
+    const handleSendMessage = async () => {
     if ((!message.trim() && !selectedFile) || isLoading) return;
 
     const convId = await ensureConversation();
@@ -351,8 +481,8 @@ const ChatbotPage = () => {
     onSend: handleSendMessage,
     onKeyPress: (e: React.KeyboardEvent) => e.key === "Enter" && !e.shiftKey && handleSendMessage(),
     isLoading,
-    isListening,
-    onToggleVoice: () => {},
+    isListening: speech.isListening,
+    onToggleVoice: () => openShadowTalkLive(true),
     onOpenImageGenerator: () => setShowImageGenerator(true),
     onStopGeneration: handleStopGeneration,
     selectedFile,
@@ -370,6 +500,7 @@ const ChatbotPage = () => {
           userInitials={userInitials}
           onNewChat={() => void startNewChat()}
           onOpenHistory={() => setShowSidebar(true)}
+          onOpenTools={() => setToolsMenuOpen(true)}
           onOpenSettings={() => navigate("/profile")}
         />
         <AnimatePresence>
@@ -394,14 +525,29 @@ const ChatbotPage = () => {
             personality={personality}
             onPersonalityChange={setPersonality}
             onToggleSidebar={() => setShowSidebar(!showSidebar)}
-            onExport={() => {}}
+            onExport={handleExportHistory}
             onManageSubscription={() => navigate("/pricing")}
             onSignOut={signOut}
             onOpenAnalytics={() => setShowAnalytics(true)}
             onOpenDeepResearch={() => setShowDeepResearch(true)}
             onOpenImageGenerator={() => setShowImageGenerator(true)}
-            onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
+            onOpenShadowTalkLive={() => openShadowTalkLive(true)}
             onOpenBrowser={() => setShowShadowBrowser(true)}
+            onOpenScriptAutomation={() => navigate("/workspace")}
+            onOpenStealthVault={() => navigate("/vault")}
+            onOpenAgentWorkflows={() => navigate("/agents")}
+            onOpenModelFineTuning={() => navigate("/personal-llm")}
+            onOpenWhiteLabelBranding={() => navigate("/enterprise")}
+            onOpenGeminiAnalytics={() => navigate("/analytics")}
+            onOpenCanvas={(type) => {
+              if (type === "code") setShowCodeCanvas(true);
+              else setShowCreativeSynthesis(true);
+            }}
+            onOpenAgenticRunner={() => navigate("/missioncontrol")}
+            onOpenVisualReasoning={() => setChatMode("camera")}
+            onOpenCreativeSynthesis={() => setShowCreativeSynthesis(true)}
+            toolsMenuOpen={toolsMenuOpen}
+            onToolsMenuOpenChange={setToolsMenuOpen}
             aiProvider={aiProvider}
             onProviderChange={setAiProvider}
             maxChats="∞"
@@ -424,14 +570,14 @@ const ChatbotPage = () => {
                     showSuggestions={false}
                     personality={personality}
                     userPlan={userPlan}
-                    speakingMessageId={speakingMessageId}
-                    isSpeaking={isSpeaking}
+                    speakingMessageId={speech.speakingMessageId}
+                    isSpeaking={speech.isSpeaking}
                     onSelectPrompt={setMessage}
-                    onEdit={() => {}}
-                    onRegenerate={() => {}}
-                    onTextToSpeech={() => {}}
-                    onOpenCodeCanvas={() => setShowCodeCanvas(true)}
-                    onOpenIDE={() => {}}
+                    onEdit={handleEditMessage}
+                    onRegenerate={(i) => void handleRegenerate(i)}
+                    onTextToSpeech={(text, id) => speech.speakMessage(text, id)}
+                    onOpenCodeCanvas={handleOpenCodeCanvas}
+                    onOpenIDE={handleOpenIDE}
                     onOpenInBrowser={(url) => { setBrowserInitialUrl(url); setShowShadowBrowser(true); }}
                     messagesEndRef={messagesEndRef}
                   />
@@ -488,25 +634,34 @@ const ChatbotPage = () => {
       />
       <ShadowTalkLive
         isOpen={showShadowTalkLive}
-        onClose={() => setShowShadowTalkLive(false)}
-        onInsertToChat={(c) =>
-          setMessages((prev) => [...prev, { id: crypto.randomUUID(), type: "ai", content: c, timestamp: new Date() }])
-        }
+        autoConnect={liveAutoConnect}
+        onClose={() => {
+          setShowShadowTalkLive(false);
+          setLiveAutoConnect(false);
+        }}
+        onInsertToChat={(c) => void insertLiveTranscript(c)}
+        onSessionEnd={(md) => void insertLiveTranscript(md)}
       />
       {showCodeCanvas && (
         <CodeCanvas
-          code={
-            [...messages]
-              .reverse()
-              .find((m) => m.type === "ai" && m.content.includes("```"))
-              ?.content.match(/```[\w]*\n([\s\S]*?)```/)?.[1] ||
-            "// Use chat to generate code, then open Code Canvas"
-          }
-          language="typescript"
+          code={codeCanvasCode || "// Generate code in chat, then open Code Canvas"}
+          language={codeCanvasLanguage}
           onClose={() => setShowCodeCanvas(false)}
         />
       )}
-      <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} onAction={() => {}} />
+      {showPersonalIDE && (
+        <PersonalIDE initialCode={ideCode} language={ideLanguage} onClose={() => setShowPersonalIDE(false)} />
+      )}
+      {showCreativeSynthesis && (
+        <CreativeSynthesis
+          isOpen={showCreativeSynthesis}
+          onClose={() => setShowCreativeSynthesis(false)}
+          onInsertToChat={(c) =>
+            setMessages((prev) => [...prev, { id: crypto.randomUUID(), type: "ai", content: c, timestamp: new Date() }])
+          }
+        />
+      )}
+      <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} onAction={handleCommandAction} />
     </motion.div>
   );
 };
