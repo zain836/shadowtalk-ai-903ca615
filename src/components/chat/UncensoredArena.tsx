@@ -9,6 +9,7 @@ import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getModePrompt } from "@/components/chat/ModeSelector";
+import { stringifyChatBody } from "@/lib/chatRequest";
 
 type Phase = "intro" | "disclaimer" | "arena";
 type Msg = { role: "user" | "assistant"; content: string };
@@ -66,7 +67,7 @@ export function UncensoredArena({ open, onClose }: Props) {
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           messages: next,
           personality: "friendly",
           mode: "uncensored",

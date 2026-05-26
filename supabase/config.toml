@@ -9,6 +9,8 @@ project_id = "axsudmhjpfzffcicfvuj"
     verify_jwt = false
   [functions.auto-broadcast]
     verify_jwt = false
+  [functions.notify-app-update]
+    verify_jwt = false
   [functions.chat]
     verify_jwt = false
   [functions.gemini-key-alert]
@@ -39,6 +41,8 @@ project_id = "axsudmhjpfzffcicfvuj"
     verify_jwt = false
   [functions.test-gemini-key]
     verify_jwt = false
+  [functions.test-custom-ai-key]
+    verify_jwt = false
   [functions.web-search]
     verify_jwt = false
   [functions.whatsapp-webhook]
@@ -54,4 +58,10 @@ project_id = "axsudmhjpfzffcicfvuj"
   [functions.cyber-ai-copilot]
     verify_jwt = false
   [functions.generate-blog]
+    verify_jwt = false
+  [functions.firecrawl-scrape]
+    verify_jwt = false
+  [functions.shadow-agent-tools]
+    verify_jwt = false
+  [functions.mission-execute]
     verify_jwt = false

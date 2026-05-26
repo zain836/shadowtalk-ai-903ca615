@@ -78,6 +78,7 @@ const CreativeStudioPage = lazy(() => import("./pages/CreativeStudioPage"));
 const CyberCommandPage = lazy(() => import("./pages/CyberCommandPage"));
 const PersonalLLMPage = lazy(() => import("./pages/PersonalLLMPage"));
 const PWABanner = lazy(() => import("./components/PWABanner"));
+const AnnouncementBanner = lazy(() => import("./components/AnnouncementBanner"));
 const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
 const ShadowMemoryTracker = lazy(() => import("./components/ShadowMemoryTracker"));
@@ -247,6 +248,9 @@ const App = () => {
               <Toaster />
               <Sonner />
                <BrowserRouter>
+                 <Suspense fallback={null}>
+                   <AnnouncementBanner />
+                 </Suspense>
                  <AnimatedRoutes />
                  <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
                   <Suspense fallback={null}>

@@ -429,6 +429,21 @@
     z-index: 1;
   }
 
+  /* Neural Expressive response cards (Gemini-style layout, ShadowTalk tokens) */
+  .neural-response-card {
+    @apply rounded-2xl border border-border/30 bg-card/25 backdrop-blur-sm shadow-sm;
+    box-shadow: 0 4px 24px hsl(var(--primary) / 0.06);
+  }
+
+  .neural-message-row .prose strong {
+    @apply text-foreground font-semibold;
+  }
+
+  .neural-message-row .prose h2:first-child,
+  .neural-message-row .prose h3:first-child {
+    @apply mt-0;
+  }
+
   /* Article Style Responses */
   .article-response {
     h1, h2, h3, h4, h5, h6 {

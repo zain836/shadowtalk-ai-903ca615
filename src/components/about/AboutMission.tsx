@@ -37,7 +37,7 @@ const AboutMission = () => {
               <div className="grid sm:grid-cols-3 gap-4">
                 {[
                   { icon: WifiOff, title: "Offline-First", desc: "Sovereign AI that works anywhere, anytime" },
-                  { icon: Shield, title: "Privacy-Native", desc: "Your data never leaves your device" },
+                  { icon: Shield, title: "Privacy-Native", desc: "Vault, BYOK, and optional on-device AI — you choose cloud vs local" },
                   { icon: Globe, title: "Pakistan-Built", desc: "World-class tech from the Global South" },
                 ].map((item, i) => (
                   <motion.div

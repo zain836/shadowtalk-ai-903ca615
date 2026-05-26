@@ -7,6 +7,7 @@ import { Settings, Globe, Palette, Monitor, Moon, Sun, Volume2 } from "lucide-re
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { OfflineAISettings } from "./OfflineAISettings";
+import { AutoImproveInsights } from "@/components/autoImprove/AutoImproveInsights";
 
 const tabMotion = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.3 } };
 

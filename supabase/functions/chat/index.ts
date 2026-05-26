@@ -3,6 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { checkRateLimit, getRateLimitHeaders } from "../_shared/rate-limit.ts";
 import { ChatRequestSchema, validateInput } from "../_shared/validation.ts";
+import { getKimiDocumentSystemPrompt, KIMI_CHAT_DOCUMENT_APPENDIX, type KimiDocumentType, type KimiToneType, type KimiLengthType } from "../_shared/kimiDocumentPrompts.ts";
+import { parseCustomAi, customAiChatCompletions, getEvaluatorApiKey } from "../_shared/custom-ai-provider.ts";
 
 // ============================================================================
 // SPRINT 1: CHAT INTELLIGENCE ENGINE
@@ -382,9 +384,13 @@ serve(async (req) => {
       messages, personality, generateImage, imagePrompt, imageEdit, originalImage, editPrompt,
       mode, modePrompt, userContext, businessMemory, analyzeTask, getEcoActions, location, securityAudit, 
       webSearch, searchQuery, deepResearch, researchQuery, agentWorkflow, decodeImage, imageToAnalyze,
-      isResearch, industry
+      isResearch, industry,
+      documentGeneration, documentType, documentTone, documentLength
     } = validation.data;
+    const customAi = parseCustomAi(body as Record<string, unknown>);
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const chatAi = (payload: Record<string, unknown>) =>
+      customAiChatCompletions(customAi, LOVABLE_API_KEY!, payload, fetchWithRetry);
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
@@ -394,13 +400,7 @@ serve(async (req) => {
     if (decodeImage && imageToAnalyze) {
       console.log("[CHAT] Decoding image with professional analysis");
       
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const response = await chatAi({
           model: "google/gemini-2.5-pro",
           messages: [
             { 
@@ -494,13 +494,7 @@ Be thorough, professional, and precise. Use bullet points for clarity.`
         console.log(`[CHAT] Executing step ${i + 1}/${steps.length}:`, step.name);
         
         // Execute each step with AI
-        const stepResponse: Response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
+        const stepResponse: Response = await chatAi({
             model: "google/gemini-2.5-flash",
             messages: [
               { 
@@ -631,13 +625,7 @@ Execute this step thoroughly and provide actionable, detailed results.`
         return `${prefix} **${r.title}**\n${r.snippet}\nSource: ${r.link}`;
       }).join('\n\n');
       
-      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const aiResponse = await chatAi({
           model: "google/gemini-2.5-pro",
           messages: [
             { 
@@ -721,13 +709,7 @@ Format your response with:
         `[${i + 1}] **${r.title}**\n${r.snippet}\nSource: ${r.link}`
       ).join('\n\n');
       
-      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const aiResponse = await chatAi({
           model: "google/gemini-2.5-flash",
           messages: [
             { 
@@ -761,13 +743,7 @@ Format your response with:
     if (analyzeTask) {
       console.log("[CHAT] Analyzing cognitive load for task");
       
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const response = await chatAi({
           model: "google/gemini-2.5-flash",
           messages: [
             { 
@@ -829,13 +805,7 @@ Return ONLY valid JSON in this exact format:
     if (getEcoActions && location) {
       console.log("[CHAT] Getting eco actions for location:", location);
       
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const response = await chatAi({
           model: "google/gemini-2.5-flash",
           messages: [
             { 
@@ -938,13 +908,7 @@ EROI (Environmental Return on Investment) should be 1-10 based on impact/effort 
       console.log("[CHAT] Running security audit on code");
       console.log("[CHAT] Code length:", securityAudit.length);
       
-      const response = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const response = await chatAi({
           model: "google/gemini-2.5-pro",
           max_tokens: 12000,
           messages: [
@@ -1137,13 +1101,7 @@ Return ONLY valid JSON in this exact format:
       
       console.log("[CHAT] Enhanced prompt for photorealism:", enhancedPrompt.substring(0, 200) + "...");
       
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const response = await chatAi({
           model: "google/gemini-3-pro-image-preview",
           messages: [
             { 
@@ -1203,13 +1161,7 @@ Return ONLY valid JSON in this exact format:
     if (imageEdit && originalImage && editPrompt) {
       console.log("[CHAT] Editing image with prompt:", editPrompt);
       
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const response = await chatAi({
           model: "google/gemini-2.5-flash-image",
           messages: [
             { 
@@ -1280,13 +1232,7 @@ Return ONLY valid JSON in this exact format:
     if (isResearch && messages && messages.length > 0) {
       console.log("[CHAT] Research mode - non-streaming JSON response");
       
-      const response = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const response = await chatAi({
           model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: "You are a business research analyst. Always respond with valid JSON when asked for JSON. Be thorough and specific." },
@@ -1361,7 +1307,22 @@ Return ONLY valid JSON in this exact format:
     );
 
     const hasMemoryContext = !!(businessMemory?.trim() || serverSideContext);
-    const routerDecision = smartModelRouter(lastUserText, hasImageContent, messages.length, hasMemoryContext);
+    let routerDecision = smartModelRouter(lastUserText, hasImageContent, messages.length, hasMemoryContext);
+
+    const isDocumentRequest =
+      documentGeneration === true ||
+      mode === "document" ||
+      /\b(write|create|generate|draft|compose)\s+(?:me\s+)?(?:a\s+)?(?:professional\s+)?(?:\d+k?\s*-?\s*word\s+)?(?:document|report|proposal|whitepaper|essay|thesis|business\s+plan|memo|brief)\b/i.test(lastUserText);
+
+    if (isDocumentRequest) {
+      routerDecision = {
+        model: "openai/gpt-5",
+        tier: "DOCUMENT",
+        score: 85,
+        reasoning: "professional_document_generation",
+      };
+      console.log("[CHAT] Professional document mode — model:", routerDecision.model);
+    }
     
     console.log(`[MODEL ROUTER V2] Tier: ${routerDecision.tier} | Score: ${routerDecision.score} | Model: ${routerDecision.model} | Signals: ${routerDecision.reasoning}`);
 
@@ -1592,8 +1553,26 @@ When a user asks you to write, create, draft, or generate any document (email, a
 
     let systemPrompt = personality && systemPrompts[personality as keyof typeof systemPrompts] ? systemPrompts[personality as keyof typeof systemPrompts] : systemPrompts.friendly;
     
-    if (modePrompt && mode !== 'general') {
+    if (modePrompt && mode !== 'general' && mode !== 'document') {
       systemPrompt += `\n\n## Current Mode: ${mode?.toUpperCase() || 'GENERAL'}\n${modePrompt}`;
+    }
+
+    if (isDocumentRequest) {
+      const docType = (documentType as KimiDocumentType) || "report";
+      const docTone = (documentTone as KimiToneType) || "professional";
+      const docLength = (documentLength as KimiLengthType) || (
+        /\b(10,?000|10000|epic|exhaustive)\b/i.test(lastUserText) ? "epic" :
+        /\b(comprehensive|in[- ]depth|detailed)\b/i.test(lastUserText) ? "comprehensive" :
+        /\b(long[- ]form|3500|3000)\b/i.test(lastUserText) ? "long" : "medium"
+      );
+      systemPrompt =
+        getKimiDocumentSystemPrompt(docType, docTone, docLength) +
+        currentDatePrompt +
+        (industryPrompt || "") +
+        developerCredit;
+      if (serverSideContext) systemPrompt += serverSideContext;
+      if (businessMemory?.trim()) systemPrompt += `\n\n## USER BUSINESS CONTEXT\n${businessMemory}`;
+      console.log("[CHAT] Professional doc:", docType, docTone, docLength);
     }
 
     // === SPRINT 1: USE ROUTER V2 MODEL DECISION ===
@@ -1601,13 +1580,7 @@ When a user asks you to write, create, draft, or generate any document (email, a
     console.log(`[CHAT] Model Router V2 selected: ${model} (${routerDecision.tier}, score: ${routerDecision.score})`);
 
     // First attempt
-    const response = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const response = await chatAi({
         model,
         messages: [
           { role: "system", content: systemPrompt },
@@ -1671,20 +1644,14 @@ When a user asks you to write, create, draft, or generate any document (email, a
 
       // Only quality-check if we got substantial content
       if (fullContent.length > 100) {
-        const quality = await evaluateResponseQuality(lastUserText, fullContent, LOVABLE_API_KEY);
+        const quality = await evaluateResponseQuality(lastUserText, fullContent, getEvaluatorApiKey(customAi, LOVABLE_API_KEY!));
         console.log(`[QUALITY SCORER] Score: ${quality.score}/10, Verdict: ${quality.verdict}, Issues: ${quality.issues.join(', ') || 'none'}`);
 
         // If quality is poor (< 5), retry with upgraded model
         if (quality.score < 5 && model !== 'openai/gpt-5.2') {
           console.log("[QUALITY SCORER] Low quality detected, retrying with GPT-5.2...");
           
-          const retryResponse = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
+          const retryResponse = await chatAi({
               model: 'openai/gpt-5.2',
               messages: [
                 { role: "system", content: systemPrompt + `\n\n> QUALITY IMPROVEMENT: A previous attempt scored ${quality.score}/10. Issues: ${quality.issues.join(', ')}. Ensure this response is comprehensive, accurate, and well-structured.` },
