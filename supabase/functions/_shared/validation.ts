@@ -58,7 +58,6 @@ export const ChatRequestSchema = z.object({
   deepResearch: z.boolean().optional(),
   isResearch: z.boolean().optional(), // Flag for research/strategy agent mode
   industry: z.string().max(50).optional(), // Industry specialization context
-  improvementHint: z.string().max(500).optional(), // Client-side adaptive learning hint
   researchQuery: z.string().max(500).optional(),
   decodeImage: z.boolean().optional(),
   imageToAnalyze: z.string().optional(),
@@ -71,9 +70,13 @@ export const ChatRequestSchema = z.object({
       status: z.enum(["pending", "running", "completed", "error"]).optional(),
     })).optional(),
   }).optional(),
+  documentGeneration: z.boolean().optional(),
+  documentType: z.string().max(50).optional(),
+  documentTone: z.enum(["professional", "casual", "academic", "persuasive", "creative"]).optional(),
+  documentLength: z.enum(["brief", "short", "medium", "long", "comprehensive", "epic"]).optional(),
 }).refine(
-  (data) => data.messages || data.analyzeTask || data.getEcoActions || data.securityAudit || data.agentWorkflow || data.deepResearch || data.webSearch || data.generateImage || data.imageEdit || data.decodeImage,
-  { message: "Either messages or a special mode (analyzeTask, getEcoActions, securityAudit, agentWorkflow, deepResearch, webSearch, generateImage, imageEdit, decodeImage) must be provided" }
+  (data) => data.messages || data.analyzeTask || data.getEcoActions || data.securityAudit || data.agentWorkflow || data.deepResearch || data.webSearch || data.generateImage || data.imageEdit || data.decodeImage || data.documentGeneration,
+  { message: "Either messages or a special mode (analyzeTask, getEcoActions, securityAudit, agentWorkflow, deepResearch, webSearch, generateImage, imageEdit, decodeImage, documentGeneration) must be provided" }
 );
 
 // SSO Configuration validation

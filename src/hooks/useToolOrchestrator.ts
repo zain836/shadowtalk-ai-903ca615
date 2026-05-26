@@ -288,27 +288,40 @@ const TOOL_PATTERNS: Array<{
       return { query: cleaned || msg };
     }
   },
-  // Document Generator
+  // Document Generator (Kimi-class Document Studio)
   {
     tool: 'document_generator',
     patterns: [
-      /\b(write|create|generate|draft|compose)\s+(a\s+|an\s+)?(document|doc|article|email|letter|report|proposal|blog\s*post|resume|cv)/i,
-      /\b(generate|write|create)\s+(?:me\s+)?(a\s+|an\s+)?(professional\s+)?(email|letter|report)/i,
-      /\bmake\s+(?:me\s+)?(a\s+|an\s+)?(document|article|email|report|pdf)/i,
-      /\bdraft\s+(an?\s+)?(email|letter|proposal|article)/i,
-      /\b(pdf|doc|article|email)\s+(?:about|for|on)\s+/i,
+      /\b(write|create|generate|draft|compose)\s+(a\s+|an\s+)?(document|doc|article|email|letter|report|proposal|blog\s*post|resume|cv|whitepaper|essay|memo|thesis|business\s+plan|press\s+release|case\s+study)/i,
+      /\b(generate|write|create)\s+(?:me\s+)?(a\s+|an\s+)?(professional\s+)?(email|letter|report|whitepaper|long[- ]form\s+document)/i,
+      /\bmake\s+(?:me\s+)?(a\s+|an\s+)?(document|article|email|report|pdf|word\s+doc)/i,
+      /\bdraft\s+(an?\s+)?(email|letter|proposal|article|contract|memo)/i,
+      /\b(pdf|docx?|word|article|email)\s+(?:about|for|on)\s+/i,
       /\b(write|create|generate|draft)\s+(a\s+|an\s+)?(book|book\s*extract|book\s*chapter|chapter|excerpt|novel\s*excerpt)/i,
       /\bbook\s*(extract|chapter|excerpt|section)\s*(?:about|on|for)?\s*/i,
       /\b(generate|write)\s+(?:me\s+)?(a\s+)?(story|fiction|narrative|book\s*content)/i,
+      /\b(?:kimi|document\s+studio)\s+(?:style\s+)?(?:write|generate|create)/i,
+      /\b\d+k?\s*word\s+(?:document|report|essay|article)/i,
+      /\b(long[- ]form|comprehensive|epic)\s+(?:document|report|write)/i,
     ],
-    priority: 8,
+    priority: 9,
     autoExecute: true,
     extractParams: (msg) => {
       const isBookRequest = /\b(book|chapter|excerpt|novel|story|fiction|narrative)/i.test(msg);
+      const isWhitepaper = /\bwhitepaper|white\s+paper/i.test(msg);
+      const isPlan = /\bbusiness\s+plan/i.test(msg);
       const cleaned = msg
-        .replace(/^(write|create|generate|draft|compose|make)\s+(me\s+)?(a\s+|an\s+)?(professional\s+)?(document|doc|article|email|letter|report|proposal|blog\s*post|resume|cv|book|book\s*extract|book\s*chapter|chapter|excerpt|novel\s*excerpt|story|fiction|narrative)\s*(about|for|on)?\s*/i, '')
+        .replace(/^(write|create|generate|draft|compose|make)\s+(me\s+)?(a\s+|an\s+)?(professional\s+)?(document|doc|article|email|letter|report|proposal|blog\s*post|resume|cv|book|book\s*extract|book\s*chapter|chapter|excerpt|novel\s*excerpt|story|fiction|narrative|whitepaper|essay|memo|business\s+plan)\s*(about|for|on)?\s*/i, '')
         .trim();
-      return { topic: cleaned || msg, docType: isBookRequest ? 'book_extract' : undefined };
+      let docType = 'article';
+      if (isBookRequest) docType = /\b(story|fiction)/i.test(msg) ? 'creative_story' : 'book_extract';
+      else if (isWhitepaper) docType = 'whitepaper';
+      else if (isPlan) docType = 'business_plan';
+      else if (/\bemail/i.test(msg)) docType = 'email';
+      else if (/\breport/i.test(msg)) docType = 'report';
+      else if (/\bproposal/i.test(msg)) docType = 'proposal';
+      else if (/\bresume|cv/i.test(msg)) docType = 'resume';
+      return { topic: cleaned || msg, docType };
     }
   },
   // Daily Planner

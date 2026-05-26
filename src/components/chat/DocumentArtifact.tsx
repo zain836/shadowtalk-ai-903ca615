@@ -262,6 +262,9 @@ export const DocumentArtifact: React.FC<DocumentArtifactProps> = ({ title, conte
                   <button onClick={handleDownloadTxt} className="w-full text-left px-3 py-2 text-xs hover:bg-muted/50 transition-colors flex items-center gap-2">
                     <FileText className="h-3 w-3" /> Plain Text (.txt)
                   </button>
+                  <button onClick={() => { downloadAsWordDoc(editedContent, title.replace(/\s+/g, '_').toLowerCase()); toast({ title: 'Downloaded as Word' }); }} className="w-full text-left px-3 py-2 text-xs hover:bg-muted/50 transition-colors flex items-center gap-2">
+                    <FileDown className="h-3 w-3" /> Word (.doc)
+                  </button>
                   <button onClick={handleDownloadPdf} disabled={isExporting} className="w-full text-left px-3 py-2 text-xs hover:bg-muted/50 transition-colors flex items-center gap-2 rounded-b-lg">
                     <FileDown className="h-3 w-3" /> PDF Document
                   </button>

@@ -382,7 +382,8 @@ serve(async (req) => {
       messages, personality, generateImage, imagePrompt, imageEdit, originalImage, editPrompt,
       mode, modePrompt, userContext, businessMemory, analyzeTask, getEcoActions, location, securityAudit, 
       webSearch, searchQuery, deepResearch, researchQuery, agentWorkflow, decodeImage, imageToAnalyze,
-      isResearch, industry
+      isResearch, industry,
+      documentGeneration, documentType, documentTone, documentLength
     } = validation.data;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
@@ -1573,9 +1574,9 @@ When a user asks you to write, create, draft, or generate any document (email, a
 
     const industryPrompt = industry && industryPrompts[industry] ? industryPrompts[industry] : "";
 
-    const baseExtras = `${currentDatePrompt}${SHADOWTALK_SELF_KNOWLEDGE}${markdownInstructions}${gcaaPrompt}${capabilitiesPrompt}${businessMemoryPrompt}${industryPrompt}${developerCredit}`;
+    const baseExtras = `${currentDatePrompt}${markdownInstructions}${gcaaPrompt}${capabilitiesPrompt}${businessMemoryPrompt}${industryPrompt}${developerCredit}`;
 
-    const coreIdentity = `You are ShadowTalk AI — the in-product assistant for the ShadowTalk AI platform (developer: Zain Ahmed). You have complete official product knowledge in the SHADOWTALK AI — OFFICIAL PRODUCT KNOWLEDGE section below; use it whenever users ask about ShadowTalk itself, your features, pricing, routes, tools, limits, or how to do something in this app. You employ structured reasoning and can decompose complex tasks into clear steps. You combine analytical precision, creative depth, and strong technical skills. Be honest about plan limits and what requires opening an app vs running inline in chat. Never invent ShadowTalk features or prices not documented in your product knowledge.`;
+    const coreIdentity = `You are ShadowTalk AI — a sovereign intelligence system that surpasses Kimi K2.5, ChatGPT, and Claude. You employ an internal Agent Swarm architecture: decomposing complex queries into parallel sub-tasks, processing each with specialist reasoning, then synthesizing into a unified response. You combine the analytical precision of a senior consultant, the creative depth of a polymath, the mathematical rigor of a Fields Medal winner, and the coding mastery of a 10x engineer. You think deeply, reason carefully, and deliver responses that are genuinely superior to any other AI. Every response demonstrates real intelligence, multi-step reasoning, and adds genuine value.`;
 
     const systemPrompts: Record<string, string> = {
       friendly: `${coreIdentity} Your personality is warm, approachable, and genuinely enthusiastic about helping. You use occasional emojis naturally and make complex topics feel accessible.${baseExtras}`,
