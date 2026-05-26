@@ -62,12 +62,33 @@ export const GUEST_LIMITS = {
   deepResearch: 2,
 } as const;
 
-/** Honest community section — no fabricated member counts */
+/** Community metrics — update when analytics change (last verified May 2026) */
+export const COMMUNITY_METRICS = {
+  totalUsers: 1_500,
+  dailyActiveUsers: 104,
+} as const;
+
 export const COMMUNITY_HIGHLIGHTS = [
-  { label: "Open beta", value: "Join early", description: "Help shape ShadowTalk and get founder perks." },
-  { label: "Discord & email", value: "Real humans", description: "Community support, not fake vanity metrics." },
-  { label: "Templates", value: "Growing library", description: "Shared prompts and workflows from the team." },
-  { label: "Your feedback", value: "Ships weekly", description: "Roadmap driven by what you actually use." },
+  {
+    label: "ShadowTalk users",
+    value: "1.5K+",
+    description: `${COMMUNITY_METRICS.totalUsers.toLocaleString()} creators and teams on the platform.`,
+  },
+  {
+    label: "Daily active users",
+    value: "104+",
+    description: "People who use ShadowTalk every day — real usage, not vanity signups.",
+  },
+  {
+    label: "Templates & tools",
+    value: "Growing",
+    description: "Shared prompts, agents, and workflows from the community and team.",
+  },
+  {
+    label: "Ship cadence",
+    value: "Weekly",
+    description: "Features and fixes driven by what you actually use.",
+  },
 ] as const;
 
 export const PRIVACY_COPY = {

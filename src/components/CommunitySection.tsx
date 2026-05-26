@@ -1,4 +1,5 @@
-import { Users, MessageSquare, Star, TrendingUp, Calendar, ArrowUpRight, Zap, Globe } from "lucide-react";
+import { Users, MessageSquare, Star, Activity, Calendar, ArrowUpRight, Zap, Globe } from "lucide-react";
+import { COMMUNITY_HIGHLIGHTS } from "@/lib/productClaims";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion, useInView } from "framer-motion";
@@ -23,7 +24,7 @@ const CommunitySection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
 
-  const statIcons = [Users, Mail, Star, Heart];
+  const statIcons = [Users, Activity, Star, MessageSquare];
   const communityStats = COMMUNITY_HIGHLIGHTS.map((item, i) => ({
     icon: statIcons[i] ?? Users,
     value: item.value,
@@ -115,7 +116,10 @@ const CommunitySection = () => {
                     <stat.icon className="h-5 w-5 text-primary" />
                   </motion.div>
                   <div className="text-2xl font-bold gradient-text mb-1">{stat.value}</div>
-                  <div className="text-xs text-muted-foreground">{stat.label}</div>
+                  <div className="text-xs font-medium text-foreground/80">{stat.label}</div>
+                  {"description" in stat && (
+                    <p className="text-[10px] text-muted-foreground mt-1 leading-snug">{stat.description}</p>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
