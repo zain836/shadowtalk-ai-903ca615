@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import {
-  Search, Image, FileText, Brain, AudioLines, Code, Shield, 
+  Search, Image, FileText, Brain, Mic, AudioLines, Code, Shield, 
   Sparkles, Globe, Bot, Zap, Camera, Calendar, GamepadIcon,
   Eye, Folder, MessageSquare, Settings, Moon, Sun, LogOut,
   Users, Keyboard, ArrowRight, Star, Clock, Flame, Compass,

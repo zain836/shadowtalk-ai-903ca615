@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { 
   Bot, ArrowLeft, LogOut, Settings, Download, Lock, Crown, Star, Zap, Menu, 
-  Search, Image, Play, Eye, Wand2, Compass, FileText, Mic, MoreVertical,
+  Search, Image, Play, Eye, Wand2, Compass, FileText, Mic, AudioLines, MoreVertical,
   LayoutGrid, Sparkles, MessageCircle, Briefcase, Heart, Laugh, Lightbulb,
   Scale, Target, HelpCircle, Share2, Plus, Pin
 } from "lucide-react";
@@ -140,7 +140,7 @@ const ToolsHubMenu = ({
           <span className="text-[13px] font-medium">Creative Studio</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onOpenShadowTalkLive} className="gap-3 rounded-xl py-2.5 px-3">
-          <AudioLines className="h-4 w-4 text-blue-400" />
+          <Mic className="h-4 w-4 text-blue-400" />
           <span className="text-[13px] font-medium">ShadowTalk Live</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onOpenBrowser} className="gap-3 rounded-xl py-2.5 px-3">

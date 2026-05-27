@@ -5,6 +5,7 @@ import { FileUpload } from "@/components/chat/FileUpload";
 import { ModeSelector, ChatMode } from "@/components/chat/ModeSelector";
 import { SearchHistory } from "@/components/chat/SearchHistory";
 import { ProviderSelector, AIProvider } from "@/components/chat/ProviderSelector";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Tooltip,
   TooltipContent,
@@ -223,28 +224,7 @@ export const ChatInput = ({
                 </Tooltip>
               </TooltipProvider>
 
-              {!isGemini && (
-                <>
-                  {isLoading ? (
-                    <Button
-                      onClick={onStopGeneration}
-                      size="icon"
-                      className="h-9 w-9 rounded-full bg-destructive/80 hover:bg-destructive text-white shadow-lg shadow-destructive/20"
-                    >
-                      <Square className="h-3.5 w-3.5 fill-current" />
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={onSend}
-                      size="icon"
-                      className="h-9 w-9 rounded-full bg-white text-black hover:bg-white/90 shadow-lg transition-all duration-300 disabled:opacity-10 disabled:bg-white/5 disabled:text-white/20 hover:scale-105 active:scale-95"
-                      disabled={!message.trim() && !selectedFile}
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  )}
-                </>
-              )}
+              {/* Non-gemini layout uses the same send/stop slot above */}
             </div>
           </div>
         </div>
