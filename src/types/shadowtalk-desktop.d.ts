@@ -8,6 +8,9 @@ export interface ShadowTalkDesktopInfo {
   documentsPath: string;
   homePath: string;
   shadowtalkDataPath: string;
+  /** Tier C: installer shipped default MLC model cache */
+  offlineModelBundled?: boolean;
+  offlineModelPath?: string;
 }
 
 export interface ShadowTalkDesktopAPI {

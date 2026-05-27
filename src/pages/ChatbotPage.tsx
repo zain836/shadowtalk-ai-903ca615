@@ -36,6 +36,10 @@ import { Badge } from "@/components/ui/badge";
 import type { ToolType } from "@/hooks/useToolOrchestrator";
 import { executeShadowTool } from "@/lib/shadowTools";
 import { trackAgenticEvent } from "@/lib/agenticMetrics";
+import { useGemmaOffline } from "@/hooks/useGemmaOffline";
+import { runLocalChat, isAnyLocalModelReady, getActiveLocalTier } from "@/lib/offline/localChat";
+import { OfflineBootstrapBanner, OfflineReadyBadge } from "@/components/offline/OfflineBootstrapBanner";
+import type { RouterMessage } from "@/lib/offline/hybridRouter";
 
 interface Message {
   id: string;
@@ -66,6 +70,8 @@ const ChatbotPage = () => {
   const e2ee = useE2EE();
   const { open: openGlobalPalette } = useContext(CommandPaletteContext);
   const { dispatchDetection } = useAgenticToolDispatch();
+  const gemmaOffline = useGemmaOffline();
+  const [localTier, setLocalTier] = useState<"smollm" | "gemma" | null>(null);
   const { requestPermission } = usePushNotifications();
   const { getOfflineSession } = useOfflineAuth();
   const { isElite } = useFeatureGating();
@@ -224,6 +230,41 @@ const ChatbotPage = () => {
       return final;
     },
     [messages, personality, chatMode, selectedFile]
+  );
+
+
+  const streamLocalChat = useCallback(
+    async (routerMessages: RouterMessage[]) => {
+      const aiMessageId = crypto.randomUUID();
+      let assistantContent = "";
+
+      const { content, tier } = await runLocalChat(routerMessages, (delta) => {
+        assistantContent += delta;
+        setMessages((prev) => {
+          const exists = prev.find((m) => m.id === aiMessageId);
+          if (exists) {
+            return prev.map((m) =>
+              m.id === aiMessageId ? { ...m, content: assistantContent } : m
+            );
+          }
+          return [
+            ...prev,
+            {
+              id: aiMessageId,
+              type: "ai" as const,
+              content: assistantContent,
+              timestamp: new Date(),
+            },
+          ];
+        });
+      });
+
+      setLocalTier(tier === "none" ? null : tier);
+      if (content) await saveMessage(content, "assistant");
+      trackAgenticEvent("chat_stream_complete", { mode: chatMode, source: "local", tier });
+      return content;
+    },
+    [chatMode, messages, saveMessage]
   );
 
   const updateMessageTool = useCallback(
@@ -472,6 +513,35 @@ const ChatbotPage = () => {
       const outcome = dispatchDetection(msgContent, toolUi());
       if (outcome.handled) trackAgenticEvent("tool_run", { source: "dispatch" });
       if (outcome.handled) {
+        return;
+      }
+
+      const routerMessages: RouterMessage[] = messages
+        .filter((m) => m.id !== "welcome")
+        .map((m) => ({
+          role: (m.type === "user" ? "user" : "assistant") as RouterMessage["role"],
+          content: m.content,
+        }));
+      routerMessages.push({ role: "user", content: msgContent });
+
+      const routeDecision = gemmaOffline.route(routerMessages);
+
+      if (routeDecision.target === "local") {
+        if (!isAnyLocalModelReady()) {
+          appendAssistant(
+            "📴 **Offline AI not installed yet.** Use the banner above to install the included on-device model (~130 MB), or open **Profile → Offline AI** for Gemma."
+          );
+          return;
+        }
+        trackAgenticEvent("chat_stream_start", { mode: chatMode, source: "local" });
+        await streamLocalChat(routerMessages);
+        return;
+      }
+
+      if (!gemmaOffline.isOnline && !isAnyLocalModelReady()) {
+        appendAssistant(
+          "You're offline and no on-device model is loaded. Install offline AI when you're back online."
+        );
         return;
       }
 

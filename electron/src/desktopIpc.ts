@@ -1,4 +1,5 @@
 import { app, dialog, ipcMain, Notification, shell } from 'electron';
+import { access } from 'fs/promises';
 import { readFile, writeFile } from 'fs/promises';
 import { homedir } from 'os';
 import { join } from 'path';
@@ -18,7 +19,16 @@ const CHANNEL = {
 } as const;
 
 export function registerDesktopIpc(): void {
-  ipcMain.handle(CHANNEL.getInfo, () => ({
+  ipcMain.handle(CHANNEL.getInfo, async () => {
+    const bundledDir = join(process.resourcesPath, 'offline-models', 'SmolLM2-135M-Instruct-q4f16_1-MLC');
+    let offlineModelBundled = false;
+    try {
+      await access(bundledDir);
+      offlineModelBundled = true;
+    } catch {
+      offlineModelBundled = false;
+    }
+    return ({
     platform: process.platform,
     arch: process.arch,
     appVersion: app.getVersion(),
@@ -28,7 +38,9 @@ export function registerDesktopIpc(): void {
     documentsPath: app.getPath('documents'),
     homePath: homedir(),
     shadowtalkDataPath: join(app.getPath('userData'), 'shadowtalk-data'),
-  }));
+    offlineModelBundled,
+    offlineModelPath: offlineModelBundled ? bundledDir : undefined,
+  };});
 
   ipcMain.handle(CHANNEL.openFile, async (_event, options: Electron.OpenDialogOptions) => {
     const result = await dialog.showOpenDialog({

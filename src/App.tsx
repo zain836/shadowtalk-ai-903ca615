@@ -209,6 +209,13 @@ const App = () => {
     // Auto-resume any previously-started on-device model download.
     // The engine singleton outlives every route, so once load() is called
     // the fetch+cache pipeline keeps running even after the user navigates away.
+    // Tier A: resume SmolLM if user already consented
+    if (localStorage.getItem('shadowtalk_offline_tier_a_consent') === '1') {
+      import('@/lib/offline/smollmEngine').then(({ getSmolLMEngine }) => {
+        getSmolLMEngine().ensureLoaded().catch((e) => console.warn('[Tier A] resume failed', e));
+      });
+    }
+
     if (localStorage.getItem('shadowtalk_offline_autoresume') === '1') {
       (async () => {
         try {
