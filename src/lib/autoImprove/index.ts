@@ -3,3 +3,8 @@ export * from "./analyzeBehavior";
 export * from "./inferCategory";
 export * from "./eventStore";
 export * from "./consent";
+export * from "./eventBus";
+export * from "./learningConsent";
+export * from "./syncProfileMemories";
+export * from "./dailyInsightsClient";
+export * from "./metrics";

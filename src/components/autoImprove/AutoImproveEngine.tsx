@@ -1,21 +1,32 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "@/components/AuthProvider";
 import { useAutoImproveContext } from "@/contexts/AutoImproveContext";
+import { maybeFetchDailyInsights } from "@/lib/autoImprove/dailyInsightsClient";
+import { hasAnalyticsConsent } from "@/lib/autoImprove/consent";
 import { AnimatePresence, motion } from "framer-motion";
 import { Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
- * Background engine: runs analysis on route changes and surfaces subtle improvement toasts.
+ * Background engine: runs analysis on route changes, syncs cloud memories/insights, surfaces improvement toasts.
  */
 export const AutoImproveEngine = () => {
   const location = useLocation();
+  const { user } = useAuth();
   const { runAnalysis, pendingImprovements, dismissImprovementNotice } = useAutoImproveContext();
 
   useEffect(() => {
     const t = setTimeout(() => runAnalysis(), 2000);
     return () => clearTimeout(t);
   }, [location.pathname, runAnalysis]);
+
+  useEffect(() => {
+    if (!user?.id || !hasAnalyticsConsent()) return;
+    maybeFetchDailyInsights(user.id).catch((e) =>
+      console.warn("[AutoImprove] daily insights", e)
+    );
+  }, [user?.id]);
 
   return (
     <AnimatePresence>

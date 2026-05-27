@@ -6,12 +6,14 @@ import { useShadowMemoryContext } from "@/contexts/ShadowMemoryContext";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import {
   analyzeBehavior,
-  appendBehaviorEvent,
   getBehaviorEvents,
   hasAnalyticsConsent,
   inferQueryCategory,
+  publishAutoImproveEvent,
+  isLearningEnabled,
+  syncProfileToMemories,
+  bumpMetric,
   PROFILE_SETTING_KEY,
-  type BehaviorEvent,
   type BehaviorEventType,
   type LearnedProfile,
   type ImprovementApplied,
@@ -42,31 +44,34 @@ export function useAutoImprove() {
   const analyzingRef = useRef(false);
 
   const runAnalysis = useCallback(async () => {
-    if (analyzingRef.current) return;
+    if (analyzingRef.current || !isLearningEnabled()) return;
     analyzingRef.current = true;
     try {
       const events = await getBehaviorEvents();
       const { profile: next, newImprovements } = analyzeBehavior(events, profile || EMPTY_PROFILE);
       await saveProfile(next);
+      bumpMetric("analysesRun");
+      bumpMetric("lastAnalysisAt", 0);
+
+      if (user?.id && hasAnalyticsConsent()) {
+        await syncProfileToMemories(user.id, next);
+      }
+
       if (newImprovements.length > 0) {
         setPendingImprovements((prev) => [...prev, ...newImprovements].slice(-5));
       }
     } finally {
       analyzingRef.current = false;
     }
-  }, [profile, saveProfile]);
+  }, [profile, saveProfile, user?.id]);
 
   const capture = useCallback(
     async (type: BehaviorEventType, payload?: Record<string, string | number | boolean>) => {
-      const event: BehaviorEvent = {
-        id: crypto.randomUUID(),
-        ts: Date.now(),
-        type,
-        payload,
-      };
+      if (!isLearningEnabled()) return;
 
-      await appendBehaviorEvent(event);
+      await publishAutoImproveEvent(type, payload);
       eventCountRef.current += 1;
+      bumpMetric("eventsCaptured");
 
       shadowMemory.log(
         "feature",
@@ -86,7 +91,13 @@ export function useAutoImprove() {
         } else if (type === "mode_change" && payload?.mode) {
           await trackModeSwitch(String(payload.mode));
         } else {
-          await trackUsage("chat_message", undefined, `auto_improve_${type}`, undefined, payload as Record<string, string>);
+          await trackUsage(
+            "chat_message",
+            undefined,
+            `auto_improve_${type}`,
+            undefined,
+            payload as Record<string, string>
+          );
         }
       }
 
@@ -132,6 +143,7 @@ export function useAutoImprove() {
 
       apply(defaults);
       sessionStorage.setItem(sessionKey, "1");
+      bumpMetric("defaultsApplied");
 
       const labels: string[] = [];
       if (defaults.mode) labels.push(`${defaults.mode} mode`);
@@ -157,7 +169,10 @@ export function useAutoImprove() {
     await saveProfile(EMPTY_PROFILE);
     sessionStorage.removeItem(SESSION_APPLIED_KEY);
     setPendingImprovements([]);
-    toast({ title: "Learning reset", description: "Behavior profile cleared. ShadowTalk will relearn from new activity." });
+    toast({
+      title: "Learning reset",
+      description: "Behavior profile cleared. ShadowTalk will relearn from new activity.",
+    });
   }, [saveProfile, toast]);
 
   useEffect(() => {
@@ -180,5 +195,6 @@ export function useAutoImprove() {
     dismissImprovementNotice,
     clearLearning,
     preferSeeRouting: (profile || EMPTY_PROFILE).preferSeeRouting === true,
+    learningEnabled: isLearningEnabled(),
   };
 }

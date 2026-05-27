@@ -28,6 +28,7 @@ export function buildAgenticChatBody(
     decodeImage?: boolean;
     imageDataUrl?: string;
     agenticSystemHint?: boolean;
+    improvementHint?: string;
   }
 ): AgenticChatBody {
   const body: AgenticChatBody = {
@@ -48,10 +49,14 @@ export function buildAgenticChatBody(
     body.decodeImage = true;
     body.imageToAnalyze = opts.imageDataUrl;
   }
+  const agenticBase =
+    "You are ShadowTalk, a top-tier agentic AI. Break hard problems into steps, name tools you would use, and deliver finished work (drafts, plans, code, tables)—not vague advice. Be direct and execution-focused.";
+  const hint = opts.improvementHint?.trim();
   if (opts.agenticSystemHint) {
-    body.modePrompt =
-      "You are ShadowTalk, a top-tier agentic AI. Break hard problems into steps, name tools you would use, and deliver finished work (drafts, plans, code, tables)—not vague advice. Be direct and execution-focused.";
+    body.modePrompt = hint ? `${agenticBase}\n\n## Learned preferences\n${hint}` : agenticBase;
     body.agenticReact = true;
+  } else if (hint) {
+    body.modePrompt = hint;
   }
 
   return body;

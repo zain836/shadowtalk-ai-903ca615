@@ -10,6 +10,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/AuthProvider";
 import { SecurityProvider } from "@/components/SecurityProvider";
 import { ShadowMemoryProvider } from "@/contexts/ShadowMemoryContext";
+import { AutoImproveProvider } from "@/contexts/AutoImproveContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import BootScreen from "@/components/BootScreen";
 import CommandPalette from "@/components/CommandPalette";
@@ -81,6 +82,7 @@ const PWABanner = lazy(() => import("./components/PWABanner"));
 const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
 const ShadowMemoryTracker = lazy(() => import("./components/ShadowMemoryTracker"));
+const AutoImproveEngine = lazy(() => import("./components/autoImprove/AutoImproveEngine"));
 const JourneyTracker = lazy(() => import("./components/JourneyTracker").then(m => ({ default: m.JourneyTracker })));
 const VoiceCommandSystem = lazy(() => import("./components/VoiceCommandSystem"));
 const OnboardingFlow = lazy(() => import("./components/OnboardingFlow"));
@@ -248,6 +250,7 @@ const App = () => {
             <AuthProvider>
               <SecurityProvider>
               <ShadowMemoryProvider>
+              <AutoImproveProvider>
               <CommandPaletteContext.Provider value={{ open: () => setCmdOpen(true) }}>
               {showBootScreen && !hasBooted && (
                 <BootScreen onComplete={handleBootComplete} />
@@ -265,9 +268,11 @@ const App = () => {
                    <PWABanner />
                    <CookieConsent />
                    <CustomerSupportWidget />
+                   <AutoImproveEngine />
                  </Suspense>
                </BrowserRouter>
               </CommandPaletteContext.Provider>
+              </AutoImproveProvider>
               </ShadowMemoryProvider>
               </SecurityProvider>
             </AuthProvider>

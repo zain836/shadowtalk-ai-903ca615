@@ -39,6 +39,7 @@ import type { ToolType } from "@/hooks/useToolOrchestrator";
 import { executeShadowTool } from "@/lib/shadowTools";
 import { trackAgenticEvent } from "@/lib/agenticMetrics";
 import { useGemmaOffline } from "@/hooks/useGemmaOffline";
+import { useAutoImproveContext } from "@/contexts/AutoImproveContext";
 import { runLocalChat, isAnyLocalModelReady, getActiveLocalTier } from "@/lib/offline/localChat";
 import { OfflineBootstrapBanner, OfflineReadyBadge } from "@/components/offline/OfflineBootstrapBanner";
 import type { RouterMessage } from "@/lib/offline/hybridRouter";
@@ -84,6 +85,7 @@ const ChatbotPage = () => {
     hasOfflineSession: !!offlineSession,
   });
   const { isElite } = useFeatureGating();
+  const autoImprove = useAutoImproveContext();
 
   const [e2eePassphrase, setE2EEPassphrase] = useState("");
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -122,6 +124,26 @@ const ChatbotPage = () => {
   const imagePromptRef = useRef("");
 
   useGeoLocation();
+
+  useEffect(() => {
+    if (!plainOfflineChat && !e2ee.isUnlocked) return;
+    autoImprove.applyChatDefaultsOnce((defaults) => {
+      if (defaults.mode) setChatMode(defaults.mode as ChatMode);
+      if (defaults.personality) setPersonality(defaults.personality as Personality);
+    });
+  }, [plainOfflineChat, e2ee.isUnlocked, autoImprove]);
+
+
+  const handleModeChange = (mode: ChatMode) => {
+    setChatMode(mode);
+    void autoImprove.capture("mode_change", { mode });
+  };
+
+  const handlePersonalityChange = (p: Personality) => {
+    setPersonality(p);
+    void autoImprove.capture("personality_change", { personality: p });
+  };
+
 
   const appendAssistant = useCallback(
     (content: string, toolExecution?: Message["toolExecution"]) => {
@@ -183,6 +205,7 @@ const ChatbotPage = () => {
         personality,
         mode: chatMode,
         agenticSystemHint: chatMode === "agent",
+        improvementHint: autoImprove.getChatDefaults()?.systemHintAddon,
         webSearch: flags?.webSearch,
         searchQuery: flags?.searchQuery,
         deepResearch: flags?.deepResearch,
@@ -238,7 +261,7 @@ const ChatbotPage = () => {
       }
       return final;
     },
-    [messages, personality, chatMode, selectedFile]
+    [messages, personality, chatMode, selectedFile, autoImprove]
   );
 
 
@@ -348,13 +371,16 @@ const ChatbotPage = () => {
         setIsLoading(false);
       }
     },
-    [messages, personality, chatMode, navigate, streamChat, toast, updateMessageTool]
+    [messages, personality, chatMode, navigate, streamChat, toast, updateMessageTool, autoImprove]
   );
 
   const handleCancelTool = useCallback((messageId: string) => {
     setMessages((prev) => prev.filter((m) => m.id !== messageId));
   }, []);
 
+
+  const getWelcomeMessage = () =>
+    `👋 ${pickChatWelcome()} Your agentic workspace is ready — ask for a plan, research, or say "run this for me".`;
 
   const initPlainOfflineStore = async () => {
     if (!offlineChat.isReady) return;
@@ -491,9 +517,6 @@ const ChatbotPage = () => {
     }
   };
 
-  const getWelcomeMessage = () =>
-    `👋 ${pickChatWelcome()} Your agentic workspace is ready — ask for a plan, research, or say "run this for me".`;
-
   const saveMessage = async (content: string, role: "user" | "assistant") => {
     if (!currentConversationId) return null;
 
@@ -574,6 +597,7 @@ const ChatbotPage = () => {
     setSelectedFile(null);
     setIsLoading(true);
     await saveMessage(msgContent, "user");
+    void autoImprove.captureChatSend(msgContent, chatMode, personality, Boolean(fileSnapshot));
 
     try {
       const outcome = dispatchDetection(msgContent, toolUi());
@@ -632,6 +656,7 @@ const ChatbotPage = () => {
     setShowCommandPalette(false);
     switch (action) {
       case "agentic":
+        void autoImprove.capture("see_launch", { source: "palette" });
         setAgenticGoal("");
         setShowAgenticRunner(true);
         break;
@@ -741,7 +766,7 @@ const ChatbotPage = () => {
   const headerProps = {
     userPlan,
     personality,
-    onPersonalityChange: setPersonality,
+    onPersonalityChange: handlePersonalityChange,
     onToggleSidebar: () => setShowSidebar(!showSidebar),
     onExport: handleExport,
     onManageSubscription: () => navigate("/billing"),
@@ -755,7 +780,7 @@ const ChatbotPage = () => {
     onOpenGeminiAnalytics: () => navigate("/analytics"),
     onOpenCanvas: () => navigate("/workspace"),
     onOpenDeepResearch: () => setShowDeepResearch(true),
-    onOpenAgenticRunner: () => setShowAgenticRunner(true),
+    onOpenAgenticRunner: () => { void autoImprove.capture("see_launch", { source: "header" }); setShowAgenticRunner(true); },
     onOpenVisualReasoning: noop,
     onOpenCreativeSynthesis: () => navigate("/studio"),
     onOpenImageGenerator: () => setShowImageGenerator(true),
@@ -789,7 +814,7 @@ const ChatbotPage = () => {
       <div className="flex h-screen w-full relative z-10">
         <ChatIconRail
           userInitials={userInitials}
-          onNewChat={() => {
+          onNewChat={() => { void autoImprove.capture("conversation_new", {});
             setCurrentConversationId(null);
             setMessages([]);
           }}
@@ -880,7 +905,7 @@ const ChatbotPage = () => {
                       selectedFile={selectedFile}
                       onFileSelect={setSelectedFile}
                       chatMode={chatMode}
-                      onModeChange={setChatMode}
+                      onModeChange={handleModeChange}
                       personality={personality}
                     />
                   </div>
@@ -930,7 +955,7 @@ const ChatbotPage = () => {
                 selectedFile={selectedFile}
                 onFileSelect={setSelectedFile}
                 chatMode={chatMode}
-                onModeChange={setChatMode}
+                onModeChange={handleModeChange}
                 personality={personality}
               />
             </div>
