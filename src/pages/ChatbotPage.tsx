@@ -183,6 +183,66 @@ const ChatbotPage = () => {
     [appendAssistant, navigate]
   );
 
+  const saveMessage = async (content: string, role: "user" | "assistant") => {
+    if (!currentConversationId) return null;
+
+    if (plainOfflineChat && offlineChat.isReady) {
+      const msgId = crypto.randomUUID();
+      await offlineChat.cacheMessage(
+        currentConversationId,
+        { id: msgId, type: role === "user" ? "user" : "ai", content, timestamp: new Date() },
+        personality
+      );
+      if (role === "user" && messages.length <= 1) {
+        const title = content.trim().split(/\s+/).slice(0, 3).join(" ").slice(0, 25) || "Offline chat";
+        await offlineChat.touchConversation(currentConversationId, title);
+        setConversations((prev) =>
+          prev.map((c) => (c.id === currentConversationId ? { ...c, title } : c))
+        );
+      } else {
+        await offlineChat.touchConversation(currentConversationId);
+      }
+      await offlineChat.addToPendingSync("message", "create", {
+        conversation_id: currentConversationId,
+        content,
+        role,
+      });
+      return { id: msgId };
+    }
+
+    if (!user || !e2ee.isUnlocked) return null;
+    let contentToSave = content;
+    const encrypted = await e2ee.encryptData(content);
+    if (encrypted) contentToSave = e2ee.wrapEncrypted(encrypted.data, encrypted.iv);
+
+    const { data } = await supabase
+      .from("messages")
+      .insert({
+        conversation_id: currentConversationId,
+        user_id: user.id,
+        content: contentToSave,
+        role,
+        personality,
+      })
+      .select()
+      .single();
+
+    if (role === "user" && messages.length <= 1) {
+      const title = content.trim().split(/\s+/).slice(0, 3).join(" ").slice(0, 25);
+      let titleToSave = title;
+      const encryptedTitle = await e2ee.encryptData(title);
+      if (encryptedTitle) titleToSave = e2ee.wrapEncrypted(encryptedTitle.data, encryptedTitle.iv);
+      await supabase
+        .from("conversations")
+        .update({ title: titleToSave, updated_at: new Date().toISOString() })
+        .eq("id", currentConversationId);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === currentConversationId ? { ...c, title } : c))
+      );
+    }
+    return data;
+  };
+
   const streamChat = useCallback(
     async (msgContent: string, flags?: {
       webSearch?: boolean;
@@ -517,65 +577,6 @@ const ChatbotPage = () => {
     }
   };
 
-  const saveMessage = async (content: string, role: "user" | "assistant") => {
-    if (!currentConversationId) return null;
-
-    if (plainOfflineChat && offlineChat.isReady) {
-      const msgId = crypto.randomUUID();
-      await offlineChat.cacheMessage(
-        currentConversationId,
-        { id: msgId, type: role === "user" ? "user" : "ai", content, timestamp: new Date() },
-        personality
-      );
-      if (role === "user" && messages.length <= 1) {
-        const title = content.trim().split(/\s+/).slice(0, 3).join(" ").slice(0, 25) || "Offline chat";
-        await offlineChat.touchConversation(currentConversationId, title);
-        setConversations((prev) =>
-          prev.map((c) => (c.id === currentConversationId ? { ...c, title } : c))
-        );
-      } else {
-        await offlineChat.touchConversation(currentConversationId);
-      }
-      await offlineChat.addToPendingSync("message", "create", {
-        conversation_id: currentConversationId,
-        content,
-        role,
-      });
-      return { id: msgId };
-    }
-
-    if (!user || !e2ee.isUnlocked) return null;
-    let contentToSave = content;
-    const encrypted = await e2ee.encryptData(content);
-    if (encrypted) contentToSave = e2ee.wrapEncrypted(encrypted.data, encrypted.iv);
-
-    const { data } = await supabase
-      .from("messages")
-      .insert({
-        conversation_id: currentConversationId,
-        user_id: user.id,
-        content: contentToSave,
-        role,
-        personality,
-      })
-      .select()
-      .single();
-
-    if (role === "user" && messages.length <= 1) {
-      const title = content.trim().split(/\s+/).slice(0, 3).join(" ").slice(0, 25);
-      let titleToSave = title;
-      const encryptedTitle = await e2ee.encryptData(title);
-      if (encryptedTitle) titleToSave = e2ee.wrapEncrypted(encryptedTitle.data, encryptedTitle.iv);
-      await supabase
-        .from("conversations")
-        .update({ title: titleToSave, updated_at: new Date().toISOString() })
-        .eq("id", currentConversationId);
-      setConversations((prev) =>
-        prev.map((c) => (c.id === currentConversationId ? { ...c, title } : c))
-      );
-    }
-    return data;
-  };
 
   const handleSendMessage = async () => {
     if ((!message.trim() && !selectedFile) || isLoading || !currentConversationId) return;

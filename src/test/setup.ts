@@ -1,5 +1,10 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
+import { createMockSupabase } from './mocks/supabaseClient';
+
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: createMockSupabase(),
+}));
 
 // Mock matchMedia for components that use it
 Object.defineProperty(window, 'matchMedia', {

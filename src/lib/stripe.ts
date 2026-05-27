@@ -1,4 +1,6 @@
 // Stripe Configuration for ShadowTalk AI
+import { FREE_TIER_MARKETING } from "@/lib/productClaims";
+
 
 export const STRIPE_CONFIG = {
   prices: {
