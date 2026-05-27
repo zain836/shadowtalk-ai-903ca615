@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useUsageTracking } from './useUsageTracking';
-import { AuthProvider } from '@/components/AuthProvider';
-import { supabase } from '@/integrations/supabase/client';
+import React from 'react';
 
+// Mock supabase client
 vi.mock('@/integrations/supabase/client', () => {
   const insert = vi.fn().mockResolvedValue({ error: null });
   return {
@@ -13,23 +13,28 @@ vi.mock('@/integrations/supabase/client', () => {
   };
 });
 
-// Minimal mocked AuthProvider that always provides a fake user
-const MockAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { AuthContext } = require('@/components/AuthProvider');
-  return (
-    <AuthContext.Provider value={{ user: { id: 'test-user' }, userPlan: 'free' }}>
-      {children}
-    </AuthContext.Provider>
-  );
+// Mock AuthContext and useAuth
+const mockUser = { id: 'test-user' };
+const mockContextValue = {
+  user: mockUser,
+  userPlan: 'free',
+  session: null,
+  isLoading: false,
+  signOut: vi.fn(),
+  checkSubscription: vi.fn(),
+  isOffline: false
 };
+
+vi.mock('@/components/AuthProvider', () => ({
+  useAuth: () => mockContextValue,
+  AuthContext: {
+    Provider: ({ children, value }: any) => <div data-testid="mock-provider">{children}</div>
+  }
+}));
 
 describe('useUsageTracking', () => {
   it('tracks a chat message without throwing', async () => {
-    const wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-      <MockAuthProvider>{children}</MockAuthProvider>
-    );
-
-    const { result } = renderHook(() => useUsageTracking(), { wrapper });
+    const { result } = renderHook(() => useUsageTracking());
 
     await act(async () => {
       await result.current.trackChatMessage('general', 'Default', 42, false);
