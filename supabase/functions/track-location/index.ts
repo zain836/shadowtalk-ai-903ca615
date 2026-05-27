@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
-import { optionalAuth } from "../_shared/auth.ts";
+import { requireAuth } from "../_shared/auth.ts";
 
 serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -13,8 +13,8 @@ serve(async (req) => {
   const corsHeaders = getCorsHeaders(origin);
 
   try {
-    // Optional auth — location tracking works for anonymous visitors too
-    const auth = await optionalAuth(req);
+    const auth = await requireAuth(req, corsHeaders);
+    if (!auth.authenticated) return auth.response;
     
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -83,7 +83,7 @@ serve(async (req) => {
       .from("user_locations")
       .insert({
         session_id: sessionId,
-        user_id: auth.userId || null,
+        user_id: auth.userId,
         ip_address: clientIP,
         country: geoData.country,
         country_code: geoData.countryCode,
