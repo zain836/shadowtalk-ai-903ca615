@@ -38,6 +38,8 @@ interface SovereignAIState {
   isWebGPUAvailable: boolean;
   isWASMFallback: boolean;
   encryptionEnabled: boolean;
+  isSovereignProtected: boolean; // True when at least one model is cached
+  isProactiveCaching: boolean;
   contextTokens: number;
   maxContextTokens: number;
 }
@@ -167,6 +169,9 @@ const FALLBACK_RESPONSES = {
   default: "I'm currently in basic offline mode. For full AI reasoning, please download a local model or connect to the internet.",
 };
 
+const PROACTIVE_CACHE_KEY = 'shadowtalk_proactive_cache_attempted';
+const PROACTIVE_MODEL_ID = 'SmolLM2-135M-Instruct-q4f16_1-MLC';
+
 export const useSovereignAI = () => {
   const { capabilities } = useHardwareCapabilities();
   const { search: ragSearch, documentCount } = useOfflineRAG();
@@ -183,12 +188,15 @@ export const useSovereignAI = () => {
     isWebGPUAvailable: false,
     isWASMFallback: false,
     encryptionEnabled: true,
+    isSovereignProtected: false,
+    isProactiveCaching: false,
     contextTokens: 0,
     maxContextTokens: 4096,
   });
 
   const engineRef = useRef<any>(null);
   const initPromiseRef = useRef<Promise<boolean> | null>(null);
+  const proactiveAttemptedRef = useRef(false);
   const stateRef = useRef(state);
 
   // Keep refs in sync
@@ -196,7 +204,25 @@ export const useSovereignAI = () => {
     stateRef.current = state;
   }, [state]);
 
-  // Detect WebGPU availability
+  // Check protection status
+  const checkProtectionStatus = useCallback(async () => {
+    try {
+      const webllm = await import('@mlc-ai/web-llm');
+      let hasCached = false;
+      for (const model of SOVEREIGN_MODELS) {
+        if (await webllm.hasModelInCache(model.id)) {
+          hasCached = true;
+          break;
+        }
+      }
+      setState(prev => ({ ...prev, isSovereignProtected: hasCached }));
+      return hasCached;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Detect WebGPU availability and trigger proactive cache
   useEffect(() => {
     const detectRuntime = async () => {
       let webGPUAvailable = false;
@@ -221,6 +247,51 @@ export const useSovereignAI = () => {
     };
 
     detectRuntime();
+    checkProtectionStatus();
+
+    // Proactive Caching logic
+    const triggerProactiveCache = async () => {
+      if (proactiveAttemptedRef.current || !navigator.onLine) return;
+
+      const attempted = localStorage.getItem(PROACTIVE_CACHE_KEY);
+      if (attempted) {
+        proactiveAttemptedRef.current = true;
+        return;
+      }
+
+      const isProtected = await checkProtectionStatus();
+      if (isProtected) {
+        proactiveAttemptedRef.current = true;
+        localStorage.setItem(PROACTIVE_CACHE_KEY, 'true');
+        return;
+      }
+
+      console.log('[SovereignAI] Triggering proactive model pre-cache...');
+      proactiveAttemptedRef.current = true;
+      setState(prev => ({ ...prev, isProactiveCaching: true }));
+
+      try {
+        const webllm = await import('@mlc-ai/web-llm');
+        const engine = await webllm.CreateMLCEngine(PROACTIVE_MODEL_ID, {
+          initProgressCallback: (p) => {
+            console.log(`[SovereignAI] Pre-caching: ${Math.round(p.progress * 100)}%`);
+          }
+        });
+        await engine.unload();
+        console.log('[SovereignAI] Proactive cache complete. Sovereign Protection ACTIVE.');
+        localStorage.setItem(PROACTIVE_CACHE_KEY, 'true');
+        setState(prev => ({ ...prev, isProactiveCaching: false, isSovereignProtected: true }));
+      } catch (e) {
+        console.warn('[SovereignAI] Proactive cache failed:', e);
+        setState(prev => ({ ...prev, isProactiveCaching: false }));
+      }
+    };
+
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(() => triggerProactiveCache(), { timeout: 30000 });
+    } else {
+      setTimeout(triggerProactiveCache, 10000);
+    }
 
     // Listen for network changes
     const handleOnline = () => setState(prev => ({ ...prev, mode: 'hybrid' }));

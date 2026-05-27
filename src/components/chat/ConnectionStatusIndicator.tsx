@@ -10,6 +10,8 @@ import {
   X,
   Loader2,
   HardDrive,
+  ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -37,9 +39,11 @@ export const ConnectionStatusIndicator: React.FC = () => {
     availableModels,
     isWebGPUAvailable,
     capabilities,
+    isSovereignProtected,
+    isProactiveCaching,
   } = useSovereignAI();
 
-  const hasCachedModel = availableModels.some(m => m.tier === 'standard'); // Simplified check
+  const hasCachedModel = isSovereignProtected || availableModels.some(m => m.tier === 'standard'); // Simplified check
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -74,7 +78,7 @@ export const ConnectionStatusIndicator: React.FC = () => {
           bgClass: 'bg-green-500/15 border-green-500/40',
           textClass: 'text-green-500',
           icon: <Brain className="h-3.5 w-3.5" />,
-          label: 'Sovereign AI',
+          label: 'Sovereign AI 🛡️',
         };
       }
       return {
@@ -90,6 +94,14 @@ export const ConnectionStatusIndicator: React.FC = () => {
         textClass: 'text-green-500',
         icon: <Wifi className="h-3.5 w-3.5" />,
         label: 'AI Ready',
+      };
+    }
+    if (isSovereignProtected) {
+      return {
+        bgClass: 'bg-emerald-500/15 border-emerald-500/40',
+        textClass: 'text-emerald-500',
+        icon: <ShieldCheck className="h-3.5 w-3.5" />,
+        label: 'Protected',
       };
     }
     return {
@@ -146,6 +158,36 @@ export const ConnectionStatusIndicator: React.FC = () => {
                 ? 'Connected to the internet. Cloud AI available.'
                 : 'No internet connection. Using local AI if available.'}
             </p>
+          </div>
+
+          <div className="border-t border-border" />
+
+          {/* Sovereign Protection Status */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              <ShieldCheck className={`h-4 w-4 ${isSovereignProtected ? 'text-emerald-500' : 'text-muted-foreground'}`} />
+              <span>Sovereign Protection</span>
+              {isSovereignProtected && <Badge variant="secondary" className="ml-auto bg-emerald-500/10 text-emerald-500 text-[10px] h-4">ACTIVE</Badge>}
+            </h4>
+
+            {isProactiveCaching && (
+              <div className="p-2 rounded-lg bg-blue-500/5 border border-blue-500/10 flex items-center gap-2">
+                <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                <p className="text-[10px] text-muted-foreground">Preparing local safety layer...</p>
+              </div>
+            )}
+
+            {!isSovereignProtected && !isProactiveCaching && (
+              <p className="text-[10px] text-muted-foreground">
+                Your device is not yet protected for offline use. Enable Bunker Mode to download core intelligence.
+              </p>
+            )}
+
+            {isSovereignProtected && (
+              <p className="text-[10px] text-muted-foreground">
+                Core intelligence is cached locally. You can chat even without an internet connection.
+              </p>
+            )}
           </div>
 
           <div className="border-t border-border" />
@@ -230,7 +272,7 @@ export const ConnectionStatusIndicator: React.FC = () => {
 
           <p className="text-[10px] text-muted-foreground text-center pt-1 border-t border-border">
             {isReady
-              ? '✨ Sovereign AI active — 100% Private'
+              ? '✨ Sovereign AI 🛡️ active — 100% Private'
               : '🚀 Powerful local intelligence available for download'}
           </p>
         </div>
