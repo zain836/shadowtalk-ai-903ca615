@@ -1,5 +1,6 @@
 import Navigation from "@/components/Navigation";
 import HeroSection from "@/components/HeroSection";
+import BrandManifestoSection from "@/components/brand/BrandManifestoSection";
 import CompetitiveComparison from "@/components/CompetitiveComparison";
 import FeaturesSection from "@/components/FeaturesSection";
 import PricingSection from "@/components/PricingSection";
@@ -20,7 +21,6 @@ const Index = () => {
       <CouponBanner />
       <Navigation />
       <HeroSection />
-      <BrandManifestoSection />
       <CompetitiveComparison />
       <FeaturesSection />
       <PricingSection />
