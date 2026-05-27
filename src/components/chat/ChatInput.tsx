@@ -5,7 +5,6 @@ import { FileUpload } from "@/components/chat/FileUpload";
 import { ModeSelector, ChatMode } from "@/components/chat/ModeSelector";
 import { SearchHistory } from "@/components/chat/SearchHistory";
 import { ProviderSelector, AIProvider } from "@/components/chat/ProviderSelector";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   Tooltip,
   TooltipContent,
@@ -219,7 +218,7 @@ export const ChatInput = ({
                     )}
                   </TooltipTrigger>
                   <TooltipContent side="top" className="text-xs">
-                    {isLoading ? "Stop" : "ShadowTalk Live (voice)"}
+                    {isLoading ? "Stop" : "Voice input"}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
