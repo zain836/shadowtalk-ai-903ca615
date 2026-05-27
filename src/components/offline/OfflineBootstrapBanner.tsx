@@ -18,8 +18,10 @@ export function OfflineBootstrapBanner() {
     acceptAndInstall,
     skipInstall,
     retry,
+    silentInstall,
   } = useOfflineBootstrap();
 
+  if (silentInstall && phase !== "downloading" && phase !== "error") return null;
   if (phase === "idle" || phase === "ready" || phase === "skipped") return null;
 
   return (

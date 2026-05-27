@@ -9,10 +9,9 @@ import { isAnyLocalModelReady } from "@/lib/offline/localChat";
 import { getGemmaEngine } from "@/lib/offline/gemmaEngine";
 import { isShadowTalkDesktop, getDesktopInfo } from "@/lib/desktopBridge";
 
-const BOOTSTRAP_DONE_KEY = "shadowtalk_offline_tier_a_done";
-const BOOTSTRAP_SKIP_KEY = "shadowtalk_offline_tier_a_skip";
-const BOOTSTRAP_CONSENT_KEY = "shadowtalk_offline_tier_a_consent";
+import { BOOTSTRAP_CONSENT_KEY, BOOTSTRAP_DONE_KEY, isSilentTierAEnabled } from "@/lib/offline/tierAInstall";
 
+const BOOTSTRAP_SKIP_KEY = "shadowtalk_offline_tier_a_skip";
 export type BootstrapPhase =
   | "idle"
   | "needs_consent"
@@ -58,7 +57,7 @@ export function useOfflineBootstrap() {
       }
     }
 
-    if (localStorage.getItem(BOOTSTRAP_CONSENT_KEY) === "1") {
+    if (localStorage.getItem(BOOTSTRAP_CONSENT_KEY) === "1" || isSilentTierAEnabled()) {
       setPhase("downloading");
       return;
     }
@@ -111,12 +110,15 @@ export function useOfflineBootstrap() {
     void acceptAndInstall();
   }, [phase, acceptAndInstall]);
 
+  const silentInstall = isSilentTierAEnabled();
+
   return {
     phase,
     progress,
     statusText,
     error,
     isDesktopBundled,
+    silentInstall,
     tierASizeMB: TIER_A_SIZE_MB,
     acceptAndInstall,
     skipInstall,

@@ -336,5 +336,7 @@ export const useOfflineChatHistory = () => {
     getPendingSync,
     clearPendingSync,
     getCacheStats,
+    createConversation,
+    touchConversation,
   };
 };

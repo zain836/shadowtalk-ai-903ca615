@@ -21,6 +21,8 @@ import { ShareDialog } from "@/components/chat/ShareDialog";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useOfflineAuth } from "@/hooks/useOfflineAuth";
+import { useOfflineChatHistory } from "@/hooks/useOfflineChatHistory";
+import { isPlainOfflineChatMode } from "@/lib/offline/plainOfflineMode";
 import { useGeoLocation } from "@/hooks/useGeoLocation";
 import { useE2EE } from "@/hooks/useE2EE";
 import { useAgenticToolDispatch } from "@/hooks/useAgenticToolDispatch";
@@ -74,6 +76,13 @@ const ChatbotPage = () => {
   const [localTier, setLocalTier] = useState<"smollm" | "gemma" | null>(null);
   const { requestPermission } = usePushNotifications();
   const { getOfflineSession } = useOfflineAuth();
+  const offlineChat = useOfflineChatHistory();
+  const offlineSession = getOfflineSession();
+  const plainOfflineChat = isPlainOfflineChatMode({
+    e2eeUnlocked: e2ee.isUnlocked,
+    isOffline,
+    hasOfflineSession: !!offlineSession,
+  });
   const { isElite } = useFeatureGating();
 
   const [e2eePassphrase, setE2EEPassphrase] = useState("");
@@ -347,28 +356,49 @@ const ChatbotPage = () => {
   }, []);
 
 
+  const initPlainOfflineStore = async () => {
+    if (!offlineChat.isReady) return;
+    const cached = await offlineChat.getCachedConversations();
+    if (cached.length > 0) {
+      setConversations(cached.map((c) => ({ id: c.id, title: c.title, created_at: c.created_at })));
+      const convId = cached[0].id;
+      setCurrentConversationId(convId);
+      const loaded = await offlineChat.getCachedMessages(convId);
+      setMessages(
+        loaded.length
+          ? loaded
+          : [{ id: "welcome", type: "ai", content: getWelcomeMessage(), timestamp: new Date() }]
+      );
+      return;
+    }
+    const id = await offlineChat.createConversation("Offline chat");
+    const now = new Date().toISOString();
+    setConversations([{ id, title: "Offline chat", created_at: now }]);
+    setCurrentConversationId(id);
+    setMessages([{ id: "welcome", type: "ai", content: getWelcomeMessage(), timestamp: new Date() }]);
+  };
+
   useEffect(() => {
-    const offlineSession = getOfflineSession();
-    if ((user || offlineSession) && e2ee.isUnlocked) {
+    if (plainOfflineChat && offlineChat.isReady) {
+      void initPlainOfflineStore();
+      return;
+    }
+    const session = getOfflineSession();
+    if ((user || session) && e2ee.isUnlocked) {
       loadConversations();
       checkSubscription();
       if (isElite) requestPermission();
-    } else if (!user && !offlineSession && !isOffline) {
+    } else if (!user && !session && !isOffline) {
       const guestConvId = "guest-" + Date.now();
       setCurrentConversationId(guestConvId);
       setMessages([
-        {
-          id: "welcome",
-          type: "ai",
-          content: `👋 ${pickChatWelcome(0)}`,
-          timestamp: new Date(),
-        },
+        { id: "welcome", type: "ai", content: `👋 ${pickChatWelcome(0)}`, timestamp: new Date() },
       ]);
       setConversations([
         { id: guestConvId, title: "Guest Conversation", created_at: new Date().toISOString() },
       ]);
     }
-  }, [user, e2ee.isUnlocked]);
+  }, [user, e2ee.isUnlocked, plainOfflineChat, offlineChat.isReady]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -415,6 +445,16 @@ const ChatbotPage = () => {
   };
 
   const loadConversation = async (conversationId: string) => {
+    if (plainOfflineChat && offlineChat.isReady) {
+      setCurrentConversationId(conversationId);
+      const loaded = await offlineChat.getCachedMessages(conversationId);
+      setMessages(
+        loaded.length === 0
+          ? [{ id: "welcome", type: "ai", content: getWelcomeMessage(), timestamp: new Date() }]
+          : loaded
+      );
+      return;
+    }
     if (!e2ee.isUnlocked) return;
     setCurrentConversationId(conversationId);
     const { data, error } = await supabase
@@ -455,7 +495,33 @@ const ChatbotPage = () => {
     `👋 ${pickChatWelcome()} Your agentic workspace is ready — ask for a plan, research, or say "run this for me".`;
 
   const saveMessage = async (content: string, role: "user" | "assistant") => {
-    if (!user || !currentConversationId || !e2ee.isUnlocked) return null;
+    if (!currentConversationId) return null;
+
+    if (plainOfflineChat && offlineChat.isReady) {
+      const msgId = crypto.randomUUID();
+      await offlineChat.cacheMessage(
+        currentConversationId,
+        { id: msgId, type: role === "user" ? "user" : "ai", content, timestamp: new Date() },
+        personality
+      );
+      if (role === "user" && messages.length <= 1) {
+        const title = content.trim().split(/\s+/).slice(0, 3).join(" ").slice(0, 25) || "Offline chat";
+        await offlineChat.touchConversation(currentConversationId, title);
+        setConversations((prev) =>
+          prev.map((c) => (c.id === currentConversationId ? { ...c, title } : c))
+        );
+      } else {
+        await offlineChat.touchConversation(currentConversationId);
+      }
+      await offlineChat.addToPendingSync("message", "create", {
+        conversation_id: currentConversationId,
+        content,
+        role,
+      });
+      return { id: msgId };
+    }
+
+    if (!user || !e2ee.isUnlocked) return null;
     let contentToSave = content;
     const encrypted = await e2ee.encryptData(content);
     if (encrypted) contentToSave = e2ee.wrapEncrypted(encrypted.data, encrypted.iv);
@@ -622,12 +688,12 @@ const ChatbotPage = () => {
 
   const noop = () => {};
 
-  if (!user && !isOffline) {
+  if (!user && !isOffline && !offlineSession) {
     navigate("/auth");
     return null;
   }
 
-  if (!e2ee.isUnlocked) {
+  if (!e2ee.isUnlocked && !plainOfflineChat) {
     return (
       <div className="min-h-screen neural-bg flex items-center justify-center p-6">
         <motion.div
