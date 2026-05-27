@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/AuthProvider";
+import { BunkerModeToggle } from "./BunkerModeToggle";
 import {
   Select,
   SelectContent,
@@ -274,6 +275,8 @@ export const ChatHeader = ({
         <div className="hidden xs:block h-4 w-px bg-white/10 mx-1" />
         
         <ProviderSelector provider={aiProvider} onProviderChange={onProviderChange} />
+        <div className="hidden xs:block h-4 w-px bg-white/10 mx-1" />
+        <BunkerModeToggle />
       </div>
 
       {/* Right: Tools & User */}
