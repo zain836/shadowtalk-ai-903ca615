@@ -6,9 +6,10 @@
  * - CORS hardening
  */
 
+import { getCorsHeaders } from "./cors.ts";
+
 export const HARDENED_CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  ...getCorsHeaders(null),
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',

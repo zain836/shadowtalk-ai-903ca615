@@ -161,6 +161,12 @@ RULES:
 3. Use markdown for structured responses
 4. Be concise but comprehensive`;
 
+const FALLBACK_RESPONSES = {
+  greeting: "👋 Hello! I'm ShadowTalk AI operating in secure offline mode. How can I assist you today?",
+  help: "I'm running in offline mode. I can help with:\n• Document analysis (from your local vault)\n• Business strategy (from your memory)\n• Basic Q&A and calculations\n• Session-based chat memory",
+  default: "I'm currently in basic offline mode. For full AI reasoning, please download a local model or connect to the internet.",
+};
+
 export const useSovereignAI = () => {
   const { capabilities } = useHardwareCapabilities();
   const { search: ragSearch, documentCount } = useOfflineRAG();
@@ -526,11 +532,28 @@ Please try:
       temperature = 0.7,
     } = options || {};
 
+    const lastMessage = messages[messages.length - 1]?.content || '';
+
+    // If no WebGPU and no WASM (extremely rare) or generation fails, use fallback
+    if (!stateRef.current.isWebGPUAvailable && stateRef.current.isWASMFallback && !engineRef.current) {
+      const response = generateFallbackResponse(lastMessage);
+      if (onChunk) onChunk(response);
+      return response;
+    }
+
     // Ensure engine is ready
     if (!engineRef.current || !stateRef.current.isReady) {
-      const loaded = await initializeSovereignEngine();
-      if (!loaded || !engineRef.current) {
-        const errorMsg = "🔧 Initializing offline AI...";
+      // If we are currently offline, try to auto-initialize
+      if (stateRef.current.mode === 'stealth') {
+        const loaded = await initializeSovereignEngine();
+        if (!loaded || !engineRef.current) {
+          const response = generateFallbackResponse(lastMessage);
+          if (onChunk) onChunk(response);
+          return response;
+        }
+      } else {
+        // Online mode - usually we use cloud AI, but if called here we might want local
+        const errorMsg = "🔧 Local engine not initialized. Please enable Bunker Mode.";
         if (onChunk) onChunk(errorMsg);
         return errorMsg;
       }
@@ -617,6 +640,30 @@ Please try:
       }
     }
   }, []);
+
+  const generateFallbackResponse = (message: string): string => {
+    const low = message.toLowerCase();
+    if (low.match(/\b(hi|hello|hey|greetings)\b/)) return FALLBACK_RESPONSES.greeting;
+    if (low.match(/\b(help|assist|what can you do)\b/)) return FALLBACK_RESPONSES.help;
+
+    // Simple math
+    const mathMatch = message.match(/(\d+)\s*([+\-*/×÷])\s*(\d+)/);
+    if (mathMatch) {
+      const [, a, op, b] = mathMatch;
+      const n1 = parseFloat(a), n2 = parseFloat(b);
+      let res: number;
+      switch (op) {
+        case '+': res = n1 + n2; break;
+        case '-': res = n1 - n2; break;
+        case '*': case '×': res = n1 * n2; break;
+        case '/': case '÷': res = n2 !== 0 ? n1 / n2 : NaN; break;
+        default: res = NaN;
+      }
+      if (!isNaN(res)) return `🧮 **${n1} ${op} ${n2} = ${res}**`;
+    }
+
+    return FALLBACK_RESPONSES.default;
+  };
 
   // Clear context
   const clearContext = useCallback(() => {

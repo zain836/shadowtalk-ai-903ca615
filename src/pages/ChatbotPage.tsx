@@ -12,7 +12,9 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
 import { ImageGenerator } from "@/components/chat/ImageGenerator";
+import { AIAgentWorkflows } from "@/components/chat/AIAgentWorkflows";
 import { DeepResearchPanel } from "@/components/chat/DeepResearchPanel";
+import { GoogleIntegrationPanel } from "@/components/chat/GoogleIntegrationPanel";
 import { CommandPalette } from "@/components/chat/CommandPalette";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -80,9 +82,11 @@ const ChatbotPage = () => {
   const [showImageGenerator, setShowImageGenerator] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showDeepResearch, setShowDeepResearch] = useState(false);
+  const [showGoogleIntegration, setShowGoogleIntegration] = useState(false);
   const [showShadowTalkLive, setShowShadowTalkLive] = useState(false);
   const [showShadowBrowser, setShowShadowBrowser] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showAgentWorkflows, setShowAgentWorkflows] = useState(false);
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -286,7 +290,35 @@ const ChatbotPage = () => {
           )}
         </AnimatePresence>
         <div className="flex-1 flex flex-col min-w-0">
-          <ChatHeader userPlan={userPlan} personality={personality} onPersonalityChange={setPersonality} onToggleSidebar={() => setShowSidebar(!showSidebar)} onExport={() => {}} onManageSubscription={() => {}} onSignOut={signOut} onOpenAnalytics={() => setShowAnalytics(true)} onOpenDeepResearch={() => setShowDeepResearch(true)} onOpenImageGenerator={() => setShowImageGenerator(true)} onOpenShadowTalkLive={() => setShowShadowTalkLive(true)} onOpenBrowser={() => setShowShadowBrowser(true)} aiProvider={aiProvider} onProviderChange={setAiProvider} maxChats="∞" dailyChats={dailyChats} />
+          <ChatHeader
+            userPlan={userPlan}
+            personality={personality}
+            onPersonalityChange={setPersonality}
+            onToggleSidebar={() => setShowSidebar(!showSidebar)}
+            onExport={() => {}}
+            onManageSubscription={() => {}}
+            onSignOut={signOut}
+            onOpenAnalytics={() => setShowAnalytics(true)}
+            onOpenDeepResearch={() => setShowDeepResearch(true)}
+            onOpenGoogleIntegration={() => setShowGoogleIntegration(true)}
+            onOpenImageGenerator={() => setShowImageGenerator(true)}
+            onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
+            onOpenBrowser={() => setShowShadowBrowser(true)}
+            aiProvider={aiProvider}
+            onProviderChange={setAiProvider}
+            maxChats="∞"
+            dailyChats={dailyChats}
+            onOpenAgentWorkflows={() => setShowAgentWorkflows(true)}
+            onOpenScriptAutomation={() => {}}
+            onOpenStealthVault={() => {}}
+            onOpenModelFineTuning={() => {}}
+            onOpenWhiteLabelBranding={() => {}}
+            onOpenGeminiAnalytics={() => {}}
+            onOpenCanvas={() => {}}
+            onOpenAgenticRunner={() => {}}
+            onOpenVisualReasoning={() => {}}
+            onOpenCreativeSynthesis={() => {}}
+          />
           <div className={`flex-1 overflow-hidden relative flex flex-col ${isEmptyChat ? "justify-center" : ""}`}>
             <AnimatePresence mode="wait">
               {isEmptyChat ? (
@@ -308,7 +340,11 @@ const ChatbotPage = () => {
       </div>
       {showImageGenerator && <ImageGenerator onClose={() => setShowImageGenerator(false)} onImageGenerated={(url) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: '🎨 Generated image', timestamp: new Date(), imageUrl: url }])} />}
       {showDeepResearch && <DeepResearchPanel isOpen={showDeepResearch} onClose={() => setShowDeepResearch(false)} onInsertToChat={(c) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: c, timestamp: new Date() }])} />}
-      <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} onAction={() => {}} />
+      {showGoogleIntegration && <GoogleIntegrationPanel isOpen={showGoogleIntegration} onClose={() => setShowGoogleIntegration(false)} onImportContent={(c, s) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: `Imported from ${s}:\n\n${c}`, timestamp: new Date() }])} />}
+      <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} onAction={(action) => {
+        if (action === 'google') setShowGoogleIntegration(true);
+      }} />
+      {showAgentWorkflows && <AIAgentWorkflows isOpen={showAgentWorkflows} onClose={() => setShowAgentWorkflows(false)} onResult={(r) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: r, timestamp: new Date() }])} />}
     </motion.div>
   );
 };

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { checkRateLimit, getRateLimitHeaders } from "../_shared/rate-limit.ts";
+import { requireAuth } from "../_shared/auth.ts";
 import { ChatRequestSchema, validateInput } from "../_shared/validation.ts";
 
 // ============================================================================
@@ -365,7 +366,26 @@ serve(async (req) => {
 
   const corsHeaders = getCorsHeaders(origin);
 
+  // Require authentication
+  const auth = await requireAuth(req, corsHeaders);
+  if (!auth.authenticated) return auth.response;
+
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check rate limit
+    const { data: sub } = await supabase.from("subscribers").select("subscription_tier").eq("user_id", auth.userId).single();
+    const tier = sub?.subscription_tier || "free";
+    const rateLimit = await checkRateLimit(auth.userId!, tier, supabase);
+    if (!rateLimit.allowed) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded", resetAt: rateLimit.resetAt }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Parse and validate request body
     const body = await req.json();
     const validation = validateInput(ChatRequestSchema, body);

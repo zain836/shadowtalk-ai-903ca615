@@ -18,8 +18,7 @@ import {
   Trash2,
   Star,
 } from 'lucide-react';
-import { useAdvancedOfflineAI } from '@/hooks/useAdvancedOfflineAI';
-import { useHardwareCapabilities } from '@/hooks/useHardwareCapabilities';
+import { useSovereignAI } from '@/hooks/useSovereignAI';
 import {
   Tooltip,
   TooltipContent,
@@ -43,14 +42,14 @@ const CAPABILITY_ICONS: Record<string, React.ReactNode> = {
 };
 
 const SIZE_ESTIMATES: Record<string, string> = {
-  '360M': '~270 MB',
-  '500M': '~400 MB',
+  '135M': '~130 MB',
+  '360M': '~360 MB',
+  '1.1B': '~675 MB',
   '1B': '~800 MB',
-  '1.5B': '~1.2 GB',
-  '1.7B': '~1.4 GB',
+  '2B': '~2 GB',
   '3B': '~2.5 GB',
-  '3.8B': '~3 GB',
-  '7B': '~5.5 GB',
+  '7B': '~5 GB',
+  '8B': '~5.5 GB',
 };
 
 export const ModelDownloadManager: React.FC<ModelDownloadManagerProps> = ({ onClose }) => {
@@ -60,13 +59,10 @@ export const ModelDownloadManager: React.FC<ModelDownloadManagerProps> = ({ onCl
     isLoading,
     loadProgress,
     loadStage,
-    loadModel,
-    switchModel,
+    initializeSovereignEngine: loadModel,
     unloadModel,
-    performanceTier,
-  } = useAdvancedOfflineAI();
-
-  const { capabilities, isDetecting } = useHardwareCapabilities();
+    capabilities,
+  } = useSovereignAI();
 
   const handleLoadModel = async (modelId: string) => {
     await loadModel(modelId);
@@ -81,42 +77,6 @@ export const ModelDownloadManager: React.FC<ModelDownloadManagerProps> = ({ onCl
     }
   };
 
-  const getStatusBadge = (status: string, modelId: string) => {
-    if (status === 'downloading') {
-      return (
-        <Badge variant="secondary" className="gap-1 bg-blue-500/20 text-blue-400">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          Downloading
-        </Badge>
-      );
-    }
-    if (status === 'ready' && modelId === activeModel) {
-      return (
-        <Badge variant="secondary" className="gap-1 bg-green-500/20 text-green-400">
-          <Check className="h-3 w-3" />
-          Active
-        </Badge>
-      );
-    }
-    if (status === 'ready') {
-      return (
-        <Badge variant="secondary" className="gap-1 bg-green-500/20 text-green-400">
-          <Check className="h-3 w-3" />
-          Ready
-        </Badge>
-      );
-    }
-    if (status === 'error') {
-      return (
-        <Badge variant="destructive" className="gap-1">
-          <AlertCircle className="h-3 w-3" />
-          Error
-        </Badge>
-      );
-    }
-    return null;
-  };
-
   return (
     <Card className="w-full max-w-2xl bg-card/95 backdrop-blur-lg border-border">
       <CardHeader className="pb-4">
@@ -124,14 +84,14 @@ export const ModelDownloadManager: React.FC<ModelDownloadManagerProps> = ({ onCl
           <div>
             <CardTitle className="flex items-center gap-2">
               <Cpu className="h-5 w-5 text-primary" />
-              AI Model Manager
+              Sovereign AI Manager
             </CardTitle>
             <CardDescription className="mt-1">
-              Download and manage local AI models for offline use
+              Download and manage private AI models for your Stealth Vault
             </CardDescription>
           </div>
-          <Badge variant="outline" className={getTierBadgeColor(performanceTier)}>
-            {performanceTier.charAt(0).toUpperCase() + performanceTier.slice(1)} Tier
+          <Badge variant="outline" className={getTierBadgeColor(capabilities.tier)}>
+            {capabilities.tier.charAt(0).toUpperCase() + capabilities.tier.slice(1)} Tier
           </Badge>
         </div>
       </CardHeader>
@@ -141,24 +101,17 @@ export const ModelDownloadManager: React.FC<ModelDownloadManagerProps> = ({ onCl
         <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
           <div className="flex items-center gap-2 text-sm font-medium mb-2">
             <HardDrive className="h-4 w-4 text-muted-foreground" />
-            Device Capabilities
+            Neural Hardware Stats
           </div>
-          {isDetecting ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Detecting hardware...
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            <div>RAM: {capabilities.deviceMemory} GB</div>
+            <div>Accelerator: {capabilities.hasWebGPU ? 'WebGPU' : 'WASM (CPU)'}</div>
+            <div>VRAM: ~{capabilities.estimatedVRAM} GB</div>
+            <div>CPU Cores: {capabilities.logicalCores}</div>
+            <div className="col-span-2">
+              Vault Storage: {capabilities.usedStorage.toFixed(2)} / {capabilities.estimatedStorage} GB
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground">
-              <div>RAM: {capabilities.deviceMemory} GB</div>
-              <div>GPU: {capabilities.hasWebGPU ? 'WebGPU ✓' : 'No WebGPU'}</div>
-              <div>VRAM: ~{capabilities.estimatedVRAM} GB</div>
-              <div>CPU Cores: {capabilities.logicalCores}</div>
-              <div className="col-span-2">
-                Storage: {capabilities.usedStorage.toFixed(2)} / {capabilities.estimatedStorage} GB
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Loading Progress */}
@@ -179,7 +132,7 @@ export const ModelDownloadManager: React.FC<ModelDownloadManagerProps> = ({ onCl
               <div
                 key={model.id}
                 className={`p-4 rounded-lg border transition-colors ${
-                  model.id === activeModel
+                  model.id === activeModel?.id
                     ? 'bg-primary/10 border-primary/30'
                     : 'bg-muted/30 border-border/50 hover:border-border'
                 }`}
@@ -188,10 +141,15 @@ export const ModelDownloadManager: React.FC<ModelDownloadManagerProps> = ({ onCl
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{model.name}</span>
-                      {model.id === activeModel && (
+                      {model.id === activeModel?.id && (
                         <Star className="h-4 w-4 text-primary fill-primary" />
                       )}
-                      {getStatusBadge(model.status, model.id)}
+                      {model.id === activeModel?.id && (
+                        <Badge variant="secondary" className="gap-1 bg-green-500/20 text-green-400">
+                          <Check className="h-3 w-3" />
+                          Active
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                       <span>{model.size} parameters</span>
@@ -206,7 +164,7 @@ export const ModelDownloadManager: React.FC<ModelDownloadManagerProps> = ({ onCl
                                 variant="secondary"
                                 className="gap-1 text-xs cursor-help"
                               >
-                                {CAPABILITY_ICONS[cap]}
+                                {CAPABILITY_ICONS[cap] || <Zap className="h-3 w-3" />}
                                 {cap}
                               </Badge>
                             </TooltipTrigger>
@@ -220,55 +178,18 @@ export const ModelDownloadManager: React.FC<ModelDownloadManagerProps> = ({ onCl
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {model.status === 'downloading' && (
-                      <div className="w-20">
-                        <Progress value={model.downloadProgress} className="h-2" />
-                      </div>
-                    )}
-                    
-                    {model.status === 'not_loaded' && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleLoadModel(model.id)}
-                        disabled={isLoading}
-                        className="gap-1"
-                      >
-                        <Download className="h-3 w-3" />
-                        Load
-                      </Button>
-                    )}
-
-                    {model.status === 'ready' && model.id !== activeModel && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => switchModel(model.id)}
-                        disabled={isLoading}
-                        className="gap-1"
-                      >
-                        <Zap className="h-3 w-3" />
-                        Activate
-                      </Button>
-                    )}
-
-                    {model.status === 'error' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleLoadModel(model.id)}
-                        disabled={isLoading}
-                        className="gap-1"
-                      >
-                        <Download className="h-3 w-3" />
-                        Retry
-                      </Button>
-                    )}
+                    <Button
+                      size="sm"
+                      variant={model.id === activeModel?.id ? "secondary" : "default"}
+                      onClick={() => handleLoadModel(model.id)}
+                      disabled={isLoading || model.id === activeModel?.id}
+                      className="gap-1"
+                    >
+                      {model.id === activeModel?.id ? <Check className="h-3 w-3" /> : <Download className="h-3 w-3" />}
+                      {model.id === activeModel?.id ? 'Active' : 'Load'}
+                    </Button>
                   </div>
                 </div>
-
-                {model.status === 'downloading' && (
-                  <Progress value={model.downloadProgress} className="h-1 mt-3" />
-                )}
               </div>
             ))}
           </div>
@@ -280,10 +201,10 @@ export const ModelDownloadManager: React.FC<ModelDownloadManagerProps> = ({ onCl
             {activeModel ? (
               <span className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
-                Active: {availableModels.find(m => m.id === activeModel)?.name}
+                Sovereign AI Active
               </span>
             ) : (
-              <span>No model loaded</span>
+              <span>No local engine active</span>
             )}
           </div>
           <div className="flex gap-2">

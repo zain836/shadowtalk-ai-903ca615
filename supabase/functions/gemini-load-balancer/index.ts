@@ -1,10 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import { requireAuth } from "../_shared/auth.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const GeminiRequestSchema = z.object({
+  sessionId: z.string().min(1),
+  message: z.string().min(1),
+  userId: z.string().uuid().optional(),
+  stream: z.boolean().optional(),
+});
 
 interface GeminiApiKey {
   id: string;
@@ -73,26 +79,62 @@ interface GeminiResponseData {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsOptions(origin);
   }
 
+  const corsHeaders = getCorsHeaders(origin);
   const startTime = Date.now();
 
   try {
-    const { sessionId, message, userId, stream } = await req.json();
+    const body = await req.json();
+    const result = GeminiRequestSchema.safeParse(body);
 
-    if (!sessionId || !message) {
+    if (!result.success) {
       return new Response(
-        JSON.stringify({ error: 'sessionId and message are required' }),
+        JSON.stringify({ error: 'Invalid input', details: result.error.format() }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const { sessionId, message, userId, stream } = result.data;
 
     // Create Supabase client with service role for accessing api_keys
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check rate limit if userId is provided
+    if (userId) {
+      const { data: subscriber } = await supabase
+        .from("subscribers")
+        .select("subscription_tier")
+        .eq("user_id", userId)
+        .single();
+
+      const tier = subscriber?.subscription_tier || "free";
+      const rateLimit = await checkRateLimit(userId, tier, supabase);
+
+      if (!rateLimit.allowed) {
+        return new Response(
+          JSON.stringify({
+            error: "Rate limit exceeded",
+            resetAt: rateLimit.resetAt
+          }),
+          {
+            status: 429,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'X-RateLimit-Limit': String(rateLimit.limit),
+              'X-RateLimit-Remaining': String(rateLimit.remaining),
+              'X-RateLimit-Reset': rateLimit.resetAt.toISOString(),
+            }
+          }
+        );
+      }
+    }
 
     // Fetch settings for thresholds
     const { data: settingsData } = await supabase

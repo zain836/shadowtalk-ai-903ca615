@@ -1,10 +1,9 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import { requireAuth } from "../_shared/auth.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 // Admin emails that should automatically get admin role
 const ADMIN_EMAILS = ["j3451500@gmail.com"];
@@ -15,6 +14,11 @@ const logStep = (step: string, details?: unknown) => {
 };
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  if (req.method === "OPTIONS") {
+    return handleCorsOptions(origin);
+  }
+  const corsHeaders = getCorsHeaders(origin);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -28,27 +32,20 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("No authorization header provided");
+    const auth = await requireAuth(req, corsHeaders);
+    if (!auth.authenticated) return auth.response;
+
+    const { userId, email } = auth;
+    await checkRateLimit(userId, supabaseClient);
+
+    if (!email) {
+      throw new Error("User email not available");
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-
-    if (userError) {
-      throw new Error(`Authentication error: ${userError.message}`);
-    }
-
-    const user = userData.user;
-    if (!user?.email) {
-      throw new Error("User not authenticated or email not available");
-    }
-
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    logStep("User authenticated", { userId, email });
 
     // Check if user email is in admin list
-    if (!ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+    if (!ADMIN_EMAILS.includes(email.toLowerCase())) {
       logStep("User is not in admin list");
       return new Response(JSON.stringify({ isAdmin: false, message: "Not an admin email" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -60,7 +57,7 @@ serve(async (req) => {
     const { data: existingRole, error: roleError } = await supabaseClient
       .from("user_roles")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("role", "admin")
       .maybeSingle();
 
@@ -79,7 +76,7 @@ serve(async (req) => {
     // Assign admin role
     const { error: insertError } = await supabaseClient
       .from("user_roles")
-      .insert({ user_id: user.id, role: "admin" });
+      .insert({ user_id: userId, role: "admin" });
 
     if (insertError) {
       throw new Error(`Error assigning admin role: ${insertError.message}`);
