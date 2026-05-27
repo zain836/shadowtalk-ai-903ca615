@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { requireAuth } from "../_shared/auth.ts";
+import { requireAdmin } from "../_shared/admin.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,6 +42,11 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const auth = await requireAuth(req, corsHeaders);
+  if (!auth.authenticated) return auth.response;
+  const adminResp = await requireAdmin(auth, corsHeaders);
+  if (adminResp) return adminResp;
 
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",

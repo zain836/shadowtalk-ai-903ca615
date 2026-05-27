@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { parseCustomAi, customAiChatCompletions } from "../_shared/custom-ai-provider.ts";
+import { requireAuth } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,9 +10,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const body = await req.json();
-    const { action, content, instruction, language } = body;
-    const customAi = parseCustomAi(body);
+    const auth = await requireAuth(req, corsHeaders);
+    if (!auth.authenticated) return auth.response;
+
+    const { action, content, instruction, language } = await req.json();
 
     if (!content || typeof content !== "string" || content.length > 50000) {
       return new Response(JSON.stringify({ error: "Invalid content" }), {
@@ -43,12 +44,19 @@ serve(async (req) => {
 
     const systemPrompt = actionPrompts[action] || actionPrompts.custom;
 
-    const response = await customAiChatCompletions(customAi, LOVABLE_API_KEY, {
-      model: "google/gemini-3-flash-preview",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content },
-      ],
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content },
+        ],
+      }),
     });
 
     if (!response.ok) {
