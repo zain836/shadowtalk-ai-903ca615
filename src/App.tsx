@@ -52,6 +52,7 @@ export const CommandPaletteContext = createContext<{ open: () => void }>({ open:
   const WorkspacePage = lazy(() => import("./pages/WorkspacePage"));
   const MarketplacePage = lazy(() => import("./pages/MarketplacePage"));
   const DevelopersPage = lazy(() => import("./pages/DevelopersPage"));
+  const DownloadPage = lazy(() => import("./pages/DownloadPage"));
    const LifetimeDealPage = lazy(() => import("./pages/LifetimeDealPage"));
     const PrivacyScorePage = lazy(() => import("./pages/PrivacyScorePage"));
   const PresentationBuilderPage = lazy(() => import("./pages/PresentationBuilderPage"));
