@@ -10,6 +10,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/AuthProvider";
 import { SecurityProvider } from "@/components/SecurityProvider";
 import { ShadowMemoryProvider } from "@/contexts/ShadowMemoryContext";
+import { AutoImproveProvider } from "@/contexts/AutoImproveContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import BootScreen from "@/components/BootScreen";
 import CommandPalette from "@/components/CommandPalette";
@@ -81,6 +82,7 @@ const PWABanner = lazy(() => import("./components/PWABanner"));
 const CookieConsent = lazy(() => import("./components/CookieConsent"));
 const CustomerSupportWidget = lazy(() => import("./components/CustomerSupportWidget"));
 const ShadowMemoryTracker = lazy(() => import("./components/ShadowMemoryTracker"));
+const AutoImproveEngine = lazy(() => import("./components/autoImprove/AutoImproveEngine"));
 const JourneyTracker = lazy(() => import("./components/JourneyTracker").then(m => ({ default: m.JourneyTracker })));
 const VoiceCommandSystem = lazy(() => import("./components/VoiceCommandSystem"));
 const OnboardingFlow = lazy(() => import("./components/OnboardingFlow"));
@@ -160,6 +162,7 @@ const AnimatedRoutes = () => {
           <Route path="/workspace" element={<PageTransition><WorkspacePage /></PageTransition>} />
           <Route path="/marketplace" element={<PageTransition><MarketplacePage /></PageTransition>} />
           <Route path="/developers" element={<PageTransition><DevelopersPage /></PageTransition>} />
+          <Route path="/download" element={<PageTransition><DownloadPage /></PageTransition>} />
           <Route path="/privacy-score" element={<PageTransition><PrivacyScorePage /></PageTransition>} />
           <Route path="/presentations" element={<PageTransition><PresentationBuilderPage /></PageTransition>} />
           <Route path="/missioncontrol" element={<PageTransition><MissionControlPage /></PageTransition>} />
@@ -208,6 +211,13 @@ const App = () => {
     // Auto-resume any previously-started on-device model download.
     // The engine singleton outlives every route, so once load() is called
     // the fetch+cache pipeline keeps running even after the user navigates away.
+    // Tier A: resume SmolLM if user already consented
+    if (localStorage.getItem('shadowtalk_offline_tier_a_consent') === '1') {
+      import('@/lib/offline/smollmEngine').then(({ getSmolLMEngine }) => {
+        getSmolLMEngine().ensureLoaded().catch((e) => console.warn('[Tier A] resume failed', e));
+      });
+    }
+
     if (localStorage.getItem('shadowtalk_offline_autoresume') === '1') {
       (async () => {
         try {
@@ -240,6 +250,7 @@ const App = () => {
             <AuthProvider>
               <SecurityProvider>
               <ShadowMemoryProvider>
+              <AutoImproveProvider>
               <CommandPaletteContext.Provider value={{ open: () => setCmdOpen(true) }}>
               {showBootScreen && !hasBooted && (
                 <BootScreen onComplete={handleBootComplete} />
@@ -257,9 +268,11 @@ const App = () => {
                    <PWABanner />
                    <CookieConsent />
                    <CustomerSupportWidget />
+                   <AutoImproveEngine />
                  </Suspense>
                </BrowserRouter>
               </CommandPaletteContext.Provider>
+              </AutoImproveProvider>
               </ShadowMemoryProvider>
               </SecurityProvider>
             </AuthProvider>

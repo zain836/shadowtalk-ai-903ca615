@@ -258,7 +258,7 @@ const PricingSection = () => {
             {[
               { icon: Coins, title: "Pay-Per-Use Credits", desc: "Buy credits, no subscription", gradient: "from-primary/10 to-secondary/5", borderColor: "border-primary/15" },
               { icon: TrendingUp, title: "Affiliate Program", desc: "Earn 20-40% recurring commission", gradient: "from-success/10 to-primary/5", borderColor: "border-success/15" },
-              { icon: PlayCircle, title: "Video Tutorials", desc: "Master AI features step-by-step", gradient: "from-secondary/10 to-primary/5", borderColor: "border-secondary/15" },
+              { icon: BookOpen, title: "Documentation", desc: "API reference and product guides", gradient: "from-secondary/10 to-primary/5", borderColor: "border-secondary/15" },
             ].map((item, i) => (
               <motion.div
                 key={i}

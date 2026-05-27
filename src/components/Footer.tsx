@@ -2,6 +2,7 @@ import { Bot, Github, Twitter, Linkedin, Mail, Globe, Shield, FileText, ArrowUpR
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import NewsletterSubscription from "./NewsletterSubscription";
+import { BRAND } from "@/lib/brand";
 
 const Footer = () => {
   const footerSections = [

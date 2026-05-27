@@ -55,6 +55,7 @@ export const ChatRequestSchema = z.object({
   securityAudit: z.string().max(100000).optional(),
   webSearch: z.boolean().optional(),
   searchQuery: z.string().max(500).optional(),
+  agenticReact: z.boolean().optional(),
   deepResearch: z.boolean().optional(),
   isResearch: z.boolean().optional(), // Flag for research/strategy agent mode
   industry: z.string().max(50).optional(), // Industry specialization context

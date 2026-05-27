@@ -7,7 +7,11 @@ const corsHeaders = {
 };
 
 // Admin emails that should automatically get admin role
-const ADMIN_EMAILS = ["j3451500@gmail.com"];
+const ADMIN_EMAILS = [
+  "j3451500@gmail.com",
+  "zaim98269@gmail.com",
+  "laibaanis345@gmail.com",
+];
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';

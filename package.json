@@ -1,8 +1,7 @@
 {
-  "name": "shadowtalk-ai",
+  "name": "vite_react_shadcn_ts",
   "private": true,
   "version": "0.0.0",
-  "description": "ShadowTalk AI — the privacy-first neural workspace. Your keys, your models, your pace. Chat, agents, docs, decks, offline mode, and admin control in one app.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -72,7 +71,7 @@
     "html2canvas": "^1.4.1",
     "idb": "^8.0.3",
     "input-otp": "^1.4.2",
-    "jspdf": "^4.0.0",
+    "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",
     "katex": "^0.16.27",
     "lucide-react": "^0.462.0",

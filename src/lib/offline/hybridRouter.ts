@@ -66,14 +66,14 @@ export function decideRoute(
   isOnline: boolean,
 ): RoutingDecision {
   const mode = getRoutingMode();
-  const engine = getGemmaEngine();
+  const localReady = isAnyLocalModelReady();
 
   if (mode === "cloud-only") {
     return { target: "cloud", reason: "User forced cloud-only mode" };
   }
 
   if (!isOnline) {
-    if (engine.isReady) return { target: "local", reason: "Offline — using on-device Gemma" };
+    if (localReady) return { target: "local", reason: "Offline — using on-device AI" };
     return {
       target: "cloud",
       reason: "Offline but local model not loaded — will surface offline notice",
@@ -81,15 +81,15 @@ export function decideRoute(
   }
 
   if (mode === "local-only") {
-    if (engine.isReady) return { target: "local", reason: "User forced local-only mode" };
+    if (localReady) return { target: "local", reason: "User forced local-only mode" };
     return {
       target: "cloud",
       reason: "Local model not loaded yet — falling back to cloud this time",
     };
   }
 
-  // Auto mode (online)
-  if (engine.isReady && !isComplex(messages)) {
+  // Auto mode (online): use local for simple queries when Tier A/B is ready
+  if (localReady && !isComplex(messages)) {
     return { target: "local", reason: "Auto: simple query handled on-device for privacy" };
   }
   return { target: "cloud", reason: "Auto: cloud chosen (complex query or model not loaded)" };

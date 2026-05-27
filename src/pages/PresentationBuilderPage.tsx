@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Presentation, Plus, Download, Wand2, ChevronLeft, ChevronRight, 
@@ -20,6 +21,7 @@ import Navigation from "@/components/Navigation";
 import SlideRenderer from "@/components/presentation/SlideRenderer";
 import GenerationProgress, { GenerationPhase } from "@/components/presentation/GenerationProgress";
 import { Slide, PresentationData, ThemeKey, THEMES } from "@/components/presentation/types";
+import { loadPresentationFromSession } from "@/lib/kimiPresentation";
 
 export type { Slide, ThemeKey };
 export { THEMES };
@@ -82,6 +84,7 @@ interface WebsitePlan {
 }
 
 const PresentationBuilderPage = () => {
+  const [searchParams] = useSearchParams();
   const [topic, setTopic] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [additionalContext, setAdditionalContext] = useState("");
@@ -102,6 +105,33 @@ const PresentationBuilderPage = () => {
   const [websitePlan, setWebsitePlan] = useState<WebsitePlan | null>(null);
   const [editablePlanTitle, setEditablePlanTitle] = useState("");
   const [editablePlanContext, setEditablePlanContext] = useState("");
+  useEffect(() => {
+    if (searchParams.get("load") === "session") {
+      const loaded = loadPresentationFromSession();
+      if (loaded) {
+        const slides = loaded.presentation.slides.map((s, i) => ({
+          ...s,
+          id: s.id || `slide-${i}-${Date.now()}`,
+        }));
+        setPresentation({ ...loaded.presentation, slides });
+        setStyle(loaded.style);
+        setCurrentSlide(0);
+        setActiveTab("editor");
+        toast.success("Loaded your generated deck");
+      }
+    }
+    const urlTopic = searchParams.get("topic");
+    if (urlTopic) setTopic(urlTopic);
+    const urlSlides = searchParams.get("slides");
+    if (urlSlides) setSlideCount(urlSlides);
+    const urlStyle = searchParams.get("style");
+    if (urlStyle && urlStyle in THEMES) setStyle(urlStyle as ThemeKey);
+    if (searchParams.get("generate") === "1" && urlTopic) {
+      const timer = setTimeout(() => generatePresentation(), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
+
 
   const analyzeWebsite = useCallback(async () => {
     if (!websiteUrl.trim()) {
@@ -235,7 +265,13 @@ const PresentationBuilderPage = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("generate-presentation", {
-        body: { topic, slideCount: parseInt(slideCount), style, additionalContext },
+        body: {
+          topic,
+          slideCount: parseInt(slideCount),
+          style,
+          additionalContext,
+          mode: "adaptive",
+        },
       });
       phaseTimers.forEach(clearTimeout);
       if (error) {
@@ -256,7 +292,7 @@ const PresentationBuilderPage = () => {
         setStyle(meta.effectiveStyle as ThemeKey);
         toast.info(`Theme auto-adjusted to "${meta.effectiveStyle}" for your audience`);
       }
-      toast.success(`Generated ${slides.length} Manus-quality slides with real research!`);
+      toast.success(`Generated ${slides.length} Kimi Slides–quality deck!`);
     } catch (err) {
       phaseTimers.forEach(clearTimeout);
       const msg = err instanceof Error ? err.message : "Failed to generate";

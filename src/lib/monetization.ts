@@ -282,64 +282,11 @@ export const AFFILIATE_TIERS = [
   { level: 5, name: 'Diamond', minReferrals: 50, commission: 40 },
 ];
 
-// Daily free limits by plan - BETTER THAN CHATGPT!
-// ChatGPT Free: ~3 deep research, ~3 images, limited messages
-// ShadowTalk Free: 5 deep research, 4 images, 50 messages!
-export const DAILY_LIMITS = {
-  free: {
-    messages: 50,
-    fileUploads: 3,
-    codeGenerations: 5,
-    imageGenerations: 4,   // ChatGPT = ~3, WE GIVE 4!
-    webSearches: 5,
-    deepResearch: 5,       // ChatGPT = ~3, WE GIVE 5!
-  },
-  pro: {
-    messages: Infinity,
-    fileUploads: 50,
-    codeGenerations: Infinity,
-    imageGenerations: 20,
-    webSearches: 50,
-    deepResearch: 20,
-  },
-  premium: {
-    messages: Infinity,
-    fileUploads: Infinity,
-    codeGenerations: Infinity,
-    imageGenerations: 50,
-    webSearches: Infinity,
-    deepResearch: 50,
-  },
-  elite: {
-    messages: Infinity,
-    fileUploads: Infinity,
-    codeGenerations: Infinity,
-    imageGenerations: Infinity,
-    webSearches: Infinity,
-    deepResearch: Infinity,
-  },
-  lifetime: {
-    messages: Infinity,
-    fileUploads: Infinity,
-    codeGenerations: Infinity,
-    imageGenerations: Infinity,
-    webSearches: Infinity,
-    deepResearch: Infinity,
-  },
-} as const;
+// Daily limits — canonical definition in productClaims.ts
+export { DAILY_LIMITS, isWithinLimit } from '@/lib/productClaims';
 
 // Helper to get pricing text
 export const formatPrice = (price: number, period?: string): string => {
   if (price === 0) return 'Free';
   return `$${price}${period || ''}`;
-};
-
-// Helper to check if action is within daily limit
-export const isWithinLimit = (
-  plan: keyof typeof DAILY_LIMITS,
-  action: keyof typeof DAILY_LIMITS.free,
-  currentCount: number
-): boolean => {
-  const limit = DAILY_LIMITS[plan][action];
-  return limit === Infinity || currentCount < limit;
 };

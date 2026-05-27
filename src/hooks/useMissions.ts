@@ -6,13 +6,23 @@ import { useToast } from '@/hooks/use-toast';
 // SOVEREIGN EXECUTION ENGINE - Mission Management Hook
 // =============================================================================
 
+export interface MissionStepProof {
+  sources?: Array<{ title: string; link: string; snippet?: string }>;
+  urls?: string[];
+  tool_invoked: string;
+  raw_summary?: string;
+}
+
 export interface MissionStep {
   id: string;
   action: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'awaiting_approval';
   result?: string;
   duration_ms?: number;
   tool_name?: string;
+  requires_approval?: boolean;
+  tool_params?: Record<string, string>;
+  proof?: MissionStepProof;
 }
 
 export interface Mission {

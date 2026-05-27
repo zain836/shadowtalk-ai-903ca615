@@ -242,7 +242,8 @@ const AuthPage = () => {
         if (error) throw error;
         if (data.user && data.session) {
           await saveCredentialsForOffline(cleanEmail, cleanPassword, data.user.id);
-          toast({ title: "Success", description: "Account created!" });
+          startSilentTierAInstall();
+          toast({ title: "Success", description: "Account created! Offline AI installs in the background." });
           setLoading(false);
           await playWelcomeVoice(cleanEmail);
           navigate('/chatbot');
