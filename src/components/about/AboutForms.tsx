@@ -59,7 +59,7 @@ const AboutForms = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.functions.invoke("send-contact-email", {
+      const { data, error } = await supabase.functions.invoke("send-contact-email", {
         body: {
           name: form.name.trim(),
           email: form.email.trim(),
@@ -68,9 +68,13 @@ const AboutForms = () => {
             activeTab === "waitlist"
               ? `Waitlist signup from ${form.name} (${form.email}). ${form.message || ""}`
               : form.message.trim(),
+          source: `About Page — ${activeTab}`,
         },
       });
       if (error) throw error;
+      if (data && typeof data === "object" && "error" in data && data.error) {
+        throw new Error(String(data.error));
+      }
 
       setSubmitted(true);
       setForm(initialForm);
