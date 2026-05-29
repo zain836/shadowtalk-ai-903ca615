@@ -362,10 +362,33 @@ const ChatbotPage = () => {
     }
   };
 
+  const chatInputProps = {
+    message,
+    onMessageChange: setMessage,
+    onSend: handleSendMessage,
+    onKeyPress: (e: React.KeyboardEvent) => e.key === "Enter" && handleSendMessage(),
+    isLoading,
+    isListening,
+    onToggleVoice: () => setShowShadowTalkLive(true),
+    onOpenImageGenerator: () => setShowImageGenerator(true),
+    onStopGeneration: () => {},
+    selectedFile,
+    onFileSelect: setSelectedFile,
+    chatMode,
+    onModeChange: setChatMode,
+    personality,
+    layout: "gemini" as const,
+    aiProvider,
+    onProviderChange: setAiProvider,
+  };
+
   return (
-    <motion.div className="min-h-screen neural-bg relative overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <AnimatePresence>{isLoading && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="neural-thinking-glow" />}</AnimatePresence>
-      <div className="flex h-screen w-full relative z-10">
+    <motion.div
+      className="min-h-screen gemini-chat-shell chat-clean-shell relative overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+    >
+      <div className="chat-clean-main flex h-screen w-full relative z-10">
         <ChatIconRail
           userInitials={userInitials}
           onNewChat={() => { setCurrentConversationId(null); setMessages([]); }}
@@ -382,6 +405,7 @@ const ChatbotPage = () => {
         </AnimatePresence>
         <div className="flex-1 flex flex-col min-w-0">
           <ChatHeader
+            variant="minimal"
             userPlan={userPlan}
             personality={personality}
             onPersonalityChange={setPersonality}
@@ -414,57 +438,47 @@ const ChatbotPage = () => {
           <div className={`flex-1 overflow-hidden relative flex flex-col ${isEmptyChat ? "justify-center" : ""}`}>
             <AnimatePresence mode="wait">
               {isEmptyChat ? (
-                <motion.div key="home" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="home-centered-content">
-                  <h1 className="text-5xl md:text-[4.5rem] font-bold text-white tracking-tight mb-8">Hello, {userDisplayName}.</h1>
-                  {hasVerifiedKey && aiConfig.useCustomKey && (
-                    <p className="text-sm text-primary/80 mb-4 -mt-4">
-                      Using your connected {aiConfig.preferredProvider} API key
-                    </p>
-                  )}
-                  <div className="w-full max-w-2xl px-4">
-                    <ChatInput
-                      message={message}
-                      onMessageChange={setMessage}
-                      onSend={handleSendMessage}
-                      onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                      isLoading={isLoading}
-                      isListening={isListening}
-                      onToggleVoice={() => setShowShadowTalkLive(true)}
-                      onOpenImageGenerator={() => setShowImageGenerator(true)}
-                      onStopGeneration={() => {}}
-                      selectedFile={selectedFile}
-                      onFileSelect={setSelectedFile}
-                      chatMode={chatMode}
-                      onModeChange={setChatMode}
-                      personality={personality}
-                    />
+                <motion.div key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="chat-clean-empty">
+                  <div>
+                    <h1 className="chat-clean-greeting">Hello, {userDisplayName}</h1>
+                    <p className="chat-clean-subtitle">How can I help you today?</p>
+                    {hasVerifiedKey && aiConfig.useCustomKey && (
+                      <p className="text-xs text-muted-foreground/50 mt-3">
+                        Using your {aiConfig.preferredProvider} API key
+                      </p>
+                    )}
+                  </div>
+                  <div className="w-full">
+                    <ChatInput {...chatInputProps} isEmptyState />
                   </div>
                 </motion.div>
               ) : (
                 <div className="h-full flex flex-col overflow-hidden">
-                  <ChatMessages messages={messages} isLoading={isLoading} showSuggestions={false} personality={personality} userPlan={userPlan} speakingMessageId={speakingMessageId} isSpeaking={isSpeaking} onSelectPrompt={setMessage} onEdit={() => {}} onRegenerate={() => {}} onTextToSpeech={() => {}} onOpenCodeCanvas={() => {}} onOpenIDE={() => {}} onOpenInBrowser={(url) => { setShowShadowBrowser(true); }} messagesEndRef={messagesEndRef} />
+                  <ChatMessages
+                    messages={messages}
+                    isLoading={isLoading}
+                    showSuggestions={false}
+                    personality={personality}
+                    userPlan={userPlan}
+                    speakingMessageId={speakingMessageId}
+                    isSpeaking={isSpeaking}
+                    onSelectPrompt={setMessage}
+                    onEdit={() => {}}
+                    onRegenerate={() => {}}
+                    onTextToSpeech={() => {}}
+                    onOpenCodeCanvas={() => {}}
+                    onOpenIDE={() => {}}
+                    onOpenInBrowser={() => { setShowShadowBrowser(true); }}
+                    messagesEndRef={messagesEndRef}
+                    layout="gemini"
+                  />
                 </div>
               )}
             </AnimatePresence>
           </div>
           {!isEmptyChat && (
-            <div className="p-4 max-w-4xl mx-auto w-full">
-              <ChatInput
-                message={message}
-                onMessageChange={setMessage}
-                onSend={handleSendMessage}
-                onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                isLoading={isLoading}
-                isListening={isListening}
-                onToggleVoice={() => setShowShadowTalkLive(true)}
-                onOpenImageGenerator={() => setShowImageGenerator(true)}
-                onStopGeneration={() => {}}
-                selectedFile={selectedFile}
-                onFileSelect={setSelectedFile}
-                chatMode={chatMode}
-                onModeChange={setChatMode}
-                personality={personality}
-              />
+            <div className="chat-clean-input-dock border-t border-border/20">
+              <ChatInput {...chatInputProps} />
             </div>
           )}
         </div>

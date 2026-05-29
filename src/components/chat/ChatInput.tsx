@@ -111,7 +111,7 @@ export const ChatInput = ({
             : "max-w-3xl py-4 md:py-6"
         }`}
       >
-        {!isGemini && (
+        {!isGemini && !isEmptyState && (
           <div className="flex items-center gap-2 mb-3 px-1">
             <ModeSelector
               mode={chatMode}
@@ -141,7 +141,7 @@ export const ChatInput = ({
           <div
             className={
               isGemini
-                ? "relative flex items-center gap-1 bg-muted/30 hover:bg-muted/40 focus-within:bg-muted/45 rounded-[28px] border border-border/50 px-3 py-2.5 shadow-sm transition-colors duration-200"
+                ? "relative flex items-center gap-1 bg-[#2f2f2f] hover:bg-[#383838] focus-within:bg-[#383838] rounded-[26px] border border-[#404040] px-3 py-2 shadow-none transition-colors duration-200"
                 : "relative flex items-end gap-2 bg-[#1e1f20]/60 backdrop-blur-2xl rounded-[30px] border border-white/10 p-2.5 px-4 shadow-2xl transition-all duration-500 group-focus-within:bg-[#1e1f20]/80 group-focus-within:border-white/20 ring-1 ring-white/5"
             }
           >

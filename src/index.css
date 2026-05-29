@@ -404,29 +404,38 @@
     @apply flex flex-col items-center justify-center flex-1 w-full max-w-3xl mx-auto px-6 text-center gap-10;
   }
 
-  /* Gemini-style chat shell — keeps ShadowTalk theme tokens */
-  .gemini-chat-shell {
-    background: hsl(var(--background));
+  /* Clean chat shell — Gemini / ChatGPT–style flat dark workspace */
+  .gemini-chat-shell,
+  .chat-clean-shell {
+    background: hsl(0 0% 7%);
     position: relative;
   }
 
-  .gemini-chat-shell::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: radial-gradient(
-      ellipse 80% 50% at 50% 38%,
-      hsl(var(--primary) / 0.12),
-      hsl(var(--secondary) / 0.06) 40%,
-      transparent 70%
-    );
-    z-index: 0;
+  .gemini-chat-shell::before,
+  .chat-clean-shell::before {
+    content: none;
   }
 
-  .gemini-chat-main {
+  .gemini-chat-main,
+  .chat-clean-main {
     position: relative;
     z-index: 1;
+  }
+
+  .chat-clean-empty {
+    @apply flex flex-col items-center justify-center flex-1 w-full max-w-[720px] mx-auto px-4 text-center gap-6;
+  }
+
+  .chat-clean-greeting {
+    @apply text-[2rem] md:text-[2.25rem] font-normal text-foreground/95 tracking-tight;
+  }
+
+  .chat-clean-subtitle {
+    @apply text-[15px] text-muted-foreground/70 -mt-2;
+  }
+
+  .chat-clean-input-dock {
+    @apply w-full max-w-[720px] mx-auto px-4 pb-6 pt-2;
   }
 
   /* Neural Expressive response cards (Gemini-style layout, ShadowTalk tokens) */
