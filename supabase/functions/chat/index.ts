@@ -1,10 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
-import { checkRateLimit, getRateLimitHeaders } from "../_shared/rate-limit.ts";
 import { ChatRequestSchema, validateInput } from "../_shared/validation.ts";
 import { fetchUserProviderKey, streamWithUserKey } from "../_shared/byok-chat.ts";
 import { isValidProvider } from "../_shared/verify-provider-key.ts";
+import {
+  customAiChatCompletions,
+  parseCustomAi,
+  type CustomAiConfig,
+} from "../_shared/custom-ai-provider.ts";
 
 // ============================================================================
 // SPRINT 1: CHAT INTELLIGENCE ENGINE
@@ -255,6 +259,33 @@ async function fetchWithRetry(
   
   throw lastError || new Error("Max retries exceeded");
 }
+
+function resolveCustomAi(body: Record<string, unknown>): CustomAiConfig | null {
+  return parseCustomAi(body);
+}
+
+function platformAiUnavailable(corsHeaders: Record<string, string>): Response {
+  return new Response(
+    JSON.stringify({
+      error:
+        "AI is not configured. Add an API key in Profile → API Keys, or enable platform AI (LOVABLE_API_KEY).",
+    }),
+    {
+      status: 503,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
+  );
+}
+
+function canUsePlatformGateway(lovableKey: string | undefined, customAi: CustomAiConfig | null): boolean {
+  return !!(lovableKey || customAi);
+}
+
+const fetchWithRetryCompat: typeof fetch = (input, init) => {
+  const url =
+    typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+  return fetchWithRetry(url, init ?? {});
+};
  
  // Robust JSON extraction with truncation handling
  function extractJsonFromResponse(response: string): { success: boolean; data: unknown; error?: string } {
@@ -387,10 +418,8 @@ serve(async (req) => {
       isResearch, industry, agenticReact, aiProvider, useCustomApiKey
     } = validation.data;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
+    const customAi = resolveCustomAi(body as Record<string, unknown>);
+    const platformKey = LOVABLE_API_KEY || "";
 
     let effectiveWebSearch = !!webSearch;
     let effectiveSearchQuery = searchQuery?.trim() || "";
@@ -404,12 +433,12 @@ serve(async (req) => {
             ? (lastUserMsg.content.find((c: { type?: string }) => c.type === "text") as { text?: string })?.text || ""
             : "";
 
-      if (lastText.length > 16) {
+      if (platformKey && lastText.length > 16) {
         try {
           const planResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              Authorization: `Bearer ${platformKey}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
@@ -442,6 +471,26 @@ serve(async (req) => {
           console.warn("[CHAT] Agentic react planner skipped:", reactErr);
         }
       }
+    }
+
+    const specialModeRequested =
+      !!(decodeImage || generateImage || imageEdit || analyzeTask || getEcoActions || securityAudit ||
+        agentWorkflow || deepResearch || webSearch || isResearch);
+
+    if (specialModeRequested && !canUsePlatformGateway(LOVABLE_API_KEY, customAi)) {
+      return platformAiUnavailable(corsHeaders);
+    }
+    if (specialModeRequested && !LOVABLE_API_KEY) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "This tool requires platform AI (LOVABLE_API_KEY). Standard chat works with your own API key in Profile → API Keys.",
+        }),
+        {
+          status: 503,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Image Decoder - Professional analysis with enhanced output
@@ -1409,8 +1458,13 @@ Return ONLY valid JSON in this exact format:
 
     // === SPRINT 1: SMART MODEL ROUTER V2 ===
     const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user');
-    const lastUserText = typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : 
-      (Array.isArray(lastUserMsg?.content) ? lastUserMsg.content.find((c: any) => c.type === 'text')?.text || '' : '');
+    const lastUserText = typeof lastUserMsg?.content === 'string' ? lastUserMsg.content :
+      (Array.isArray(lastUserMsg?.content)
+        ? (() => {
+            const part = lastUserMsg.content.find((c: { type?: string }) => c.type === 'text') as { text?: string } | undefined;
+            return part?.text || '';
+          })()
+        : '');
     
     const hasImageContent = messages.some((m: any) => 
       Array.isArray(m.content) && m.content.some((c: any) => c.type === 'image_url')
@@ -1680,22 +1734,24 @@ When a user asks you to write, create, draft, or generate any document (email, a
       }
     }
 
-    // First attempt
-    const response = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    if (!canUsePlatformGateway(LOVABLE_API_KEY, customAi)) {
+      return platformAiUnavailable(corsHeaders);
+    }
+
+    // First attempt (Lovable gateway or BYOK customAi from request body)
+    const response = await customAiChatCompletions(
+      customAi,
+      platformKey,
+      {
         model,
         messages: [
           { role: "system", content: systemPrompt },
           ...trimmedMessages,
         ],
         stream: true,
-      }),
-    });
+      },
+      fetchWithRetryCompat,
+    );
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -1722,8 +1778,8 @@ When a user asks you to write, create, draft, or generate any document (email, a
     }
 
     // === SPRINT 1: RESPONSE QUALITY SCORING ===
-    // For high-tier queries, buffer the response, score it, and retry if poor
-    if (routerDecision.tier === 'EXTREME' || routerDecision.tier === 'COMPLEX') {
+    // For high-tier queries, buffer the response, score it, and retry if poor (platform gateway only)
+    if (LOVABLE_API_KEY && (routerDecision.tier === 'EXTREME' || routerDecision.tier === 'COMPLEX')) {
       // Buffer the streamed response to evaluate quality
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No response body");
@@ -1758,21 +1814,19 @@ When a user asks you to write, create, draft, or generate any document (email, a
         if (quality.score < 5 && model !== 'openai/gpt-5.2') {
           console.log("[QUALITY SCORER] Low quality detected, retrying with GPT-5.2...");
           
-          const retryResponse = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
+          const retryResponse = await customAiChatCompletions(
+            customAi,
+            platformKey,
+            {
               model: 'openai/gpt-5.2',
               messages: [
                 { role: "system", content: systemPrompt + `\n\n> QUALITY IMPROVEMENT: A previous attempt scored ${quality.score}/10. Issues: ${quality.issues.join(', ')}. Ensure this response is comprehensive, accurate, and well-structured.` },
                 ...trimmedMessages,
               ],
               stream: true,
-            }),
-          });
+            },
+            fetchWithRetryCompat,
+          );
 
           if (retryResponse.ok) {
             console.log("[QUALITY SCORER] Retry successful, streaming upgraded response");

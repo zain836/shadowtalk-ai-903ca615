@@ -250,7 +250,29 @@ const ChatbotPage = () => {
         }),
       });
 
-      if (!resp.ok) throw new Error("Failed");
+      if (!resp.ok) {
+        let detail = "Chat request failed";
+        try {
+          const errJson = await resp.json();
+          detail = typeof errJson.error === "string" ? errJson.error : detail;
+        } catch {
+          detail = (await resp.text().catch(() => "")) || detail;
+        }
+        throw new Error(detail);
+      }
+
+      const contentType = resp.headers.get("content-type") || "";
+      if (!contentType.includes("text/event-stream")) {
+        let detail = "Unexpected response from chat service";
+        try {
+          const json = await resp.json();
+          detail = typeof json.error === "string" ? json.error : detail;
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail);
+      }
+
       const reader = resp.body?.getReader();
       const decoder = new TextDecoder();
       const aiMessageId = crypto.randomUUID();
@@ -279,8 +301,10 @@ const ChatbotPage = () => {
         }
       }
       if (assistantContent && user) await saveMessage(assistantContent, 'assistant', conversationId);
-    } catch {
-      setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: "Error connecting to neural host.", timestamp: new Date() }]);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error connecting to chat service.";
+      toast({ title: "Message failed", description: msg, variant: "destructive" });
+      setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: msg, timestamp: new Date() }]);
     } finally { setIsLoading(false); }
   };
 
