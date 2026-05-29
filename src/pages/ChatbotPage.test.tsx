@@ -15,18 +15,6 @@ vi.mock('@/integrations/supabase/client', () => ({
   },
 }));
 
-vi.mock('@/hooks/useE2EE', () => ({
-  useE2EE: () => ({
-    isUnlocked: true,
-    isEncrypted: () => false,
-    unlock: vi.fn().mockResolvedValue(true),
-    encryptData: vi.fn(),
-    decryptData: vi.fn(),
-    unwrapEncrypted: vi.fn(),
-    wrapEncrypted: vi.fn(),
-  }),
-}));
-
 vi.mock('@/hooks/useOfflineAuth', () => ({
   useOfflineAuth: () => ({
     getOfflineSession: () => null,
