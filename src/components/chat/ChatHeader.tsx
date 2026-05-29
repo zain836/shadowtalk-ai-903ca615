@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { 
   Bot, ArrowLeft, LogOut, Settings, Download, Lock, Crown, Star, Zap, Menu, 
-  Search, Image, Play, Eye, Wand2, Compass, FileText, Mic, MoreVertical,
+  Search, Image, Play, Eye, Wand2, Compass, FileText, Mic, AudioLines, MoreVertical,
   LayoutGrid, Sparkles, MessageCircle, Briefcase, Heart, Laugh, Lightbulb,
   Scale, Target, HelpCircle, Share2, Plus, Pin
 } from "lucide-react";
@@ -34,7 +34,6 @@ import {
   DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { ProviderSelector, AIProvider } from "./ProviderSelector";
-import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { motion } from "framer-motion";
 
 type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive" | "spicy";
@@ -202,37 +201,28 @@ export const ChatHeader = ({
   if (variant === "minimal") {
     return (
       <>
-        <div className="flex items-center justify-between px-4 py-3 md:px-6 bg-transparent relative z-20 shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center justify-between px-4 py-3 md:px-8 bg-transparent relative z-20 shrink-0">
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={onToggleSidebar}
-              className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/20 md:hidden shrink-0"
+              className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/20 md:hidden"
               aria-label="Menu"
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <NotificationBell iconClassName="h-4 w-4 text-white/80" />
-            <ProviderSelector provider={aiProvider} onProviderChange={onProviderChange} />
             <Button
               variant="ghost"
               size="icon"
               onClick={() => onToolsMenuOpenChange?.(true)}
-              className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/20 md:hidden shrink-0"
+              className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/20 md:hidden"
               aria-label="Tools"
             >
               <LayoutGrid className="h-5 w-5 text-primary" />
             </Button>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Badge
-              variant="outline"
-              className="hidden sm:flex h-8 px-3 rounded-full border-primary/25 bg-primary/5 text-primary/90 text-[11px] font-medium gap-1.5"
-            >
-              <Lock className="h-3 w-3" />
-              E2EE
-            </Badge>
+          <div className="flex items-center gap-2">
             {showUpgrade && (
               <Button
                 onClick={() => navigate("/pricing")}
@@ -242,32 +232,6 @@ export const ChatHeader = ({
                 Upgrade
               </Button>
             )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-secondary/80 text-xs font-bold text-primary-foreground shadow-md ring-1 ring-border/30"
-                  aria-label="Account"
-                >
-                  {userInitials}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 p-2 bg-card/95 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-2xl">
-                <DropdownMenuItem onClick={onManageSubscription} className="gap-3 rounded-xl py-2.5">
-                  <Crown className="h-4 w-4 text-amber-400" />
-                  <span className="text-sm font-medium">Subscription</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onOpenGeminiAnalytics} className="gap-3 rounded-xl py-2.5">
-                  <Settings className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-border/40" />
-                <DropdownMenuItem onClick={onSignOut} className="gap-3 rounded-xl py-2.5 text-destructive focus:text-destructive">
-                  <LogOut className="h-4 w-4" />
-                  <span className="text-sm font-medium">Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
         <ToolsHubMenu
