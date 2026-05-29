@@ -53,6 +53,8 @@ project_id = "axsudmhjpfzffcicfvuj"
     verify_jwt = false
   [functions.document-ai]
     verify_jwt = false
+  [functions.elevenlabs-tts]
+    verify_jwt = false
   [functions.fetch-threat-intel]
     verify_jwt = false
   [functions.website-security-scan]
