@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   MessageSquare,
+  MessageSquarePlus,
   Brain,
   Network,
   FileText,
@@ -9,6 +10,7 @@ import {
   Plug,
   Settings,
   Sparkles,
+  History,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
@@ -29,12 +31,14 @@ interface ChatShadowSidebarProps {
   userInitials: string;
   userDisplayName: string;
   onNewChat: () => void;
+  onOpenHistory?: () => void;
 }
 
 export function ChatShadowSidebar({
   userInitials,
   userDisplayName,
   onNewChat,
+  onOpenHistory,
 }: ChatShadowSidebarProps) {
   const navigate = useNavigate();
   const [shadowMode, setShadowMode] = useState(true);
@@ -55,7 +59,28 @@ export function ChatShadowSidebar({
         </div>
       </button>
 
-      <nav className="flex-1 px-3 space-y-0.5">
+      <div className="px-3 pb-3 space-y-1">
+        <button
+          type="button"
+          onClick={onNewChat}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-white bg-white/[0.06] hover:bg-white/[0.1] transition-colors"
+        >
+          <MessageSquarePlus className="h-4 w-4 text-cyan-400 shrink-0" />
+          New chat
+        </button>
+        {onOpenHistory && (
+          <button
+            type="button"
+            onClick={onOpenHistory}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-white/45 hover:text-white/80 hover:bg-white/[0.03] transition-colors"
+          >
+            <History className="h-4 w-4 shrink-0" />
+            Chat history
+          </button>
+        )}
+      </div>
+
+      <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
         {NAV.map((item) => {
           const { label, icon: Icon, to } = item;
           const end = "end" in item && item.end;
@@ -96,11 +121,7 @@ export function ChatShadowSidebar({
             className="data-[state=checked]:bg-cyan-500"
           />
         </div>
-        <button
-          type="button"
-          onClick={onNewChat}
-          className="flex w-full items-center gap-3 rounded-lg px-2 py-2 hover:bg-white/[0.04] transition-colors text-left"
-        >
+        <div className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#1a1a1e] text-xs font-bold text-white/90 ring-1 ring-white/10">
             {userInitials}
           </div>
@@ -108,7 +129,7 @@ export function ChatShadowSidebar({
             <p className="text-sm font-medium text-white truncate">{userDisplayName}</p>
             <p className="text-[11px] text-white/35">Executive</p>
           </div>
-        </button>
+        </div>
       </div>
     </aside>
   );
