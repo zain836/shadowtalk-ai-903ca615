@@ -168,7 +168,7 @@ Provide a comprehensive, actionable final report with citations where available.
       );
 
       await trackAgenticEvent("mission_complete", { missionId: mission.id });
-          await updateMissionStatus(mission.id, "completed", {
+      await updateMissionStatus(mission.id, "completed", {
         result: { output: finalResult, steps: results },
         progress: 100,
         completed_at: new Date().toISOString(),
@@ -199,7 +199,7 @@ Provide a comprehensive, actionable final report with citations where available.
       }
 
       trackAgenticEvent("mission_start", { missionId: mission.id });
-        setIsExecuting(true);
+      setIsExecuting(true);
       setCurrentMissionId(mission.id);
       await updateMissionStatus(mission.id, "running");
 

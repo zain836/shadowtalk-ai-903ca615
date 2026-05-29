@@ -151,8 +151,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         {/* Message bubble */}
         <div className={`w-full transition-all duration-300 ${
           isUser 
-            ? 'bg-[#1e1f20]/45 border border-border/10 text-foreground rounded-[28px] rounded-tr-sm px-6 py-3.5 shadow-sm max-w-max' 
-            : 'bg-transparent border-none shadow-none px-0 py-1 article-response'
+            ? isNeural
+              ? 'bg-muted/25 border border-border/40 text-foreground rounded-[24px] rounded-tr-md px-5 py-3 shadow-sm max-w-max'
+              : 'bg-[#1e1f20]/45 border border-border/10 text-foreground rounded-[28px] rounded-tr-sm px-6 py-3.5 shadow-sm max-w-max'
+            : isNeural
+              ? 'neural-response-card article-response px-5 py-4'
+              : 'bg-transparent border-none shadow-none px-0 py-1 article-response'
         }`}>
           {isUser ? (
             <p className="text-[15.5px] leading-relaxed whitespace-pre-wrap break-words font-normal tracking-wide">{typeof message.content === 'string' ? message.content : String(message.content || '')}</p>

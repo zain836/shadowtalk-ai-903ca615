@@ -41,6 +41,8 @@ project_id = "axsudmhjpfzffcicfvuj"
     verify_jwt = false
   [functions.test-gemini-key]
     verify_jwt = false
+  [functions.user-provider-keys]
+    verify_jwt = false
   [functions.test-custom-ai-key]
     verify_jwt = false
   [functions.web-search]
