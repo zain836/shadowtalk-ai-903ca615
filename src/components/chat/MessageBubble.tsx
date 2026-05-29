@@ -48,6 +48,10 @@ interface MessageBubbleProps {
   onLaunchWebsite?: (code: string, language: string) => void;
   onOpenInBrowser?: (url: string) => void;
   layout?: 'default' | 'gemini' | 'shadow-pulse';
+  /** @deprecated Prefer `layout`. Kept for older ChatMessages that pass variant="neural". */
+  variant?: 'default' | 'neural';
+  onConfirmTool?: (messageId: string) => void;
+  onCancelTool?: (messageId: string) => void;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -64,11 +68,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onOpenIDE,
   onLaunchWebsite,
   onOpenInBrowser,
-  layout = 'default',
+  layout: layoutProp = 'default',
+  variant,
+  onConfirmTool,
+  onCancelTool,
 }) => {
   const { toast } = useToast();
   const isUser = message.type === 'user';
   const isWelcome = message.id === 'welcome';
+  const layout =
+    layoutProp !== 'default' || variant !== 'neural' ? layoutProp : 'gemini';
   const isClean = layout === 'gemini' || layout === 'shadow-pulse';
 
   // Detect document artifacts in AI responses
