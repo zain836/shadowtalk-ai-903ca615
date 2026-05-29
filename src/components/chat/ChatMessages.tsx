@@ -33,7 +33,7 @@ interface ChatMessagesProps {
   onCancelTool?: (messageId: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   thinkingStage?: 'understanding' | 'reasoning' | 'generating' | 'refining' | null;
-  layout?: 'default' | 'gemini';
+  layout?: 'default' | 'gemini' | 'shadow-pulse';
 }
 
 export const ChatMessages: React.FC<ChatMessagesProps> = ({
@@ -56,7 +56,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   thinkingStage,
   layout = 'default',
 }) => {
-  const isGemini = layout === 'gemini';
+  const isGemini = layout === 'gemini' || layout === 'shadow-pulse';
   const STAGE_INFO = {
     understanding: { text: 'Parsing intent & context', icon: '🧠', color: 'text-blue-400', glow: 'shadow-blue-500/20' },
     reasoning: { text: 'Chain-of-thought reasoning', icon: '⚡', color: 'text-amber-400', glow: 'shadow-amber-500/20' },
@@ -107,90 +107,84 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
             onOpenIDE={onOpenIDE}
             onLaunchWebsite={onLaunchWebsite}
             onOpenInBrowser={onOpenInBrowser}
-            variant={isGemini ? 'neural' : 'default'}
+            layout={isGemini ? 'gemini' : 'default'}
           />
         ))}
 
         {/* Premium thinking indicator */}
         {isLoading && (
           <motion.div 
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             className="flex items-start gap-3"
           >
-            <motion.div 
-              animate={{ scale: [1, 1.08, 1] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-              className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary via-primary/80 to-secondary flex items-center justify-center shadow-lg shadow-primary/20"
-            >
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
-              >
-                <Sparkles className="h-4 w-4 text-primary-foreground" />
-              </motion.div>
-            </motion.div>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0">
+              <Sparkles className="h-5 w-5 text-muted-foreground/50" />
+            </div>
             
             <div className="relative">
-              <AIResponseGlow isActive={true} />
+              {!isGemini && <AIResponseGlow isActive={true} />}
               <motion.div 
-                className="bg-card/90 backdrop-blur-md border border-border/40 rounded-2xl rounded-tl-md px-4 py-3 shadow-lg"
+                className={
+                  isGemini
+                    ? "px-1 py-2"
+                    : "bg-card/90 backdrop-blur-md border border-border/40 rounded-2xl rounded-tl-md px-4 py-3 shadow-lg"
+                }
               >
-                <div className="flex flex-col gap-2">
-                  {/* Progress bar */}
-                  <div className="flex items-center gap-3">
+                {isGemini ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground/70">
                     <div className="flex gap-1">
                       {[0, 1, 2].map((i) => (
                         <motion.div
                           key={i}
-                          animate={{ y: [0, -6, 0], opacity: [0.3, 1, 0.3] }}
-                          transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
-                          className="w-1.5 h-1.5 bg-primary rounded-full" 
+                          animate={{ opacity: [0.35, 1, 0.35] }}
+                          transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                          className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60"
                         />
                       ))}
                     </div>
-                    
-                    {/* Thinking stage with enhanced animation */}
-                    <AnimatePresence mode="wait">
-                      {thinkingStage && (
-                        <motion.div
-                          key={thinkingStage}
-                          initial={{ opacity: 0, x: -10, filter: 'blur(4px)' }}
-                          animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                          exit={{ opacity: 0, x: 10, filter: 'blur(4px)' }}
-                          transition={{ duration: 0.3 }}
-                          className={`flex items-center gap-1.5 text-xs font-medium ${STAGE_INFO[thinkingStage].color}`}
-                        >
-                          <motion.span 
-                            animate={{ scale: [1, 1.3, 1] }}
-                            transition={{ duration: 1, repeat: Infinity }}
-                            className="text-sm"
-                          >
-                            {STAGE_INFO[thinkingStage].icon}
-                          </motion.span>
-                          <span>{STAGE_INFO[thinkingStage].text}</span>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    <span>Thinking…</span>
                   </div>
-
-                  {/* Animated progress track */}
-                  {thinkingStage && (
-                    <motion.div 
-                      initial={{ opacity: 0, scaleX: 0 }}
-                      animate={{ opacity: 1, scaleX: 1 }}
-                      className="h-0.5 bg-muted rounded-full overflow-hidden origin-left"
-                    >
-                      <motion.div
-                        className="h-full bg-gradient-to-r from-primary via-primary/60 to-primary rounded-full"
-                        animate={{ x: ['-100%', '100%'] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                        style={{ width: '50%' }}
-                      />
-                    </motion.div>
-                  )}
-                </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex gap-1">
+                        {[0, 1, 2].map((i) => (
+                          <motion.div
+                            key={i}
+                            animate={{ y: [0, -6, 0], opacity: [0.3, 1, 0.3] }}
+                            transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+                            className="w-1.5 h-1.5 bg-primary rounded-full"
+                          />
+                        ))}
+                      </div>
+                      <AnimatePresence mode="wait">
+                        {thinkingStage && (
+                          <motion.div
+                            key={thinkingStage}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 10 }}
+                            className={`flex items-center gap-1.5 text-xs font-medium ${STAGE_INFO[thinkingStage].color}`}
+                          >
+                            <span>{STAGE_INFO[thinkingStage].icon}</span>
+                            <span>{STAGE_INFO[thinkingStage].text}</span>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                    {thinkingStage && (
+                      <motion.div className="h-0.5 bg-muted rounded-full overflow-hidden">
+                        <motion.div
+                          className="h-full bg-primary/60 rounded-full"
+                          animate={{ x: ['-100%', '100%'] }}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                          style={{ width: '50%' }}
+                        />
+                      </motion.div>
+                    )}
+                  </div>
+                )}
               </motion.div>
             </div>
           </motion.div>
