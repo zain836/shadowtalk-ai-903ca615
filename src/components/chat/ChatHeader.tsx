@@ -3,7 +3,7 @@ import {
   Bot, ArrowLeft, LogOut, Settings, Download, Lock, Crown, Star, Zap, Menu, 
   Search, Image, Play, Eye, Wand2, Compass, FileText, Mic, AudioLines, MoreVertical,
   LayoutGrid, Sparkles, MessageCircle, Briefcase, Heart, Laugh, Lightbulb,
-  Scale, Target, HelpCircle, Share2, Plus, Pin
+  Scale, Target, HelpCircle, Share2, Plus, Pin, Mail
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
