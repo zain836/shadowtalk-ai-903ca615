@@ -23,6 +23,7 @@ export const CustomApiKeysPanel = () => {
     isVerifying,
     isSaving,
     hasVerifiedKey,
+    usingLocalFallback,
     verifyAndSave,
     removeKey,
     setDefault,
@@ -62,15 +63,21 @@ export const CustomApiKeysPanel = () => {
           </p>
         </div>
 
-        {hasVerifiedKey && aiConfig.useCustomKey && aiConfig.preferredProvider && (
+        {hasVerifiedKey && aiConfig.preferredProvider && (
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle2 className="h-4 w-4 text-green-500" />
             <span>
               Chat is using your{" "}
               <strong>{AI_PROVIDER_OPTIONS.find((p) => p.id === aiConfig.preferredProvider)?.name}</strong>{" "}
-              key
+              key{usingLocalFallback ? " (this device)" : ""}
             </span>
           </div>
+        )}
+        {usingLocalFallback && (
+          <p className="text-xs text-amber-500/90">
+            Server key sync is not deployed yet — your key works on this device. Deploy the{" "}
+            <code className="text-[10px]">user-provider-keys</code> edge function for encrypted cloud storage.
+          </p>
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">

@@ -2,11 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { encryptApiKey, keyPrefix } from "../_shared/byok-crypto.ts";
 import { isValidProvider, verifyProviderApiKey } from "../_shared/verify-provider-key.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 
 const rateMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 10;
@@ -40,8 +36,11 @@ async function getUser(req: Request) {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsOptions(origin);
   }
 
   try {
@@ -66,9 +65,20 @@ serve(async (req) => {
     );
 
     const url = new URL(req.url);
-    const action = url.searchParams.get("action") || "list";
+    let body: Record<string, unknown> = {};
+    if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH") {
+      try {
+        body = await req.json();
+      } catch {
+        body = {};
+      }
+    }
+    const action =
+      (typeof body.action === "string" ? body.action : null) ||
+      url.searchParams.get("action") ||
+      (req.method === "GET" ? "list" : "list");
 
-    if (req.method === "GET" || action === "list") {
+    if (action === "list") {
       const { data, error } = await admin
         .from("user_provider_keys")
         .select("id, provider, label, key_prefix, verified_at, is_active, is_default, created_at, updated_at")
@@ -81,8 +91,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const body = req.method === "POST" ? await req.json() : {};
 
     if (action === "verify") {
       const { provider, apiKey } = body;
