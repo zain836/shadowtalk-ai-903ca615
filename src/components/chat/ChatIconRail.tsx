@@ -39,7 +39,7 @@ export const ChatIconRail = ({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <aside className="hidden md:flex w-[72px] shrink-0 flex-col items-center py-4 border-r border-border/40 bg-background/40 relative z-30">
+      <aside className="flex md:hidden w-[72px] shrink-0 flex-col items-center py-4 border-r border-border/25 bg-[hsl(0_0%_5%)] relative z-30">
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -62,7 +62,7 @@ export const ChatIconRail = ({
                   variant="ghost"
                   size="icon"
                   onClick={onClick}
-                  className="h-11 w-11 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/25"
+                  className="h-10 w-10 rounded-lg text-muted-foreground/80 hover:text-foreground hover:bg-white/5"
                   aria-label={label}
                 >
                   <Icon className="h-5 w-5" />
@@ -80,7 +80,7 @@ export const ChatIconRail = ({
                 variant="ghost"
                 size="icon"
                 onClick={onOpenSettings}
-                className="h-11 w-11 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/25"
+                className="h-10 w-10 rounded-lg text-muted-foreground/80 hover:text-foreground hover:bg-white/5"
                 aria-label="Settings"
               >
                 <Settings className="h-5 w-5" />
@@ -94,7 +94,7 @@ export const ChatIconRail = ({
               <button
                 type="button"
                 onClick={onOpenSettings}
-                className="mt-1 flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-secondary/80 text-xs font-bold text-primary-foreground shadow-md ring-1 ring-white/10"
+                className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-[#2f2f2f] text-xs font-medium text-foreground/90 ring-1 ring-border/30"
                 aria-label="Account"
               >
                 {userInitials}

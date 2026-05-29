@@ -3,20 +3,26 @@ import { MemoryRouter } from 'react-router-dom';
 import { render } from '@testing-library/react';
 import ChatbotPage from './ChatbotPage';
 
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    auth: { getSession: vi.fn().mockResolvedValue({ data: { session: null } }) },
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: { id: 'conv-1', title: 'New Chat', created_at: new Date().toISOString() }, error: null }),
-    })),
-    functions: { invoke: vi.fn().mockResolvedValue({ data: { keys: [] }, error: null }) },
-  },
-}));
+vi.mock('@/integrations/supabase/client', () => {
+  const chain = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+    insert: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: { id: 'conv-1', title: 'New Chat', created_at: new Date().toISOString() }, error: null }),
+  };
+  return {
+    supabase: {
+      auth: { getSession: vi.fn().mockResolvedValue({ data: { session: null } }) },
+      from: vi.fn(() => chain),
+      channel: vi.fn(() => ({ on: vi.fn().mockReturnThis(), subscribe: vi.fn() })),
+      removeChannel: vi.fn(),
+      functions: { invoke: vi.fn().mockResolvedValue({ data: { keys: [] }, error: null }) },
+    },
+  };
+});
 
 vi.mock('@/contexts/AutoImproveContext', () => ({
   useAutoImproveContext: () => ({
