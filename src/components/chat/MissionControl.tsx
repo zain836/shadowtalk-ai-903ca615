@@ -518,8 +518,8 @@ Example: Find 10 SaaS companies in Berlin, analyze their pricing pages, compare 
                       <div>
                         <h3 className="font-semibold text-sm mb-1">Manus gives you a sandbox. S.E.E. gives you sovereignty.</h3>
                         <p className="text-xs text-muted-foreground">
-                          Close your laptop. S.E.E. works offline in the background for hours.
-                          Your data never leaves your device. Come back to completed tasks, not cloud bills.
+                          Close your laptop. S.E.E. can run with on-device models when enabled.
+                          Sensitive steps stay local; cloud steps use encrypted transport. Come back to completed tasks, not cloud bills.
                         </p>
                       </div>
                     </div>

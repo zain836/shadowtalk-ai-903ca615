@@ -25,16 +25,16 @@ const STORAGE_KEY = 'shadowtalk-privacy-events';
 
 export const usePrivacyScore = () => {
   const [score, setScore] = useState<PrivacyScore>({
-    overall: 95,
-    dataOnDevice: 100,
+    overall: 0,
+    dataOnDevice: 0,
     trackersBlocked: 0,
     cookiesBlocked: 0,
     fingerprintAttempts: 0,
     localProcessingRate: 0,
     totalEvents: 0,
     recentEvents: [],
-    streakDays: 1,
-    level: 'protected',
+    streakDays: 0,
+    level: 'exposed',
   });
 
   // Load persisted events

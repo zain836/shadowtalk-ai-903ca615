@@ -225,26 +225,7 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete, initialGoal
 
       if (!resultResp.ok) throw new Error("Result generation failed");
 
-      // Parse streaming response for result
-      const resultReader = resultResp.body?.getReader();
-      let resultContent = "";
-
-      while (resultReader) {
-        const { done, value } = await resultReader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        
-        const lines = chunk.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-            try {
-              const data = JSON.parse(line.slice(6));
-              const content = data.choices?.[0]?.delta?.content;
-              if (content) resultContent += content;
-            } catch {}
-          }
-        }
-      }
+      const resultContent = await consumeChatSSE(resultResp, () => {});
 
       setCurrentTask(prev => prev ? { ...prev, status: "completed", endTime: new Date() } : null);
       addLog("Task completed successfully!");

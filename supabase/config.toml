@@ -9,6 +9,8 @@ project_id = "axsudmhjpfzffcicfvuj"
     verify_jwt = false
   [functions.auto-broadcast]
     verify_jwt = false
+  [functions.notify-app-update]
+    verify_jwt = false
   [functions.chat]
     verify_jwt = false
   [functions.gemini-key-alert]
@@ -38,6 +40,10 @@ project_id = "axsudmhjpfzffcicfvuj"
   [functions.stripe-subscription]
     verify_jwt = false
   [functions.test-gemini-key]
+    verify_jwt = false
+  [functions.user-provider-keys]
+    verify_jwt = false
+  [functions.test-custom-ai-key]
     verify_jwt = false
   [functions.web-search]
     verify_jwt = false

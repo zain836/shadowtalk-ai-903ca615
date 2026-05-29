@@ -89,6 +89,7 @@ const Navigation = () => {
     { name: "Mission Control", href: "/missioncontrol", icon: Target, isLink: true },
     { name: "Presentations", href: "/presentations", icon: Presentation, isLink: true },
     { name: "Developers", href: "/developers", icon: Terminal, isLink: true },
+    { name: "Desktop app", href: "/download", icon: Download, isLink: true },
     { name: "Privacy Score", href: "/privacy-score", icon: ShieldCheck, isLink: true },
     { name: t("nav.docs"), href: "/docs", icon: BookOpen, isLink: true },
     { name: t("nav.changelog"), href: "/changelog", icon: History, isLink: true },

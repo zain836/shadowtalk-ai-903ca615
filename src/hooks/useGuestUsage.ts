@@ -1,11 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { GUEST_LIMITS } from '@/lib/productClaims';
 
-export const GUEST_LIMITS = {
-  chats: 10,
-  images: 5,
-  deepResearch: 2,
-} as const;
+export { GUEST_LIMITS };
 
 interface GuestUsage {
   chats: number;

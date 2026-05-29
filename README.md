@@ -1,97 +1,76 @@
-# Welcome to your Lovable project
+# ShadowTalk AI
 
-## Project info
+**Think AI. Think ShadowTalk.**
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+ShadowTalk is the **agentic AI workspace** built for people who are tired of chatbots that only talk. Plan missions, run 30+ tools from one sentence, approve agent steps when it matters, and ship real work — on web, PWA, or desktop.
 
-## How can I edit this code?
+> *ChatGPT answers. ShadowTalk executes.*
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## Why ShadowTalk sticks in your head
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+| Others | ShadowTalk |
+|--------|------------|
+| Single-thread chat | **Mission Control** — multi-step autonomous runs |
+| Manual tool hopping | **30+ tools** from natural language |
+| Cloud-only | **Vault, BYOK, optional on-device Gemma** |
+| Browser tab | **Desktop app** with native files & notifications |
 
-Changes made via Lovable will be committed automatically to this repo.
+**1.5K+** creators · **104+** daily active users (and growing).
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Start in 60 seconds
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Open [http://localhost:5173](http://localhost:5173) → **Enter ShadowTalk** on the homepage.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Desktop software
 
-**Use GitHub Codespaces**
+```bash
+npm run build
+npm run desktop:make
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+See [DESKTOP.md](./DESKTOP.md) for installers.
 
-## What technologies are used for this project?
+---
 
-This project is built with:
+## Stack
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **Frontend:** React, Vite, Tailwind, shadcn/ui  
+- **Backend:** Supabase (auth, DB, edge functions)  
+- **AI:** Multi-model chat, agents, BYOK (Gemini / OpenRouter / Kimi)  
+- **Desktop:** Capacitor + Electron  
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Environment
 
-## Production deployment (self-hosted)
+```env
+VITE_SUPABASE_URL=
+VITE_SUPABASE_PUBLISHABLE_KEY=
+```
 
-For a production deployment outside Lovable, you should:
+Deploy migrations under `supabase/migrations` and configure edge function secrets (Stripe, AI keys, etc.) in your host — never commit secrets.
 
-1. Set required environment variables for the frontend (build-time):
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+---
 
-   The Vite config will refuse to build in production if these are missing.
+## Links
 
-2. Configure your Supabase project with the SQL migrations under `supabase/migrations` and set the service role and URL for edge functions.
+- **Live:** https://www.shadowtalk-ai.com  
+- **Chat:** https://www.shadowtalk-ai.com/chatbot  
+- **Download desktop:** https://www.shadowtalk-ai.com/download  
 
-3. Configure secrets for payments and integrations in your hosting provider (not committed to the repo), such as:
-   - Stripe keys (publishable and secret)
-   - LemonSqueezy API keys and webhook secrets
-   - Any OAuth client IDs/secrets used by Google/Microsoft
+---
 
-4. Run the standard quality gates before deploying:
-   - `npm run lint`
-   - `npm run test`
-   - `npm run build`
+## License
 
-Once these pass with your production environment variables, you can deploy the built assets (`dist/`) behind your preferred CDN or app hosting platform.
+MIT — build something legendary with it.
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+**Think AI. Think ShadowTalk.**

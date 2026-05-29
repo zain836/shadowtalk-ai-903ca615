@@ -230,8 +230,8 @@ export const OfflineToolsPanel = ({ isOpen, onClose, onInsertToChat }: OfflineTo
 
                   <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
                     <p className="text-xs text-muted-foreground">
-                      <strong>🛡️ Zero-Server Promise:</strong> All processing happens on your device. 
-                      Your data never leaves your browser. Perfect for sensitive documents and private conversations.
+                      <strong>🛡️ Local processing:</strong> In offline mode, inference runs in your browser.
+                      Prompts for that session are not sent to ShadowTalk servers. Perfect for sensitive documents.
                     </p>
                   </div>
                 </CardContent>

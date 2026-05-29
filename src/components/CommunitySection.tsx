@@ -1,4 +1,5 @@
-import { Users, MessageSquare, Star, TrendingUp, Calendar, ArrowUpRight, Zap, Globe } from "lucide-react";
+import { Users, MessageSquare, Star, Activity, Calendar, ArrowUpRight, Zap, Globe } from "lucide-react";
+import { COMMUNITY_HIGHLIGHTS } from "@/lib/productClaims";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion, useInView } from "framer-motion";
@@ -23,12 +24,19 @@ const CommunitySection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
 
-  const communityStats = [
-    { icon: Users, value: "15,000+", label: "Community Members", gradient: "from-primary/20 to-primary/5" },
-    { icon: MessageSquare, value: "2,500+", label: "Daily Discussions", gradient: "from-secondary/20 to-secondary/5" },
-    { icon: Star, value: "500+", label: "Shared Templates", gradient: "from-accent/20 to-accent/5" },
-    { icon: TrendingUp, value: "99%", label: "Satisfaction Rate", gradient: "from-success/20 to-success/5" },
-  ];
+  const statIcons = [Users, Activity, Star, MessageSquare];
+  const communityStats = COMMUNITY_HIGHLIGHTS.map((item, i) => ({
+    icon: statIcons[i] ?? Users,
+    value: item.value,
+    label: item.label,
+    description: item.description,
+    gradient: [
+      "from-primary/20 to-primary/5",
+      "from-secondary/20 to-secondary/5",
+      "from-accent/20 to-accent/5",
+      "from-success/20 to-success/5",
+    ][i],
+  }));
 
   const events = [
     { date: "Feb 20", title: "AI Automation Workshop", type: "Workshop", participants: 200, live: true },
@@ -108,7 +116,10 @@ const CommunitySection = () => {
                     <stat.icon className="h-5 w-5 text-primary" />
                   </motion.div>
                   <div className="text-2xl font-bold gradient-text mb-1">{stat.value}</div>
-                  <div className="text-xs text-muted-foreground">{stat.label}</div>
+                  <div className="text-xs font-medium text-foreground/80">{stat.label}</div>
+                  {"description" in stat && (
+                    <p className="text-[10px] text-muted-foreground mt-1 leading-snug">{stat.description}</p>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>

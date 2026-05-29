@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { stringifyChatBody } from "@/lib/chatRequest";
 
 interface WorkflowStep {
   id: string;
@@ -90,7 +91,7 @@ export const AIAgentWorkflows: React.FC<AIAgentWorkflowsProps> = ({ isOpen, onCl
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           agentWorkflow: {
             workflowId: selectedWorkflow.id,
             input,

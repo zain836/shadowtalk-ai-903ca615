@@ -1,3 +1,5 @@
+import { stringifyChatBody } from "@/lib/chatRequest";
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 export async function streamChatCompletion(
@@ -11,7 +13,7 @@ export async function streamChatCompletion(
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({
+    body: stringifyChatBody({
       messages: [{ role: "user", content: userContent }],
       model: options?.model ?? "google/gemini-2.5-flash",
       mode: options?.mode ?? "general",

@@ -28,6 +28,8 @@ import { ProfileTab } from "@/components/profile/ProfileTab";
 import { ActivityTab } from "@/components/profile/ActivityTab";
 import { PreferencesTab } from "@/components/profile/PreferencesTab";
 import { LinkedAccountsTab } from "@/components/profile/LinkedAccountsTab";
+import { CustomApiKeysPanel } from "@/components/profile/CustomApiKeysPanel";
+import { AdminPanelLink } from "@/components/admin/AdminPanelLink";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle,
@@ -180,7 +182,8 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <ProfileHeader
+      <div className="mb-6"><AdminPanelLink /></div>
+            <ProfileHeader
         displayName={displayName}
         email={user?.email || ""}
         avatarUrl={avatarUrl}
@@ -296,6 +299,8 @@ const ProfilePage = () => {
                   <TwoFactorSetup />
                 </CardContent>
               </Card>
+
+              <CustomApiKeysPanel />
 
               <Card className="glass border-border/50">
                 <CardHeader>

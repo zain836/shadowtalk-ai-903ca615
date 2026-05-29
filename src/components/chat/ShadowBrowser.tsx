@@ -30,6 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { stringifyChatBody } from "@/lib/chatRequest";
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -657,7 +658,7 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/web-proxy`,
           {
             method: "POST", headers,
-            body: JSON.stringify({ url: activeTab.url, mode: "proxy" }),
+            body: stringifyChatBody({ url: activeTab.url, mode: "proxy" }),
           },
           1, 20000
         );
@@ -689,7 +690,7 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
         {
           method: "POST", headers,
-          body: JSON.stringify({
+          body: stringifyChatBody({
             messages: [{ role: "user", content: `Extract the main readable content from this URL and present it in clean, well-formatted text suitable for reading mode: ${activeTab.url}. Focus on the article body, remove navigation, ads, and sidebars.` }],
             personality: "professional",
           }),
@@ -714,7 +715,7 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
         {
           method: "POST", headers,
-          body: JSON.stringify({
+          body: stringifyChatBody({
             messages: [{ role: "user", content: `The user is viewing: ${activeTab.url}. Translate the key content of this page into ${language}. Provide a clear, well-formatted translation of the main content.` }],
             personality: "professional",
           }),
@@ -740,7 +741,7 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
         {
           method: "POST", headers,
-          body: JSON.stringify({
+          body: stringifyChatBody({
             messages: [{ role: "user", content: `The user is viewing: ${activeTab.url}. Extract all ${type} from this page and present them in a well-organized format. Be thorough and accurate.` }],
             personality: "professional",
           }),
@@ -765,7 +766,7 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
       const headers = await getAuthHeaders();
       const response = await fetchAIWithRetry(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
-        { method: "POST", headers, body: JSON.stringify({ messages: [{ role: "user", content: searchQuery }], personality: "professional" }) }
+        { method: "POST", headers, body: stringifyChatBody({ messages: [{ role: "user", content: searchQuery }], personality: "professional" }) }
       );
       await parseStreamingResponse(response, content => setAiSummary(content));
     } catch (error) {
@@ -803,7 +804,7 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
         {
           method: "POST", headers,
-          body: JSON.stringify({
+          body: stringifyChatBody({
             messages: [{ role: "user", content: `You are an AI browsing assistant. The user is viewing: ${activeTab.url}\n\nProvide a JSON response: {"summary": "2-3 sentences", "insights": ["3-4 insights"], "relatedTopics": [{"title": "...", "searchQuery": "..."}], "suggestedQuestions": ["..."]}` }],
             personality: "professional",
           }),
@@ -846,7 +847,7 @@ export const ShadowBrowser = ({ isOpen, onClose, onInsertToChat, initialUrl }: S
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
         {
           method: "POST", headers,
-          body: JSON.stringify({
+          body: stringifyChatBody({
             messages: [
               { role: "system", content: `You are an AI browsing assistant. The user is viewing: ${activeTab?.url}. Be concise.` },
               { role: "user", content: question },

@@ -15,6 +15,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { stringifyChatBody } from "@/lib/chatRequest";
 
 interface Source {
   title: string;
@@ -129,7 +130,7 @@ export const DeepResearchPanel = ({ isOpen, onClose, onInsertToChat, initialQuer
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
         },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           deepResearch: true,
           researchQuery: query,
           searchMode: searchMode
