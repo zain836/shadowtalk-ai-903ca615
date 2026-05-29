@@ -39,7 +39,7 @@ export const ChatIconRail = ({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <aside className="hidden md:flex w-[72px] shrink-0 flex-col items-center py-4 border-r border-border/25 bg-[hsl(0_0%_5%)] relative z-30">
+      <aside className="flex md:hidden w-[72px] shrink-0 flex-col items-center py-4 border-r border-border/25 bg-[hsl(0_0%_5%)] relative z-30">
         <Tooltip>
           <TooltipTrigger asChild>
             <button

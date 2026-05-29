@@ -438,6 +438,130 @@
     @apply w-full max-w-[720px] mx-auto px-4 pb-6 pt-2;
   }
 
+  /* ===== Shadow Pulse — black shell + moving rainbow edges ===== */
+  @property --shadow-pulse-angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  @keyframes shadow-pulse-rainbow-spin {
+    to {
+      --shadow-pulse-angle: 360deg;
+    }
+  }
+
+  .shadow-pulse-shell {
+    background: #000000;
+  }
+
+  .shadow-pulse-rainbow-edges {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    padding: 2px;
+    background: conic-gradient(
+      from var(--shadow-pulse-angle),
+      #ff2d95,
+      #ff9a3c,
+      #f9f871,
+      #53f3a8,
+      #38bdf8,
+      #a78bfa,
+      #ff2d95
+    );
+    animation: shadow-pulse-rainbow-spin 5s linear infinite;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+  }
+
+  @supports not (background: conic-gradient(from var(--shadow-pulse-angle), red, blue)) {
+    .shadow-pulse-rainbow-edges {
+      padding: 0;
+      background: none;
+    }
+    .shadow-pulse-rainbow-edges::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 220vmax;
+      height: 220vmax;
+      translate: -50% -50%;
+      background: conic-gradient(
+        #ff2d95,
+        #ff9a3c,
+        #f9f871,
+        #53f3a8,
+        #38bdf8,
+        #a78bfa,
+        #ff2d95
+      );
+      animation: shadow-pulse-rainbow-rotate 5s linear infinite;
+    }
+    .shadow-pulse-rainbow-edges::after {
+      content: "";
+      position: absolute;
+      inset: 3px;
+      background: #000;
+    }
+  }
+
+  @keyframes shadow-pulse-rainbow-rotate {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .shadow-pulse-empty {
+    @apply flex flex-col items-center justify-center flex-1 w-full max-w-3xl mx-auto px-6 text-center;
+  }
+
+  .shadow-pulse-greeting {
+    @apply text-3xl md:text-4xl font-light text-white tracking-[0.2em] uppercase;
+  }
+
+  .shadow-pulse-tagline {
+    @apply text-[11px] font-semibold uppercase tracking-[0.35em] text-cyan-400/90 mt-4;
+  }
+
+  .shadow-pulse-input-wrap {
+    @apply relative w-full max-w-2xl mt-10 p-[2px] rounded-[20px];
+    background: conic-gradient(
+      from var(--shadow-pulse-angle),
+      #22d3ee,
+      #a78bfa,
+      #22d3ee
+    );
+    animation: shadow-pulse-rainbow-spin 4s linear infinite;
+  }
+
+  .shadow-pulse-input-inner {
+    @apply rounded-[18px] bg-[#0a0a0c] border border-white/[0.08];
+  }
+
+  .shadow-pulse-top-label {
+    @apply text-[10px] font-bold uppercase tracking-[0.4em] text-white/20 text-center py-3;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shadow-pulse-rainbow-edges,
+    .shadow-pulse-input-wrap {
+      animation: none;
+    }
+    .shadow-pulse-rainbow-edges {
+      background: linear-gradient(90deg, #22d3ee, #a78bfa);
+      opacity: 0.5;
+    }
+  }
+
   /* Neural Expressive response cards (Gemini-style layout, ShadowTalk tokens) */
   .neural-response-card {
     @apply rounded-2xl border border-border/30 bg-card/25 backdrop-blur-sm shadow-sm;

@@ -33,7 +33,7 @@ interface ChatMessagesProps {
   onCancelTool?: (messageId: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   thinkingStage?: 'understanding' | 'reasoning' | 'generating' | 'refining' | null;
-  layout?: 'default' | 'gemini';
+  layout?: 'default' | 'gemini' | 'shadow-pulse';
 }
 
 export const ChatMessages: React.FC<ChatMessagesProps> = ({
@@ -56,7 +56,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   thinkingStage,
   layout = 'default',
 }) => {
-  const isGemini = layout === 'gemini';
+  const isGemini = layout === 'gemini' || layout === 'shadow-pulse';
   const STAGE_INFO = {
     understanding: { text: 'Parsing intent & context', icon: '🧠', color: 'text-blue-400', glow: 'shadow-blue-500/20' },
     reasoning: { text: 'Chain-of-thought reasoning', icon: '⚡', color: 'text-amber-400', glow: 'shadow-amber-500/20' },

@@ -8,6 +8,9 @@ import { ChatMode } from "@/components/chat/ModeSelector";
 import { AIProvider } from "@/components/chat/ProviderSelector";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatIconRail } from "@/components/chat/ChatIconRail";
+import { ChatShadowSidebar } from "@/components/chat/ChatShadowSidebar";
+import { RainbowEdgeFrame } from "@/components/chat/RainbowEdgeFrame";
+import { ShadowPulseOrb } from "@/components/chat/ShadowPulseOrb";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
@@ -377,18 +380,26 @@ const ChatbotPage = () => {
     chatMode,
     onModeChange: setChatMode,
     personality,
-    layout: "gemini" as const,
+    layout: "shadow-pulse" as const,
     aiProvider,
     onProviderChange: setAiProvider,
   };
 
   return (
-    <motion.div
-      className="min-h-screen gemini-chat-shell chat-clean-shell relative overflow-hidden"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-    >
-      <div className="chat-clean-main flex h-screen w-full relative z-10">
+    <RainbowEdgeFrame>
+      <motion.div
+        className="flex h-screen w-full relative overflow-hidden"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        <ChatShadowSidebar
+          userInitials={userInitials}
+          userDisplayName={userDisplayName}
+          onNewChat={() => {
+            setCurrentConversationId(null);
+            setMessages([]);
+          }}
+        />
         <ChatIconRail
           userInitials={userInitials}
           onNewChat={() => { setCurrentConversationId(null); setMessages([]); }}
@@ -398,12 +409,13 @@ const ChatbotPage = () => {
         />
         <AnimatePresence>
           {showSidebar && (
-            <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} className="fixed left-0 top-0 bottom-0 z-50 md:left-[72px]">
+            <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} className="fixed left-0 top-0 bottom-0 z-50 md:left-[240px]">
               <ConversationSidebar conversations={conversations} currentConversationId={currentConversationId} onCreateNew={() => { setCurrentConversationId(null); setMessages([]); setShowSidebar(false); }} onSelect={(id) => { loadConversation(id); setShowSidebar(false); }} onDelete={() => {}} onClearAll={() => {}} />
             </motion.div>
           )}
         </AnimatePresence>
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 bg-black">
+          <p className="shadow-pulse-top-label hidden md:block shrink-0">Shadow Pulse</p>
           <ChatHeader
             variant="minimal"
             userPlan={userPlan}
@@ -438,18 +450,24 @@ const ChatbotPage = () => {
           <div className={`flex-1 overflow-hidden relative flex flex-col ${isEmptyChat ? "justify-center" : ""}`}>
             <AnimatePresence mode="wait">
               {isEmptyChat ? (
-                <motion.div key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="chat-clean-empty">
-                  <div>
-                    <h1 className="chat-clean-greeting">Hello, {userDisplayName}</h1>
-                    <p className="chat-clean-subtitle">How can I help you today?</p>
-                    {hasVerifiedKey && aiConfig.useCustomKey && (
-                      <p className="text-xs text-muted-foreground/50 mt-3">
-                        Using your {aiConfig.preferredProvider} API key
-                      </p>
-                    )}
-                  </div>
-                  <div className="w-full">
-                    <ChatInput {...chatInputProps} isEmptyState />
+                <motion.div
+                  key="home"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="shadow-pulse-empty"
+                >
+                  <ShadowPulseOrb />
+                  <h1 className="shadow-pulse-greeting">Hello, {userDisplayName}</h1>
+                  <p className="shadow-pulse-tagline">ShadowTalk Intelligence</p>
+                  {hasVerifiedKey && aiConfig.useCustomKey && (
+                    <p className="text-[10px] text-white/30 mt-2 tracking-wide">
+                      {aiConfig.preferredProvider} API connected
+                    </p>
+                  )}
+                  <div className="shadow-pulse-input-wrap w-full">
+                    <div className="shadow-pulse-input-inner">
+                      <ChatInput {...chatInputProps} isEmptyState />
+                    </div>
                   </div>
                 </motion.div>
               ) : (
@@ -470,19 +488,22 @@ const ChatbotPage = () => {
                     onOpenIDE={() => {}}
                     onOpenInBrowser={() => { setShowShadowBrowser(true); }}
                     messagesEndRef={messagesEndRef}
-                    layout="gemini"
+                    layout="shadow-pulse"
                   />
                 </div>
               )}
             </AnimatePresence>
           </div>
           {!isEmptyChat && (
-            <div className="chat-clean-input-dock border-t border-border/20">
-              <ChatInput {...chatInputProps} />
+            <div className="px-4 pb-6 pt-2 max-w-3xl mx-auto w-full">
+              <div className="shadow-pulse-input-wrap w-full">
+                <div className="shadow-pulse-input-inner">
+                  <ChatInput {...chatInputProps} />
+                </div>
+              </div>
             </div>
           )}
         </div>
-      </div>
       {showImageGenerator && <ImageGenerator onClose={() => setShowImageGenerator(false)} onImageGenerated={(url) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: '🎨 Generated image', timestamp: new Date(), imageUrl: url }])} />}
       {showDeepResearch && <DeepResearchPanel isOpen={showDeepResearch} onClose={() => setShowDeepResearch(false)} onInsertToChat={(c) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: c, timestamp: new Date() }])} />}
       <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} onAction={handleCommandAction} />
@@ -517,7 +538,8 @@ const ChatbotPage = () => {
           />
         </Suspense>
       )}
-    </motion.div>
+      </motion.div>
+    </RainbowEdgeFrame>
   );
 };
 export default ChatbotPage;

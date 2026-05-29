@@ -29,7 +29,7 @@ interface ChatInputProps {
   chatMode: ChatMode;
   onModeChange: (mode: ChatMode) => void;
   personality: string;
-  layout?: "default" | "gemini";
+  layout?: "default" | "gemini" | "shadow-pulse";
   aiProvider?: AIProvider;
   onProviderChange?: (provider: AIProvider) => void;
   isEmptyState?: boolean;
@@ -63,10 +63,15 @@ export const ChatInput = ({
     }
   };
 
-  const isGemini = layout === "gemini";
+  const isShadowPulse = layout === "shadow-pulse";
+  const isGemini = layout === "gemini" || isShadowPulse;
 
   return (
-    <div className={`relative ${isGemini ? "border-t-0 bg-transparent" : "border-t border-transparent bg-transparent"}`}>
+    <div
+      className={`relative ${
+        isShadowPulse ? "bg-transparent" : isGemini ? "border-t-0 bg-transparent" : "border-t border-transparent bg-transparent"
+      }`}
+    >
       <AnimatePresence>
         {(isListening || isSpeaking) && (
           <motion.div
@@ -103,15 +108,17 @@ export const ChatInput = ({
       </AnimatePresence>
 
       <div
-        className={`mx-auto px-4 relative ${
-          isGemini
-            ? isEmptyState
-              ? "max-w-[720px] py-0"
-              : "max-w-[720px] py-4 md:py-5"
-            : "max-w-3xl py-4 md:py-6"
+        className={`mx-auto relative ${
+          isShadowPulse
+            ? "max-w-full px-2 py-0"
+            : isGemini
+              ? isEmptyState
+                ? "max-w-[720px] px-4 py-0"
+                : "max-w-[720px] px-4 py-4 md:py-5"
+              : "max-w-3xl px-4 py-4 md:py-6"
         }`}
       >
-        {!isGemini && !isEmptyState && (
+        {!isGemini && !isShadowPulse && !isEmptyState && (
           <div className="flex items-center gap-2 mb-3 px-1">
             <ModeSelector
               mode={chatMode}
@@ -134,15 +141,17 @@ export const ChatInput = ({
         )}
 
         <div className="relative group">
-          {!isGemini && (
+          {!isGemini && !isShadowPulse && (
             <div className="absolute -inset-[1px] rounded-[32px] bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 opacity-0 group-focus-within:opacity-100 blur-md transition-opacity duration-700" />
           )}
 
           <div
             className={
-              isGemini
-                ? "relative flex items-center gap-1 bg-[#2f2f2f] hover:bg-[#383838] focus-within:bg-[#383838] rounded-[26px] border border-[#404040] px-3 py-2 shadow-none transition-colors duration-200"
-                : "relative flex items-end gap-2 bg-[#1e1f20]/60 backdrop-blur-2xl rounded-[30px] border border-white/10 p-2.5 px-4 shadow-2xl transition-all duration-500 group-focus-within:bg-[#1e1f20]/80 group-focus-within:border-white/20 ring-1 ring-white/5"
+              isShadowPulse
+                ? "relative flex items-center gap-2 bg-transparent rounded-[18px] px-2 py-1"
+                : isGemini
+                  ? "relative flex items-center gap-1 bg-[#2f2f2f] hover:bg-[#383838] focus-within:bg-[#383838] rounded-[26px] border border-[#404040] px-3 py-2 shadow-none transition-colors duration-200"
+                  : "relative flex items-end gap-2 bg-[#1e1f20]/60 backdrop-blur-2xl rounded-[30px] border border-white/10 p-2.5 px-4 shadow-2xl transition-all duration-500 group-focus-within:bg-[#1e1f20]/80 group-focus-within:border-white/20 ring-1 ring-white/5"
             }
           >
             <div className={`flex items-center shrink-0 ${isGemini ? "" : "pb-1"}`}>
@@ -170,7 +179,15 @@ export const ChatInput = ({
               value={message}
               onChange={(e) => onMessageChange(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isListening ? "Listening..." : isGemini ? "Ask ShadowTalk" : "Type, talk, or share..."}
+              placeholder={
+                isListening
+                  ? "Listening..."
+                  : isShadowPulse
+                    ? "Ask anything..."
+                    : isGemini
+                      ? "Ask ShadowTalk"
+                      : "Type, talk, or share..."
+              }
               className={
                 isGemini
                   ? "flex-1 min-h-[44px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-3 px-1 text-[15px] placeholder:text-muted-foreground/50 leading-relaxed overflow-y-auto custom-scrollbar"
@@ -229,7 +246,11 @@ export const ChatInput = ({
                   <Button
                     onClick={onSend}
                     size="icon"
-                    className="h-9 w-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all disabled:opacity-40"
+                    className={
+                      isShadowPulse
+                        ? "h-9 w-9 rounded-full bg-cyan-500 text-black hover:bg-cyan-400 shadow-[0_0_16px_rgba(34,211,238,0.45)]"
+                        : "h-9 w-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all disabled:opacity-40"
+                    }
                     disabled={!message.trim() && !selectedFile}
                   >
                     <Send className="h-4 w-4" />
@@ -267,7 +288,7 @@ export const ChatInput = ({
           </p>
         )}
 
-        {!isGemini && (
+        {!isGemini && !isShadowPulse && (
           <p className="text-[10px] text-muted-foreground/25 font-medium text-center mt-4 select-none tracking-widest uppercase">
             ShadowTalk Neural OS • Enterprise Grade Privacy
           </p>

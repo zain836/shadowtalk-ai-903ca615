@@ -47,7 +47,7 @@ interface MessageBubbleProps {
   onOpenIDE?: (code: string, language: string) => void;
   onLaunchWebsite?: (code: string, language: string) => void;
   onOpenInBrowser?: (url: string) => void;
-  layout?: 'default' | 'gemini';
+  layout?: 'default' | 'gemini' | 'shadow-pulse';
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -69,7 +69,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const { toast } = useToast();
   const isUser = message.type === 'user';
   const isWelcome = message.id === 'welcome';
-  const isClean = layout === 'gemini';
+  const isClean = layout === 'gemini' || layout === 'shadow-pulse';
 
   // Detect document artifacts in AI responses
   const documentArtifact = useMemo(() => {
