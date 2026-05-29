@@ -9,6 +9,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isOffline: boolean;
   userPlan: UserPlan;
   subscribed: boolean;
   subscriptionEnd: string | null;
@@ -160,6 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     session,
     loading,
+    isOffline,
     userPlan,
     subscribed,
     subscriptionEnd,

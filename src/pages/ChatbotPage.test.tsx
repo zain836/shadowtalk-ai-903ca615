@@ -1,21 +1,58 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { render } from '@testing-library/react';
 import ChatbotPage from './ChatbotPage';
-import { AuthProvider } from '@/components/AuthProvider';
 
-// Simple smoke test to ensure the main chat experience renders without throwing.
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: {
+    auth: { getSession: vi.fn().mockResolvedValue({ data: { session: null } }) },
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+    })),
+    functions: { invoke: vi.fn().mockResolvedValue({ data: { keys: [] }, error: null }) },
+  },
+}));
+
+vi.mock('@/hooks/useE2EE', () => ({
+  useE2EE: () => ({
+    isUnlocked: true,
+    isEncrypted: () => false,
+    unlock: vi.fn().mockResolvedValue(true),
+    encryptData: vi.fn(),
+    decryptData: vi.fn(),
+    unwrapEncrypted: vi.fn(),
+    wrapEncrypted: vi.fn(),
+  }),
+}));
+
+vi.mock('@/hooks/useOfflineAuth', () => ({
+  useOfflineAuth: () => ({
+    getOfflineSession: () => null,
+  }),
+}));
+
+vi.mock('@/components/AuthProvider', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user', email: 'test@example.com', user_metadata: {} },
+    userPlan: 'free',
+    signOut: vi.fn(),
+    checkSubscription: vi.fn(),
+    loading: false,
+    isOffline: false,
+  }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 describe('ChatbotPage', () => {
   it('renders main chat layout without crashing', () => {
     const { container } = render(
       <MemoryRouter>
-        <AuthProvider>
-          <ChatbotPage />
-        </AuthProvider>
+        <ChatbotPage />
       </MemoryRouter>,
     );
 
-    // Check that the component renders without crashing
     expect(container).toBeTruthy();
   });
 });

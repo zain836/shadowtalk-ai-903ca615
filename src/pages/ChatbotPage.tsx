@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
@@ -14,6 +14,14 @@ import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
 import { ImageGenerator } from "@/components/chat/ImageGenerator";
 import { DeepResearchPanel } from "@/components/chat/DeepResearchPanel";
 import { CommandPalette } from "@/components/chat/CommandPalette";
+import { MissionControl } from "@/components/chat/MissionControl";
+
+const ShadowTalkLive = lazy(() =>
+  import("@/components/chat/ShadowTalkLive").then((m) => ({ default: m.ShadowTalkLive })),
+);
+const ShadowBrowser = lazy(() =>
+  import("@/components/chat/ShadowBrowser").then((m) => ({ default: m.ShadowBrowser })),
+);
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useUsageTracking } from "@/hooks/useUsageTracking";
@@ -46,7 +54,7 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 const ChatbotPage = () => {
   const navigate = useNavigate();
-  const { user, userPlan, signOut, checkSubscription, isOffline } = useAuth();
+  const { user, userPlan, signOut, checkSubscription, isOffline, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const e2ee = useE2EE();
   
@@ -83,6 +91,8 @@ const ChatbotPage = () => {
   const [showShadowTalkLive, setShowShadowTalkLive] = useState(false);
   const [showShadowBrowser, setShowShadowBrowser] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showMissionControl, setShowMissionControl] = useState(false);
+  const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -246,7 +256,25 @@ const ChatbotPage = () => {
     if (success) { setE2EEPassphrase(""); loadConversations(); }
   };
 
-  if (!user && !isOffline) { navigate("/auth"); return null; }
+  const offlineSession = getOfflineSession();
+
+  useEffect(() => {
+    if (!authLoading && !user && !offlineSession && !isOffline) {
+      navigate("/auth");
+    }
+  }, [authLoading, user, offlineSession, isOffline, navigate]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen neural-bg flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user && !offlineSession && !isOffline) {
+    return null;
+  }
 
   if (!e2ee.isUnlocked) {
     return (
@@ -277,7 +305,13 @@ const ChatbotPage = () => {
     <motion.div className="min-h-screen neural-bg relative overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <AnimatePresence>{isLoading && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="neural-thinking-glow" />}</AnimatePresence>
       <div className="flex h-screen w-full relative z-10">
-        <ChatIconRail userInitials={userInitials} onNewChat={() => { setCurrentConversationId(null); setMessages([]); }} onOpenHistory={() => setShowSidebar(true)} onOpenSettings={() => navigate("/profile")} />
+        <ChatIconRail
+          userInitials={userInitials}
+          onNewChat={() => { setCurrentConversationId(null); setMessages([]); }}
+          onOpenHistory={() => setShowSidebar(true)}
+          onOpenTools={() => setToolsMenuOpen(true)}
+          onOpenSettings={() => navigate("/profile")}
+        />
         <AnimatePresence>
           {showSidebar && (
             <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} className="fixed left-0 top-0 bottom-0 z-50 md:left-[72px]">
@@ -286,7 +320,36 @@ const ChatbotPage = () => {
           )}
         </AnimatePresence>
         <div className="flex-1 flex flex-col min-w-0">
-          <ChatHeader userPlan={userPlan} personality={personality} onPersonalityChange={setPersonality} onToggleSidebar={() => setShowSidebar(!showSidebar)} onExport={() => {}} onManageSubscription={() => {}} onSignOut={signOut} onOpenAnalytics={() => setShowAnalytics(true)} onOpenDeepResearch={() => setShowDeepResearch(true)} onOpenImageGenerator={() => setShowImageGenerator(true)} onOpenShadowTalkLive={() => setShowShadowTalkLive(true)} onOpenBrowser={() => setShowShadowBrowser(true)} aiProvider={aiProvider} onProviderChange={setAiProvider} maxChats="∞" dailyChats={dailyChats} />
+          <ChatHeader
+            userPlan={userPlan}
+            personality={personality}
+            onPersonalityChange={setPersonality}
+            onToggleSidebar={() => setShowSidebar(!showSidebar)}
+            onExport={() => {}}
+            onManageSubscription={() => navigate("/billing")}
+            onSignOut={signOut}
+            onOpenAnalytics={() => navigate("/analytics")}
+            onOpenScriptAutomation={() => navigate("/workspace")}
+            onOpenStealthVault={() => navigate("/vault")}
+            onOpenAgentWorkflows={() => navigate("/workspace")}
+            onOpenModelFineTuning={() => navigate("/workspace")}
+            onOpenWhiteLabelBranding={() => navigate("/workspace")}
+            onOpenGeminiAnalytics={() => navigate("/profile")}
+            onOpenCanvas={() => navigate("/workspace")}
+            onOpenDeepResearch={() => setShowDeepResearch(true)}
+            onOpenAgenticRunner={() => setShowMissionControl(true)}
+            onOpenVisualReasoning={() => setShowCommandPalette(true)}
+            onOpenCreativeSynthesis={() => navigate("/studio")}
+            onOpenImageGenerator={() => setShowImageGenerator(true)}
+            onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
+            onOpenBrowser={() => setShowShadowBrowser(true)}
+            aiProvider={aiProvider}
+            onProviderChange={setAiProvider}
+            maxChats="∞"
+            dailyChats={dailyChats}
+            toolsMenuOpen={toolsMenuOpen}
+            onToolsMenuOpenChange={setToolsMenuOpen}
+          />
           <div className={`flex-1 overflow-hidden relative flex flex-col ${isEmptyChat ? "justify-center" : ""}`}>
             <AnimatePresence mode="wait">
               {isEmptyChat ? (
@@ -308,18 +371,49 @@ const ChatbotPage = () => {
       </div>
       {showImageGenerator && <ImageGenerator onClose={() => setShowImageGenerator(false)} onImageGenerated={(url) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: '🎨 Generated image', timestamp: new Date(), imageUrl: url }])} />}
       {showDeepResearch && <DeepResearchPanel isOpen={showDeepResearch} onClose={() => setShowDeepResearch(false)} onInsertToChat={(c) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: c, timestamp: new Date() }])} />}
-      <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} onAction={() => {}} />
-      <MissionControl
-        isOpen={showMissionControl}
-        onClose={() => setShowMissionControl(false)}
-        onMissionComplete={(result) => {
-          setMessages((prev) => [
-            ...prev,
-            { id: crypto.randomUUID(), type: "ai", content: `✅ S.E.E. mission deliverable:\n\n${result}`, timestamp: new Date() },
-          ]);
-          setShowMissionControl(false);
+      <CommandPalette
+        open={showCommandPalette}
+        onOpenChange={setShowCommandPalette}
+        onAction={(action) => {
+          setShowCommandPalette(false);
+          if (action === "deep-research") setShowDeepResearch(true);
+          else if (action === "image") setShowImageGenerator(true);
+          else if (action === "voice") setShowShadowTalkLive(true);
+          else if (action === "browser") setShowShadowBrowser(true);
+          else if (action === "missions") setShowMissionControl(true);
         }}
       />
+      {showMissionControl && (
+        <MissionControl
+          isOpen={showMissionControl}
+          onClose={() => setShowMissionControl(false)}
+          onMissionComplete={(result) => {
+            setMessages((prev) => [
+              ...prev,
+              { id: crypto.randomUUID(), type: "ai", content: `✅ S.E.E. mission deliverable:\n\n${result}`, timestamp: new Date() },
+            ]);
+            setShowMissionControl(false);
+          }}
+        />
+      )}
+      {showShadowTalkLive && (
+        <Suspense fallback={null}>
+          <ShadowTalkLive
+            isOpen={showShadowTalkLive}
+            onClose={() => setShowShadowTalkLive(false)}
+            onInsertToChat={(content) => setMessage(content)}
+          />
+        </Suspense>
+      )}
+      {showShadowBrowser && (
+        <Suspense fallback={null}>
+          <ShadowBrowser
+            isOpen={showShadowBrowser}
+            onClose={() => setShowShadowBrowser(false)}
+            onInsertToChat={(content) => setMessage(content)}
+          />
+        </Suspense>
+      )}
     </motion.div>
   );
 };
