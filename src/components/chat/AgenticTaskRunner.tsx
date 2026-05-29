@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
+import { stringifyChatBody } from "@/lib/chatRequest";
 
 interface TaskStep {
   id: string;
@@ -95,7 +96,7 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete, initialGoal
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
         },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           messages: [{ 
             role: "user", 
             content: `Break down this task into 4-6 numbered steps. Only list the steps, nothing else:\n\n${goal}` 
@@ -174,7 +175,7 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete, initialGoal
               "Content-Type": "application/json",
               Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
             },
-            body: JSON.stringify({
+            body: stringifyChatBody({
               messages: [{ role: "user", content: `Execute this step for the goal "${goal}": ${step.action}. Provide a concise result.` }],
               personality: "professional",
               mode: "general"
@@ -216,7 +217,7 @@ export const AgenticTaskRunner = ({ isOpen, onClose, onTaskComplete, initialGoal
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
         },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           messages: [{ role: "user", content: goal }],
           personality: "professional",
           mode: "general"

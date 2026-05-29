@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useAdvancedOfflineAI } from './useAdvancedOfflineAI';
+import { useSovereignAI } from './useSovereignAI';
 import { useBusinessMemory } from './useBusinessMemory';
 import { useLocalVectorStore } from './useLocalVectorStore';
 
@@ -54,7 +54,7 @@ export const useOfflineStrategy = () => {
     error: null,
   });
 
-  const { generateResponse, isReady: aiReady, loadModel } = useAdvancedOfflineAI();
+  const { generateResponse, isReady: aiReady, initializeSovereignEngine: loadModel } = useSovereignAI();
   const { memories } = useBusinessMemory();
   const { search: vectorSearch } = useLocalVectorStore();
 

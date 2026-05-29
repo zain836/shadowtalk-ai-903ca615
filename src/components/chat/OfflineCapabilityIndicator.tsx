@@ -28,9 +28,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { useAdvancedOfflineAI } from '@/hooks/useAdvancedOfflineAI';
+import { useSovereignAI } from '@/hooks/useSovereignAI';
 import { useOfflineRAG } from '@/hooks/useOfflineRAG';
-import { useOfflineMode } from '@/hooks/useOfflineMode';
 
 interface OfflineCapabilityIndicatorProps {
   onOpenModelManager?: () => void;
@@ -51,7 +50,6 @@ export const OfflineCapabilityIndicator: React.FC<OfflineCapabilityIndicatorProp
   onOpenModelManager,
   compact = false,
 }) => {
-  const { isOffline } = useOfflineMode();
   const {
     isReady,
     isLoading,
@@ -62,10 +60,14 @@ export const OfflineCapabilityIndicator: React.FC<OfflineCapabilityIndicatorProp
     performanceTier,
     contextTokens,
     maxContextTokens,
-    loadModel,
+    initializeSovereignEngine: loadModel,
     error,
-  } = useAdvancedOfflineAI();
+    mode,
+  } = useSovereignAI();
+
   const { documentCount, isModelLoaded: ragLoaded } = useOfflineRAG();
+
+  const isOffline = mode === 'stealth';
 
   const getCapabilityStatus = (requires: string): 'available' | 'loading' | 'unavailable' => {
     if (requires === 'basic') return 'available';
@@ -128,7 +130,7 @@ export const OfflineCapabilityIndicator: React.FC<OfflineCapabilityIndicatorProp
               </p>
               {isReady && activeModel && (
                 <p className="text-xs text-muted-foreground">
-                  Model: {availableModels.find(m => m.id === activeModel)?.name}
+                  Model: {activeModel.name}
                 </p>
               )}
               <p className="text-xs">
@@ -213,7 +215,7 @@ export const OfflineCapabilityIndicator: React.FC<OfflineCapabilityIndicatorProp
                 <div className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
                   <span className="text-sm font-medium">
-                    {availableModels.find(m => m.id === activeModel)?.name}
+                    {activeModel.name}
                   </span>
                 </div>
                 <span className="text-xs text-muted-foreground">Active</span>

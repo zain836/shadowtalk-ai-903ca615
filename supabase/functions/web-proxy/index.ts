@@ -1,5 +1,8 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { requireAuth } from "../_shared/auth.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 const MAX_CONTENT_SIZE = 5 * 1024 * 1024; // 5MB limit
 
@@ -35,6 +38,39 @@ Deno.serve(async (req) => {
   if (!auth.authenticated) return auth.response;
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check rate limit
+    const { data: subscriber } = await supabase
+      .from("subscribers")
+      .select("subscription_tier")
+      .eq("user_id", auth.userId)
+      .single();
+
+    const tier = subscriber?.subscription_tier || "free";
+    const rateLimit = await checkRateLimit(auth.userId!, tier, supabase);
+
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: "Rate limit exceeded",
+          resetAt: rateLimit.resetAt
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+            'X-RateLimit-Limit': String(rateLimit.limit),
+            'X-RateLimit-Remaining': String(rateLimit.remaining),
+            'X-RateLimit-Reset': rateLimit.resetAt.toISOString(),
+          }
+        }
+      );
+    }
+
     const { url, mode } = await req.json();
 
     if (!url || typeof url !== "string") {
