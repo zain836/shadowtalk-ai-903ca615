@@ -36,8 +36,14 @@ const AboutTimeline = () => {
         </div>
 
         <div className="relative">
-          {/* Vertical line */}
-          <div className="absolute left-6 md:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-primary/40 via-secondary/30 to-accent/20 md:-translate-x-px" />
+          {/* Vertical line — draws in on scroll */}
+          <motion.div
+            initial={{ scaleY: 0 }}
+            whileInView={{ scaleY: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute left-6 md:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-primary/60 via-secondary/40 to-accent/30 md:-translate-x-px origin-top"
+          />
 
           <div className="space-y-10">
             {milestones.map((m, i) => (
@@ -59,7 +65,13 @@ const AboutTimeline = () => {
                 </div>
 
                 {/* Node */}
-                <div className="absolute left-6 md:left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-primary ring-4 ring-background z-10 mt-6" />
+                <motion.div
+                  initial={{ scale: 0 }}
+                  whileInView={{ scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 + 0.2, type: "spring", stiffness: 300 }}
+                  className="absolute left-6 md:left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-primary ring-4 ring-background z-10 mt-6 shadow-[0_0_12px_hsl(var(--primary)/0.6)]"
+                />
 
                 {/* Spacer for alternating layout */}
                 <div className="hidden md:block flex-1" />

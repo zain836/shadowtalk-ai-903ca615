@@ -1,8 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
+import AboutScrollProgress from "@/components/about/AboutScrollProgress";
 import AboutHero from "@/components/about/AboutHero";
+import AboutQuoteMarquee from "@/components/about/AboutQuoteMarquee";
+import AboutInspire from "@/components/about/AboutInspire";
 import AboutStats from "@/components/about/AboutStats";
 import AboutMission from "@/components/about/AboutMission";
+import AboutSpotlight from "@/components/about/AboutSpotlight";
 import AboutTimeline from "@/components/about/AboutTimeline";
 import AboutSkills from "@/components/about/AboutSkills";
 import AboutStack from "@/components/about/AboutStack";
@@ -20,10 +24,10 @@ const AboutPage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background about-page">
+      <AboutScrollProgress />
       <Navigation />
 
-      {/* Back to Home */}
       <div className="fixed bottom-6 left-6 z-40">
         <Button
           variant="outline"
@@ -37,10 +41,13 @@ const AboutPage = () => {
       </div>
 
       <AboutHero />
+      <AboutQuoteMarquee />
+      <AboutInspire />
       <Separator className="max-w-4xl mx-auto opacity-30" />
       <AboutStats />
       <Separator className="max-w-4xl mx-auto opacity-30" />
       <AboutMission />
+      <AboutSpotlight />
       <AboutTimeline />
       <Separator className="max-w-4xl mx-auto opacity-30" />
       <AboutSkills />
