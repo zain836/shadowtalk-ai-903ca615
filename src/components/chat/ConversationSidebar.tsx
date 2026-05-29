@@ -29,6 +29,8 @@ interface ConversationSidebarProps {
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onClearAll: () => void;
+  onClearCurrent?: () => void;
+  onClose?: () => void;
 }
 
 export const ConversationSidebar = ({
@@ -38,6 +40,8 @@ export const ConversationSidebar = ({
   onSelect,
   onDelete,
   onClearAll,
+  onClearCurrent,
+  onClose,
 }: ConversationSidebarProps) => {
   const [search, setSearch] = useState("");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -66,15 +70,25 @@ export const ConversationSidebar = ({
   const groupOrder = ["Today", "Yesterday", "Last 7 days", "Last 30 days", "Earlier"];
 
   return (
-    <div className="w-[280px] shrink-0 bg-[#1e1f20]/95 backdrop-blur-2xl border-r border-white/5 flex flex-col max-md:absolute max-md:left-0 max-md:top-0 max-md:h-full max-md:z-50 max-md:shadow-2xl">
+    <div className="w-[280px] shrink-0 bg-[#1e1f20]/95 backdrop-blur-2xl border-r border-white/5 flex flex-col max-md:absolute max-md:left-0 max-md:top-0 max-md:h-full max-md:z-50 max-md:shadow-2xl h-full">
       {/* Top Section: Action Hub */}
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-2 border-b border-white/5">
         <Button
           onClick={onCreateNew}
-          className="w-[140px] h-10 rounded-full bg-[#2b2c2d] hover:bg-[#333537] text-foreground border border-white/5 shadow-sm transition-all duration-300 text-[14px] font-medium gap-2.5 justify-center"
+          className="w-full h-10 rounded-full bg-[#2b2c2d] hover:bg-[#333537] text-foreground border border-white/5 shadow-sm transition-all duration-300 text-[14px] font-medium gap-2.5 justify-center"
         >
-          <Plus className="h-4.5 w-4.5 text-blue-400" /> New chat
+          <Plus className="h-4 w-4 text-blue-400" /> New chat
         </Button>
+        {onClearCurrent && currentConversationId && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClearCurrent}
+            className="w-full h-9 rounded-full text-[12px] text-muted-foreground hover:text-foreground"
+          >
+            <Trash className="h-3.5 w-3.5 mr-2" /> Clear this chat
+          </Button>
+        )}
       </div>
 
       {/* Main Navigation */}

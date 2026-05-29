@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ChatMode } from "@/components/chat/ModeSelector";
 import { AIProvider } from "@/components/chat/ProviderSelector";
 import { ChatHeader } from "@/components/chat/ChatHeader";
+import { ChatToolbar } from "@/components/chat/ChatToolbar";
 import { ChatIconRail } from "@/components/chat/ChatIconRail";
 import { ChatShadowSidebar } from "@/components/chat/ChatShadowSidebar";
 import { RainbowEdgeFrame } from "@/components/chat/RainbowEdgeFrame";
@@ -181,6 +182,148 @@ const ChatbotPage = () => {
     return "👋 Welcome back! Your neural workspace is ready.";
   };
 
+  const welcomeMessage = (): Message => ({
+    id: "welcome",
+    type: "ai",
+    content: getWelcomeMessage(),
+    timestamp: new Date(),
+  });
+
+  const isGuestConversationId = (id: string | null) =>
+    !!id && (id.startsWith("guest-") || !user);
+
+  const resetToNewChat = () => {
+    setCurrentConversationId(null);
+    setMessages([welcomeMessage()]);
+    setMessage("");
+    setSelectedFile(null);
+  };
+
+  const handleNewChat = () => {
+    resetToNewChat();
+    setShowSidebar(false);
+    toast({ title: "New chat", description: "Started a fresh conversation." });
+  };
+
+  const handleClearCurrentChat = async () => {
+    const convId = currentConversationId;
+    if (!convId) {
+      resetToNewChat();
+      return;
+    }
+
+    if (isGuestConversationId(convId)) {
+      resetToNewChat();
+      setConversations((prev) => prev.filter((c) => c.id !== convId));
+      const guestConvId = `guest-${Date.now()}`;
+      setCurrentConversationId(guestConvId);
+      setConversations([{ id: guestConvId, title: "Guest Conversation", created_at: new Date().toISOString() }]);
+      toast({ title: "Chat cleared" });
+      return;
+    }
+
+    if (!user) return;
+
+    const { error: msgError } = await supabase
+      .from("messages")
+      .delete()
+      .eq("conversation_id", convId)
+      .eq("user_id", user.id);
+
+    if (msgError) {
+      const { error: convError } = await supabase
+        .from("conversations")
+        .delete()
+        .eq("id", convId)
+        .eq("user_id", user.id);
+      if (convError) {
+        toast({ title: "Could not clear chat", description: convError.message, variant: "destructive" });
+        return;
+      }
+      setConversations((prev) => prev.filter((c) => c.id !== convId));
+      resetToNewChat();
+    } else {
+      await supabase
+        .from("conversations")
+        .update({ title: "New Chat", updated_at: new Date().toISOString() })
+        .eq("id", convId)
+        .eq("user_id", user.id);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === convId ? { ...c, title: "New Chat" } : c)),
+      );
+      setMessages([welcomeMessage()]);
+    }
+
+    toast({ title: "Chat cleared", description: "Messages in this conversation were removed." });
+    setShowSidebar(false);
+  };
+
+  const handleDeleteConversation = async (conversationId: string) => {
+    if (isGuestConversationId(conversationId)) {
+      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+      if (currentConversationId === conversationId) resetToNewChat();
+      return;
+    }
+
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("conversations")
+      .delete()
+      .eq("id", conversationId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    const wasActive = currentConversationId === conversationId;
+    setConversations((prev) => {
+      const next = prev.filter((c) => c.id !== conversationId);
+      if (wasActive) {
+        if (next.length > 0) {
+          void loadConversation(next[0].id);
+        } else {
+          resetToNewChat();
+        }
+      }
+      return next;
+    });
+    toast({ title: "Conversation deleted" });
+  };
+
+  const handleClearAllChats = async () => {
+    if (!user) {
+      const guestConvId = `guest-${Date.now()}`;
+      setConversations([{ id: guestConvId, title: "Guest Conversation", created_at: new Date().toISOString() }]);
+      setCurrentConversationId(guestConvId);
+      setMessages([
+        {
+          id: "welcome",
+          type: "ai",
+          content: "👋 Welcome to ShadowTalk AI! Your neural workspace is ready for guest access.",
+          timestamp: new Date(),
+        },
+      ]);
+      setShowSidebar(false);
+      toast({ title: "All chats cleared" });
+      return;
+    }
+
+    const { error } = await supabase.from("conversations").delete().eq("user_id", user.id);
+
+    if (error) {
+      toast({ title: "Could not delete chats", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    setConversations([]);
+    resetToNewChat();
+    setShowSidebar(false);
+    toast({ title: "All chats deleted", description: "Your conversation history was cleared." });
+  };
+
   const ensureConversation = async (): Promise<string | null> => {
     if (!user) return currentConversationId;
     if (currentConversationId) return currentConversationId;
@@ -320,7 +463,8 @@ const ChatbotPage = () => {
     return null;
   }
 
-  const isEmptyChat = messages.length <= 1;
+  const isEmptyChat = messages.filter((m) => m.id !== "welcome").length === 0;
+  const hasActiveChat = messages.some((m) => m.id !== "welcome");
   const userDisplayName = user?.user_metadata?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "there";
   const userInitials = user?.email ? user.email.charAt(0).toUpperCase() : "G";
 
@@ -356,8 +500,7 @@ const ChatbotPage = () => {
     setShowCommandPalette(false);
     switch (action) {
       case "new-chat":
-        setCurrentConversationId(null);
-        setMessages([]);
+        handleNewChat();
         return;
       case "deep-research":
         setShowDeepResearch(true);
@@ -419,27 +562,61 @@ const ChatbotPage = () => {
         <ChatShadowSidebar
           userInitials={userInitials}
           userDisplayName={userDisplayName}
-          onNewChat={() => {
-            setCurrentConversationId(null);
-            setMessages([]);
-          }}
+          onNewChat={handleNewChat}
+          onOpenHistory={() => setShowSidebar(true)}
         />
         <ChatIconRail
           userInitials={userInitials}
-          onNewChat={() => { setCurrentConversationId(null); setMessages([]); }}
+          onNewChat={handleNewChat}
           onOpenHistory={() => setShowSidebar(true)}
           onOpenTools={() => setToolsMenuOpen(true)}
           onOpenSettings={() => navigate("/profile")}
         />
         <AnimatePresence>
           {showSidebar && (
-            <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} className="fixed left-0 top-0 bottom-0 z-50 md:left-[240px]">
-              <ConversationSidebar conversations={conversations} currentConversationId={currentConversationId} onCreateNew={() => { setCurrentConversationId(null); setMessages([]); setShowSidebar(false); }} onSelect={(id) => { loadConversation(id); setShowSidebar(false); }} onDelete={() => {}} onClearAll={() => {}} />
-            </motion.div>
+            <>
+              <motion.button
+                type="button"
+                aria-label="Close history"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-40 bg-black/60 md:left-[240px]"
+                onClick={() => setShowSidebar(false)}
+              />
+              <motion.div
+                initial={{ x: -280 }}
+                animate={{ x: 0 }}
+                exit={{ x: -280 }}
+                className="fixed left-0 top-0 bottom-0 z-50 md:left-[240px]"
+              >
+                <ConversationSidebar
+                  conversations={conversations}
+                  currentConversationId={currentConversationId}
+                  onCreateNew={handleNewChat}
+                  onSelect={(id) => {
+                    loadConversation(id);
+                    setShowSidebar(false);
+                  }}
+                  onDelete={handleDeleteConversation}
+                  onClearAll={handleClearAllChats}
+                  onClearCurrent={handleClearCurrentChat}
+                  onClose={() => setShowSidebar(false)}
+                />
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
         <div className="flex-1 flex flex-col min-w-0 bg-black">
           <p className="shadow-pulse-top-label hidden md:block shrink-0">Shadow Pulse</p>
+          <ChatToolbar
+            hasActiveChat={hasActiveChat}
+            conversationCount={conversations.length}
+            onNewChat={handleNewChat}
+            onOpenHistory={() => setShowSidebar(true)}
+            onClearChat={handleClearCurrentChat}
+            onDeleteAllChats={handleClearAllChats}
+          />
           <ChatHeader
             variant="minimal"
             userPlan={userPlan}
