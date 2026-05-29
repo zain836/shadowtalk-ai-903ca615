@@ -1,7 +1,7 @@
 {
   "appId": "com.shadowtalk.ai",
   "productName": "ShadowTalk AI",
-  "copyright": "Copyright \u00a9 ShadowTalk AI",
+  "copyright": "Copyright © ShadowTalk AI",
   "directories": {
     "buildResources": "resources",
     "output": "dist"
@@ -25,33 +25,25 @@
     "uninstallerIcon": "assets/appIcon.ico"
   },
   "win": {
-    "target": [
-      "nsis"
-    ],
+    "target": ["nsis"],
     "icon": "assets/appIcon.ico",
     "publisherName": "ShadowTalk AI"
   },
   "mac": {
     "category": "public.app-category.productivity",
-    "target": [
-      "dmg"
-    ],
+    "target": ["dmg"],
     "icon": "assets/appIcon.png",
     "hardenedRuntime": true
   },
   "linux": {
-    "target": [
-      "AppImage"
-    ],
+    "target": ["AppImage"],
     "category": "Office"
   },
   "extraResources": [
     {
       "from": "resources/offline-models",
       "to": "offline-models",
-      "filter": [
-        "**/*"
-      ]
+      "filter": ["**/*"]
     }
   ]
 }

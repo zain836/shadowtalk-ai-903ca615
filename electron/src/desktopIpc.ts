@@ -28,19 +28,20 @@ export function registerDesktopIpc(): void {
     } catch {
       offlineModelBundled = false;
     }
-    return ({
-    platform: process.platform,
-    arch: process.arch,
-    appVersion: app.getVersion(),
-    electronVersion: process.versions.electron,
-    chromeVersion: process.versions.chrome,
-    userDataPath: app.getPath('userData'),
-    documentsPath: app.getPath('documents'),
-    homePath: homedir(),
-    shadowtalkDataPath: join(app.getPath('userData'), 'shadowtalk-data'),
-    offlineModelBundled,
-    offlineModelPath: offlineModelBundled ? bundledDir : undefined,
-  };});
+    return {
+      platform: process.platform,
+      arch: process.arch,
+      appVersion: app.getVersion(),
+      electronVersion: process.versions.electron,
+      chromeVersion: process.versions.chrome,
+      userDataPath: app.getPath('userData'),
+      documentsPath: app.getPath('documents'),
+      homePath: homedir(),
+      shadowtalkDataPath: join(app.getPath('userData'), 'shadowtalk-data'),
+      offlineModelBundled,
+      offlineModelPath: offlineModelBundled ? bundledDir : undefined,
+    };
+  });
 
   ipcMain.handle(CHANNEL.openFile, async (_event, options: Electron.OpenDialogOptions) => {
     const result = await dialog.showOpenDialog({
@@ -88,16 +89,13 @@ export function registerDesktopIpc(): void {
     }
   });
 
-  ipcMain.handle(CHANNEL.getAutoLaunch, () => {
+  ipcMain.handle(CHANNEL.getAutoLaunch, async () => {
     const settings = app.getLoginItemSettings();
     return settings.openAtLogin;
   });
 
-  ipcMain.handle(CHANNEL.setAutoLaunch, (_event, enabled: boolean) => {
-    app.setLoginItemSettings({
-      openAtLogin: enabled,
-      openAsHidden: false,
-    });
+  ipcMain.handle(CHANNEL.setAutoLaunch, async (_event, enabled: boolean) => {
+    app.setLoginItemSettings({ openAtLogin: enabled });
     return enabled;
   });
 }
