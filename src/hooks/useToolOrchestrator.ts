@@ -713,7 +713,7 @@ const TOOL_PATTERNS: Array<{
     autoExecute: false,
   },
 
-  // Presentation Builder
+  // Presentation Builder (Kimi Slides–class)
   {
     tool: 'presentation_builder',
     patterns: [
@@ -723,14 +723,16 @@ const TOOL_PATTERNS: Array<{
       /\bpitch\s*deck/i,
       /\bpowerpoint/i,
       /\bslide\s*show/i,
+      /\bkimi\s+slides?\b/i,
+      /\bslide\s+studio\b/i,
     ],
-    priority: 9,
-    autoExecute: false,
+    priority: 10,
+    autoExecute: true,
     extractParams: (msg: string) => {
       const cleaned = msg
         .replace(/^(create|make|build|generate|design)\s+(me\s+)?(a\s+|an\s+)?(presentation|ppt|pptx|slides?|slide\s*deck|deck|powerpoint|pitch\s*deck)\s*(about|on|for)?\s*/i, '')
         .trim();
-      return { topic: cleaned || msg };
+      return { topic: cleaned || msg, mode: /\bvisual\b/i.test(msg) ? "visual" : "adaptive" };
     }
   },
 ];

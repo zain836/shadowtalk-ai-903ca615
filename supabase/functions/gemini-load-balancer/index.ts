@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireAuth } from "../_shared/auth.ts";
+import { requireAdmin } from "../_shared/admin.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -80,6 +82,11 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
+    const auth = await requireAuth(req, corsHeaders);
+    if (!auth.authenticated) return auth.response;
+    const adminResp = await requireAdmin(auth, corsHeaders);
+    if (adminResp) return adminResp;
+
     const { sessionId, message, userId, stream } = await req.json();
 
     if (!sessionId || !message) {

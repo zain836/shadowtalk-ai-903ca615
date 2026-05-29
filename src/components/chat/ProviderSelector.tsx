@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 
-export type AIProvider = "lovable" | "gemini";
+export type AIProvider = "lovable" | "gemini" | "openrouter" | "kimi";
 
 interface ProviderSelectorProps {
   provider: AIProvider;
@@ -26,9 +26,21 @@ const providers = [
   },
   {
     value: "gemini" as const,
-    label: "ShadowTalk API (Gemini)",
-    description: "External API load-balancer",
+    label: "Google Gemini (BYOK)",
+    description: "Your Gemini API key",
     icon: <Key className="h-4 w-4 text-amber-400" />,
+  },
+  {
+    value: "openrouter" as const,
+    label: "OpenRouter (BYOK)",
+    description: "Your OpenRouter key",
+    icon: <Key className="h-4 w-4 text-blue-400" />,
+  },
+  {
+    value: "kimi" as const,
+    label: "Kimi / Moonshot (BYOK)",
+    description: "Your Moonshot API key",
+    icon: <Key className="h-4 w-4 text-violet-400" />,
   },
 ];
 

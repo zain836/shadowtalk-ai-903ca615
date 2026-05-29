@@ -34,7 +34,7 @@ interface Feature {
 const FEATURES: Feature[] = [
   // Privacy & Security
   { name: "100% Offline Mode", description: "Full AI without internet — WebGPU local inference", shadowtalk: "free", manus: "no", chatgpt: "no", claude: "no", gemini: "no", icon: <WifiOff className="h-3.5 w-3.5" />, category: "privacy" },
-  { name: "Zero-Knowledge Privacy", description: "Data never leaves your device", shadowtalk: "superior", manus: "no", chatgpt: "no", claude: "no", gemini: "no", icon: <Shield className="h-3.5 w-3.5" />, category: "privacy" },
+  { name: "Privacy choice", description: "Vault, BYOK, and optional on-device inference", shadowtalk: "superior", manus: "no", chatgpt: "no", claude: "no", gemini: "no", icon: <Shield className="h-3.5 w-3.5" />, category: "privacy" },
   { name: "Encrypted Stealth Vault", description: "AES-256-GCM client-side encryption", shadowtalk: "free", manus: "no", chatgpt: "no", claude: "no", gemini: "no", icon: <Lock className="h-3.5 w-3.5" />, category: "privacy" },
 
   // Agentic

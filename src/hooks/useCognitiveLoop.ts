@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { stringifyChatBody } from "@/lib/chatRequest";
 
 // =============================================================================
 // COGNITIVE LOOP ARCHITECTURE - Beyond 2026 Industry Standard
@@ -150,7 +151,7 @@ Now provide your perspective as the ${agent.name}. If you disagree with any poin
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           messages: [
             { role: 'system', content: `${agent.systemPrompt}\n\nContext:\n${context}` },
             { role: 'user', content: prompt },
@@ -285,7 +286,7 @@ Provide the BEST possible answer by combining their expertise.`;
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           messages: [{ role: 'user', content: synthesisPrompt }],
           model: 'google/gemini-2.5-pro', // Use strongest model for synthesis
           stream: false,

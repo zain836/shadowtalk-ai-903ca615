@@ -219,7 +219,7 @@ export const ChatInput = ({
                     )}
                   </TooltipTrigger>
                   <TooltipContent side="top" className="text-xs">
-                    {isLoading ? "Stop" : "Voice input"}
+                    {isLoading ? "Stop" : "ShadowTalk Live (voice)"}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

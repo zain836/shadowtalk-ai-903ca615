@@ -4,10 +4,10 @@ import { Search, ListTree, Palette, Sparkles, Check, Loader2 } from "lucide-reac
 export type GenerationPhase = "idle" | "researching" | "structuring" | "designing" | "polishing" | "done";
 
 const PHASES = [
-  { key: "researching", label: "Researching Topic", desc: "Gathering data, statistics, and insights from knowledge base", icon: Search },
-  { key: "structuring", label: "Building Outline", desc: "Creating narrative arc and selecting optimal slide layouts", icon: ListTree },
-  { key: "designing", label: "Generating Content", desc: "Writing data-rich bullets, stats, and speaker notes", icon: Palette },
-  { key: "polishing", label: "Final Polish", desc: "Validating content density and adding finishing touches", icon: Sparkles },
+  { key: "researching", label: "Researching", desc: "Kimi Slides: gathering facts, stats, and sources for your deck", icon: Search },
+  { key: "structuring", label: "Structuring", desc: "Building narrative arc, TOC, and SmartArt layout plan", icon: ListTree },
+  { key: "designing", label: "Designing slides", desc: "Coding each slide with citations and visual hierarchy", icon: Palette },
+  { key: "polishing", label: "Final polish", desc: "Refining layouts, speaker notes, and export-ready HTML", icon: Sparkles },
 ] as const;
 
 interface GenerationProgressProps {

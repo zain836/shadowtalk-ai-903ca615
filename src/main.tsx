@@ -43,7 +43,8 @@
  // Defer non-critical initialization
  deferNonCritical(() => {
    // Register service worker for PWA
-   if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  const isLovablePreview = window.location.hostname.endsWith("lovableproject.com");
+  if ("serviceWorker" in navigator && import.meta.env.PROD && !isLovablePreview) {
      navigator.serviceWorker.register('/sw.js').catch((err) => {
        console.warn('[SW] Registration failed:', err);
      });

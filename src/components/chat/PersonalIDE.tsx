@@ -19,6 +19,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/componen
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { stringifyChatBody } from "@/lib/chatRequest";
 
 const Editor = lazy(() => import("@monaco-editor/react"));
 
@@ -326,7 +327,7 @@ export const PersonalIDE = ({ initialCode, language, onClose }: PersonalIDEProps
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: `${instruction}\n\n${activeFile.content}` },

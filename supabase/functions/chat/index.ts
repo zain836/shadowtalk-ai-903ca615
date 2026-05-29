@@ -384,12 +384,64 @@ serve(async (req) => {
       messages, personality, generateImage, imagePrompt, imageEdit, originalImage, editPrompt,
       mode, modePrompt, userContext, businessMemory, analyzeTask, getEcoActions, location, securityAudit, 
       webSearch, searchQuery, deepResearch, researchQuery, agentWorkflow, decodeImage, imageToAnalyze,
-      isResearch, industry, aiProvider, useCustomApiKey
+      isResearch, industry, agenticReact, aiProvider, useCustomApiKey
     } = validation.data;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    let effectiveWebSearch = !!webSearch;
+    let effectiveSearchQuery = searchQuery?.trim() || "";
+
+    if (!effectiveWebSearch && !deepResearch && (mode === "agent" || agenticReact) && messages?.length) {
+      const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === "user");
+      const lastText =
+        typeof lastUserMsg?.content === "string"
+          ? lastUserMsg.content
+          : Array.isArray(lastUserMsg?.content)
+            ? (lastUserMsg.content.find((c: { type?: string }) => c.type === "text") as { text?: string })?.text || ""
+            : "";
+
+      if (lastText.length > 16) {
+        try {
+          const planResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash-lite",
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    'You are a tool router. Reply with ONLY minified JSON: {"action":"answer"} OR {"action":"web_search","query":"..."}. Use web_search when the user needs live/current facts, news, prices, or cited sources.',
+                },
+                { role: "user", content: lastText.slice(0, 800) },
+              ],
+              stream: false,
+            }),
+          });
+          if (planResp.ok) {
+            const planJson = await planResp.json();
+            const planText = planJson.choices?.[0]?.message?.content || "";
+            const jsonMatch = planText.match(/\{[\s\S]*?\}/);
+            if (jsonMatch) {
+              const plan = JSON.parse(jsonMatch[0]) as { action?: string; query?: string };
+              if (plan.action === "web_search" && plan.query) {
+                effectiveWebSearch = true;
+                effectiveSearchQuery = String(plan.query).slice(0, 500);
+                console.log("[CHAT] Agentic react → web_search:", effectiveSearchQuery);
+              }
+            }
+          }
+        } catch (reactErr) {
+          console.warn("[CHAT] Agentic react planner skipped:", reactErr);
+        }
+      }
     }
 
     // Image Decoder - Professional analysis with enhanced output
@@ -682,8 +734,8 @@ Format your response with:
     }
 
     // Web Search using Google Custom Search
-    if (webSearch && searchQuery) {
-      console.log("[CHAT] Performing web search for:", searchQuery);
+    if (effectiveWebSearch && effectiveSearchQuery) {
+      console.log("[CHAT] Performing web search for:", effectiveSearchQuery);
       
       const GOOGLE_SEARCH_API_KEY = Deno.env.get('GOOGLE_SEARCH_API_KEY');
       const GOOGLE_SEARCH_ENGINE_ID = Deno.env.get('GOOGLE_SEARCH_ENGINE_ID');
@@ -698,7 +750,7 @@ Format your response with:
       const searchUrl = new URL('https://www.googleapis.com/customsearch/v1');
       searchUrl.searchParams.set('key', GOOGLE_SEARCH_API_KEY);
       searchUrl.searchParams.set('cx', GOOGLE_SEARCH_ENGINE_ID);
-      searchUrl.searchParams.set('q', searchQuery);
+      searchUrl.searchParams.set('q', effectiveSearchQuery);
       searchUrl.searchParams.set('num', '5');
       
       const searchResponse = await fetch(searchUrl.toString());
@@ -743,7 +795,7 @@ Format your response with:
             },
             { 
               role: "user", 
-              content: `User query: "${searchQuery}"\n\nSearch Results:\n${searchContext}\n\nProvide a comprehensive answer based on these search results.`
+              content: `User query: "${effectiveSearchQuery}"\n\nSearch Results:\n${searchContext}\n\nProvide a comprehensive answer based on these search results.`
             }
           ],
           stream: true,

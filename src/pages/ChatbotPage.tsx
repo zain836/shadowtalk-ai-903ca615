@@ -14,6 +14,8 @@ import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
 import { ImageGenerator } from "@/components/chat/ImageGenerator";
 import { DeepResearchPanel } from "@/components/chat/DeepResearchPanel";
 import { CommandPalette } from "@/components/chat/CommandPalette";
+import { ShadowTalkLive } from "@/components/chat/ShadowTalkLive";
+import { ShadowBrowser } from "@/components/chat/ShadowBrowser";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useUsageTracking } from "@/hooks/useUsageTracking";
@@ -28,6 +30,7 @@ import { useShadowMemoryContext } from "@/contexts/ShadowMemoryContext";
 import { useIntelligenceHub } from "@/hooks/useIntelligenceHub";
 import { useGemmaOffline } from "@/hooks/useGemmaOffline";
 import { useCustomApiKeys } from "@/hooks/useCustomApiKeys";
+import { stringifyChatBody } from "@/lib/chatRequest";
 import { useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
 import { Button } from "@/components/ui/button";
 
@@ -85,6 +88,7 @@ const ChatbotPage = () => {
   const [showShadowTalkLive, setShowShadowTalkLive] = useState(false);
   const [showShadowBrowser, setShowShadowBrowser] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -203,7 +207,7 @@ const ChatbotPage = () => {
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           messages: chatMessages,
           personality,
           mode: chatMode,
@@ -282,11 +286,82 @@ const ChatbotPage = () => {
   const userDisplayName = user?.user_metadata?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "there";
   const userInitials = user?.email ? user.email.charAt(0).toUpperCase() : "G";
 
+  const handleExport = () => {
+    try {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        conversationId: currentConversationId,
+        personality,
+        mode: chatMode,
+        messages: messages.map((m) => ({
+          role: m.type,
+          content: m.content,
+          timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : String(m.timestamp),
+        })),
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `shadowtalk-history-${currentConversationId || "chat"}-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: "Exported", description: "Downloaded chat history JSON." });
+    } catch {
+      toast({ title: "Export failed", description: "Could not export chat history.", variant: "destructive" });
+    }
+  };
+
+  const handleCommandAction = (action: string) => {
+    setShowCommandPalette(false);
+    switch (action) {
+      case "new-chat":
+        setCurrentConversationId(null);
+        setMessages([]);
+        return;
+      case "deep-research":
+        setShowDeepResearch(true);
+        return;
+      case "image":
+        setShowImageGenerator(true);
+        return;
+      case "voice":
+        setShowShadowTalkLive(true);
+        return;
+      case "browser":
+        setShowShadowBrowser(true);
+        return;
+      case "analytics":
+        navigate("/analytics");
+        return;
+      case "custom-instructions":
+      case "gemini-analytics":
+        navigate("/profile");
+        return;
+      case "missions":
+        navigate("/missioncontrol");
+        return;
+      case "vault":
+        navigate("/vault");
+        return;
+      default:
+        return;
+    }
+  };
+
   return (
     <motion.div className="min-h-screen neural-bg relative overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <AnimatePresence>{isLoading && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="neural-thinking-glow" />}</AnimatePresence>
       <div className="flex h-screen w-full relative z-10">
-        <ChatIconRail userInitials={userInitials} onNewChat={() => { setCurrentConversationId(null); setMessages([]); }} onOpenHistory={() => setShowSidebar(true)} onOpenSettings={() => navigate("/profile")} />
+        <ChatIconRail
+          userInitials={userInitials}
+          onNewChat={() => { setCurrentConversationId(null); setMessages([]); }}
+          onOpenHistory={() => setShowSidebar(true)}
+          onOpenTools={() => setToolsMenuOpen(true)}
+          onOpenSettings={() => navigate("/profile")}
+        />
         <AnimatePresence>
           {showSidebar && (
             <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} className="fixed left-0 top-0 bottom-0 z-50 md:left-[72px]">
@@ -295,7 +370,36 @@ const ChatbotPage = () => {
           )}
         </AnimatePresence>
         <div className="flex-1 flex flex-col min-w-0">
-          <ChatHeader userPlan={userPlan} personality={personality} onPersonalityChange={setPersonality} onToggleSidebar={() => setShowSidebar(!showSidebar)} onExport={() => {}} onManageSubscription={() => {}} onSignOut={signOut} onOpenAnalytics={() => setShowAnalytics(true)} onOpenDeepResearch={() => setShowDeepResearch(true)} onOpenImageGenerator={() => setShowImageGenerator(true)} onOpenShadowTalkLive={() => setShowShadowTalkLive(true)} onOpenBrowser={() => setShowShadowBrowser(true)} aiProvider={aiProvider} onProviderChange={setAiProvider} maxChats="∞" dailyChats={dailyChats} />
+          <ChatHeader
+            userPlan={userPlan}
+            personality={personality}
+            onPersonalityChange={setPersonality}
+            onToggleSidebar={() => setShowSidebar(!showSidebar)}
+            onExport={handleExport}
+            onManageSubscription={() => navigate("/billing")}
+            onSignOut={signOut}
+            onOpenAnalytics={() => navigate("/analytics")}
+            onOpenScriptAutomation={() => navigate("/workspace")}
+            onOpenStealthVault={() => navigate("/vault")}
+            onOpenAgentWorkflows={() => navigate("/workspace")}
+            onOpenModelFineTuning={() => navigate("/workspace")}
+            onOpenWhiteLabelBranding={() => navigate("/workspace")}
+            onOpenGeminiAnalytics={() => navigate("/profile")}
+            onOpenCanvas={() => navigate("/workspace")}
+            onOpenDeepResearch={() => setShowDeepResearch(true)}
+            onOpenAgenticRunner={() => setShowCommandPalette(true)}
+            onOpenVisualReasoning={() => setShowCommandPalette(true)}
+            onOpenCreativeSynthesis={() => navigate("/studio")}
+            onOpenImageGenerator={() => setShowImageGenerator(true)}
+            onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
+            onOpenBrowser={() => setShowShadowBrowser(true)}
+            aiProvider={aiProvider}
+            onProviderChange={setAiProvider}
+            maxChats="∞"
+            dailyChats={dailyChats}
+            toolsMenuOpen={toolsMenuOpen}
+            onToolsMenuOpenChange={setToolsMenuOpen}
+          />
           <div className={`flex-1 overflow-hidden relative flex flex-col ${isEmptyChat ? "justify-center" : ""}`}>
             <AnimatePresence mode="wait">
               {isEmptyChat ? (
@@ -307,7 +411,22 @@ const ChatbotPage = () => {
                     </p>
                   )}
                   <div className="w-full max-w-2xl px-4">
-                    <ChatInput message={message} onMessageChange={setMessage} onSend={handleSendMessage} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} isLoading={isLoading} isListening={isListening} onToggleVoice={() => {}} onOpenImageGenerator={() => setShowImageGenerator(true)} onStopGeneration={() => {}} selectedFile={selectedFile} onFileSelect={setSelectedFile} chatMode={chatMode} onModeChange={setChatMode} personality={personality} />
+                    <ChatInput
+                      message={message}
+                      onMessageChange={setMessage}
+                      onSend={handleSendMessage}
+                      onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                      isLoading={isLoading}
+                      isListening={isListening}
+                      onToggleVoice={() => setShowShadowTalkLive(true)}
+                      onOpenImageGenerator={() => setShowImageGenerator(true)}
+                      onStopGeneration={() => {}}
+                      selectedFile={selectedFile}
+                      onFileSelect={setSelectedFile}
+                      chatMode={chatMode}
+                      onModeChange={setChatMode}
+                      personality={personality}
+                    />
                   </div>
                 </motion.div>
               ) : (
@@ -317,23 +436,41 @@ const ChatbotPage = () => {
               )}
             </AnimatePresence>
           </div>
-          {!isEmptyChat && <div className="p-4 max-w-4xl mx-auto w-full"><ChatInput message={message} onMessageChange={setMessage} onSend={handleSendMessage} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} isLoading={isLoading} isListening={isListening} onToggleVoice={() => {}} onOpenImageGenerator={() => setShowImageGenerator(true)} onStopGeneration={() => {}} selectedFile={selectedFile} onFileSelect={setSelectedFile} chatMode={chatMode} onModeChange={setChatMode} personality={personality} /></div>}
+          {!isEmptyChat && (
+            <div className="p-4 max-w-4xl mx-auto w-full">
+              <ChatInput
+                message={message}
+                onMessageChange={setMessage}
+                onSend={handleSendMessage}
+                onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                isLoading={isLoading}
+                isListening={isListening}
+                onToggleVoice={() => setShowShadowTalkLive(true)}
+                onOpenImageGenerator={() => setShowImageGenerator(true)}
+                onStopGeneration={() => {}}
+                selectedFile={selectedFile}
+                onFileSelect={setSelectedFile}
+                chatMode={chatMode}
+                onModeChange={setChatMode}
+                personality={personality}
+              />
+            </div>
+          )}
         </div>
       </div>
       {showImageGenerator && <ImageGenerator onClose={() => setShowImageGenerator(false)} onImageGenerated={(url) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: '🎨 Generated image', timestamp: new Date(), imageUrl: url }])} />}
       {showDeepResearch && <DeepResearchPanel isOpen={showDeepResearch} onClose={() => setShowDeepResearch(false)} onInsertToChat={(c) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: c, timestamp: new Date() }])} />}
-      <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} onAction={() => {}} />
-      <MissionControl
-        isOpen={showMissionControl}
-        onClose={() => setShowMissionControl(false)}
-        onMissionComplete={(result) => {
-          setMessages((prev) => [
-            ...prev,
-            { id: crypto.randomUUID(), type: "ai", content: `✅ S.E.E. mission deliverable:\n\n${result}`, timestamp: new Date() },
-          ]);
-          setShowMissionControl(false);
-        }}
+      <ShadowTalkLive
+        isOpen={showShadowTalkLive}
+        onClose={() => setShowShadowTalkLive(false)}
+        onInsertToChat={(content) => setMessage(content)}
       />
+      <ShadowBrowser
+        isOpen={showShadowBrowser}
+        onClose={() => setShowShadowBrowser(false)}
+        onInsertToChat={(content) => setMessage(content)}
+      />
+      <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} onAction={handleCommandAction} />
     </motion.div>
   );
 };

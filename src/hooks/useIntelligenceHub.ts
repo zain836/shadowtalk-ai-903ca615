@@ -153,7 +153,12 @@ export const useIntelligenceHub = () => {
             source: 'auto',
             confidence: 0.85,
           }).select().single();
-          if (data) setMemories(prev => [data as AIMemory, ...prev]);
+          if (data) {
+            setMemories(prev => [data as AIMemory, ...prev]);
+            import("@/lib/autoImprove/eventBus").then(({ publishAutoImproveEvent }) =>
+              publishAutoImproveEvent("feature_open", { feature: "memory_extract", category })
+            );
+          }
         }
       }
     }

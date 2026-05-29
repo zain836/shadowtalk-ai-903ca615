@@ -51,7 +51,7 @@ jobs:
         run: npm ci
       
       - name: Run tests
-        run: npm run test -- --run
+        run: npm test
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
