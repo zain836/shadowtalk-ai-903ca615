@@ -3,6 +3,8 @@
  * Handles auth headers, errors, and audio playback without crashing the UI.
  */
 
+import { supabase } from "@/integrations/supabase/client";
+
 export interface ElevenLabsTtsOptions {
   text: string;
   voiceId?: string;
@@ -32,12 +34,16 @@ export async function fetchElevenLabsSpeech(
   }
 
   try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    const bearer = accessToken ?? anonKey;
+
     const response = await fetch(`${supabaseUrl}/functions/v1/elevenlabs-tts`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         apikey: anonKey,
-        Authorization: `Bearer ${anonKey}`,
+        Authorization: `Bearer ${bearer}`,
       },
       body: JSON.stringify({
         text,

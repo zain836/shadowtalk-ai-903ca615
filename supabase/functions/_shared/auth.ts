@@ -39,9 +39,9 @@ export async function requireAuth(
   );
 
   const token = authHeader.replace("Bearer ", "");
-  const { data, error } = await supabase.auth.getClaims(token);
+  const { data, error } = await supabase.auth.getUser(token);
 
-  if (error || !data?.claims) {
+  if (error || !data?.user) {
     return {
       authenticated: false,
       response: new Response(
@@ -53,8 +53,8 @@ export async function requireAuth(
 
   return {
     authenticated: true,
-    userId: data.claims.sub as string,
-    email: data.claims.email as string | undefined,
+    userId: data.user.id,
+    email: data.user.email ?? undefined,
     supabase,
   };
 }
@@ -80,15 +80,15 @@ export async function optionalAuth(
     );
 
     const token = authHeader.replace("Bearer ", "");
-    const { data, error } = await supabase.auth.getClaims(token);
+    const { data, error } = await supabase.auth.getUser(token);
 
-    if (error || !data?.claims) {
+    if (error || !data?.user) {
       return { userId: null };
     }
 
     return {
-      userId: data.claims.sub as string,
-      email: data.claims.email as string | undefined,
+      userId: data.user.id,
+      email: data.user.email ?? undefined,
     };
   } catch {
     return { userId: null };

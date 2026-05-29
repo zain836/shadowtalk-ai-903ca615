@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { requireAuth } from "../_shared/auth.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,23 +12,49 @@ const corsHeaders = {
 const DEFAULT_VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
 const MAX_TEXT_LENGTH = 5000;
 
-/** Chunked base64 — avoids stack overflow and std import issues on large buffers */
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  const chunkSize = 8192;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
-    binary += String.fromCharCode(...chunk);
-  }
-  return btoa(binary);
-}
-
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+/** Accept user JWT or Supabase anon key (gateway / guest TTS). */
+async function resolveCaller(
+  req: Request,
+): Promise<{ allowed: boolean; userId: string | null }> {
+  const authHeader = req.headers.get("Authorization");
+  const apikeyHeader = req.headers.get("apikey");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return { allowed: false, userId: null };
+  }
+
+  const token = authHeader.replace("Bearer ", "").trim();
+
+  if (anonKey && token === anonKey && apikeyHeader === anonKey) {
+    return { allowed: true, userId: null };
+  }
+
+  if (!supabaseUrl || !anonKey) {
+    return { allowed: false, userId: null };
+  }
+
+  try {
+    const supabase = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data?.user) {
+      return { allowed: false, userId: null };
+    }
+    return { allowed: true, userId: data.user.id };
+  } catch (e) {
+    console.error("[elevenlabs-tts] auth check failed:", e);
+    return { allowed: false, userId: null };
+  }
 }
 
 serve(async (req) => {
@@ -40,8 +67,13 @@ serve(async (req) => {
   }
 
   try {
-    const auth = await requireAuth(req, corsHeaders);
-    if (!auth.authenticated) return auth.response;
+    const caller = await resolveCaller(req);
+    if (!caller.allowed) {
+      return jsonResponse(
+        { error: "Authentication required", code: "UNAUTHORIZED" },
+        401,
+      );
+    }
 
     let body: { text?: string; voiceId?: string; format?: "json" | "binary" } = {};
     const raw = await req.text();
@@ -57,7 +89,10 @@ serve(async (req) => {
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 
     if (!ELEVENLABS_API_KEY) {
-      return jsonResponse({ error: "ElevenLabs API key not configured", code: "MISSING_API_KEY" }, 500);
+      return jsonResponse(
+        { error: "ElevenLabs API key not configured", code: "MISSING_API_KEY" },
+        500,
+      );
     }
 
     if (!text || typeof text !== "string" || !text.trim()) {
@@ -87,7 +122,7 @@ serve(async (req) => {
             use_speaker_boost: true,
           },
         }),
-      }
+      },
     );
 
     if (!response.ok) {
@@ -143,7 +178,7 @@ serve(async (req) => {
       });
     }
 
-    const base64Audio = arrayBufferToBase64(audioBuffer);
+    const base64Audio = base64Encode(new Uint8Array(audioBuffer));
     return jsonResponse({ audioContent: base64Audio });
   } catch (error) {
     console.error("Error in elevenlabs-tts:", error);
@@ -152,7 +187,7 @@ serve(async (req) => {
         error: error instanceof Error ? error.message : "Unknown error",
         code: "INTERNAL_ERROR",
       },
-      500
+      500,
     );
   }
 });
