@@ -1,3 +1,6 @@
+import { checkRateLimit } from "../_shared/rate-limit.ts";
+import { requireAuth } from "../_shared/auth.ts";
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 

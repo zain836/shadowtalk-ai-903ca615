@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useAdvancedOfflineAI } from './useAdvancedOfflineAI';
+import { useSovereignAI } from './useSovereignAI';
 import { useOfflineRAG } from './useOfflineRAG';
 import { useLocalVectorStore } from './useLocalVectorStore';
 
@@ -116,7 +116,7 @@ export const useOfflineResearch = () => {
     researchHistory: [],
   });
 
-  const { generateResponse, isReady: aiReady, loadModel } = useAdvancedOfflineAI();
+  const { generateResponse, isReady: aiReady, initializeSovereignEngine: loadModel } = useSovereignAI();
   const { search: ragSearch, documentCount } = useOfflineRAG();
   const { search: vectorSearch, entryCount: vectorCount } = useLocalVectorStore();
 

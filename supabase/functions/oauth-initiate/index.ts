@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import { requireAuth } from "../_shared/auth.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
  const GOOGLE_OAUTH_CONFIG = {
    clientId: Deno.env.get("GOOGLE_OAUTH_CLIENT_ID"),
@@ -37,23 +39,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Authenticate user
-    const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!token) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const auth = await requireAuth(req, corsHeaders);
+    if (!auth.authenticated) return auth.response;
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const { userId } = auth;
 
     const { provider, scope } = await req.json();
 
@@ -72,7 +61,7 @@ serve(async (req) => {
       const scopeValue = GOOGLE_OAUTH_CONFIG.scopes[scopeKey] || GOOGLE_OAUTH_CONFIG.scopes.both;
       
       // Create state parameter with user ID and scope for callback
-      const state = btoa(JSON.stringify({ userId: user.id, scope: scopeKey }));
+      const state = btoa(JSON.stringify({ userId, scope: scopeKey }));
       
       const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
       authUrl.searchParams.set("client_id", GOOGLE_OAUTH_CONFIG.clientId);

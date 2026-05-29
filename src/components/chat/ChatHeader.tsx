@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/AuthProvider";
+import { BunkerModeToggle } from "./BunkerModeToggle";
 import {
   Select,
   SelectContent,
@@ -70,11 +71,12 @@ interface ChatHeaderProps {
   onOpenGeminiAnalytics: () => void;
   onOpenCanvas: (type: "document" | "code") => void;
   onOpenDeepResearch: () => void;
+  onOpenGoogleIntegration?: () => void;
+  onOpenImageGenerator: () => void;
+  onOpenShadowTalkLive: () => void;
   onOpenAgenticRunner: () => void;
   onOpenVisualReasoning: () => void;
   onOpenCreativeSynthesis: () => void;
-  onOpenImageGenerator: () => void;
-  onOpenShadowTalkLive: () => void;
   onOpenOfflineTools?: () => void;
   onOpenBrowser: () => void;
   aiProvider: AIProvider;
@@ -90,6 +92,7 @@ const ToolsHubMenu = ({
   open,
   onOpenChange,
   onOpenDeepResearch,
+  onOpenGoogleIntegration,
   onOpenAgenticRunner,
   onOpenVisualReasoning,
   onOpenCreativeSynthesis,
@@ -100,6 +103,7 @@ const ToolsHubMenu = ({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onOpenDeepResearch: () => void;
+  onOpenGoogleIntegration?: () => void;
   onOpenAgenticRunner: () => void;
   onOpenVisualReasoning: () => void;
   onOpenCreativeSynthesis: () => void;
@@ -123,6 +127,10 @@ const ToolsHubMenu = ({
         <DropdownMenuItem onClick={onOpenDeepResearch} className="flex-col items-start gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all cursor-pointer">
           <Search className="h-4 w-4 text-blue-400" />
           <span className="text-[12px] font-semibold">Deep Research</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onOpenGoogleIntegration} className="flex-col items-start gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all cursor-pointer">
+          <Mail className="h-4 w-4 text-red-400" />
+          <span className="text-[12px] font-semibold">Google Workspace</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onOpenAgenticRunner} className="flex-col items-start gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all cursor-pointer">
           <Play className="h-4 w-4 text-green-400" />
@@ -180,6 +188,7 @@ export const ChatHeader = ({
   onOpenGeminiAnalytics,
   onOpenCanvas,
   onOpenDeepResearch,
+  onOpenGoogleIntegration,
   onOpenAgenticRunner,
   onOpenVisualReasoning,
   onOpenCreativeSynthesis,
@@ -238,6 +247,7 @@ export const ChatHeader = ({
           open={toolsMenuOpen}
           onOpenChange={onToolsMenuOpenChange}
           onOpenDeepResearch={onOpenDeepResearch}
+          onOpenGoogleIntegration={onOpenGoogleIntegration}
           onOpenAgenticRunner={onOpenAgenticRunner}
           onOpenVisualReasoning={onOpenVisualReasoning}
           onOpenCreativeSynthesis={onOpenCreativeSynthesis}
@@ -265,6 +275,8 @@ export const ChatHeader = ({
         <div className="hidden xs:block h-4 w-px bg-white/10 mx-1" />
         
         <ProviderSelector provider={aiProvider} onProviderChange={onProviderChange} />
+        <div className="hidden xs:block h-4 w-px bg-white/10 mx-1" />
+        <BunkerModeToggle />
       </div>
 
       {/* Right: Tools & User */}
