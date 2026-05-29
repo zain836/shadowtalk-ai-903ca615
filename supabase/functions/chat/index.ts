@@ -3,6 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { checkRateLimit, getRateLimitHeaders } from "../_shared/rate-limit.ts";
 import { ChatRequestSchema, validateInput } from "../_shared/validation.ts";
+import { fetchUserProviderKey, streamWithUserKey } from "../_shared/byok-chat.ts";
+import { isValidProvider } from "../_shared/verify-provider-key.ts";
 
 // ============================================================================
 // SPRINT 1: CHAT INTELLIGENCE ENGINE
@@ -382,7 +384,7 @@ serve(async (req) => {
       messages, personality, generateImage, imagePrompt, imageEdit, originalImage, editPrompt,
       mode, modePrompt, userContext, businessMemory, analyzeTask, getEcoActions, location, securityAudit, 
       webSearch, searchQuery, deepResearch, researchQuery, agentWorkflow, decodeImage, imageToAnalyze,
-      isResearch, industry
+      isResearch, industry, aiProvider, useCustomApiKey
     } = validation.data;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
@@ -1325,13 +1327,14 @@ Return ONLY valid JSON in this exact format:
     // === SPRINT 1: ADAPTIVE CONTEXT ENGINE ===
     // Extract user ID from auth header for server-side context fetching
     let serverSideContext = '';
+    let authUserId: string | null = null;
     const authHeader = req.headers.get('authorization');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
     if (authHeader) {
       try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-        
         if (supabaseUrl && serviceRoleKey) {
           // Decode user from JWT
           const token = authHeader.replace('Bearer ', '');
@@ -1339,6 +1342,7 @@ Return ONLY valid JSON in this exact format:
           const { data: { user: authUser } } = await anonClient.auth.getUser(token);
           
           if (authUser?.id) {
+            authUserId = authUser.id;
             console.log("[CONTEXT ENGINE] Fetching adaptive context for user:", authUser.id);
             serverSideContext = await fetchAdaptiveContext(authUser.id, supabaseUrl, serviceRoleKey);
             if (serverSideContext) {
@@ -1599,6 +1603,30 @@ When a user asks you to write, create, draft, or generate any document (email, a
     // === SPRINT 1: USE ROUTER V2 MODEL DECISION ===
     const model = routerDecision.model;
     console.log(`[CHAT] Model Router V2 selected: ${model} (${routerDecision.tier}, score: ${routerDecision.score})`);
+
+    // BYOK: route through user's verified API key when requested
+    if (useCustomApiKey && authUserId && serviceRoleKey && aiProvider && isValidProvider(aiProvider)) {
+      try {
+        const admin = createClient(supabaseUrl, serviceRoleKey);
+        const userKey = await fetchUserProviderKey(admin, authUserId, aiProvider);
+        if (userKey) {
+          console.log(`[CHAT] BYOK active for provider: ${userKey.provider}`);
+          const byokResponse = await streamWithUserKey(
+            userKey.provider,
+            userKey.apiKey,
+            systemPrompt,
+            trimmedMessages,
+          );
+          return new Response(byokResponse.body, {
+            status: byokResponse.status,
+            headers: { ...corsHeaders, ...Object.fromEntries(byokResponse.headers.entries()) },
+          });
+        }
+        console.warn("[CHAT] BYOK requested but no stored key found for user");
+      } catch (byokErr) {
+        console.error("[CHAT] BYOK routing failed, falling back to platform gateway:", byokErr);
+      }
+    }
 
     // First attempt
     const response = await fetchWithRetry("https://ai.gateway.lovable.dev/v1/chat/completions", {

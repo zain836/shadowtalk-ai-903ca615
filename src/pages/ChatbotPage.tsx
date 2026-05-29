@@ -27,6 +27,7 @@ import { Shield, Lock, Key, Loader2, Sparkles } from "lucide-react";
 import { useShadowMemoryContext } from "@/contexts/ShadowMemoryContext";
 import { useIntelligenceHub } from "@/hooks/useIntelligenceHub";
 import { useGemmaOffline } from "@/hooks/useGemmaOffline";
+import { useCustomApiKeys } from "@/hooks/useCustomApiKeys";
 import { useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
 import { Button } from "@/components/ui/button";
 
@@ -57,6 +58,7 @@ const ChatbotPage = () => {
   const { getOfflineSession } = useOfflineAuth();
   const toolOrchestrator = useToolOrchestrator();
   const gemmaOffline = useGemmaOffline();
+  const { aiConfig, hasVerifiedKey } = useCustomApiKeys();
   
   // State
   const [e2eePassphrase, setE2EEPassphrase] = useState("");
@@ -201,7 +203,14 @@ const ChatbotPage = () => {
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ messages: chatMessages, personality, mode: chatMode }),
+        body: JSON.stringify({
+          messages: chatMessages,
+          personality,
+          mode: chatMode,
+          ...(aiConfig.useCustomKey && aiConfig.preferredProvider
+            ? { useCustomApiKey: true, aiProvider: aiConfig.preferredProvider }
+            : {}),
+        }),
       });
 
       if (!resp.ok) throw new Error("Failed");
@@ -292,6 +301,11 @@ const ChatbotPage = () => {
               {isEmptyChat ? (
                 <motion.div key="home" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="home-centered-content">
                   <h1 className="text-5xl md:text-[4.5rem] font-bold text-white tracking-tight mb-8">Hello, {userDisplayName}.</h1>
+                  {hasVerifiedKey && aiConfig.useCustomKey && (
+                    <p className="text-sm text-primary/80 mb-4 -mt-4">
+                      Using your connected {aiConfig.preferredProvider} API key
+                    </p>
+                  )}
                   <div className="w-full max-w-2xl px-4">
                     <ChatInput message={message} onMessageChange={setMessage} onSend={handleSendMessage} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} isLoading={isLoading} isListening={isListening} onToggleVoice={() => {}} onOpenImageGenerator={() => setShowImageGenerator(true)} onStopGeneration={() => {}} selectedFile={selectedFile} onFileSelect={setSelectedFile} chatMode={chatMode} onModeChange={setChatMode} personality={personality} />
                   </div>

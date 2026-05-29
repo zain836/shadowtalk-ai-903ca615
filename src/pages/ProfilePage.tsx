@@ -28,6 +28,7 @@ import { ProfileTab } from "@/components/profile/ProfileTab";
 import { ActivityTab } from "@/components/profile/ActivityTab";
 import { PreferencesTab } from "@/components/profile/PreferencesTab";
 import { LinkedAccountsTab } from "@/components/profile/LinkedAccountsTab";
+import { CustomApiKeysPanel } from "@/components/profile/CustomApiKeysPanel";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle,
@@ -296,6 +297,8 @@ const ProfilePage = () => {
                   <TwoFactorSetup />
                 </CardContent>
               </Card>
+
+              <CustomApiKeysPanel />
 
               <Card className="glass border-border/50">
                 <CardHeader>
