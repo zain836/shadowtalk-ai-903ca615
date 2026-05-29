@@ -207,14 +207,20 @@ const ChatbotPage = () => {
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: stringifyChatBody({
-          messages: chatMessages,
-          personality,
-          mode: chatMode,
-          ...(aiConfig.useCustomKey && aiConfig.preferredProvider
-            ? { useCustomApiKey: true, aiProvider: aiConfig.preferredProvider }
-            : {}),
-        }),
+        body:
+          aiConfig.useCustomKey && aiConfig.preferredProvider
+            ? JSON.stringify({
+                messages: chatMessages,
+                personality,
+                mode: chatMode,
+                useCustomApiKey: true,
+                aiProvider: aiConfig.preferredProvider,
+              })
+            : stringifyChatBody({
+                messages: chatMessages,
+                personality,
+                mode: chatMode,
+              }),
       });
 
       if (!resp.ok) throw new Error("Failed");

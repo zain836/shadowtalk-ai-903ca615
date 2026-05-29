@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KeyRound, ExternalLink, Loader2, CheckCircle2, Trash2, Shield } from "lucide-react";
+import { KeyRound, ExternalLink, Loader2, CheckCircle2, Trash2, Shield, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,8 @@ export const CustomApiKeysPanel = () => {
     isVerifying,
     isSaving,
     hasVerifiedKey,
-    usingLocalFallback,
+    backendReady,
+    backendError,
     verifyAndSave,
     removeKey,
     setDefault,
@@ -63,21 +64,28 @@ export const CustomApiKeysPanel = () => {
           </p>
         </div>
 
-        {hasVerifiedKey && aiConfig.preferredProvider && (
+        {!backendReady && (
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-sm">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-destructive">Backend not deployed</p>
+              <p className="text-muted-foreground mt-1">
+                {backendError ||
+                  "Deploy the user-provider-keys edge function and apply the user_provider_keys migration before connecting keys."}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {hasVerifiedKey && aiConfig.useCustomKey && aiConfig.preferredProvider && (
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle2 className="h-4 w-4 text-green-500" />
             <span>
-              Chat is using your{" "}
+              Chat uses your verified{" "}
               <strong>{AI_PROVIDER_OPTIONS.find((p) => p.id === aiConfig.preferredProvider)?.name}</strong>{" "}
-              key{usingLocalFallback ? " (this device)" : ""}
+              key (encrypted on ShadowTalk servers)
             </span>
           </div>
-        )}
-        {usingLocalFallback && (
-          <p className="text-xs text-amber-500/90">
-            Server key sync is not deployed yet — your key works on this device. Deploy the{" "}
-            <code className="text-[10px]">user-provider-keys</code> edge function for encrypted cloud storage.
-          </p>
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -132,7 +140,11 @@ export const CustomApiKeysPanel = () => {
           </div>
 
           <div className="flex items-end">
-            <Button className="w-full" onClick={handleConnect} disabled={busy || !apiKey.trim()}>
+            <Button
+              className="w-full"
+              onClick={handleConnect}
+              disabled={busy || !apiKey.trim() || !backendReady}
+            >
               {busy ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

@@ -259,8 +259,17 @@ serve(async (req) => {
     });
   } catch (err) {
     console.error("[user-provider-keys]", err);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
+    const msg = err instanceof Error ? err.message : String(err);
+    const isMissingTable =
+      msg.includes("user_provider_keys") &&
+      (msg.includes("does not exist") || msg.includes("PGRST205") || msg.includes("42P01"));
+    const clientMessage = isMissingTable
+      ? "Database table user_provider_keys is missing. Run the Supabase migration, then redeploy this function."
+      : msg.includes("SUPABASE_SERVICE_ROLE_KEY")
+        ? "Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY is required."
+        : "Internal server error";
+    return new Response(JSON.stringify({ error: clientMessage, details: msg }), {
+      status: isMissingTable ? 503 : 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

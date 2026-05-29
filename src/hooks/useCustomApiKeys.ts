@@ -4,13 +4,6 @@ import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import type { AiConfig, AiProviderId } from "@/lib/aiProviders";
 import { DEFAULT_AI_CONFIG } from "@/lib/aiProviders";
-import {
-  type CustomAiProviderId,
-  saveCustomAiConfig,
-  loadCustomAiConfig,
-  maskApiKey,
-  DEFAULT_CUSTOM_AI_CONFIG,
-} from "@/lib/customApiKeys";
 
 export interface UserProviderKeyRow {
   id: string;
@@ -24,25 +17,14 @@ export interface UserProviderKeyRow {
   updated_at: string;
 }
 
-function isInvokeUnavailable(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const msg =
-    "message" in error && typeof (error as { message: string }).message === "string"
-      ? (error as { message: string }).message
-      : String(error);
-  return (
-    msg.includes("Failed to send") ||
-    msg.includes("Failed to fetch") ||
-    msg.includes("FunctionsFetchError") ||
-    msg.includes("Function not found") ||
-    msg.includes("404")
-  );
-}
+const BACKEND_SETUP_MESSAGE =
+  "Custom API keys backend is not available. Deploy the user-provider-keys edge function and run the user_provider_keys database migration on Supabase.";
 
-function toLocalProvider(provider: AiProviderId): CustomAiProviderId | null {
-  if (provider === "google") return "gemini";
-  if (provider === "openrouter") return "openrouter";
-  return null;
+function formatInvokeError(error: unknown): string {
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message: string }).message);
+  }
+  return error instanceof Error ? error.message : BACKEND_SETUP_MESSAGE;
 }
 
 async function invokeUserProviderKeys<T>(
@@ -53,26 +35,18 @@ async function invokeUserProviderKeys<T>(
     body: { action, ...payload },
   });
 
-  if (error) throw error;
-  if (data && typeof data === "object" && "error" in data && data.error) {
-    throw new Error(String(data.error));
+  if (error) {
+    throw new Error(formatInvokeError(error));
   }
+
+  if (data && typeof data === "object") {
+    const record = data as Record<string, unknown>;
+    if (record.error) {
+      throw new Error(String(record.error));
+    }
+  }
+
   return data as T;
-}
-
-async function verifyViaTestFunction(
-  provider: AiProviderId,
-  apiKey: string,
-): Promise<{ success: boolean; message?: string; error?: string }> {
-  const legacy = toLocalProvider(provider);
-  const testProvider = legacy ?? provider;
-
-  const { data, error } = await supabase.functions.invoke("test-custom-ai-key", {
-    body: { provider: testProvider, apiKey: apiKey.trim() },
-  });
-
-  if (error) throw error;
-  return data as { success: boolean; message?: string; error?: string };
 }
 
 export function useCustomApiKeys() {
@@ -83,27 +57,8 @@ export function useCustomApiKeys() {
   const [isLoading, setIsLoading] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [usingLocalFallback, setUsingLocalFallback] = useState(false);
-
-  const loadLocalKeys = useCallback((): UserProviderKeyRow[] => {
-    const cfg = loadCustomAiConfig();
-    if (cfg.usePlatformDefault || !cfg.apiKey?.trim()) return [];
-    const provider = (cfg.provider === "gemini" ? "google" : cfg.provider) as AiProviderId;
-    const now = new Date().toISOString();
-    return [
-      {
-        id: `local-${provider}`,
-        provider,
-        label: "This device",
-        key_prefix: maskApiKey(cfg.apiKey),
-        verified_at: now,
-        is_active: true,
-        is_default: true,
-        created_at: now,
-        updated_at: now,
-      },
-    ];
-  }, []);
+  const [backendReady, setBackendReady] = useState(true);
+  const [backendError, setBackendError] = useState<string | null>(null);
 
   const loadAiConfig = useCallback(async () => {
     if (!user) {
@@ -118,129 +73,75 @@ export function useCustomApiKeys() {
       .maybeSingle();
 
     if (data?.setting_value && typeof data.setting_value === "object") {
-      setAiConfig({ ...DEFAULT_AI_CONFIG, ...(data.setting_value as AiConfig) });
+      const cfg = data.setting_value as AiConfig & { storage?: string };
+      if (cfg.storage === "local") {
+        setAiConfig(DEFAULT_AI_CONFIG);
+        return;
+      }
+      setAiConfig({ ...DEFAULT_AI_CONFIG, ...cfg });
     }
   }, [user]);
 
   const refresh = useCallback(async () => {
     if (!user) {
       setKeys([]);
+      setBackendReady(false);
       setIsLoading(false);
       return;
     }
     setIsLoading(true);
-    setUsingLocalFallback(false);
     try {
       const data = await invokeUserProviderKeys<{ keys: UserProviderKeyRow[] }>("list");
       setKeys(data.keys ?? []);
+      setBackendReady(true);
+      setBackendError(null);
       await loadAiConfig();
     } catch (e) {
-      console.warn("[useCustomApiKeys] server list unavailable, using local keys:", e);
-      const local = loadLocalKeys();
-      setKeys(local);
-      setUsingLocalFallback(local.length > 0);
-      if (local.length > 0) {
-        setAiConfig((c) => ({
-          ...c,
-          preferredProvider: local[0].provider,
-          useCustomKey: false,
-        }));
-      }
-      await loadAiConfig();
+      const message = e instanceof Error ? e.message : BACKEND_SETUP_MESSAGE;
+      console.error("[useCustomApiKeys] backend unavailable:", message);
+      setKeys([]);
+      setBackendReady(false);
+      setBackendError(message);
+      setAiConfig(DEFAULT_AI_CONFIG);
     } finally {
       setIsLoading(false);
     }
-  }, [user, loadAiConfig, loadLocalKeys]);
+  }, [user, loadAiConfig]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  const saveLocalFallback = useCallback(
-    async (provider: AiProviderId, apiKey: string, label?: string) => {
-      if (!user) return false;
-      const localProvider = toLocalProvider(provider);
-      if (localProvider) {
-        saveCustomAiConfig({
-          ...DEFAULT_CUSTOM_AI_CONFIG,
-          provider: localProvider,
-          apiKey: apiKey.trim(),
-          usePlatformDefault: false,
-          setupDismissed: true,
-        });
-      }
-
-      await supabase.from("user_settings").upsert(
-        {
-          user_id: user.id,
-          setting_key: "ai_config",
-          setting_value: {
-            preferredProvider: provider,
-            useCustomKey: false,
-            storage: "local",
-            configuredAt: new Date().toISOString(),
-          },
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,setting_key" },
-      );
-
-      setUsingLocalFallback(true);
-      setKeys(loadLocalKeys());
-      setAiConfig({
-        preferredProvider: provider,
-        useCustomKey: false,
-        configuredAt: new Date().toISOString(),
-      });
-
-      toast({
-        title: "API key configured",
-        description: localProvider
-          ? `${provider} is ready on this device. Chat will use your key via browser storage.`
-          : `${provider} verified. Deploy the latest backend to sync keys across devices.`,
-      });
-      return true;
-    },
-    [user, loadLocalKeys, toast],
-  );
-
   const verifyKey = useCallback(
     async (provider: AiProviderId, apiKey: string) => {
+      if (!backendReady) {
+        toast({
+          title: "Backend not ready",
+          description: BACKEND_SETUP_MESSAGE,
+          variant: "destructive",
+        });
+        return false;
+      }
+
       setIsVerifying(true);
       try {
-        try {
-          const result = await invokeUserProviderKeys<{
-            success: boolean;
-            message?: string;
-            error?: string;
-          }>("verify", { provider, apiKey });
-          if (!result.success) {
-            toast({
-              title: "Verification failed",
-              description: result.error || result.message || "Invalid API key",
-              variant: "destructive",
-            });
-            return false;
-          }
-          toast({ title: "Key verified", description: result.message });
-          return true;
-        } catch (serverErr) {
-          if (!isInvokeUnavailable(serverErr)) throw serverErr;
-          const result = await verifyViaTestFunction(provider, apiKey);
-          if (!result?.success) {
-            toast({
-              title: "Verification failed",
-              description: result?.error || result?.message || "Invalid API key",
-              variant: "destructive",
-            });
-            return false;
-          }
+        const result = await invokeUserProviderKeys<{
+          success: boolean;
+          message?: string;
+          error?: string;
+        }>("verify", { provider, apiKey: apiKey.trim() });
+
+        if (!result.success) {
           toast({
-            title: "Key verified",
-            description: result.message || "Provider accepted your API key",
+            title: "Verification failed",
+            description: result.error || result.message || "Invalid API key",
+            variant: "destructive",
           });
-          return true;
+          return false;
         }
+
+        toast({ title: "Key verified", description: result.message });
+        return true;
       } catch (e) {
         toast({
           title: "Verification failed",
@@ -252,52 +153,65 @@ export function useCustomApiKeys() {
         setIsVerifying(false);
       }
     },
-    [toast],
+    [toast, backendReady],
   );
 
   const saveKey = useCallback(
     async (provider: AiProviderId, apiKey: string, label?: string, setAsDefault = true) => {
+      if (!backendReady) {
+        toast({
+          title: "Cannot save key",
+          description: BACKEND_SETUP_MESSAGE,
+          variant: "destructive",
+        });
+        return false;
+      }
+
       setIsSaving(true);
       try {
-        try {
-          const result = await invokeUserProviderKeys<{
-            success: boolean;
-            message?: string;
-            error?: string;
-            key?: UserProviderKeyRow;
-            configured?: AiConfig;
-          }>("save", { provider, apiKey, label, setAsDefault });
+        const result = await invokeUserProviderKeys<{
+          success: boolean;
+          message?: string;
+          error?: string;
+          key?: UserProviderKeyRow;
+          configured?: AiConfig;
+        }>("save", {
+          provider,
+          apiKey: apiKey.trim(),
+          label,
+          setAsDefault,
+        });
 
-          if (!result.success) {
-            toast({
-              title: "Could not save key",
-              description: result.error || "Verification failed",
-              variant: "destructive",
-            });
-            return false;
-          }
-
-          if (result.configured) setAiConfig(result.configured);
-          setUsingLocalFallback(false);
+        if (!result.success) {
           toast({
-            title: "API key configured",
-            description: `${provider} is ready. ShadowTalk will use your key for chat.`,
+            title: "Could not save key",
+            description: result.error || result.message || "Verification failed",
+            variant: "destructive",
           });
-          await refresh();
-          return true;
-        } catch (serverErr) {
-          if (!isInvokeUnavailable(serverErr)) throw serverErr;
-          const verified = await verifyViaTestFunction(provider, apiKey);
-          if (!verified?.success) {
-            toast({
-              title: "Could not save key",
-              description: verified?.error || "Invalid API key",
-              variant: "destructive",
-            });
-            return false;
-          }
-          return saveLocalFallback(provider, apiKey, label);
+          return false;
         }
+
+        if (!result.key?.verified_at) {
+          toast({
+            title: "Save incomplete",
+            description: "Key was not stored with a verified status. Try again.",
+            variant: "destructive",
+          });
+          return false;
+        }
+
+        if (result.configured) {
+          setAiConfig(result.configured);
+        }
+
+        toast({
+          title: "API key configured",
+          description:
+            result.message ||
+            `${provider} is verified, encrypted on the server, and active for chat.`,
+        });
+        await refresh();
+        return true;
       } catch (e) {
         toast({
           title: "Save failed",
@@ -309,7 +223,7 @@ export function useCustomApiKeys() {
         setIsSaving(false);
       }
     },
-    [toast, refresh, saveLocalFallback],
+    [toast, refresh, backendReady],
   );
 
   const verifyAndSave = useCallback(
@@ -321,13 +235,17 @@ export function useCustomApiKeys() {
 
   const removeKey = useCallback(
     async (provider: AiProviderId) => {
+      if (!backendReady) {
+        toast({
+          title: "Cannot remove key",
+          description: BACKEND_SETUP_MESSAGE,
+          variant: "destructive",
+        });
+        return;
+      }
+
       try {
-        try {
-          await invokeUserProviderKeys("delete", { provider });
-        } catch (serverErr) {
-          if (!isInvokeUnavailable(serverErr)) throw serverErr;
-          saveCustomAiConfig({ ...DEFAULT_CUSTOM_AI_CONFIG });
-        }
+        await invokeUserProviderKeys("delete", { provider });
         toast({ title: "API key removed" });
         await refresh();
       } catch (e) {
@@ -338,17 +256,22 @@ export function useCustomApiKeys() {
         });
       }
     },
-    [toast, refresh],
+    [toast, refresh, backendReady],
   );
 
   const setDefault = useCallback(
     async (provider: AiProviderId) => {
+      if (!backendReady) {
+        toast({
+          title: "Cannot update default",
+          description: BACKEND_SETUP_MESSAGE,
+          variant: "destructive",
+        });
+        return;
+      }
+
       try {
-        try {
-          await invokeUserProviderKeys("set-default", { provider });
-        } catch (serverErr) {
-          if (!isInvokeUnavailable(serverErr)) throw serverErr;
-        }
+        await invokeUserProviderKeys("set-default", { provider });
         setAiConfig((c) => ({ ...c, preferredProvider: provider, useCustomKey: true }));
         await refresh();
         toast({ title: "Default provider updated" });
@@ -360,11 +283,10 @@ export function useCustomApiKeys() {
         });
       }
     },
-    [toast, refresh],
+    [toast, refresh, backendReady],
   );
 
-  const hasVerifiedKey =
-    keys.some((k) => k.verified_at && k.is_active) || loadLocalKeys().length > 0;
+  const hasVerifiedKey = keys.some((k) => k.verified_at && k.is_active);
   const defaultKey = keys.find((k) => k.is_default) || keys.find((k) => k.verified_at);
 
   return {
@@ -375,7 +297,8 @@ export function useCustomApiKeys() {
     isSaving,
     hasVerifiedKey,
     defaultKey,
-    usingLocalFallback,
+    backendReady,
+    backendError,
     verifyKey,
     saveKey,
     verifyAndSave,
