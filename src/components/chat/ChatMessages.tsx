@@ -29,6 +29,8 @@ interface ChatMessagesProps {
   onOpenIDE?: (code: string, language: string) => void;
   onLaunchWebsite?: (code: string, language: string) => void;
   onOpenInBrowser?: (url: string) => void;
+  onConfirmTool?: (messageId: string) => void;
+  onCancelTool?: (messageId: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   thinkingStage?: 'understanding' | 'reasoning' | 'generating' | 'refining' | null;
   layout?: 'default' | 'gemini';

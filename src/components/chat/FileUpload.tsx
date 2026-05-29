@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
-import { ImagePlus, File, X, Loader2, Plus } from "lucide-react";
+import { ImagePlus, File, X, Loader2, Plus, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { isShadowTalkDesktop, pickAndReadTextFile } from "@/lib/desktopBridge";
 
 interface FileUploadProps {
   onFileSelect: (file: { type: 'image' | 'file'; data: string; name: string; mimeType: string }) => void;
@@ -15,12 +16,12 @@ export const FileUpload = ({ onFileSelect, selectedFile, onClear, disabled, vari
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const isDesktop = isShadowTalkDesktop();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast({
         title: "File too large",
@@ -55,7 +56,7 @@ export const FileUpload = ({ onFileSelect, selectedFile, onClear, disabled, vari
         setIsProcessing(false);
       };
       reader.readAsDataURL(file);
-    } catch (error) {
+    } catch {
       toast({
         title: "Error processing file",
         description: "Please try again",
@@ -64,9 +65,32 @@ export const FileUpload = ({ onFileSelect, selectedFile, onClear, disabled, vari
       setIsProcessing(false);
     }
 
-    // Clear input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDesktopPick = async () => {
+    setIsProcessing(true);
+    try {
+      const picked = await pickAndReadTextFile();
+      if (!picked) return;
+      const name = picked.path.split(/[/\\]/).pop() ?? "file";
+      onFileSelect({
+        type: "file",
+        data: picked.content,
+        name,
+        mimeType: "text/plain",
+      });
+      toast({ title: "File attached", description: name });
+    } catch {
+      toast({
+        title: "Could not open file",
+        description: "Try a smaller text or markdown file",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -105,34 +129,62 @@ export const FileUpload = ({ onFileSelect, selectedFile, onClear, disabled, vari
           </Button>
         </div>
       ) : variant === "gemini" ? (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || isProcessing}
-          className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/30 relative"
-          aria-label="Attach file"
-        >
-          {isProcessing ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Plus className="h-5 w-5" />
+        <div className="flex items-center gap-0.5">
+          {isDesktop && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleDesktopPick}
+              disabled={disabled || isProcessing}
+              className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+              title="Open from computer"
+            >
+              <FolderOpen className="h-5 w-5" />
+            </Button>
           )}
-        </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || isProcessing}
+            className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/30 relative"
+            aria-label="Attach file"
+          >
+            {isProcessing ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Plus className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
       ) : (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || isProcessing}
-          className="gap-2"
-        >
-          {isProcessing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <ImagePlus className="h-4 w-4" />
+        <div className="flex items-center gap-1">
+          {isDesktop && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDesktopPick}
+              disabled={disabled || isProcessing}
+              className="px-2"
+              title="Open from computer (native picker)"
+            >
+              <FolderOpen className="h-4 w-4" />
+            </Button>
           )}
-        </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || isProcessing}
+            className="gap-2"
+          >
+            {isProcessing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ImagePlus className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       )}
     </div>
   );

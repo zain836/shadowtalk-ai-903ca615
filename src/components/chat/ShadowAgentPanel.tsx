@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { stringifyChatBody } from "@/lib/chatRequest";
 
 // =============================================================================
 // COMPLIANCE AUTOPILOT - UNIVERSAL REGULATORY ENGINE
@@ -478,7 +479,7 @@ const ShadowAgentPanel: React.FC<ShadowAgentPanelProps> = ({ onExecuteTask, isEx
           "Content-Type": "application/json",
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           messages: [{
             role: 'user',
             content: `You are a regulatory compliance expert. Generate a compliance checklist for a ${industry?.label} business operating in ${regionLabels.join(', ')}. Return ONLY a JSON array of objects with these fields: regulation (string), category (string - region name), requirement (string), status (one of: compliant, partial, non_compliant, review_needed), risk (one of: critical, high, medium, low), action (string), deadline (string date). Generate 6-12 realistic items based on real regulations. Return only the JSON array, no markdown.`

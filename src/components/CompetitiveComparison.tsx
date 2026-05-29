@@ -1,4 +1,5 @@
 import { Shield, Wifi, WifiOff, Server, Lock, Eye, Image, Search, MessageCircle, Sparkles, Brain, Zap } from "lucide-react";
+import { FREE_TIER_DAILY } from "@/lib/productClaims";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion, useInView } from "framer-motion";

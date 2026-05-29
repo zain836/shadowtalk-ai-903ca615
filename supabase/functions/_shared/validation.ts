@@ -55,6 +55,7 @@ export const ChatRequestSchema = z.object({
   securityAudit: z.string().max(100000).optional(),
   webSearch: z.boolean().optional(),
   searchQuery: z.string().max(500).optional(),
+  agenticReact: z.boolean().optional(),
   deepResearch: z.boolean().optional(),
   isResearch: z.boolean().optional(), // Flag for research/strategy agent mode
   industry: z.string().max(50).optional(), // Industry specialization context
@@ -70,6 +71,10 @@ export const ChatRequestSchema = z.object({
       status: z.enum(["pending", "running", "completed", "error"]).optional(),
     })).optional(),
   }).optional(),
+  aiProvider: z.enum([
+    "google", "openai", "anthropic", "xai", "perplexity", "openrouter", "mistral", "groq",
+  ]).optional(),
+  useCustomApiKey: z.boolean().optional(),
 }).refine(
   (data) => data.messages || data.analyzeTask || data.getEcoActions || data.securityAudit || data.agentWorkflow || data.deepResearch || data.webSearch || data.generateImage || data.imageEdit || data.decodeImage,
   { message: "Either messages or a special mode (analyzeTask, getEcoActions, securityAudit, agentWorkflow, deepResearch, webSearch, generateImage, imageEdit, decodeImage) must be provided" }

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { stringifyChatBody } from "@/lib/chatRequest";
 
 interface GeminiLiveModeProps {
   isOpen: boolean;
@@ -237,7 +238,7 @@ export const GeminiLiveMode = ({ isOpen, onClose, onInsertToChat }: GeminiLiveMo
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
         },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           messages: [
             ...transcript.filter(t => t.role === "user" || t.role === "ai").slice(-6).map(t => ({
               role: t.role === "ai" ? "assistant" : "user",

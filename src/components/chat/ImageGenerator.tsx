@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { stringifyChatBody } from "@/lib/chatRequest";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
@@ -49,7 +50,7 @@ export const ImageGenerator = ({ onClose, onImageGenerated, initialPrompt, autoG
           "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ 
+        body: stringifyChatBody({ 
           generateImage: true, 
           imagePrompt: prompt,
           messages: [],

@@ -19,7 +19,7 @@ import {
   BarChart3, Palette, Key, Activity, BookOpen, Database,
   GitBranch, Sliders, Lock, Target, Leaf, Navigation, Wand2,
   Rocket, Cpu, PenTool, LayoutDashboard, UserPlus, Mail,
-  HardDrive, Layers, BrainCircuit, Cog, FileCode
+  HardDrive, Layers, BrainCircuit, Cog, FileCode, Presentation
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";

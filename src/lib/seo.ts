@@ -107,9 +107,9 @@
  // Page-specific SEO configurations
 export const PAGE_SEO: Record<string, PageMeta> = {
   home: {
-    title: 'Agentic AI Workspace — Autonomous Agents, 30+ Tools & Optional On-Device Privacy',
-    description: 'ShadowTalk AI: agentic task runner, mission control, 30+ tool orchestration, and multi-model chat. Plan and execute multi-step work with human-in-the-loop safety. Optional on-device AI for privacy.',
-    keywords: ['agentic AI', 'AI agents', 'AI task automation', 'AI chatbot', 'autonomous AI', 'offline AI', 'privacy-aware AI'],
+    title: 'Think AI. Think ShadowTalk. — Agentic Workspace That Executes',
+    description: 'ShadowTalk AI: the agentic workspace that gets work done. Mission Control, 30+ tools, multi-step agents, vault & BYOK. Think AI — think ShadowTalk.',
+    keywords: ['ShadowTalk', 'agentic AI', 'AI agents', 'AI workspace', 'Mission Control', 'AI automation', 'GPT alternative', 'privacy AI'],
     canonical: 'https://www.shadowtalk-ai.com/',
   },
   pricing: {

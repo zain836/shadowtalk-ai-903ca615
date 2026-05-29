@@ -1,3 +1,4 @@
+import { stringifyChatBody } from "@/lib/chatRequest";
  import { useState, useCallback, useRef } from 'react';
  import { supabase } from '@/integrations/supabase/client';
  
@@ -80,7 +81,7 @@
            'Content-Type': 'application/json',
            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
          },
-         body: JSON.stringify({
+         body: stringifyChatBody({
            messages: [
              { role: 'system', content: systemPrompt },
              { role: 'user', content: prompt },

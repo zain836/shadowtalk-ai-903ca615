@@ -167,7 +167,7 @@ const HeroSection = () => {
                 onClick={() => navigate('/chatbot')}
               >
                 <MessageCircle className="mr-3 h-5 w-5" />
-                Chat Now — Free
+                Enter ShadowTalk — Free
                 <ArrowRight className="ml-3 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </motion.div>
