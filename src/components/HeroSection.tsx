@@ -4,7 +4,9 @@ import { MessageCircle, Bot, Zap, ArrowRight, Search, Workflow, Target } from "l
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { CommandPaletteContext } from "@/App";
-import { BRAND, BRAND_HOOKS, BRAND_TRACTION, LANDING_COPY } from "@/lib/brand";
+import { BRAND, BRAND_HOOKS, LANDING_COPY } from "@/lib/brand";
+import { usePlatformMetrics } from "@/hooks/usePlatformMetrics";
+import { formatTractionDaily, formatTractionUsers } from "@/lib/formatMetrics";
 import { useLandingMotion } from "@/hooks/use-landing-motion";
 import LandingAmbientOrb from "@/components/landing/LandingAmbientOrb";
 import RotatingHookText from "@/components/landing/RotatingHookText";
@@ -24,6 +26,7 @@ const HeroSection = () => {
   const navigate = useNavigate();
   const { open: openCommandPalette } = useContext(CommandPaletteContext);
   const [showDemo, setShowDemo] = useState(false);
+  const metrics = usePlatformMetrics();
   const {
     variants,
     hoverLift,
@@ -180,7 +183,9 @@ const HeroSection = () => {
             variants={variants.scaleFadeIn}
             className="mt-6 text-xs sm:text-sm text-muted-foreground/90"
           >
-            {BRAND_TRACTION.usersLabel} · {BRAND_TRACTION.dailyLabel}
+            {metrics.isLoading
+              ? "Loading live metrics…"
+              : `${formatTractionUsers(metrics.totalUsers)} · ${formatTractionDaily(metrics.dailyActiveUsers)}`}
           </motion.p>
 
           <motion.div

@@ -36,89 +36,6 @@ interface TrendSignal {
   timestamp: string;
 }
 
-const generateHypeTasks = (): HypeTask[] => [
-  {
-    id: "1",
-    type: "trend",
-    title: "\"Offline AI\" trending on Product Hunt",
-    description: "Privacy-first AI tools are surging. Create a launch post highlighting ShadowTalk's zero-data-harvesting architecture to ride this wave.",
-    urgency: "critical",
-    impact: 92,
-    category: "Trend-Scout",
-    actionLabel: "Draft Launch Post",
-    timeEstimate: "15 min",
-    icon: <Flame className="h-4 w-4" />,
-  },
-  {
-    id: "2",
-    type: "content",
-    title: "Viral hook: \"AI that works in airplane mode\"",
-    description: "Create a 60-second demo video showing ShadowTalk completing complex tasks with WiFi disabled. High viral potential for X/Twitter.",
-    urgency: "high",
-    impact: 87,
-    category: "Creative-Director",
-    actionLabel: "Generate Script",
-    timeEstimate: "10 min",
-    icon: <Rocket className="h-4 w-4" />,
-  },
-  {
-    id: "3",
-    type: "growth",
-    title: "Power users detected — activate referral offer",
-    description: "12 users have completed 50+ sessions this week. Trigger personalized referral codes with 30% bonus credits to maximize conversion.",
-    urgency: "high",
-    impact: 78,
-    category: "Growth-Hacker",
-    actionLabel: "Send Offers",
-    timeEstimate: "5 min",
-    icon: <Users className="h-4 w-4" />,
-  },
-  {
-    id: "4",
-    type: "action",
-    title: "Competitor blind spot: No offline code execution",
-    description: "Neither ChatGPT nor Claude offer offline code sandboxing. Position ShadowTalk's Code Playground as the only air-gapped dev environment.",
-    urgency: "medium",
-    impact: 85,
-    category: "Trend-Scout",
-    actionLabel: "Create Comparison",
-    timeEstimate: "20 min",
-    icon: <Target className="h-4 w-4" />,
-  },
-  {
-    id: "5",
-    type: "content",
-    title: "CEO Suite case study opportunity",
-    description: "A user generated 3 board meeting packages this week. Reach out for a testimonial and build a case study for the enterprise funnel.",
-    urgency: "medium",
-    impact: 72,
-    category: "Creative-Director",
-    actionLabel: "Draft Outreach",
-    timeEstimate: "10 min",
-    icon: <Lightbulb className="h-4 w-4" />,
-  },
-  {
-    id: "6",
-    type: "growth",
-    title: "Lifetime Deal urgency: 48hr flash sale",
-    description: "Conversion data shows 3x higher signup rates with time-limited offers. Schedule a 48-hour flash sale with countdown timer on landing page.",
-    urgency: "critical",
-    impact: 94,
-    category: "Growth-Hacker",
-    actionLabel: "Activate Sale",
-    timeEstimate: "5 min",
-    icon: <Zap className="h-4 w-4" />,
-  },
-];
-
-const generateTrendSignals = (): TrendSignal[] => [
-  { id: "t1", topic: "On-device AI inference", source: "GitHub Trending", momentum: 94, relevance: 98, timestamp: "2 hours ago" },
-  { id: "t2", topic: "Privacy-first productivity tools", source: "Product Hunt", momentum: 87, relevance: 95, timestamp: "4 hours ago" },
-  { id: "t3", topic: "WebGPU for ML workloads", source: "Hacker News", momentum: 76, relevance: 90, timestamp: "6 hours ago" },
-  { id: "t4", topic: "AI agent orchestration frameworks", source: "Reddit r/MachineLearning", momentum: 82, relevance: 85, timestamp: "8 hours ago" },
-  { id: "t5", topic: "Zero-trust AI architectures", source: "Twitter/X", momentum: 71, relevance: 88, timestamp: "12 hours ago" },
-];
-
 const urgencyColors: Record<string, string> = {
   critical: "bg-destructive/20 text-destructive border-destructive/30",
   high: "bg-orange-500/20 text-orange-400 border-orange-500/30",
@@ -181,17 +98,16 @@ export const ProactiveInsights = () => {
             icon: icons[idx % icons.length],
           })));
         } else {
-          setTasks(generateHypeTasks());
+          setTasks([]);
         }
       } catch {
-        setTasks(generateHypeTasks());
+        setTasks([]);
       }
 
-      setTrends(generateTrendSignals());
+      setTrends([]);
     } catch {
-      // Fallback to generated data
-      setTasks(generateHypeTasks());
-      setTrends(generateTrendSignals());
+      setTasks([]);
+      setTrends([]);
     }
 
     setLoading(false);

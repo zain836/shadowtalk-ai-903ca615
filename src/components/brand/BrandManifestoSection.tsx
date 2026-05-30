@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { BRAND, BRAND_PILLARS, BRAND_TRACTION, LANDING_COPY } from "@/lib/brand";
+import { BRAND, BRAND_PILLARS, LANDING_COPY } from "@/lib/brand";
+import { usePlatformMetrics } from "@/hooks/usePlatformMetrics";
+import { formatTractionDaily, formatTractionUsers } from "@/lib/formatMetrics";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useLandingMotion } from "@/hooks/use-landing-motion";

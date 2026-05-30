@@ -1,53 +1,49 @@
-import { Users, MessageSquare, Star, Activity, Calendar, ArrowUpRight, Zap, Globe } from "lucide-react";
-import { COMMUNITY_HIGHLIGHTS } from "@/lib/productClaims";
+import {
+  Users,
+  MessageSquare,
+  Star,
+  Activity,
+  Calendar,
+  ArrowUpRight,
+  Zap,
+  Globe,
+  Loader2,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { LANDING_COPY } from "@/lib/brand";
 import { useLandingMotion } from "@/hooks/use-landing-motion";
 import LandingSectionHeader from "@/components/landing/LandingSectionHeader";
 import LandingAmbientOrb from "@/components/landing/LandingAmbientOrb";
-
-const statVariants = {
-  hidden: { opacity: 0, scale: 0.8, y: 30 },
-  visible: (i: number) => ({
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: {
-      delay: i * 0.1,
-      duration: 0.5,
-      type: "spring" as const,
-      stiffness: 200,
-    },
-  }),
-};
+import { buildCommunityHighlights, usePlatformMetrics } from "@/hooks/usePlatformMetrics";
+import { useCommunityEvents } from "@/hooks/useCMSContent";
 
 const CommunitySection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
   const { hoverLift, variants, viewport, isMobile } = useLandingMotion();
+  const metrics = usePlatformMetrics();
+  const { events, isLoading: eventsLoading } = useCommunityEvents();
 
-  const statIcons = [Users, Activity, Star, MessageSquare];
-  const communityStats = COMMUNITY_HIGHLIGHTS.map((item, i) => ({
-    icon: statIcons[i] ?? Users,
-    value: item.value,
-    label: item.label,
-    description: item.description,
-    gradient: [
+  const communityStats = useMemo(() => {
+    const highlights = buildCommunityHighlights(metrics);
+    const statIcons = [Users, Activity, Star, MessageSquare];
+    const gradients = [
       "from-primary/20 to-primary/5",
       "from-secondary/20 to-secondary/5",
       "from-accent/20 to-accent/5",
       "from-success/20 to-success/5",
-    ][i],
-  }));
-
-  const events = [
-    { date: "Feb 20", title: "AI Automation Workshop", type: "Workshop", participants: 200, live: true },
-    { date: "Feb 25", title: "Developer Q&A Session", type: "Live Q&A", participants: 500, live: false },
-    { date: "Mar 01", title: "Spring Coding Challenge", type: "Challenge", participants: 1000, live: false },
-  ];
+    ];
+    return highlights.map((item, i) => ({
+      icon: statIcons[i] ?? Users,
+      value: item.value,
+      label: item.label,
+      description: item.description,
+      gradient: gradients[i],
+    }));
+  }, [metrics]);
 
   const benefits = [
     { icon: MessageSquare, title: "Share & Learn", desc: "Exchange ideas, get help, discover new AI use cases.", color: "text-primary", bg: "bg-primary/10" },
@@ -79,11 +75,10 @@ const CommunitySection = () => {
           subtitle={LANDING_COPY.community.subtitle}
         />
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16 max-w-4xl mx-auto">
           {communityStats.map((stat, i) => (
             <motion.div
-              key={i}
+              key={stat.label}
               custom={i}
               variants={variants.cardReveal}
               initial="hidden"
@@ -101,20 +96,22 @@ const CommunitySection = () => {
                   >
                     <stat.icon className="h-5 w-5 text-primary" />
                   </motion.div>
-                  <div className="text-2xl font-bold gradient-text mb-1">{stat.value}</div>
+                  <div className="text-2xl font-bold gradient-text mb-1">
+                    {metrics.isLoading ? (
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    ) : (
+                      stat.value
+                    )}
+                  </div>
                   <div className="text-xs font-medium text-foreground/80">{stat.label}</div>
-                  {"description" in stat && (
-                    <p className="text-[10px] text-muted-foreground mt-1 leading-snug">{stat.description}</p>
-                  )}
+                  <p className="text-[10px] text-muted-foreground mt-1 leading-snug">{stat.description}</p>
                 </CardContent>
               </Card>
             </motion.div>
           ))}
         </div>
 
-        {/* Two-column layout */}
         <div className="grid lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          {/* Benefits */}
           <div>
             <motion.h3
               variants={variants.fadeSlideUp}
@@ -166,7 +163,6 @@ const CommunitySection = () => {
             </div>
           </div>
 
-          {/* Events */}
           <div>
             <motion.h3
               variants={variants.fadeSlideUp}
@@ -178,9 +174,19 @@ const CommunitySection = () => {
               Upcoming Events
             </motion.h3>
             <div className="space-y-3">
+              {eventsLoading && (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {!eventsLoading && events.length === 0 && (
+                <p className="text-sm text-muted-foreground glass-subtle rounded-xl p-5">
+                  No scheduled events right now. Admins can publish community events from the announcements panel.
+                </p>
+              )}
               {events.map((event, i) => (
                 <motion.div
-                  key={i}
+                  key={event.id}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
@@ -203,11 +209,8 @@ const CommunitySection = () => {
                               </span>
                             )}
                           </div>
+                          <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{event.description}</p>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Users className="h-3 w-3" />
-                              {event.participants}
-                            </span>
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
                               {event.type}

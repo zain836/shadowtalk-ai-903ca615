@@ -16,15 +16,6 @@ const fadeUp = {
   }),
 };
 
-// Fallback changelog when DB is empty
-const FALLBACK_CHANGELOG = [
-  { id: "1", version: "3.1.0", published_at: "2026-02-17", title: "Real AI-Powered Proactive Intelligence", description: "Replaced all mock/hardcoded proactive messages with real AI-generated contextual insights.", change_type: "feature", tags: ["ai", "proactive"] },
-  { id: "2", version: "3.0.0", published_at: "2025-01-19", title: "ShadowBrowser & Browse Together Mode", description: "Revolutionary AI-powered browser integration with real-time browsing assistance.", change_type: "feature", tags: ["browser", "ai"] },
-  { id: "3", version: "2.6.0", published_at: "2025-01-10", title: "Deep Research & Advanced Analytics", description: "Professional research tools and comprehensive usage analytics.", change_type: "feature", tags: ["research", "analytics"] },
-  { id: "4", version: "2.5.0", published_at: "2024-12-15", title: "Collaborative Rooms & PWA Support", description: "Real-time collaboration and mobile app experience.", change_type: "feature", tags: ["collaboration", "pwa"] },
-  { id: "5", version: "2.0.0", published_at: "2024-12-10", title: "ShadowTalk AI Launch", description: "Initial release of the AI chatbot platform.", change_type: "feature", tags: ["launch"] },
-];
-
 const getChangeIcon = (type: string) => {
   switch (type) {
     case "feature": return <Sparkles className="h-4 w-4 text-primary" />;
@@ -49,8 +40,8 @@ const ChangelogPage = () => {
   const navigate = useNavigate();
   const { entries: dbEntries, isLoading } = useChangelogEntries();
 
-  const entries = dbEntries.length > 0 ? dbEntries : FALLBACK_CHANGELOG;
-  const [expandedVersions, setExpandedVersions] = useState<string[]>(entries.length > 0 ? [entries[0].version] : []);
+  const entries = dbEntries;
+  const [expandedVersions, setExpandedVersions] = useState<string[]>([]);
 
   const toggleVersion = (version: string) => {
     setExpandedVersions((prev) =>
@@ -97,6 +88,10 @@ const ChangelogPage = () => {
       <main className="container mx-auto px-4 py-8 max-w-4xl relative z-10">
         {isLoading ? (
           <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+        ) : entries.length === 0 ? (
+          <p className="text-center text-muted-foreground py-12 glass-subtle rounded-xl">
+            No published changelog entries yet. Admins can add releases from the CMS.
+          </p>
         ) : (
           <div className="relative">
             <div className="absolute left-[19px] top-0 bottom-0 w-px bg-gradient-to-b from-primary/40 via-border/40 to-transparent hidden md:block" />
