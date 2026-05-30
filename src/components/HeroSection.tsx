@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Bot, Zap, ArrowRight, Search, Workflow, Target } from "lucide-react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
-import heroImg from "@/assets/hero-bg.jpg";
 import { useNavigate } from "react-router-dom";
 import { CommandPaletteContext } from "@/App";
 
@@ -63,42 +62,30 @@ const HeroSection = () => {
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
   const heroY = useTransform(scrollY, [0, 400], [0, 80]);
-  const bgScale = useTransform(scrollY, [0, 600], [1, 1.15]);
-
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Layered background */}
-      <div className="absolute inset-0 bg-background"></div>
-      <div className="absolute inset-0 bg-grid opacity-30"></div>
-      <motion.div
-        style={{ scale: bgScale }}
-        className="absolute inset-0 bg-cover bg-center opacity-[0.06]"
-        initial={false}
-      >
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${heroImg})` }} />
-      </motion.div>
-      
+    <section className="shadowtalk-hero neural-bg relative min-h-screen flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 bg-grid-dense opacity-20 z-[2]" aria-hidden />
       {/* Animated ambient gradient orbs */}
       <motion.div
         animate={floatingOrbAnim}
-        className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/8 rounded-full blur-[150px]"
+        className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[150px] z-[2]"
       />
       <motion.div
         animate={floatingOrbSlowAnim}
-        className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-secondary/8 rounded-full blur-[150px]"
+        className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-secondary/15 rounded-full blur-[150px] z-[2]"
       />
       <motion.div
-        animate={{ 
-          scale: [1, 1.1, 1], 
-          opacity: [0.5, 0.8, 0.5] 
+        animate={{
+          scale: [1, 1.1, 1],
+          opacity: [0.4, 0.7, 0.4],
         }}
         transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-accent/5 rounded-full blur-[150px]"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-accent/10 rounded-full blur-[150px] z-[2]"
       />
 
       <motion.div
         style={{ opacity: heroOpacity, y: heroY }}
-        className="container mx-auto px-4 text-center relative z-10 pt-20"
+        className="container mx-auto px-4 text-center relative z-10 pt-24 pb-16"
       >
         <motion.div
           variants={staggerContainer}
@@ -134,7 +121,7 @@ const HeroSection = () => {
             </motion.span>{" "}
             <br className="hidden md:block" />
             <motion.span
-              className="inline-block"
+              className="gradient-text inline-block"
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.5, duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -179,7 +166,7 @@ const HeroSection = () => {
               <Button
                 variant="outline"
                 size="lg"
-                className="text-lg px-8 py-6 border-border/60 hover:border-primary/30 hover:bg-muted/20 rounded-xl transition-all duration-300"
+                className="text-lg px-8 py-6 border-border/60 bg-card/40 hover:border-primary/40 hover:bg-card/60 rounded-xl transition-all duration-300"
                 onClick={() => {
                   document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
                 }}

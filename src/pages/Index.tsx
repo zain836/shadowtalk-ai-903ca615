@@ -17,7 +17,7 @@ const Index = () => {
   return (
     <>
       <SEOHead meta={PAGE_SEO.home} />
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background text-foreground">
       <CouponBanner />
       <Navigation />
       <HeroSection />
