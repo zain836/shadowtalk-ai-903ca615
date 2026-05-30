@@ -55,6 +55,8 @@ import { CHAT_COMMAND_NAV_ROUTES } from "@/lib/chatCommandRoutes";
 import { useChatSpeech } from "@/hooks/useChatSpeech";
 import { OfflineToolsPanel } from "@/components/chat/OfflineToolsPanel";
 import { useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
+import { useStealthKillSwitch } from "@/hooks/useStealthKillSwitch";
+import { STEALTH_KEYBOARD_SHORTCUT } from "@/lib/stealthTypes";
 // Types
 interface Message { 
   id: string; 
@@ -93,6 +95,7 @@ const ChatbotPage = () => {
   const { getOfflineSession } = useOfflineAuth();
   const toolOrchestrator = useToolOrchestrator();
   const gemmaOffline = useGemmaOffline();
+  const { isStealthMode } = useStealthKillSwitch();
   const { aiConfig, hasVerifiedKey, keys, switchToPlatformDefault, setDefault, refresh: refreshApiKeys } =
     useCustomApiKeys();
   
@@ -533,6 +536,12 @@ const ChatbotPage = () => {
       chatMessages: Array<{ role: string; content: string }>,
       conversationId: string,
     ) => {
+      if (isStealthMode) {
+        throw new Error(
+          `Cloud chat is blocked in Stealth Mode. Use Offline Tools, Bunker Mode, or press ${STEALTH_KEYBOARD_SHORTCUT} to surface.`,
+        );
+      }
+
       abortControllerRef.current?.abort();
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -617,7 +626,7 @@ const ChatbotPage = () => {
         await saveMessage(assistantContent, "assistant", conversationId);
       }
     },
-    [aiProvider, aiConfig, keys, chatMode, personality, user],
+    [aiProvider, aiConfig, keys, chatMode, personality, user, isStealthMode],
   );
 
   const handleStopGeneration = () => {
@@ -974,6 +983,11 @@ const ChatbotPage = () => {
                     Hello, <span className="gradient-text">{userDisplayName}</span>
                   </h1>
                   <p className="shadowtalk-chat-tagline">Think AI. Think ShadowTalk.</p>
+                  {isStealthMode && (
+                    <p className="text-xs font-mono text-destructive/90 mt-3 max-w-md text-center px-4">
+                      Stealth active — cloud chat blocked. Open Offline Tools or {STEALTH_KEYBOARD_SHORTCUT} to surface.
+                    </p>
+                  )}
                   {hasVerifiedKey && aiConfig.useCustomKey && (
                     <p className="text-[10px] text-muted-foreground/60 mt-2 tracking-wide">
                       {aiConfig.preferredProvider} API connected

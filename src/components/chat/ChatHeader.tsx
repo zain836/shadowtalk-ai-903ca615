@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/AuthProvider";
 import { BunkerModeToggle } from "./BunkerModeToggle";
+import { StealthKillSwitch } from "@/components/StealthKillSwitch";
+import { useStealthKillSwitch } from "@/hooks/useStealthKillSwitch";
 import {
   Select,
   SelectContent,
@@ -205,7 +207,8 @@ export const ChatHeader = ({
 }: ChatHeaderProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+  const { isStealthMode } = useStealthKillSwitch();
+
   const userInitials = user?.email ? user.email.charAt(0).toUpperCase() : "G";
   const showUpgrade = userPlan === "free" || userPlan === "pro";
 
@@ -234,6 +237,7 @@ export const ChatHeader = ({
             </Button>
           </div>
           <div className="flex items-center gap-2">
+            <StealthKillSwitch />
             {showUpgrade && (
               <Button
                 onClick={() => navigate("/pricing")}
@@ -280,9 +284,11 @@ export const ChatHeader = ({
           provider={aiProvider}
           onProviderChange={onProviderChange}
           hasKeyForProvider={hasKeyForProvider}
+          disabled={isStealthMode}
         />
         <div className="hidden xs:block h-4 w-px bg-white/10 mx-1" />
         <BunkerModeToggle />
+        <StealthKillSwitch />
       </div>
 
       {/* Right: Tools & User */}

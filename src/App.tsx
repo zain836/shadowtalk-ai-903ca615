@@ -11,6 +11,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { SecurityProvider } from "@/components/SecurityProvider";
 import { ShadowMemoryProvider } from "@/contexts/ShadowMemoryContext";
 import { StealthKillSwitchProvider } from "@/contexts/StealthKillSwitchContext";
+import { StealthKeyboardListener } from "@/components/StealthKeyboardListener";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import BootScreen from "@/components/BootScreen";
 import CommandPalette from "@/components/CommandPalette";
@@ -242,6 +243,7 @@ const App = () => {
           <TooltipProvider>
             <AuthProvider>
               <StealthKillSwitchProvider>
+              <StealthKeyboardListener />
               <SecurityProvider>
               <ShadowMemoryProvider>
               <CommandPaletteContext.Provider value={{ open: () => setCmdOpen(true) }}>

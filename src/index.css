@@ -354,6 +354,10 @@
     scroll-padding-top: 7rem;
   }
 
+  html[data-stealth-kill-switch="active"] .shadowtalk-chat-shell {
+    padding-top: 3.25rem;
+  }
+
   /* ===== Neural Expressive Redesign ===== */
   @keyframes fluid-gradient {
     0% { background-position: 0% 50%; }
