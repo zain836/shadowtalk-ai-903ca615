@@ -10,6 +10,7 @@ import LandingAmbientOrb from "@/components/landing/LandingAmbientOrb";
 
 const BrandManifestoSection = () => {
   const navigate = useNavigate();
+  const metrics = usePlatformMetrics();
   const { variants, viewport, hoverLift, shouldAnimateAmbient, isMobile } = useLandingMotion();
 
   return (
@@ -60,7 +61,10 @@ const BrandManifestoSection = () => {
             viewport={viewport}
             className="mt-4 text-sm text-muted-foreground/80"
           >
-            {LANDING_COPY.manifesto.traction} · {BRAND_TRACTION.usersLabel} · {BRAND_TRACTION.dailyLabel}
+            {LANDING_COPY.manifesto.traction} ·{" "}
+            {metrics.isLoading
+              ? "…"
+              : `${formatTractionUsers(metrics.totalUsers)} · ${formatTractionDaily(metrics.dailyActiveUsers)}`}
           </motion.p>
         </div>
 

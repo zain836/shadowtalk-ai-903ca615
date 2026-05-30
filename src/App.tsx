@@ -10,6 +10,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/AuthProvider";
 import { SecurityProvider } from "@/components/SecurityProvider";
 import { ShadowMemoryProvider } from "@/contexts/ShadowMemoryContext";
+import { StealthKillSwitchProvider } from "@/contexts/StealthKillSwitchContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import BootScreen from "@/components/BootScreen";
 import CommandPalette from "@/components/CommandPalette";
@@ -240,6 +241,7 @@ const App = () => {
         <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false} storageKey="shadowtalk-ui-theme">
           <TooltipProvider>
             <AuthProvider>
+              <StealthKillSwitchProvider>
               <SecurityProvider>
               <ShadowMemoryProvider>
               <CommandPaletteContext.Provider value={{ open: () => setCmdOpen(true) }}>
@@ -263,6 +265,7 @@ const App = () => {
               </CommandPaletteContext.Provider>
               </ShadowMemoryProvider>
               </SecurityProvider>
+              </StealthKillSwitchProvider>
             </AuthProvider>
           </TooltipProvider>
         </ThemeProvider>
