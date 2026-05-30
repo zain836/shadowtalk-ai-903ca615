@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Shield, ShieldOff, WifiOff, Lock, Unlock,
@@ -167,54 +168,10 @@ export const StealthKillSwitch = () => {
     }
   }, [isStealthMode, isTransitioning, showFullScreen]);
 
-  return (
-    <>
-      {/* ===== TRIGGER BUTTON ===== */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleToggle}
-        disabled={isTransitioning}
-        className={cn(
-          "relative gap-1.5 transition-all duration-500 group",
-          isStealthMode
-            ? "bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive/20 shadow-[0_0_15px_-3px_hsl(var(--destructive)/0.3)]"
-            : "text-muted-foreground hover:text-foreground"
-        )}
-      >
-        {isTransitioning ? (
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 0.6, repeat: Infinity, ease: "linear" }}
-          >
-            <Fingerprint className="h-3.5 w-3.5" />
-          </motion.div>
-        ) : isStealthMode ? (
-          <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }}>
-            <EyeOff className="h-3.5 w-3.5" />
-          </motion.div>
-        ) : (
-          <Eye className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
-        )}
-        <span className="hidden sm:inline text-xs font-mono tracking-wider">
-          {isStealthMode ? "DARK" : "STEALTH"}
-        </span>
-        {isStealthMode && (
+  const stealthOverlays =
+    typeof document !== "undefined"
+      ? createPortal(
           <>
-            <motion.div
-              className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-destructive rounded-full"
-              animate={{ scale: [1, 1.4, 1], opacity: [1, 0.5, 1] }}
-              transition={{ duration: 1.2, repeat: Infinity }}
-            />
-            <motion.div
-              className="absolute inset-0 rounded-md border border-destructive/40"
-              animate={{ opacity: [0.3, 0.6, 0.3] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-          </>
-        )}
-      </Button>
-
       {/* ===== CONFIRMATION MODAL (Tactical Briefing) ===== */}
       <AnimatePresence>
         {showConfirm && (
@@ -222,7 +179,7 @@ export const StealthKillSwitch = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] flex items-center justify-center"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
             onClick={() => setShowConfirm(false)}
           >
             {/* Backdrop with grid */}
@@ -240,7 +197,7 @@ export const StealthKillSwitch = () => {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-md mx-4"
+              className="relative w-full max-w-md mx-4 z-10"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Card */}
@@ -329,21 +286,21 @@ export const StealthKillSwitch = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[80] flex items-center justify-center bg-background"
+            className="fixed inset-0 z-[210] grid place-items-center min-h-[100dvh] bg-background"
           >
             <ScanLines />
             <ActivationParticles active={countdownPhase > 0} />
 
             {/* Grid background */}
-            <div className="absolute inset-0 opacity-[0.03]"
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
               style={{
                 backgroundImage: 'radial-gradient(circle, hsl(var(--destructive)) 1px, transparent 1px)',
                 backgroundSize: '30px 30px',
               }}
             />
 
-            {/* Central countdown */}
-            <div className="relative flex flex-col items-center gap-6">
+            {/* Central countdown — viewport centered */}
+            <div className="relative z-10 flex flex-col items-center justify-center gap-6 px-4">
               {/* Progress ring */}
               <div className="relative">
                 <ProgressRing progress={activationProgress} size={160} />
@@ -380,7 +337,7 @@ export const StealthKillSwitch = () => {
                 >
                   {countdownPhase > 0 ? "ENGAGING STEALTH" : "GOING DARK"}
                 </motion.h2>
-                <p className="text-xs font-mono text-muted-foreground tracking-widest">
+                <p className="text-xs font-mono text-muted-foreground tracking-widest min-h-[1rem]">
                   {countdownPhase === 3 && "Encrypting local storage..."}
                   {countdownPhase === 2 && "Blocking network interfaces..."}
                   {countdownPhase === 1 && "Activating on-device AI..."}
@@ -389,7 +346,7 @@ export const StealthKillSwitch = () => {
               </div>
 
               {/* Progress bar */}
-              <div className="w-64 h-1 rounded-full bg-muted/20 overflow-hidden">
+              <div className="w-64 max-w-[80vw] h-1 rounded-full bg-muted/20 overflow-hidden">
                 <motion.div
                   className="h-full bg-destructive rounded-full"
                   style={{ width: `${activationProgress}%` }}
@@ -402,7 +359,7 @@ export const StealthKillSwitch = () => {
             {['top-6 left-6', 'top-6 right-6', 'bottom-6 left-6', 'bottom-6 right-6'].map((pos, i) => (
               <motion.div
                 key={i}
-                className={`absolute ${pos} w-8 h-8 border-destructive/30`}
+                className={`absolute ${pos} w-8 h-8 border-destructive/30 pointer-events-none`}
                 style={{
                   borderTopWidth: i < 2 ? 2 : 0,
                   borderBottomWidth: i >= 2 ? 2 : 0,
@@ -426,7 +383,7 @@ export const StealthKillSwitch = () => {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="fixed top-16 left-0 right-0 z-40 overflow-hidden"
+            className="fixed top-16 left-0 right-0 z-[190] overflow-hidden"
           >
             <div className="relative border-b border-destructive/20 bg-background/95 backdrop-blur-xl">
               <ScanLines />
@@ -503,6 +460,60 @@ export const StealthKillSwitch = () => {
           </motion.div>
         )}
       </AnimatePresence>
+          </>,
+          document.body
+        )
+      : null;
+
+  return (
+    <>
+      {/* ===== TRIGGER BUTTON ===== */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleToggle}
+        disabled={isTransitioning}
+        className={cn(
+          "relative gap-1.5 transition-all duration-500 group",
+          isStealthMode
+            ? "bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive/20 shadow-[0_0_15px_-3px_hsl(var(--destructive)/0.3)]"
+            : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        {isTransitioning ? (
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 0.6, repeat: Infinity, ease: "linear" }}
+          >
+            <Fingerprint className="h-3.5 w-3.5" />
+          </motion.div>
+        ) : isStealthMode ? (
+          <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }}>
+            <EyeOff className="h-3.5 w-3.5" />
+          </motion.div>
+        ) : (
+          <Eye className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
+        )}
+        <span className="hidden sm:inline text-xs font-mono tracking-wider">
+          {isStealthMode ? "DARK" : "STEALTH"}
+        </span>
+        {isStealthMode && (
+          <>
+            <motion.div
+              className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-destructive rounded-full"
+              animate={{ scale: [1, 1.4, 1], opacity: [1, 0.5, 1] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+            />
+            <motion.div
+              className="absolute inset-0 rounded-md border border-destructive/40"
+              animate={{ opacity: [0.3, 0.6, 0.3] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+          </>
+        )}
+      </Button>
+
+      {stealthOverlays}
     </>
   );
 };
