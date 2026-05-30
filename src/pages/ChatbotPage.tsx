@@ -39,6 +39,11 @@ import { useIntelligenceHub } from "@/hooks/useIntelligenceHub";
 import { useGemmaOffline } from "@/hooks/useGemmaOffline";
 import { useCustomApiKeys } from "@/hooks/useCustomApiKeys";
 import { stringifyChatBody } from "@/lib/chatRequest";
+import {
+  getGuestArchivedIds,
+  isConversationArchived,
+  setGuestArchivedIds,
+} from "@/lib/chatArchive";
 import { useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
 // Types
 interface Message { 
@@ -49,7 +54,12 @@ interface Message {
   attachment?: { type: 'image' | 'file'; data: string; name: string; mimeType: string };
   imageUrl?: string;
 }
-type Conversation = { id: string; title: string; created_at: string };
+type Conversation = {
+  id: string;
+  title: string;
+  created_at: string;
+  archived_at?: string | null;
+};
 type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive" | "spicy";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -99,7 +109,10 @@ const ChatbotPage = () => {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showMissionControl, setShowMissionControl] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
-  
+  const [guestArchivedIds, setGuestArchivedIdsState] = useState<Set<string>>(() =>
+    getGuestArchivedIds(),
+  );
+
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -136,6 +149,9 @@ const ChatbotPage = () => {
     }
   }, [authLoading, user, offlineSession, isOffline, navigate]);
 
+  const conversationIsArchived = (conv: Conversation) =>
+    isConversationArchived(conv.id, conv.archived_at, guestArchivedIds);
+
   const loadConversations = async () => {
     if (!user) return;
     const { data, error } = await supabase
@@ -148,11 +164,15 @@ const ChatbotPage = () => {
       const rows = data.map((c) => ({
         ...c,
         title: displayStoredText(c.title || 'Untitled'),
+        archived_at: (c as Conversation).archived_at ?? null,
       }));
       setConversations(rows);
-      if (rows.length > 0 && !currentConversationId) {
-        loadConversation(rows[0].id);
-      } else if (rows.length === 0) {
+      const active = rows.filter(
+        (c) => !isConversationArchived(c.id, c.archived_at, guestArchivedIds),
+      );
+      if (active.length > 0 && !currentConversationId) {
+        loadConversation(active[0].id);
+      } else if (active.length === 0) {
         setMessages([{ id: 'welcome', type: 'ai', content: getWelcomeMessage(), timestamp: new Date() }]);
       }
     }
@@ -290,6 +310,88 @@ const ChatbotPage = () => {
       return next;
     });
     toast({ title: "Conversation deleted" });
+  };
+
+  const switchAfterArchive = (archivedId: string, guestArchiveSet = guestArchivedIds) => {
+    if (currentConversationId !== archivedId) return;
+    const active = conversations.filter(
+      (c) =>
+        c.id !== archivedId &&
+        !isConversationArchived(c.id, c.archived_at, guestArchiveSet),
+    );
+    if (active.length > 0) {
+      void loadConversation(active[0].id);
+    } else {
+      resetToNewChat();
+    }
+  };
+
+  const handleArchiveConversation = async (conversationId: string) => {
+    const archivedAt = new Date().toISOString();
+
+    if (isGuestConversationId(conversationId)) {
+      const next = new Set(guestArchivedIds);
+      next.add(conversationId);
+      setGuestArchivedIdsState(next);
+      setGuestArchivedIds(next);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, archived_at: archivedAt } : c)),
+      );
+      switchAfterArchive(conversationId, next);
+      toast({ title: "Chat archived", description: "Find it under Archived in history." });
+      return;
+    }
+
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("conversations")
+      .update({ archived_at: archivedAt })
+      .eq("id", conversationId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({ title: "Could not archive", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    setConversations((prev) =>
+      prev.map((c) => (c.id === conversationId ? { ...c, archived_at: archivedAt } : c)),
+    );
+    switchAfterArchive(conversationId);
+    toast({ title: "Chat archived", description: "Find it under Archived in history." });
+  };
+
+  const handleUnarchiveConversation = async (conversationId: string) => {
+    if (isGuestConversationId(conversationId)) {
+      const next = new Set(guestArchivedIds);
+      next.delete(conversationId);
+      setGuestArchivedIdsState(next);
+      setGuestArchivedIds(next);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, archived_at: null } : c)),
+      );
+      toast({ title: "Chat restored", description: "Moved back to your active chats." });
+      return;
+    }
+
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("conversations")
+      .update({ archived_at: null })
+      .eq("id", conversationId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({ title: "Could not restore", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    setConversations((prev) =>
+      prev.map((c) => (c.id === conversationId ? { ...c, archived_at: null } : c)),
+    );
+    toast({ title: "Chat restored", description: "Moved back to your active chats." });
   };
 
   const handleClearAllChats = async () => {
@@ -593,14 +695,21 @@ const ChatbotPage = () => {
                 <ConversationSidebar
                   conversations={conversations}
                   currentConversationId={currentConversationId}
+                  isArchived={conversationIsArchived}
                   onCreateNew={handleNewChat}
                   onSelect={(id) => {
                     loadConversation(id);
                     setShowSidebar(false);
                   }}
                   onDelete={handleDeleteConversation}
+                  onArchive={handleArchiveConversation}
+                  onUnarchive={handleUnarchiveConversation}
                   onClearAll={handleClearAllChats}
                   onClearCurrent={handleClearCurrentChat}
+                  onOpenSettings={() => {
+                    setShowSidebar(false);
+                    navigate("/profile");
+                  }}
                   onClose={() => setShowSidebar(false)}
                 />
               </motion.div>
