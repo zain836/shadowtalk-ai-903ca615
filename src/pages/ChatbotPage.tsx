@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
@@ -44,6 +44,9 @@ import {
   isConversationArchived,
   setGuestArchivedIds,
 } from "@/lib/chatArchive";
+import { CHAT_COMMAND_NAV_ROUTES } from "@/lib/chatCommandRoutes";
+import { useChatSpeech } from "@/hooks/useChatSpeech";
+import { OfflineToolsPanel } from "@/components/chat/OfflineToolsPanel";
 import { useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
 // Types
 interface Message { 
@@ -96,8 +99,7 @@ const ChatbotPage = () => {
   const [aiProvider, setAiProvider] = useState<AIProvider>("lovable");
   const [showSidebar, setShowSidebar] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
+  const { isSpeaking, speakingMessageId, speakMessage } = useChatSpeech();
   const [selectedFile, setSelectedFile] = useState<{ type: 'image' | 'file'; data: string; name: string; mimeType: string } | null>(null);
   
   // Modals
@@ -108,6 +110,7 @@ const ChatbotPage = () => {
   const [showShadowBrowser, setShowShadowBrowser] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showMissionControl, setShowMissionControl] = useState(false);
+  const [showOfflineTools, setShowOfflineTools] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const [guestArchivedIds, setGuestArchivedIdsState] = useState<Set<string>>(() =>
     getGuestArchivedIds(),
@@ -464,26 +467,23 @@ const ChatbotPage = () => {
     return data;
   };
 
-  const handleSendMessage = async () => {
-    if ((!message.trim() && !selectedFile) || isLoading) return;
+  const runChatCompletion = useCallback(
+    async (
+      chatMessages: Array<{ role: string; content: string }>,
+      conversationId: string,
+    ) => {
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
 
-    const conversationId = user ? await ensureConversation() : currentConversationId;
-    if (!conversationId) return;
-
-    const msgContent = message;
-    const userMessage: Message = { id: crypto.randomUUID(), type: "user", content: msgContent, timestamp: new Date(), attachment: selectedFile || undefined };
-    setMessages(prev => [...prev, userMessage]);
-    setMessage(""); setSelectedFile(null); setIsLoading(true);
-    if (user) await saveMessage(msgContent, 'user', conversationId);
-
-    try {
       const { data: { session } } = await supabase.auth.getSession();
-      const chatMessages = messages.filter(m => m.id !== 'welcome').map(m => ({ role: m.type === "user" ? "user" : "assistant", content: m.content }));
-      chatMessages.push({ role: "user", content: msgContent });
-
       const resp = await fetch(CHAT_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        signal: controller.signal,
         body: stringifyChatBody({
           messages: chatMessages,
           personality,
@@ -526,30 +526,140 @@ const ChatbotPage = () => {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        const lines = chunk.split("\n");
         for (const line of lines) {
-          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          if (line.startsWith("data: ") && line !== "data: [DONE]") {
             try {
               const data = JSON.parse(line.slice(6));
               const delta = data.choices?.[0]?.delta?.content;
               if (delta) {
                 assistantContent += delta;
-                setMessages(prev => {
-                  const exists = prev.find(m => m.id === aiMessageId);
-                  if (exists) return prev.map(m => m.id === aiMessageId ? { ...m, content: assistantContent } : m);
-                  return [...prev, { id: aiMessageId, type: 'ai', content: assistantContent, timestamp: new Date() }];
+                setMessages((prev) => {
+                  const exists = prev.find((m) => m.id === aiMessageId);
+                  if (exists) {
+                    return prev.map((m) =>
+                      m.id === aiMessageId ? { ...m, content: assistantContent } : m,
+                    );
+                  }
+                  return [
+                    ...prev,
+                    { id: aiMessageId, type: "ai", content: assistantContent, timestamp: new Date() },
+                  ];
                 });
               }
-            } catch {}
+            } catch {
+              /* ignore malformed SSE chunk */
+            }
           }
         }
       }
-      if (assistantContent && user) await saveMessage(assistantContent, 'assistant', conversationId);
+
+      if (assistantContent && user) {
+        await saveMessage(assistantContent, "assistant", conversationId);
+      }
+    },
+    [aiConfig.preferredProvider, aiConfig.useCustomKey, chatMode, personality, user],
+  );
+
+  const handleStopGeneration = () => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsLoading(false);
+    toast({ title: "Stopped", description: "Generation cancelled." });
+  };
+
+  const handleEditMessage = async (index: number, newContent: string) => {
+    const trimmed = newContent.trim();
+    if (!trimmed) return;
+    const target = messages[index];
+    if (!target || target.type !== "user") return;
+
+    setMessages((prev) =>
+      prev.map((m, i) => (i === index ? { ...m, content: trimmed } : m)),
+    );
+
+    if (user && currentConversationId && !isGuestConversationId(currentConversationId)) {
+      await supabase
+        .from("messages")
+        .update({ content: trimmed })
+        .eq("id", target.id)
+        .eq("user_id", user.id);
+    }
+    toast({ title: "Message updated" });
+  };
+
+  const handleRegenerateMessage = async (index: number) => {
+    const target = messages[index];
+    if (!target || target.type !== "ai" || isLoading) return;
+
+    const prior = messages.slice(0, index);
+    const chatMessages = prior
+      .filter((m) => m.id !== "welcome")
+      .map((m) => ({
+        role: m.type === "user" ? "user" : "assistant",
+        content: m.content,
+      }));
+
+    if (chatMessages.length === 0) return;
+
+    const conversationId = user ? await ensureConversation() : currentConversationId;
+    if (!conversationId) return;
+
+    setMessages(prior);
+    setIsLoading(true);
+
+    try {
+      await runChatCompletion(chatMessages, conversationId);
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      const msg = err instanceof Error ? err.message : "Regeneration failed.";
+      toast({ title: "Regeneration failed", description: msg, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if ((!message.trim() && !selectedFile) || isLoading) return;
+
+    const conversationId = user ? await ensureConversation() : currentConversationId;
+    if (!conversationId) return;
+
+    const msgContent = message;
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      type: "user",
+      content: msgContent,
+      timestamp: new Date(),
+      attachment: selectedFile || undefined,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setMessage("");
+    setSelectedFile(null);
+    setIsLoading(true);
+    if (user) await saveMessage(msgContent, "user", conversationId);
+
+    const chatMessages = messages
+      .filter((m) => m.id !== "welcome")
+      .map((m) => ({
+        role: m.type === "user" ? "user" : "assistant",
+        content: m.content,
+      }));
+    chatMessages.push({ role: "user", content: msgContent });
+
+    try {
+      await runChatCompletion(chatMessages, conversationId);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       const msg = err instanceof Error ? err.message : "Error connecting to chat service.";
       toast({ title: "Message failed", description: msg, variant: "destructive" });
-      setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: msg, timestamp: new Date() }]);
-    } finally { setIsLoading(false); }
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), type: "ai", content: msg, timestamp: new Date() },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (authLoading) {
@@ -599,6 +709,13 @@ const ChatbotPage = () => {
 
   const handleCommandAction = (action: string) => {
     setShowCommandPalette(false);
+
+    const navPath = CHAT_COMMAND_NAV_ROUTES[action];
+    if (navPath) {
+      navigate(navPath);
+      return;
+    }
+
     switch (action) {
       case "new-chat":
         handleNewChat();
@@ -615,21 +732,41 @@ const ChatbotPage = () => {
       case "browser":
         setShowShadowBrowser(true);
         return;
-      case "analytics":
-        navigate("/analytics");
-        return;
-      case "custom-instructions":
-      case "gemini-analytics":
-        navigate("/profile");
-        return;
       case "missions":
+      case "agentic":
+      case "cognitive-loop":
         setShowMissionControl(true);
         return;
-      case "vault":
-        navigate("/vault");
+      case "offline-tools":
+      case "offline":
+        setShowOfflineTools(true);
+        return;
+      case "vision":
+        setShowCommandPalette(true);
+        return;
+      case "bunker": {
+        const enabled = localStorage.getItem("shadowtalk_bunker_mode") === "true";
+        localStorage.setItem("shadowtalk_bunker_mode", enabled ? "false" : "true");
+        window.dispatchEvent(
+          new CustomEvent("shadowtalk-bunker-changed", { detail: { enabled: !enabled } }),
+        );
+        toast({
+          title: !enabled ? "Bunker mode enabled" : "Bunker mode disabled",
+          description: !enabled
+            ? "Background model downloads can run when configured in Profile."
+            : "Background downloads paused.",
+        });
+        return;
+      }
+      case "wordle":
+        setMessage("Let's play Wordle — pick a 5-letter word and give me hints.");
+        toast({ title: "Wordle", description: "Prompt added to the chat input." });
         return;
       default:
-        return;
+        toast({
+          title: "Try the chat tools menu",
+          description: "Open Tools (⊞) in the header for more actions.",
+        });
     }
   };
 
@@ -642,7 +779,7 @@ const ChatbotPage = () => {
     isListening,
     onToggleVoice: () => setShowShadowTalkLive(true),
     onOpenImageGenerator: () => setShowImageGenerator(true),
-    onStopGeneration: () => {},
+    onStopGeneration: handleStopGeneration,
     selectedFile,
     onFileSelect: setSelectedFile,
     chatMode,
@@ -710,6 +847,10 @@ const ChatbotPage = () => {
                     setShowSidebar(false);
                     navigate("/profile");
                   }}
+                  onOpenWorkspace={() => {
+                    setShowSidebar(false);
+                    navigate("/workspace");
+                  }}
                   onClose={() => setShowSidebar(false)}
                 />
               </motion.div>
@@ -744,6 +885,7 @@ const ChatbotPage = () => {
             onOpenGeminiAnalytics={() => navigate("/profile")}
             onOpenCanvas={() => navigate("/workspace")}
             onOpenDeepResearch={() => setShowDeepResearch(true)}
+            onOpenGoogleIntegration={() => navigate("/profile?tab=linked")}
             onOpenAgenticRunner={() => setShowMissionControl(true)}
             onOpenVisualReasoning={() => setShowCommandPalette(true)}
             onOpenCreativeSynthesis={() => navigate("/studio")}
@@ -793,12 +935,24 @@ const ChatbotPage = () => {
                     speakingMessageId={speakingMessageId}
                     isSpeaking={isSpeaking}
                     onSelectPrompt={setMessage}
-                    onEdit={() => {}}
-                    onRegenerate={() => {}}
-                    onTextToSpeech={() => {}}
-                    onOpenCodeCanvas={() => {}}
-                    onOpenIDE={() => {}}
-                    onOpenInBrowser={() => { setShowShadowBrowser(true); }}
+                    onEdit={handleEditMessage}
+                    onRegenerate={handleRegenerateMessage}
+                    onTextToSpeech={speakMessage}
+                    onOpenCodeCanvas={(code) => {
+                      setMessage(`\`\`\`\n${code}\n\`\`\``);
+                      navigate("/workspace");
+                    }}
+                    onOpenIDE={(code, language) => {
+                      sessionStorage.setItem(
+                        "shadowtalk_ide_payload",
+                        JSON.stringify({ code, language }),
+                      );
+                      navigate("/workspace");
+                    }}
+                    onOpenInBrowser={(url) => {
+                      if (url) window.open(url, "_blank", "noopener,noreferrer");
+                      else setShowShadowBrowser(true);
+                    }}
                     messagesEndRef={messagesEndRef}
                     layout="gemini"
                   />
@@ -818,6 +972,17 @@ const ChatbotPage = () => {
         </div>
       {showImageGenerator && <ImageGenerator onClose={() => setShowImageGenerator(false)} onImageGenerated={(url) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: '🎨 Generated image', timestamp: new Date(), imageUrl: url }])} />}
       {showDeepResearch && <DeepResearchPanel isOpen={showDeepResearch} onClose={() => setShowDeepResearch(false)} onInsertToChat={(c) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: c, timestamp: new Date() }])} />}
+      {showOfflineTools && (
+        <OfflineToolsPanel
+          isOpen={showOfflineTools}
+          onClose={() => setShowOfflineTools(false)}
+          onInsertToChat={(text) => {
+            setMessage(text);
+            setShowOfflineTools(false);
+            toast({ title: "Inserted into chat", description: "Edit the prompt and send when ready." });
+          }}
+        />
+      )}
       <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} onAction={handleCommandAction} />
       {showMissionControl && (
         <MissionControl

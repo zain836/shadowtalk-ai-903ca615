@@ -1,6 +1,7 @@
 import { Code, Wifi, Brain, Shield, Zap, Download, ArrowUpRight, Bot, Target } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { BRAND } from "@/lib/brand";
 
 const cardVariants = {
@@ -33,6 +34,7 @@ const statVariants = {
 };
 
 const FeaturesSection = () => {
+  const navigate = useNavigate();
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
 
@@ -40,6 +42,7 @@ const FeaturesSection = () => {
     {
       icon: Bot,
       title: "Agentic Task Runner",
+      href: "/missioncontrol",
       description: "Give a goal — ShadowTalk plans steps, runs tools, and delivers results with human-in-the-loop approval when you want it.",
       gradient: "from-primary/20 to-primary/5",
       iconColor: "text-primary",
@@ -48,6 +51,7 @@ const FeaturesSection = () => {
     {
       icon: Target,
       title: "Mission Control",
+      href: "/missioncontrol",
       description: "Launch autonomous missions that research, draft, and execute multi-step workflows while you focus on what matters.",
       gradient: "from-secondary/20 to-secondary/5",
       iconColor: "text-secondary",
@@ -56,6 +60,7 @@ const FeaturesSection = () => {
     {
       icon: Zap,
       title: "30+ Tool Orchestration",
+      href: "/chatbot",
       description: "Natural language triggers code, research, calendar, vault, and more — no manual tool-switching.",
       gradient: "from-accent/20 to-accent/5",
       iconColor: "text-accent",
@@ -64,6 +69,7 @@ const FeaturesSection = () => {
     {
       icon: Brain,
       title: "Multi-Model AI Chat",
+      href: "/chatbot",
       description: "Gemini, GPT-class models, and specialized modes in one workspace — context-aware conversations for any task.",
       gradient: "from-warning/20 to-warning/5",
       iconColor: "text-warning",
@@ -72,6 +78,7 @@ const FeaturesSection = () => {
     {
       icon: Code,
       title: "Code Generator",
+      href: "/workspace",
       description: "Generate, debug, and optimize code in any programming language with an in-browser IDE.",
       gradient: "from-destructive/20 to-destructive/5",
       iconColor: "text-destructive",
@@ -80,6 +87,7 @@ const FeaturesSection = () => {
     {
       icon: Shield,
       title: "Privacy-Aware by Design",
+      href: "/vault",
       description: "Encrypted vault, privacy score, and optional on-device Gemma inference when you need data to stay local.",
       gradient: "from-success/20 to-success/5",
       iconColor: "text-success",
@@ -88,6 +96,7 @@ const FeaturesSection = () => {
     {
       icon: Wifi,
       title: "Optional On-Device AI",
+      href: "/profile?tab=preferences",
       description: "Opt in to download Gemma and run offline via WebGPU on Chrome/Edge — your choice, not a requirement.",
       gradient: "from-primary/10 to-secondary/5",
       iconColor: "text-primary",
@@ -96,6 +105,7 @@ const FeaturesSection = () => {
     {
       icon: Download,
       title: "Export Everything",
+      href: "/chatbot",
       description: "Download chats, code, agent outputs, and scripts in multiple formats.",
       gradient: "from-muted/30 to-muted/10",
       iconColor: "text-muted-foreground",
@@ -166,6 +176,15 @@ const FeaturesSection = () => {
                 y: -8,
                 scale: 1.02,
                 transition: { type: "spring", stiffness: 400, damping: 20 },
+              }}
+              role="button"
+              tabIndex={0}
+              onClick={() => feature.href && navigate(feature.href)}
+              onKeyDown={(e) => {
+                if ((e.key === "Enter" || e.key === " ") && feature.href) {
+                  e.preventDefault();
+                  navigate(feature.href);
+                }
               }}
               className={`bento-item group cursor-pointer ${feature.span}`}
             >

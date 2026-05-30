@@ -198,6 +198,8 @@ const App = () => {
   const [cmdOpen, setCmdOpen] = useState(false);
 
   useEffect(() => {
+    import("@/lib/shadowMode").then(({ initShadowMode }) => initShadowMode());
+
     // Check if user has seen boot screen this session
     const hasSeenBoot = sessionStorage.getItem('shadowtalk-booted');
     if (hasSeenBoot) {

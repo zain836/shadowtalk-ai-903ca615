@@ -12,23 +12,25 @@ import {
   Image as ImageIcon,
   FileText
 } from "lucide-react";
-
 const PressPage = () => {
   const pressReleases = [
     {
       date: "January 15, 2026",
       title: "ShadowTalk AI Launches Revolutionary Offline Mode",
-      excerpt: "New feature allows users to run powerful AI models entirely on their devices without internet connection."
+      excerpt: "New feature allows users to run powerful AI models entirely on their devices without internet connection.",
+      mailSubject: "Press inquiry: Offline Mode launch",
     },
     {
       date: "January 1, 2026",
       title: "ShadowTalk AI Achieves 23 Enterprise Customers in First 24 Hours",
-      excerpt: "SocialSync automation platform demonstrates unprecedented growth in the Pakistani market."
+      excerpt: "SocialSync automation platform demonstrates unprecedented growth in the Pakistani market.",
+      mailSubject: "Press inquiry: Enterprise growth",
     },
     {
       date: "December 15, 2025",
       title: "17-Year-Old Developer Launches AI Platform from Karachi",
-      excerpt: "Zain Ahmed's vision for 'Intelligence without Internet' gains traction with bootstrapped startup."
+      excerpt: "Zain Ahmed's vision for 'Intelligence without Internet' gains traction with bootstrapped startup.",
+      mailSubject: "Press inquiry: Founder story",
     }
   ];
 
@@ -36,19 +38,26 @@ const PressPage = () => {
     {
       outlet: "TechCrunch Pakistan",
       title: "The Rise of Sovereign AI: ShadowTalk's Bold Bet",
-      date: "January 2026"
+      date: "January 2026",
+      url: "https://shadowtalk-ai.com/blog",
     },
     {
       outlet: "Dawn Tech",
       title: "Young Entrepreneur Building AI for Pakistan",
-      date: "December 2025"
+      date: "December 2025",
+      url: "/about",
     },
     {
       outlet: "Express Tribune",
       title: "Governor IT Initiative Backs ShadowTalk AI",
-      date: "December 2025"
+      date: "December 2025",
+      url: "/press",
     }
   ];
+
+  const openPressInquiry = (subject: string) => {
+    window.location.href = `mailto:shadowtalk68@gmail.com?subject=${encodeURIComponent(subject)}`;
+  };
 
   const brandAssets = [
     { name: "Logo (SVG)", type: "Vector", size: "12 KB" },
@@ -89,7 +98,11 @@ const PressPage = () => {
           <h2 className="text-2xl font-bold mb-8">Press Releases</h2>
           <div className="space-y-4">
             {pressReleases.map((release, index) => (
-              <Card key={index} className="hover:border-primary/50 transition-colors cursor-pointer group">
+              <Card
+                key={index}
+                className="hover:border-primary/50 transition-colors cursor-pointer group"
+                onClick={() => openPressInquiry(release.mailSubject)}
+              >
                 <CardContent className="p-6">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                     <Calendar className="h-4 w-4" />
@@ -99,6 +112,7 @@ const PressPage = () => {
                     {release.title}
                   </h3>
                   <p className="text-muted-foreground">{release.excerpt}</p>
+                  <p className="text-xs text-primary mt-3">Contact press →</p>
                 </CardContent>
               </Card>
             ))}
@@ -112,7 +126,17 @@ const PressPage = () => {
           <h2 className="text-2xl font-bold mb-8">In the News</h2>
           <div className="grid md:grid-cols-3 gap-6">
             {mediaFeatures.map((feature, index) => (
-              <Card key={index} className="hover:border-primary/50 transition-colors cursor-pointer group">
+              <Card
+                key={index}
+                className="hover:border-primary/50 transition-colors cursor-pointer group"
+                onClick={() => {
+                  if (feature.url.startsWith("http")) {
+                    window.open(feature.url, "_blank", "noopener,noreferrer");
+                  } else {
+                    window.location.assign(feature.url);
+                  }
+                }}
+              >
                 <CardContent className="p-6">
                   <Badge variant="outline" className="mb-3">{feature.outlet}</Badge>
                   <h3 className="font-bold mb-2 group-hover:text-primary transition-colors line-clamp-2">

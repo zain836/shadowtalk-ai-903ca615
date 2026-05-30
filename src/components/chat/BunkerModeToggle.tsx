@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -76,6 +76,17 @@ export const BunkerModeToggle: React.FC<BunkerModeToggleProps> = ({ className })
 
   const [showConsentDialog, setShowConsentDialog] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const onBunkerChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ enabled: boolean }>).detail;
+      if (typeof detail?.enabled === "boolean") {
+        enableBunkerMode(detail.enabled);
+      }
+    };
+    window.addEventListener("shadowtalk-bunker-changed", onBunkerChanged);
+    return () => window.removeEventListener("shadowtalk-bunker-changed", onBunkerChanged);
+  }, [enableBunkerMode]);
 
   const handleToggle = (enabled: boolean) => {
     if (enabled && !bunkerMode) {

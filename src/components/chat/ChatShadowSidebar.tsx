@@ -13,8 +13,9 @@ import {
   History,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { getShadowModeEnabled, setShadowModeEnabled } from "@/lib/shadowMode";
 
 const NAV = [
   { label: "Chat", icon: MessageSquare, to: "/chatbot", end: true },
@@ -41,7 +42,11 @@ export function ChatShadowSidebar({
   onOpenHistory,
 }: ChatShadowSidebarProps) {
   const navigate = useNavigate();
-  const [shadowMode, setShadowMode] = useState(true);
+  const [shadowMode, setShadowMode] = useState(() => getShadowModeEnabled());
+
+  useEffect(() => {
+    setShadowModeEnabled(shadowMode);
+  }, [shadowMode]);
 
   return (
     <aside className="hidden md:flex w-[240px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar relative z-30">
