@@ -85,6 +85,57 @@ export function useStatusMonitors() {
   return { monitors, isLoading };
 }
 
+export interface CommunityEvent {
+  id: string;
+  date: string;
+  title: string;
+  type: string;
+  description: string;
+  live: boolean;
+}
+
+export function useCommunityEvents() {
+  const [events, setEvents] = useState<CommunityEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from("announcements")
+        .select("id, title, message, type, starts_at, ends_at, is_active")
+        .eq("is_active", true)
+        .in("type", ["event", "community", "workshop"])
+        .or(`ends_at.is.null,ends_at.gte.${now}`)
+        .order("starts_at", { ascending: true })
+        .limit(6);
+
+      if (data && !error) {
+        setEvents(
+          data.map((row) => {
+            const start = new Date(row.starts_at);
+            const live =
+              start.getTime() <= Date.now() &&
+              (!row.ends_at || new Date(row.ends_at).getTime() >= Date.now());
+            return {
+              id: row.id,
+              date: start.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+              title: row.title,
+              type: row.type.charAt(0).toUpperCase() + row.type.slice(1),
+              description: row.message,
+              live,
+            };
+          })
+        );
+      }
+      setIsLoading(false);
+    };
+    load();
+  }, []);
+
+  return { events, isLoading };
+}
+
 export function useDocsPages() {
   const [pages, setPages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);

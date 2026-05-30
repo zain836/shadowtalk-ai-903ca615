@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Zap, Users, Star, Gift, TrendingUp, Award,
-  Share2, Crown, ChevronRight, Sparkles, Target,
-  Copy, Check, DollarSign, Rocket
+  Zap, Users, Star, Gift, TrendingUp,
+  Copy, Check, Rocket, Loader2
 } from "lucide-react";
+import { usePowerReferrers } from "@/hooks/usePowerReferrers";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,17 +12,6 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/AuthProvider";
-
-interface PowerUser {
-  id: string;
-  name: string;
-  sessions: number;
-  tier: "bronze" | "silver" | "gold" | "platinum";
-  referrals: number;
-  potentialReach: number;
-  bonusCredits: number;
-  status: "identified" | "offered" | "active" | "champion";
-}
 
 interface ReferralOffer {
   id: string;
@@ -40,15 +29,6 @@ const tierConfig = {
   gold: { color: "text-yellow-400", bg: "bg-yellow-400/10", border: "border-yellow-400/20", label: "Gold" },
   platinum: { color: "text-purple-400", bg: "bg-purple-400/10", border: "border-purple-400/20", label: "Platinum" },
 };
-
-const mockPowerUsers: PowerUser[] = [
-  { id: "1", name: "Alex K.", sessions: 87, tier: "platinum", referrals: 12, potentialReach: 2400, bonusCredits: 500, status: "champion" },
-  { id: "2", name: "Sara M.", sessions: 72, tier: "gold", referrals: 8, potentialReach: 1800, bonusCredits: 350, status: "active" },
-  { id: "3", name: "James L.", sessions: 65, tier: "gold", referrals: 5, potentialReach: 1200, bonusCredits: 300, status: "offered" },
-  { id: "4", name: "Priya R.", sessions: 58, tier: "silver", referrals: 3, potentialReach: 950, bonusCredits: 200, status: "identified" },
-  { id: "5", name: "Omar H.", sessions: 54, tier: "silver", referrals: 2, potentialReach: 780, bonusCredits: 200, status: "identified" },
-  { id: "6", name: "Liu W.", sessions: 51, tier: "bronze", referrals: 1, potentialReach: 520, bonusCredits: 150, status: "identified" },
-];
 
 const referralOffers: ReferralOffer[] = [
   {
@@ -89,13 +69,15 @@ const statusColors: Record<string, string> = {
 
 export const AutonomousReferralEngine = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  useAuth();
+  const { referrers: powerUsers, isLoading } = usePowerReferrers();
   const [copied, setCopied] = useState<string | null>(null);
   const [activatedOffers, setActivatedOffers] = useState<Set<string>>(new Set());
 
-  const totalPotentialReach = mockPowerUsers.reduce((sum, u) => sum + u.potentialReach, 0);
-  const activeReferrers = mockPowerUsers.filter(u => u.status === "active" || u.status === "champion").length;
-  const totalReferrals = mockPowerUsers.reduce((sum, u) => sum + u.referrals, 0);
+  const totalPotentialReach = powerUsers.reduce((sum, u) => sum + u.potentialReach, 0);
+  const activeReferrers = powerUsers.filter((u) => u.status === "active" || u.status === "champion").length;
+  const totalReferrals = powerUsers.reduce((sum, u) => sum + u.referrals, 0);
+  const powerUserTotal = Math.max(powerUsers.length, 1);
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(`${window.location.origin}?ref=${code}`);
@@ -131,7 +113,7 @@ export const AutonomousReferralEngine = () => {
             </div>
             <div className="flex items-center gap-6">
               <div className="text-center">
-                <p className="text-2xl font-bold text-primary">{mockPowerUsers.length}</p>
+                <p className="text-2xl font-bold text-primary">{isLoading ? "…" : powerUsers.length}</p>
                 <p className="text-xs text-muted-foreground">Power Users</p>
               </div>
               <Separator orientation="vertical" className="h-10" />
@@ -163,7 +145,17 @@ export const AutonomousReferralEngine = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {mockPowerUsers.map((powerUser, i) => {
+              {isLoading && (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {!isLoading && powerUsers.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No referrers yet. Data appears here from <code className="text-xs">user_referral_codes</code> and conversation activity.
+                </p>
+              )}
+              {powerUsers.map((powerUser, i) => {
                 const tier = tierConfig[powerUser.tier];
                 return (
                   <motion.div
@@ -200,10 +192,10 @@ export const AutonomousReferralEngine = () => {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => copyCode(`PU-${powerUser.id}`)}
+                        onClick={() => copyCode(powerUser.referralCode)}
                         className="opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        {copied === `PU-${powerUser.id}` ? (
+                        {copied === powerUser.referralCode ? (
                           <Check className="h-4 w-4 text-green-400" />
                         ) : (
                           <Copy className="h-4 w-4" />
@@ -287,10 +279,10 @@ export const AutonomousReferralEngine = () => {
         <CardContent>
           <div className="space-y-4">
             {[
-              { label: "Identified Power Users", count: mockPowerUsers.length, total: mockPowerUsers.length, color: "bg-blue-500" },
-              { label: "Offers Sent", count: mockPowerUsers.filter(u => u.status !== "identified").length, total: mockPowerUsers.length, color: "bg-yellow-500" },
-              { label: "Active Referrers", count: activeReferrers, total: mockPowerUsers.length, color: "bg-green-500" },
-              { label: "Champions", count: mockPowerUsers.filter(u => u.status === "champion").length, total: mockPowerUsers.length, color: "bg-purple-500" },
+              { label: "Identified Power Users", count: powerUsers.length, total: powerUserTotal, color: "bg-blue-500" },
+              { label: "Offers Sent", count: powerUsers.filter((u) => u.status !== "identified").length, total: powerUserTotal, color: "bg-yellow-500" },
+              { label: "Active Referrers", count: activeReferrers, total: powerUserTotal, color: "bg-green-500" },
+              { label: "Champions", count: powerUsers.filter((u) => u.status === "champion").length, total: powerUserTotal, color: "bg-purple-500" },
             ].map((stage) => (
               <div key={stage.label} className="space-y-1">
                 <div className="flex items-center justify-between text-sm">
@@ -318,13 +310,13 @@ export const AutonomousReferralEngine = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-green-400">
-                {Math.round((activeReferrers / mockPowerUsers.length) * 100)}%
+                {powerUsers.length ? Math.round((activeReferrers / powerUsers.length) * 100) : 0}%
               </p>
               <p className="text-xs text-muted-foreground">Activation Rate</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-orange-400">
-                ${mockPowerUsers.reduce((sum, u) => sum + u.bonusCredits, 0).toLocaleString()}
+                {powerUsers.reduce((sum, u) => sum + u.bonusCredits, 0).toLocaleString()} credits
               </p>
               <p className="text-xs text-muted-foreground">Credits Allocated</p>
             </div>

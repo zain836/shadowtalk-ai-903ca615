@@ -1,6 +1,7 @@
-import { HelpCircle, Mail, MessageCircle, ArrowRight } from "lucide-react";
+import { HelpCircle, Mail, MessageCircle, Loader2 } from "lucide-react";
 import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
+import { useFAQItems } from "@/hooks/useCMSContent";
 import {
   Accordion,
   AccordionContent,
@@ -25,60 +26,26 @@ const faqVariants = {
 const FAQSection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
+  const { items: dbItems, isLoading } = useFAQItems();
 
-  const faqs = [
-    {
-      question: "What is agentic AI in ShadowTalk?",
-      answer: "Agentic AI means you give a goal and ShadowTalk plans multi-step work, runs integrated tools (research, code, calendar, vault, and more), and reports back — with optional human approval before each action. Use the Agentic Task Runner or Mission Control from the chat workspace.",
-      category: "General",
-    },
-    {
-      question: "How does the AI chatbot work?",
-      answer: "Chat uses cloud models (Gemini and others) by default for power and speed. You can also trigger 30+ tools from natural language, open the Agentic Task Runner, or switch to optional on-device Gemma when you've downloaded it in Settings.",
-      category: "General",
-    },
-    {
-      question: "Can I use it offline?",
-      answer: "Yes, optionally. Download the Gemma on-device model in Settings → On-Device AI to run inference locally via WebGPU (best on Chrome/Edge). Cloud chat and agents need internet; local mode is opt-in for privacy-sensitive work.",
-      category: "Features",
-    },
-    {
-      question: "Is my data secure and private?",
-      answer: "ShadowTalk is privacy-aware: encrypted Stealth Vault, privacy score tools, and optional on-device AI so sensitive work can stay local. Cloud features process data on secure infrastructure — you control when to use local vs cloud modes.",
-      category: "Security",
-    },
-    {
-      question: "What programming languages does it support?",
-      answer: "Our AI supports all major programming languages including Python, JavaScript, Java, C++, Go, Rust, and many more. It can generate, debug, and optimize code in any language you work with.",
-      category: "Features",
-    },
-    {
-      question: "Can I cancel my subscription anytime?",
-      answer: "Yes, you can cancel your subscription at any time. There are no cancellation fees, and you'll continue to have access to your plan features until the end of your billing period.",
-      category: "Billing",
-    },
-    {
-      question: "Do you offer refunds?",
-      answer: "We offer a 30-day money-back guarantee for all paid plans. If you're not satisfied within the first 30 days, contact our support team for a full refund.",
-      category: "Billing",
-    },
-    {
-      question: "How do I upgrade or downgrade my plan?",
-      answer: "You can change your plan anytime from your account settings. Upgrades take effect immediately, while downgrades apply at the start of your next billing cycle.",
-      category: "Billing",
-    },
-    {
-      question: "Is there an API available?",
-      answer: "Yes! Elite plan users get access to our REST API, allowing you to integrate our AI capabilities into your own applications and workflows.",
-      category: "Features",
-    },
-  ];
+  const faqs = useMemo(
+    () =>
+      dbItems.map((item) => ({
+        question: item.question,
+        answer: item.answer,
+        category:
+          item.category?.charAt(0).toUpperCase() + (item.category?.slice(1) || "general"),
+      })),
+    [dbItems]
+  );
 
   const categoryColors: Record<string, string> = {
     General: "bg-primary/10 text-primary",
     Features: "bg-secondary/10 text-secondary",
     Security: "bg-success/10 text-success",
     Billing: "bg-warning/10 text-warning",
+    Technical: "bg-accent/10 text-accent",
+    Privacy: "bg-success/10 text-success",
   };
 
   return (
@@ -156,6 +123,17 @@ const FAQSection = () => {
 
           {/* Right side - FAQ accordion */}
           <div className="lg:col-span-3">
+            {isLoading && (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {!isLoading && faqs.length === 0 && (
+              <p className="text-sm text-muted-foreground glass-subtle rounded-xl p-6">
+                FAQs are managed in the admin CMS. Visit the full{" "}
+                <a href="/faq" className="text-primary underline">FAQ page</a> or contact support.
+              </p>
+            )}
             <Accordion type="single" collapsible className="space-y-3">
               {faqs.map((faq, index) => (
                 <motion.div

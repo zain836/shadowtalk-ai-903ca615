@@ -8,25 +8,10 @@ import {
 } from "lucide-react";
 import { useStatusMonitors } from "@/hooks/useCMSContent";
 
-// Honest beta-stage placeholders. We are not yet running an external uptime
-// monitor (e.g. UptimeRobot / Better Uptime) — until we are, we display
-// "Monitoring not yet enabled" instead of fabricated uptime percentages.
-// Real numbers will replace these once a public status monitor is wired up.
-const FALLBACK_SERVICES = [
-  { service_name: "API Gateway", status: "operational", uptime_percentage: null },
-  { service_name: "Chat Service", status: "operational", uptime_percentage: null },
-  { service_name: "Authentication", status: "operational", uptime_percentage: null },
-  { service_name: "Database", status: "operational", uptime_percentage: null },
-  { service_name: "AI Processing", status: "operational", uptime_percentage: null },
-  { service_name: "File Storage", status: "operational", uptime_percentage: null },
-  { service_name: "Real-time Sync", status: "operational", uptime_percentage: null },
-  { service_name: "CDN", status: "operational", uptime_percentage: null },
-];
-
 const StatusPage = () => {
   const { monitors: dbMonitors, isLoading } = useStatusMonitors();
   
-  const services = dbMonitors.length > 0 ? dbMonitors : FALLBACK_SERVICES;
+  const services = dbMonitors;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -47,9 +32,12 @@ const StatusPage = () => {
     }
   };
 
-  const overallStatus = services.every(s => s.status === "operational") 
-    ? "All Systems Operational" 
-    : "Some Systems Affected";
+  const overallStatus =
+    services.length === 0
+      ? "Configure monitors in admin"
+      : services.every((s) => s.status === "operational")
+        ? "All Systems Operational"
+        : "Some Systems Affected";
 
   const monitoredServices = services.filter(s => s.uptime_percentage != null);
   const hasRealUptime = monitoredServices.length > 0;
@@ -84,6 +72,10 @@ const StatusPage = () => {
           <h2 className="text-2xl font-bold mb-8">Service Status</h2>
           {isLoading ? (
             <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          ) : services.length === 0 ? (
+            <p className="text-sm text-muted-foreground glass-subtle rounded-xl p-6">
+              No status monitors are published yet. Add rows in the admin CMS under Status Monitors.
+            </p>
           ) : (
             <Card>
               <CardContent className="p-0 divide-y divide-border">
