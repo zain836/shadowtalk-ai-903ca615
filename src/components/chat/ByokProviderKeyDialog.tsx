@@ -49,7 +49,7 @@ type Props = {
 export function ByokProviderKeyDialog({ open, onOpenChange, provider, onSaved }: Props) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { verifyAndSave, usePlatformDefaultAi, isVerifying, isSaving } = useCustomApiKeys();
+  const { verifyAndSave, switchToPlatformDefault, isVerifying, isSaving } = useCustomApiKeys();
   const [apiKey, setApiKey] = useState("");
   const [model, setModel] = useState("");
   const [testing, setTesting] = useState(false);
@@ -101,7 +101,7 @@ export function ByokProviderKeyDialog({ open, onOpenChange, provider, onSaved }:
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Key validation failed");
 
-      await usePlatformDefaultAi();
+      await switchToPlatformDefault();
       saveCustomAiConfig({
         ...loadCustomAiConfig(),
         provider: toCustomAiProviderId(byok),

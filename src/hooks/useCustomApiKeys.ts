@@ -188,7 +188,7 @@ export function useCustomApiKeys() {
     [toast, refresh],
   );
 
-  const usePlatformDefaultAi = useCallback(async () => {
+  const switchToPlatformDefault = useCallback(async () => {
     setAiConfig(DEFAULT_AI_CONFIG);
     if (!user) return true;
     try {
@@ -247,7 +247,7 @@ export function useCustomApiKeys() {
     verifyAndSave,
     removeKey,
     setDefault,
-    usePlatformDefaultAi,
+    switchToPlatformDefault,
     refresh,
   };
 }

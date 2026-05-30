@@ -93,7 +93,7 @@ const ChatbotPage = () => {
   const { getOfflineSession } = useOfflineAuth();
   const toolOrchestrator = useToolOrchestrator();
   const gemmaOffline = useGemmaOffline();
-  const { aiConfig, hasVerifiedKey, keys, usePlatformDefaultAi, setDefault, refresh: refreshApiKeys } =
+  const { aiConfig, hasVerifiedKey, keys, switchToPlatformDefault, setDefault, refresh: refreshApiKeys } =
     useCustomApiKeys();
   
   // State
@@ -145,7 +145,7 @@ const ChatbotPage = () => {
   const handleProviderChange = useCallback(
     async (next: AIProvider) => {
       if (next === "lovable") {
-        await usePlatformDefaultAi();
+        await switchToPlatformDefault();
         saveCustomAiConfig({ ...loadCustomAiConfig(), usePlatformDefault: true, apiKey: "" });
         setAiProvider("lovable");
         return;
@@ -163,7 +163,7 @@ const ChatbotPage = () => {
         await setDefault(serverId);
       }
     },
-    [keys, setDefault, usePlatformDefaultAi],
+    [keys, setDefault, switchToPlatformDefault],
   );
 
   const handleByokSaved = useCallback(
