@@ -10,6 +10,8 @@ import { formatTractionDaily, formatTractionUsers } from "@/lib/formatMetrics";
 import { useLandingMotion } from "@/hooks/use-landing-motion";
 import LandingAmbientOrb from "@/components/landing/LandingAmbientOrb";
 import RotatingHookText from "@/components/landing/RotatingHookText";
+import { StealthKillSwitch } from "@/components/StealthKillSwitch";
+import { useStealthKillSwitch } from "@/hooks/useStealthKillSwitch";
 
 const floatingOrbAnim = {
   y: [0, -20, 0],
@@ -27,6 +29,7 @@ const HeroSection = () => {
   const { open: openCommandPalette } = useContext(CommandPaletteContext);
   const [showDemo, setShowDemo] = useState(false);
   const metrics = usePlatformMetrics();
+  const { isStealthMode } = useStealthKillSwitch();
   const {
     variants,
     hoverLift,
@@ -208,9 +211,20 @@ const HeroSection = () => {
             )}
           </motion.div>
 
-          <motion.p variants={variants.fadeSlideUp} className="mt-8 text-xs text-muted-foreground/70 max-w-md mx-auto">
-            {LANDING_COPY.founder.line}
-          </motion.p>
+          <motion.div
+            variants={variants.fadeSlideUp}
+            className="mt-8 flex flex-col items-center gap-3 max-w-md mx-auto"
+          >
+            <p className="text-xs text-muted-foreground/70 text-center">{LANDING_COPY.founder.line}</p>
+            <div className="flex flex-col items-center gap-2 glass-subtle rounded-xl px-4 py-3 border border-border/50">
+              <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+                {isStealthMode
+                  ? "Stealth is on — outbound requests are blocked. Use SURFACE in the bar above to reconnect."
+                  : "Block outbound traffic from the browser and switch to the sovereign dark theme."}
+              </p>
+              <StealthKillSwitch />
+            </div>
+          </motion.div>
         </motion.div>
 
         <AnimatePresence>
