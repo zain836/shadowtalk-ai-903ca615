@@ -64,17 +64,18 @@ export const PreferencesTab = () => {
               </div>
               <div>
                 <p className="font-medium text-sm">Theme</p>
-                <p className="text-xs text-muted-foreground">Choose your preferred color scheme</p>
+                <p className="text-xs text-muted-foreground">ShadowTalk uses the sovereign dark brand theme</p>
               </div>
             </div>
-            <Select value={theme} onValueChange={setTheme}>
+            <Select
+              value="dark"
+              onValueChange={() => setTheme("dark")}
+            >
               <SelectTrigger className="w-28 bg-muted/30">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="dark">Dark</SelectItem>
-                <SelectItem value="light">Light</SelectItem>
-                <SelectItem value="system">System</SelectItem>
+                <SelectItem value="dark">ShadowTalk Dark</SelectItem>
               </SelectContent>
             </Select>
           </div>

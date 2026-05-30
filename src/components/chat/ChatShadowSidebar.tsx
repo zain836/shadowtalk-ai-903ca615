@@ -119,7 +119,9 @@ export function ChatShadowSidebar({
 
       <div className="px-5 py-4 border-t border-sidebar-border space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-muted-foreground">Shadow Mode</span>
+          <span className="text-xs font-medium text-muted-foreground" title="Deeper dark sovereign UI">
+            Shadow Mode
+          </span>
           <Switch
             checked={shadowMode}
             onCheckedChange={setShadowMode}
