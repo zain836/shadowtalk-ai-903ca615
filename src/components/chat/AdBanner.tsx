@@ -3,11 +3,13 @@ import { X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useFeatureGating } from '@/hooks/useFeatureGating';
+import { getPlanPsychology, RECOMMENDED_MONTHLY_PLAN } from '@/lib/conversionPsychology';
 
 export const AdBanner: React.FC = () => {
   const navigate = useNavigate();
   const { canAccess } = useFeatureGating();
   const [dismissed, setDismissed] = React.useState(false);
+  const recommended = getPlanPsychology(RECOMMENDED_MONTHLY_PLAN);
 
   // Don't show ads for Pro+ users
   if (canAccess('noAds') || dismissed) return null;
@@ -18,12 +20,20 @@ export const AdBanner: React.FC = () => {
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
           <Sparkles className="h-4 w-4 md:h-5 md:w-5 text-primary shrink-0" />
           <div className="text-xs md:text-sm truncate">
-            <span className="font-medium">Upgrade to Pro</span>
-            <span className="text-muted-foreground hidden sm:inline"> — Remove ads, unlock unlimited messages & advanced features</span>
+            <span className="font-medium">Go {recommended.name} — ${recommended.price}/mo</span>
+            <span className="text-muted-foreground hidden sm:inline">
+              {" "}
+              — Unlimited messages, no ads, {recommended.daily}/day ({recommended.comparison})
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-1 md:gap-2 shrink-0">
-          <Button size="sm" variant="default" onClick={() => navigate('/pricing')} className="text-[10px] md:text-xs h-6 md:h-7 px-2 md:px-3">
+          <Button
+            size="sm"
+            variant="default"
+            onClick={() => navigate(`/founder-access?plan=${RECOMMENDED_MONTHLY_PLAN}`)}
+            className="text-[10px] md:text-xs h-6 md:h-7 px-2 md:px-3"
+          >
             Upgrade Now
           </Button>
           <Button

@@ -96,9 +96,16 @@ export const useFeatureGating = () => {
     if (!feature) return true;
     const hasAccess = canAccess(featureKey);
     if (!hasAccess) {
+      const planLabel = feature.requiredPlan.charAt(0).toUpperCase() + feature.requiredPlan.slice(1);
+      const monthly =
+        feature.requiredPlan === "elite" || feature.requiredPlan === "enterprise"
+          ? 20
+          : feature.requiredPlan === "premium" || feature.requiredPlan === "lifetime"
+            ? 15
+            : 5;
       toast({
-        title: `${feature.requiredPlan.charAt(0).toUpperCase() + feature.requiredPlan.slice(1)} Feature`,
-        description: `${feature.name} requires a ${feature.requiredPlan.charAt(0).toUpperCase() + feature.requiredPlan.slice(1)} plan. Upgrade to remove limits!`,
+        title: `Unlock ${feature.name}`,
+        description: `${planLabel} from $${monthly}/mo — unlimited use, cancel anytime. Open Pricing to compare plans.`,
         variant: "destructive",
       });
     }

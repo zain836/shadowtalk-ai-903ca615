@@ -91,10 +91,10 @@ export function UsageLimitBanner({
               size="sm" 
               className="gap-1"
               variant={isAtLimit ? "default" : "outline"}
-              onClick={() => navigate('/founder-access')}
+              onClick={() => navigate('/founder-access?plan=premium')}
             >
               <Crown className="w-3 h-3" />
-              Upgrade for Unlimited
+              Go Premium — $15/mo
             </Button>
           </div>
         </div>
