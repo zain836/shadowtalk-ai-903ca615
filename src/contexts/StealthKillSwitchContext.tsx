@@ -19,6 +19,10 @@ import {
   saveStealthKillSwitch,
   type StealthKillSwitchPersisted,
 } from "@/lib/stealthKillSwitchStorage";
+import {
+  STEALTH_MAX_RECENT_BLOCKS,
+  type StealthBlockEvent,
+} from "@/lib/stealthTypes";
 
 export interface StealthKillSwitchState {
   isStealthMode: boolean;
@@ -27,6 +31,7 @@ export interface StealthKillSwitchState {
   lastActivated: string | null;
   blockedRequests: number;
   totalBlockedAllTime: number;
+  recentBlocks: StealthBlockEvent[];
   countdownPhase: number;
   activationProgress: number;
   isLoading: boolean;
@@ -35,6 +40,8 @@ export interface StealthKillSwitchState {
 interface StealthKillSwitchContextValue extends StealthKillSwitchState {
   activateStealthMode: () => void;
   deactivateStealthMode: () => void;
+  toggleStealthMode: () => void;
+  clearRecentBlocks: () => void;
 }
 
 const defaultState: StealthKillSwitchState = {
@@ -44,6 +51,7 @@ const defaultState: StealthKillSwitchState = {
   lastActivated: null,
   blockedRequests: 0,
   totalBlockedAllTime: 0,
+  recentBlocks: [],
   countdownPhase: 0,
   activationProgress: 0,
   isLoading: true,
@@ -66,7 +74,10 @@ export function StealthKillSwitchProvider({ children }: { children: ReactNode })
   const { user } = useAuth();
   const blockedCountRef = useRef(0);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stateRef = useRef<StealthKillSwitchState>(defaultState);
   const [state, setState] = useState<StealthKillSwitchState>(defaultState);
+
+  stateRef.current = state;
 
   const syncToBackend = useCallback(
     async (isActive: boolean, lastActivated: string | null, totalBlocked: number) => {
@@ -95,9 +106,13 @@ export function StealthKillSwitchProvider({ children }: { children: ReactNode })
   const engageStealth = useCallback(
     (lastActivated: string, totalBlockedAllTime: number) => {
       blockedCountRef.current = 0;
-      installStealthNetworkGuard(() => {
+      installStealthNetworkGuard((event) => {
         blockedCountRef.current += 1;
-        setState((prev) => ({ ...prev, blockedRequests: blockedCountRef.current }));
+        setState((prev) => ({
+          ...prev,
+          blockedRequests: blockedCountRef.current,
+          recentBlocks: [event, ...prev.recentBlocks].slice(0, STEALTH_MAX_RECENT_BLOCKS),
+        }));
       });
       applyStealthVisuals(true);
       persistLocal({
@@ -112,6 +127,7 @@ export function StealthKillSwitchProvider({ children }: { children: ReactNode })
         lastActivated,
         blockedRequests: 0,
         totalBlockedAllTime,
+        recentBlocks: [],
         countdownPhase: 0,
         activationProgress: 100,
         isLoading: false,
@@ -137,6 +153,7 @@ export function StealthKillSwitchProvider({ children }: { children: ReactNode })
         networkBlocked: false,
         lastActivated,
         blockedRequests: 0,
+        recentBlocks: [],
         totalBlockedAllTime,
         countdownPhase: 0,
         activationProgress: 0,
@@ -226,6 +243,10 @@ export function StealthKillSwitchProvider({ children }: { children: ReactNode })
     }, 800);
   }, [engageStealth]);
 
+  const clearRecentBlocks = useCallback(() => {
+    setState((prev) => ({ ...prev, recentBlocks: [] }));
+  }, []);
+
   const deactivateStealthMode = useCallback(() => {
     setState((prev) => ({ ...prev, isTransitioning: true, activationProgress: 80 }));
 
@@ -242,6 +263,13 @@ export function StealthKillSwitchProvider({ children }: { children: ReactNode })
     }, 800);
   }, [releaseStealth]);
 
+  const toggleStealthMode = useCallback(() => {
+    const prev = stateRef.current;
+    if (prev.isTransitioning || prev.isLoading) return;
+    if (prev.isStealthMode) deactivateStealthMode();
+    else activateStealthMode();
+  }, [activateStealthMode, deactivateStealthMode]);
+
   useEffect(() => {
     return () => {
       if (countdownRef.current) clearInterval(countdownRef.current);
@@ -252,6 +280,8 @@ export function StealthKillSwitchProvider({ children }: { children: ReactNode })
     ...state,
     activateStealthMode,
     deactivateStealthMode,
+    toggleStealthMode,
+    clearRecentBlocks,
   };
 
   return (

@@ -54,6 +54,25 @@ vi.mock('@/hooks/useOfflineAuth', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useStealthKillSwitch', () => ({
+  useStealthKillSwitch: () => ({
+    isStealthMode: false,
+    isTransitioning: false,
+    networkBlocked: false,
+    lastActivated: null,
+    blockedRequests: 0,
+    totalBlockedAllTime: 0,
+    recentBlocks: [],
+    countdownPhase: 0,
+    activationProgress: 0,
+    isLoading: false,
+    activateStealthMode: vi.fn(),
+    deactivateStealthMode: vi.fn(),
+    toggleStealthMode: vi.fn(),
+    clearRecentBlocks: vi.fn(),
+  }),
+}));
+
 vi.mock('@/hooks/useOfflineChatHistory', () => ({
   useOfflineChatHistory: () => ({
     isReady: false,

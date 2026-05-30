@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStealthKillSwitch } from "@/hooks/useStealthKillSwitch";
+import { STEALTH_KEYBOARD_SHORTCUT } from "@/lib/stealthTypes";
 import { cn } from "@/lib/utils";
 
 // Scan line animation component
@@ -139,8 +140,15 @@ const NetworkMonitor = ({ blockedCount }: { blockedCount: number }) => {
 
 export const StealthKillSwitch = () => {
   const {
-    isStealthMode, isTransitioning, activateStealthMode,
-    deactivateStealthMode, blockedRequests, countdownPhase, activationProgress
+    isStealthMode,
+    isTransitioning,
+    activateStealthMode,
+    deactivateStealthMode,
+    blockedRequests,
+    recentBlocks,
+    clearRecentBlocks,
+    countdownPhase,
+    activationProgress,
   } = useStealthKillSwitch();
 
   const [showConfirm, setShowConfirm] = useState(false);
@@ -224,10 +232,10 @@ export const StealthKillSwitch = () => {
                 {/* Intel Briefing */}
                 <div className="space-y-3 mb-8">
                   {[
-                    { icon: WifiOff, text: "All outbound traffic terminated", accent: true },
-                    { icon: Lock, text: "AES-256 encrypted local storage only", accent: false },
-                    { icon: Zap, text: "On-device AI models activated", accent: false },
-                    { icon: Globe, text: "Zero packets leave your machine", accent: false },
+                    { icon: WifiOff, text: "Blocks fetch, XHR, WebSocket, beacons & SSE to third parties", accent: true },
+                    { icon: Lock, text: "Same-origin app shell still loads; cloud chat & APIs stop", accent: false },
+                    { icon: Zap, text: "Use Bunker Mode / offline tools for on-device AI while dark", accent: false },
+                    { icon: Globe, text: `Shortcut: ${STEALTH_KEYBOARD_SHORTCUT} to toggle anytime`, accent: false },
                   ].map(({ icon: Icon, text, accent }, i) => (
                     <motion.div
                       key={i}
@@ -422,14 +430,28 @@ export const StealthKillSwitch = () => {
                         />
                       </div>
                       <p className="text-[10px] font-mono text-muted-foreground tracking-wider">
-                        NETWORK BLOCKED · LOCAL AI · ENCRYPTED
+                        NETWORK BLOCKED · {STEALTH_KEYBOARD_SHORTCUT} TO SURFACE
                       </p>
                     </div>
                   </div>
 
-                  {/* Center: Network monitor */}
-                  <div className="hidden md:block flex-1 max-w-xs">
+                  {/* Center: Network monitor + recent blocks */}
+                  <div className="hidden md:flex flex-1 max-w-md flex-col gap-1.5 min-w-0">
                     <NetworkMonitor blockedCount={blockedRequests} />
+                    {recentBlocks.length > 0 && (
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="text-[9px] font-mono text-muted-foreground truncate flex-1" title={recentBlocks[0].url}>
+                          Last: {recentBlocks[0].method} {recentBlocks[0].url.replace(/^https?:\/\//, "").slice(0, 48)}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={clearRecentBlocks}
+                          className="text-[9px] font-mono text-destructive/70 hover:text-destructive shrink-0"
+                        >
+                          CLEAR
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Right: Stats + Deactivate */}
