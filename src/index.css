@@ -438,6 +438,72 @@
     @apply w-full max-w-[720px] mx-auto px-4 pb-6 pt-2;
   }
 
+  /* ShadowTalk branded chat workspace */
+  .shadowtalk-chat-shell {
+    @apply min-h-screen relative text-foreground;
+    background: hsl(var(--background));
+  }
+
+  .shadowtalk-chat-shell::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: var(--gradient-hero);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .shadowtalk-chat-glow {
+    position: fixed;
+    top: -15%;
+    left: 50%;
+    translate: -50% 0;
+    width: min(100vw, 960px);
+    height: 45vh;
+    background: radial-gradient(
+      ellipse 80% 60% at 50% 0%,
+      hsl(var(--primary) / 0.14),
+      hsl(var(--secondary) / 0.08),
+      transparent 70%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .shadowtalk-chat-main {
+    position: relative;
+    z-index: 1;
+  }
+
+  .shadowtalk-chat-top-label {
+    @apply text-[10px] font-semibold uppercase tracking-[0.35em] text-muted-foreground/55 text-center py-3 shrink-0;
+  }
+
+  .shadowtalk-chat-empty {
+    @apply flex flex-col items-center justify-center flex-1 w-full max-w-[720px] mx-auto px-6 text-center;
+  }
+
+  .shadowtalk-chat-greeting {
+    @apply text-3xl md:text-[2.25rem] font-semibold tracking-tight text-foreground;
+  }
+
+  .shadowtalk-chat-tagline {
+    @apply text-sm text-muted-foreground/80 mt-2;
+  }
+
+  .shadowtalk-chat-input-shell {
+    @apply relative w-full max-w-[720px] mt-10 rounded-2xl glass-subtle border border-border/40 p-[1px];
+    box-shadow: 0 8px 40px hsl(var(--primary) / 0.1), 0 0 0 1px hsl(var(--border) / 0.5);
+  }
+
+  .shadowtalk-chat-input-inner {
+    @apply rounded-[15px] bg-card/50 border border-border/25;
+  }
+
+  .shadowtalk-chat-input-dock {
+    @apply w-full max-w-[720px] mx-auto px-4 pb-6 pt-2;
+  }
+
   /* ===== Shadow Pulse — black shell + moving rainbow edges ===== */
   @property --shadow-pulse-angle {
     syntax: "<angle>";

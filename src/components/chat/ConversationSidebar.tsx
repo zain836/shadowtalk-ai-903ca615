@@ -70,14 +70,14 @@ export const ConversationSidebar = ({
   const groupOrder = ["Today", "Yesterday", "Last 7 days", "Last 30 days", "Earlier"];
 
   return (
-    <div className="w-[280px] shrink-0 bg-[#1e1f20]/95 backdrop-blur-2xl border-r border-white/5 flex flex-col max-md:absolute max-md:left-0 max-md:top-0 max-md:h-full max-md:z-50 max-md:shadow-2xl h-full">
+    <div className="w-[280px] shrink-0 glass-strong border-r border-border/50 flex flex-col max-md:absolute max-md:left-0 max-md:top-0 max-md:h-full max-md:z-50 max-md:shadow-2xl h-full">
       {/* Top Section: Action Hub */}
-      <div className="p-4 space-y-2 border-b border-white/5">
+      <div className="p-4 space-y-2 border-b border-border/40">
         <Button
           onClick={onCreateNew}
-          className="w-full h-10 rounded-full bg-[#2b2c2d] hover:bg-[#333537] text-foreground border border-white/5 shadow-sm transition-all duration-300 text-[14px] font-medium gap-2.5 justify-center"
+          className="w-full h-10 rounded-full bg-muted hover:bg-muted/80 text-foreground border border-border/50 shadow-sm transition-all duration-300 text-[14px] font-medium gap-2.5 justify-center"
         >
-          <Plus className="h-4 w-4 text-blue-400" /> New chat
+          <Plus className="h-4 w-4 text-primary" /> New chat
         </Button>
         {onClearCurrent && currentConversationId && (
           <Button

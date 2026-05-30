@@ -44,18 +44,18 @@ export function ChatShadowSidebar({
   const [shadowMode, setShadowMode] = useState(true);
 
   return (
-    <aside className="hidden md:flex w-[240px] shrink-0 flex-col border-r border-white/[0.06] bg-[#050506] relative z-30">
+    <aside className="hidden md:flex w-[240px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar relative z-30">
       <button
         type="button"
         onClick={() => navigate("/")}
         className="flex items-center gap-3 px-5 pt-6 pb-8 text-left w-full hover:opacity-90 transition-opacity"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-violet-500 shadow-[0_0_20px_rgba(34,211,238,0.35)]">
-          <Sparkles className="h-5 w-5 text-white" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary shadow-[0_0_20px_hsl(var(--primary)/0.35)]">
+          <Sparkles className="h-5 w-5 text-primary-foreground" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-white tracking-tight">ShadowTalk AI</p>
-          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-400/80">Shadow Pulse</p>
+          <p className="text-sm font-semibold text-sidebar-foreground tracking-tight">ShadowTalk AI</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-primary/80">Sovereign Intelligence</p>
         </div>
       </button>
 
@@ -63,16 +63,16 @@ export function ChatShadowSidebar({
         <button
           type="button"
           onClick={onNewChat}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-white bg-white/[0.06] hover:bg-white/[0.1] transition-colors"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-sidebar-foreground bg-sidebar-accent hover:bg-sidebar-accent/80 transition-colors"
         >
-          <MessageSquarePlus className="h-4 w-4 text-cyan-400 shrink-0" />
+          <MessageSquarePlus className="h-4 w-4 text-primary shrink-0" />
           New chat
         </button>
         {onOpenHistory && (
           <button
             type="button"
             onClick={onOpenHistory}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-white/45 hover:text-white/80 hover:bg-white/[0.03] transition-colors"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
           >
             <History className="h-4 w-4 shrink-0" />
             Chat history
@@ -93,8 +93,8 @@ export function ChatShadowSidebar({
                 cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-colors",
                   isActive
-                    ? "bg-white/[0.06] text-white"
-                    : "text-white/45 hover:text-white/80 hover:bg-white/[0.03]",
+                    ? "bg-sidebar-accent text-sidebar-foreground"
+                    : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
                 )
               }
             >
@@ -103,7 +103,7 @@ export function ChatShadowSidebar({
                   <Icon className="h-4 w-4 shrink-0" />
                   <span className="flex-1">{label}</span>
                   {isActive && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.9)]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.9)]" />
                   )}
                 </>
               )}
@@ -112,22 +112,22 @@ export function ChatShadowSidebar({
         })}
       </nav>
 
-      <div className="px-5 py-4 border-t border-white/[0.06] space-y-4">
+      <div className="px-5 py-4 border-t border-sidebar-border space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-white/50">Shadow Mode</span>
+          <span className="text-xs font-medium text-muted-foreground">Shadow Mode</span>
           <Switch
             checked={shadowMode}
             onCheckedChange={setShadowMode}
-            className="data-[state=checked]:bg-cyan-500"
+            className="data-[state=checked]:bg-primary"
           />
         </div>
         <div className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#1a1a1e] text-xs font-bold text-white/90 ring-1 ring-white/10">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-xs font-bold text-foreground ring-1 ring-border">
             {userInitials}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-white truncate">{userDisplayName}</p>
-            <p className="text-[11px] text-white/35">Executive</p>
+            <p className="text-sm font-medium text-sidebar-foreground truncate">{userDisplayName}</p>
+            <p className="text-[11px] text-muted-foreground">Executive</p>
           </div>
         </div>
       </div>

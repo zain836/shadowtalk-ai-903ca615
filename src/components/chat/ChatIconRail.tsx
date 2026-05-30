@@ -39,7 +39,7 @@ export const ChatIconRail = ({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <aside className="flex md:hidden w-[72px] shrink-0 flex-col items-center py-4 border-r border-border/25 bg-[hsl(0_0%_5%)] relative z-30">
+      <aside className="flex md:hidden w-[72px] shrink-0 flex-col items-center py-4 border-r border-sidebar-border bg-sidebar relative z-30">
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -94,7 +94,7 @@ export const ChatIconRail = ({
               <button
                 type="button"
                 onClick={onOpenSettings}
-                className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-[#2f2f2f] text-xs font-medium text-foreground/90 ring-1 ring-border/30"
+                className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-foreground ring-1 ring-border/50"
                 aria-label="Account"
               >
                 {userInitials}
