@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Star, Download, Users, Bot, FileText, TrendingUp, Shield, Zap, Code, Loader2, Check } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import type { LucideIcon } from "lucide-react";
 

@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X, ExternalLink, Sparkles, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
 import { useFeatureGating } from "@/hooks/useFeatureGating";
 
@@ -58,6 +59,7 @@ interface AdBannerProps {
 }
 
 export function AdBanner({ placement, className = "" }: AdBannerProps) {
+  const navigate = useNavigate();
   const { userPlan } = useAuth();
   const { isProOrHigher } = useFeatureGating();
   const [currentAd, setCurrentAd] = useState<Ad | null>(null);
@@ -89,8 +91,17 @@ export function AdBanner({ placement, className = "" }: AdBannerProps) {
   if (isProOrHigher || dismissed || !currentAd) return null;
 
   const handleClick = () => {
-    // Track ad click for analytics
-    console.log(`Ad clicked: ${currentAd.id}`);
+    if (!currentAd) return;
+    if (currentAd.link.startsWith("http")) {
+      window.open(currentAd.link, "_blank", "noopener,noreferrer");
+      return;
+    }
+    const [path, hash] = currentAd.link.split("#");
+    if (hash) {
+      navigate(`${path}#${hash}`);
+    } else {
+      navigate(path);
+    }
   };
 
   const handleDismiss = (e: React.MouseEvent) => {

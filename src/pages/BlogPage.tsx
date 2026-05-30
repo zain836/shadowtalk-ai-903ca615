@@ -3,10 +3,20 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
 import { BookOpen, Calendar, Clock, Sparkles, Code, Shield, Zap, Loader2 } from "lucide-react";
 import { useBlogPosts } from "@/hooks/useCMSContent";
 import { format } from "date-fns";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30, filter: "blur(6px)" },
@@ -24,9 +34,22 @@ const ICON_MAP: Record<string, any> = {
   "Vision": Sparkles,
 };
 
+type BlogPost = {
+  id: string;
+  title: string;
+  excerpt: string | null;
+  content: string;
+  author: string;
+  category: string;
+  published_at: string | null;
+  read_time_minutes: number | null;
+  cover_image_url: string | null;
+};
+
 const BlogPage = () => {
   const { posts, isLoading } = useBlogPosts();
   const [activeCategory, setActiveCategory] = useState("All");
+  const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
 
   const featuredPost = posts[0];
   const gridPosts = posts.slice(1);
@@ -90,7 +113,10 @@ const BlogPage = () => {
             <section className="py-8 px-4">
               <div className="container mx-auto max-w-6xl">
                 <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-                  <Card className="card-glass overflow-hidden group cursor-pointer">
+                  <Card
+                    className="card-glass overflow-hidden group cursor-pointer"
+                    onClick={() => setSelectedPost(featuredPost as BlogPost)}
+                  >
                     <div className="grid md:grid-cols-2">
                       <div className="aspect-video md:aspect-auto bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 flex items-center justify-center relative overflow-hidden">
                         <div className="absolute inset-0 bg-grid-dense opacity-20" />
@@ -142,7 +168,10 @@ const BlogPage = () => {
                     <motion.div key={post.id || i} custom={i} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
                       whileHover={{ y: -6, transition: { type: "spring", stiffness: 400 } }}
                     >
-                      <Card className="card-glass h-full group cursor-pointer overflow-hidden">
+                      <Card
+                        className="card-glass h-full group cursor-pointer overflow-hidden"
+                        onClick={() => setSelectedPost(post as BlogPost)}
+                      >
                         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         <CardContent className="p-6 relative z-10">
                           <div className="flex items-center gap-2 mb-4">
@@ -185,6 +214,43 @@ const BlogPage = () => {
           </motion.div>
         </div>
       </section>
+
+      <Dialog open={!!selectedPost} onOpenChange={(open) => !open && setSelectedPost(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+          {selectedPost && (
+            <>
+              <DialogHeader>
+                <Badge variant="outline" className="w-fit mb-2">{selectedPost.category}</Badge>
+                <DialogTitle className="text-2xl pr-8">{selectedPost.title}</DialogTitle>
+                <DialogDescription className="flex flex-wrap items-center gap-2 text-sm">
+                  <span>{selectedPost.author}</span>
+                  {selectedPost.published_at && (
+                    <>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {format(new Date(selectedPost.published_at), "MMMM d, yyyy")}
+                      </span>
+                    </>
+                  )}
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    {selectedPost.read_time_minutes ?? 5} min read
+                  </span>
+                </DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="flex-1 pr-4 -mr-4">
+                <div className="prose prose-sm dark:prose-invert max-w-none pb-4">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {selectedPost.content}
+                  </ReactMarkdown>
+                </div>
+              </ScrollArea>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
