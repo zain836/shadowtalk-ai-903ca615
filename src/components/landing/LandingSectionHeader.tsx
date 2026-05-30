@@ -17,7 +17,7 @@ const LandingSectionHeader = ({
   subtitle,
   className = "",
 }: LandingSectionHeaderProps) => {
-  const { variants, viewport, hoverLift } = useLandingMotion();
+  const { variants, viewport, hoverLift } = useLandingMotionContext();
 
   return (
     <div className={`text-center mb-16 md:mb-20 ${className}`}>

@@ -13,6 +13,8 @@ export type AIProvider = "lovable" | "gemini" | "openrouter" | "kimi";
 interface ProviderSelectorProps {
   provider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
+  /** When false, BYOK rows show “Add key” instead of Active */
+  hasKeyForProvider?: (provider: AIProvider) => boolean;
   disabled?: boolean;
   variant?: "header" | "inline";
 }
@@ -44,9 +46,21 @@ const providers = [
   },
 ];
 
-export const ProviderSelector = ({ provider, onProviderChange, disabled, variant = "header" }: ProviderSelectorProps) => {
-  const currentProvider = providers.find(p => p.value === provider) || providers[0];
-  const shortLabel = currentProvider.value === "lovable" ? "Pro" : "Gemini";
+export const ProviderSelector = ({
+  provider,
+  onProviderChange,
+  hasKeyForProvider,
+  disabled,
+  variant = "header",
+}: ProviderSelectorProps) => {
+  const currentProvider = providers.find((p) => p.value === provider) || providers[0];
+  const shortLabels: Record<AIProvider, string> = {
+    lovable: "Pro",
+    gemini: "Gemini",
+    openrouter: "OpenRouter",
+    kimi: "Kimi",
+  };
+  const shortLabel = shortLabels[currentProvider.value];
 
   return (
     <DropdownMenu>
@@ -84,9 +98,15 @@ export const ProviderSelector = ({ provider, onProviderChange, disabled, variant
                 <div className="text-[11px] text-muted-foreground/60 font-normal leading-normal">{p.description}</div>
               </div>
             </div>
-            {provider === p.value && (
-              <Badge variant="secondary" className="text-[10px] bg-primary/10 border-primary/20 text-primary hover:bg-primary/15 font-semibold">Active</Badge>
-            )}
+            {provider === p.value ? (
+              <Badge variant="secondary" className="text-[10px] bg-primary/10 border-primary/20 text-primary hover:bg-primary/15 font-semibold">
+                Active
+              </Badge>
+            ) : p.value !== "lovable" && hasKeyForProvider && !hasKeyForProvider(p.value) ? (
+              <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-400/90 font-medium">
+                Add key
+              </Badge>
+            ) : null}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

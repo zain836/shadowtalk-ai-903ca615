@@ -32,6 +32,7 @@ interface ChatInputProps {
   layout?: "default" | "gemini" | "shadow-pulse";
   aiProvider?: AIProvider;
   onProviderChange?: (provider: AIProvider) => void;
+  hasKeyForProvider?: (provider: AIProvider) => boolean;
   isEmptyState?: boolean;
 }
 
@@ -54,6 +55,7 @@ export const ChatInput = ({
   layout = "default",
   aiProvider = "lovable",
   onProviderChange,
+  hasKeyForProvider,
   isEmptyState = false,
 }: ChatInputProps) => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -202,6 +204,7 @@ export const ChatInput = ({
                 <ProviderSelector
                   provider={aiProvider}
                   onProviderChange={onProviderChange}
+                  hasKeyForProvider={hasKeyForProvider}
                   disabled={isLoading}
                   variant="inline"
                 />

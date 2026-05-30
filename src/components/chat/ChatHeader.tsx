@@ -81,6 +81,7 @@ interface ChatHeaderProps {
   onOpenBrowser: () => void;
   aiProvider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
+  hasKeyForProvider?: (provider: AIProvider) => boolean;
   maxChats: string;
   dailyChats: number;
   variant?: "full" | "minimal";
@@ -197,6 +198,7 @@ export const ChatHeader = ({
   onOpenBrowser,
   aiProvider,
   onProviderChange,
+  hasKeyForProvider,
   variant = "full",
   toolsMenuOpen,
   onToolsMenuOpenChange,
@@ -274,7 +276,11 @@ export const ChatHeader = ({
         
         <div className="hidden xs:block h-4 w-px bg-white/10 mx-1" />
         
-        <ProviderSelector provider={aiProvider} onProviderChange={onProviderChange} />
+        <ProviderSelector
+          provider={aiProvider}
+          onProviderChange={onProviderChange}
+          hasKeyForProvider={hasKeyForProvider}
+        />
         <div className="hidden xs:block h-4 w-px bg-white/10 mx-1" />
         <BunkerModeToggle />
       </div>
