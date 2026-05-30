@@ -6,6 +6,7 @@ import { LANDING_COPY } from "@/lib/brand";
 import { useLandingMotion } from "@/hooks/use-landing-motion";
 import LandingSectionHeader from "@/components/landing/LandingSectionHeader";
 import LandingAmbientOrb from "@/components/landing/LandingAmbientOrb";
+import LandingStagger from "@/components/landing/LandingStagger";
 
 const cardVariants = {
   hidden: { opacity: 0, y: 50, scale: 0.95 },
@@ -143,7 +144,7 @@ const FeaturesSection = () => {
         />
 
         {/* Bento Grid - responsive with no overlap on mobile */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 max-w-5xl mx-auto px-1">
+        <LandingStagger className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 max-w-5xl mx-auto px-1">
           {features.map((feature, index) => (
             <motion.div
               key={index}
@@ -182,19 +183,30 @@ const FeaturesSection = () => {
                     <ArrowUpRight className="h-4 w-4 text-muted-foreground/0 group-hover:text-muted-foreground transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </motion.div>
                 </div>
-                <h3 className="text-lg font-semibold mb-2 group-hover:text-foreground transition-colors tracking-tight">
+                <motion.h3
+                  className="text-lg font-semibold mb-2 group-hover:text-foreground transition-colors tracking-tight"
+                  initial={{ opacity: 0, x: -8 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={viewport}
+                  transition={{ delay: 0.05 }}
+                >
                   {feature.title}
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                </motion.h3>
+                <motion.p
+                  className="text-sm text-muted-foreground leading-relaxed"
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={viewport}
+                  transition={{ delay: 0.1 }}
+                >
                   {feature.description}
-                </p>
+                </motion.p>
               </div>
             </motion.div>
           ))}
-        </div>
+        </LandingStagger>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20 max-w-4xl mx-auto">
+        <LandingStagger className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mt-16 sm:mt-20 max-w-4xl mx-auto">
           {[
             { value: "30+", label: "Integrated Tools", sub: "Natural-language triggers", subColor: "text-primary" },
             { value: "24/7", label: "Mission Control", sub: "Autonomous workflows", subColor: "text-secondary" },
@@ -216,10 +228,9 @@ const FeaturesSection = () => {
               <div className={`text-xs ${stat.subColor} mt-1 font-medium`}>{stat.sub}</div>
             </motion.div>
           ))}
-        </div>
+        </LandingStagger>
 
-        {/* Trust Indicators */}
-        <div className="mt-16 flex items-center justify-center gap-4 flex-wrap">
+        <LandingStagger className="mt-12 sm:mt-16 flex items-center justify-center gap-3 sm:gap-4 flex-wrap">
           {[
             "🤖 Agentic Task Runner",
             "⚡ Tool Orchestration",
@@ -238,7 +249,7 @@ const FeaturesSection = () => {
               {badge}
             </motion.div>
           ))}
-        </div>
+        </LandingStagger>
       </div>
     </section>
   );

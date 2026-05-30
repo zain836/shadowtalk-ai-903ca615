@@ -121,3 +121,82 @@ export function scrollOpacityRange(profile: LandingMotionProfile): [number, numb
   if (profile.reduced) return [1, 1];
   return [1, profile.mobile ? 0.85 : 0.6];
 }
+
+export function slideDown(profile: LandingMotionProfile): Variants {
+  return {
+    hidden: { opacity: profile.reduced ? 1 : 0, y: profile.reduced ? 0 : profile.mobile ? -12 : -24 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: motionDuration(profile, 0.55), ease: LANDING_EASE },
+    },
+  };
+}
+
+export function slideInLeft(profile: LandingMotionProfile): Variants {
+  const x = profile.reduced ? 0 : profile.mobile ? -16 : -32;
+  return {
+    hidden: { opacity: profile.reduced ? 1 : 0, x },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: { duration: motionDuration(profile, 0.55), ease: LANDING_EASE },
+    },
+  };
+}
+
+export function slideInRight(profile: LandingMotionProfile): Variants {
+  const x = profile.reduced ? 0 : profile.mobile ? 16 : 32;
+  return {
+    hidden: { opacity: profile.reduced ? 1 : 0, x },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: { duration: motionDuration(profile, 0.55), ease: LANDING_EASE },
+    },
+  };
+}
+
+export function popIn(profile: LandingMotionProfile): Variants {
+  return {
+    hidden: { opacity: profile.reduced ? 1 : 0, scale: profile.reduced ? 1 : 0.85 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: { type: "spring", stiffness: profile.mobile ? 280 : 360, damping: 24 },
+    },
+  };
+}
+
+export type LandingAnimatePreset =
+  | "fadeUp"
+  | "scale"
+  | "slideDown"
+  | "slideLeft"
+  | "slideRight"
+  | "pop"
+  | "card"
+  | "section";
+
+export function variantForPreset(profile: LandingMotionProfile, preset: LandingAnimatePreset): Variants {
+  switch (preset) {
+    case "fadeUp":
+      return fadeSlideUp(profile);
+    case "scale":
+      return scaleFadeIn(profile);
+    case "slideDown":
+      return slideDown(profile);
+    case "slideLeft":
+      return slideInLeft(profile);
+    case "slideRight":
+      return slideInRight(profile);
+    case "pop":
+      return popIn(profile);
+    case "card":
+      return cardReveal(profile);
+    case "section":
+      return sectionReveal(profile);
+    default:
+      return fadeSlideUp(profile);
+  }
+}

@@ -117,9 +117,10 @@ const CommunitySection = () => {
           {/* Benefits */}
           <div>
             <motion.h3
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              variants={variants.fadeSlideUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
               className="text-2xl font-bold mb-6"
             >
               Why Join?
@@ -128,11 +129,12 @@ const CommunitySection = () => {
               {benefits.map((b, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1, duration: 0.5 }}
-                  whileHover={{ x: 4, transition: { type: "spring", stiffness: 400 } }}
+                  custom={i}
+                  variants={variants.cardReveal}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={viewport}
+                  whileHover={hoverLift}
                   className="flex items-start gap-4 glass-subtle rounded-xl p-4 group cursor-default"
                 >
                   <div className={`w-10 h-10 ${b.bg} rounded-xl flex items-center justify-center shrink-0`}>
@@ -167,9 +169,10 @@ const CommunitySection = () => {
           {/* Events */}
           <div>
             <motion.h3
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              variants={variants.fadeSlideUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
               className="text-2xl font-bold mb-6"
             >
               Upcoming Events
@@ -182,7 +185,7 @@ const CommunitySection = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1, duration: 0.5 }}
-                  whileHover={{ y: -4, scale: 1.02, transition: { type: "spring", stiffness: 400 } }}
+                  whileHover={hoverLift}
                 >
                   <Card className="border-border/50 hover:border-primary/20 transition-all duration-300 hover:shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.15)] group">
                     <CardContent className="p-5">

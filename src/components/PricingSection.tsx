@@ -81,12 +81,12 @@ const PricingSection = () => {
         <div className="text-center mb-12 sm:mb-16">
           {/* Lifetime Deal Banner */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.3, type: "spring" }}
-            whileHover={{ scale: 1.02 }}
-            className="inline-flex items-center space-x-3 glass-subtle border-warning/20 rounded-xl px-6 py-4 mb-6"
+            variants={variants.scaleFadeIn}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            whileHover={hoverLift}
+            className="inline-flex items-center space-x-3 glass-subtle border-warning/20 rounded-xl px-4 sm:px-6 py-3 sm:py-4 mb-6"
           >
             <Timer className="h-6 w-6 text-warning animate-pulse" />
             <div className="text-left">
@@ -102,11 +102,12 @@ const PricingSection = () => {
           
           {/* Referral */}
           <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.4 }}
-            className="inline-flex items-center space-x-2 glass-subtle border-primary/10 rounded-xl px-6 py-3"
+            variants={variants.fadeSlideUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            whileHover={hoverLift}
+            className="inline-flex items-center space-x-2 glass-subtle border-primary/10 rounded-xl px-4 sm:px-6 py-3"
           >
             <Gift className="h-5 w-5 text-primary" />
             <span className="text-sm">
@@ -163,19 +164,39 @@ const PricingSection = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2 mb-4">
+                  <motion.div
+                    className="space-y-2 mb-4"
+                    variants={variants.staggerContainer}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={viewport}
+                  >
                     {plan.features.slice(0, 5).map((feature, fi) => (
-                      <div key={fi} className="flex items-start space-x-2">
-                        <Check className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                      <motion.div
+                        key={fi}
+                        variants={variants.fadeSlideUp}
+                        className="flex items-start space-x-2"
+                      >
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          whileInView={{ scale: 1 }}
+                          viewport={viewport}
+                          transition={{ type: "spring", stiffness: 400, delay: fi * 0.04 }}
+                        >
+                          <Check className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                        </motion.div>
                         <span className="text-xs">{feature}</span>
-                      </div>
+                      </motion.div>
                     ))}
                     {plan.features.length > 5 && (
-                      <div className="text-xs text-muted-foreground text-center">
+                      <motion.div
+                        variants={variants.fadeSlideUp}
+                        className="text-xs text-muted-foreground text-center"
+                      >
                         +{plan.features.length - 5} more features
-                      </div>
+                      </motion.div>
                     )}
-                  </div>
+                  </motion.div>
 
                   {plan.comparison && (
                     <div className="bg-success/5 border border-success/15 rounded-lg px-2 py-1.5 mb-4">
@@ -201,9 +222,10 @@ const PricingSection = () => {
         {/* Pay Per Solution */}
         <div className="mt-20 max-w-4xl mx-auto">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            variants={variants.fadeSlideUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
             className="text-center mb-10"
           >
             <h3 className="text-2xl font-bold mb-3 tracking-tight">💼 Pay-Per-Solution</h3>
@@ -218,11 +240,12 @@ const PricingSection = () => {
             ].map((item, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                whileHover={{ y: -6, transition: { type: "spring", stiffness: 400 } }}
+                custom={i}
+                variants={variants.cardReveal}
+                initial="hidden"
+                whileInView="visible"
+                viewport={viewport}
+                whileHover={hoverLift}
               >
                 <Card className="border-border/50 hover:border-primary/20 transition-all hover:shadow-[0_10px_40px_-15px_hsl(var(--primary)/0.1)]">
                   <CardContent className="pt-6 text-center">
@@ -250,11 +273,12 @@ const PricingSection = () => {
             ].map((item, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2 + i * 0.1 }}
-                whileHover={{ y: -5, transition: { type: "spring", stiffness: 400 } }}
+                custom={i}
+                variants={variants.cardReveal}
+                initial="hidden"
+                whileInView="visible"
+                viewport={viewport}
+                whileHover={hoverLift}
               >
                 <Card className={`bg-gradient-to-br ${item.gradient} ${item.borderColor} hover:shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.1)] transition-all`}>
                   <CardContent className="pt-6 text-center">
@@ -275,21 +299,30 @@ const PricingSection = () => {
 
         {/* Bottom trust */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.3 }}
+          variants={variants.fadeSlideUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
           className="text-center mt-12"
         >
           <p className="text-sm text-muted-foreground mb-4">
             30-day money-back guarantee · Cancel anytime · Secure payment
           </p>
-          <div className="flex flex-wrap justify-center items-center gap-5 text-xs text-muted-foreground">
-            {["No setup fees", "Instant activation", "Client-side encryption", "GDPR principles applied"].map((t, i) => (
-              <span key={i} className="flex items-center space-x-1.5">
+          <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-5 text-xs text-muted-foreground">
+            {["No setup fees", "Instant activation", "Client-side encryption", "GDPR principles applied"].map((label, i) => (
+              <motion.span
+                key={label}
+                custom={i}
+                variants={variants.cardReveal}
+                initial="hidden"
+                whileInView="visible"
+                viewport={viewport}
+                whileHover={hoverLift}
+                className="flex items-center space-x-1.5 glass-subtle rounded-lg px-3 py-1.5"
+              >
                 <Check className="h-3.5 w-3.5 text-success" />
-                <span>{t}</span>
-              </span>
+                <span>{label}</span>
+              </motion.span>
             ))}
           </div>
         </motion.div>

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useLandingMotion } from "@/hooks/use-landing-motion";
+import { useLandingMotionContext } from "@/components/landing/LandingMotionProvider";
 import type { LucideIcon } from "lucide-react";
 
 type LandingSectionHeaderProps = {

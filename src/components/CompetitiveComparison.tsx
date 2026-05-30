@@ -38,7 +38,7 @@ const tableRowVariants = {
 const CompetitiveComparison = () => {
   const tableRef = useRef(null);
   const tableInView = useInView(tableRef, { once: true, margin: "-80px" });
-  const { hoverLift } = useLandingMotion();
+  const { hoverLift, variants, viewport } = useLandingMotion();
 
   const detailedComparisons = [
     {
@@ -179,10 +179,11 @@ const CompetitiveComparison = () => {
         {/* Free Tier Comparison */}
         <div className="max-w-3xl mx-auto mb-16">
           <motion.h3
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-2xl font-bold text-center mb-6"
+            variants={variants.fadeSlideUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            className="text-2xl sm:text-3xl font-bold text-center mb-6"
           >
             The <span className="gradient-text">50/50 Rule</span>: 50% More Features, 50% Less Cost
           </motion.h3>
@@ -215,15 +216,21 @@ const CompetitiveComparison = () => {
 
         {/* Architecture Comparison Table */}
         <div className="max-w-5xl mx-auto" ref={tableRef}>
-          <div className="grid grid-cols-3 gap-4 mb-6 px-4">
-            <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Metric</div>
+          <motion.div
+            variants={variants.fadeSlideUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 px-2 sm:px-4"
+          >
+            <div className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">Metric</div>
             <div className="text-center">
-              <span className="text-sm font-medium text-muted-foreground line-through">ChatGPT / Claude / Perplexity</span>
+              <span className="text-xs sm:text-sm font-medium text-muted-foreground line-through">Others</span>
             </div>
             <div className="text-center">
-              <Badge className="bg-primary/20 text-primary border-primary/30 hover:bg-primary/30">ShadowTalk AI</Badge>
+              <Badge className="bg-primary/20 text-primary border-primary/30 hover:bg-primary/30 text-[10px] sm:text-xs">ShadowTalk AI</Badge>
             </div>
-          </div>
+          </motion.div>
 
           <div className="space-y-3">
             {architectureComparisons.map((row, i) => (

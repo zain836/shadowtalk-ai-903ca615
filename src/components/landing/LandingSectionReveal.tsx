@@ -1,27 +1,34 @@
-import { motion } from "framer-motion";
-import { useLandingMotion } from "@/hooks/use-landing-motion";
+import { useLandingMotionContext } from "@/components/landing/LandingMotionProvider";
+import LandingAnimate from "@/components/landing/LandingAnimate";
+import type { LandingAnimatePreset } from "@/lib/landingMotion";
 
 type LandingSectionRevealProps = {
   children: React.ReactNode;
   className?: string;
   id?: string;
+  preset?: LandingAnimatePreset;
 };
 
-/** Scroll-triggered section entrance — lighter on mobile, off when reduced motion. */
-const LandingSectionReveal = ({ children, className = "", id }: LandingSectionRevealProps) => {
-  const { variants, viewport } = useLandingMotion();
+const LandingSectionReveal = ({
+  children,
+  className = "",
+  id,
+  preset = "section",
+}: LandingSectionRevealProps) => {
+  const { isLandingPage } = useLandingMotionContext();
+
+  if (!isLandingPage) {
+    return (
+      <div id={id} className={className}>
+        {children}
+      </div>
+    );
+  }
 
   return (
-    <motion.div
-      id={id}
-      className={className}
-      variants={variants.sectionReveal}
-      initial="hidden"
-      whileInView="visible"
-      viewport={viewport}
-    >
+    <LandingAnimate id={id} className={className} preset={preset} as="div">
       {children}
-    </motion.div>
+    </LandingAnimate>
   );
 };
 

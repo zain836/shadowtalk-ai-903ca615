@@ -28,7 +28,7 @@ const faqVariants = {
 const FAQSection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
-  const { variants, viewport, isMobile } = useLandingMotion();
+  const { variants, viewport, isMobile, hoverLift } = useLandingMotion();
 
   const faqs = [
     {
@@ -133,27 +133,32 @@ const FAQSection = () => {
 
             {/* Contact CTA */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="glass-subtle rounded-2xl p-6 space-y-4"
+              variants={variants.scaleFadeIn}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              whileHover={hoverLift}
+              className="glass-subtle rounded-2xl p-5 sm:p-6 space-y-4"
             >
               <h3 className="font-semibold">Still have questions?</h3>
               <p className="text-sm text-muted-foreground">
                 We aim to reply within one business day. Premium and Elite plans get priority queue handling.
               </p>
               <div className="flex flex-col gap-2">
-                <Button size="sm" className="btn-glow justify-start gap-2" asChild>
-                  <a href="mailto:shadowtalk68@gmail.com">
-                    <Mail className="h-4 w-4" />
-                    Email Support
-                  </a>
-                </Button>
-                <Button variant="outline" size="sm" className="justify-start gap-2">
-                  <MessageCircle className="h-4 w-4" />
-                  Live Chat
-                </Button>
+                <motion.div whileHover={hoverLift} whileTap={{ scale: 0.98 }}>
+                  <Button size="sm" className="btn-glow justify-start gap-2 w-full" asChild>
+                    <a href="mailto:shadowtalk68@gmail.com">
+                      <Mail className="h-4 w-4" />
+                      Email Support
+                    </a>
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={hoverLift} whileTap={{ scale: 0.98 }}>
+                  <Button variant="outline" size="sm" className="justify-start gap-2 w-full">
+                    <MessageCircle className="h-4 w-4" />
+                    Live Chat
+                  </Button>
+                </motion.div>
               </div>
             </motion.div>
           </div>
