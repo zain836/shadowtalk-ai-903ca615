@@ -15,16 +15,31 @@ const ContentPartSchema = z.union([
   }),
 ]);
 
+const ChatMessageSchema = z.object({
+  role: z.enum(["user", "assistant", "system"]),
+  content: z.union([
+    z.string(),
+    z.array(ContentPartSchema).min(1).max(20),
+  ]),
+}).superRefine((msg, ctx) => {
+  if (msg.role !== "user") return;
+  const empty =
+    typeof msg.content === "string"
+      ? msg.content.trim().length === 0
+      : msg.content.length === 0;
+  if (empty) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "User message content cannot be empty",
+      path: ["content"],
+    });
+  }
+});
+
 // Chat request validation - messages optional for special modes
 // Content can be string (text-only) or array (multimodal with images)
 export const ChatRequestSchema = z.object({
-  messages: z.array(z.object({
-    role: z.enum(["user", "assistant", "system"]),
-    content: z.union([
-      z.string().min(1),
-      z.array(ContentPartSchema).min(1).max(20),
-    ]),
-  })).max(500).optional(), // Removed min(1) to allow empty array for image generation and other special modes
+  messages: z.array(ChatMessageSchema).max(500).optional(), // Removed min(1) to allow empty array for image generation and other special modes
   personality: z.enum([
     "friendly", "sarcastic", "professional", "creative", 
     "meticulous", "curious", "diplomatic", "witty", 
@@ -75,6 +90,11 @@ export const ChatRequestSchema = z.object({
     "google", "openai", "anthropic", "xai", "perplexity", "openrouter", "mistral", "groq",
   ]).optional(),
   useCustomApiKey: z.boolean().optional(),
+  customAi: z.object({
+    provider: z.enum(["lovable", "gemini", "openrouter", "kimi"]),
+    apiKey: z.string().min(10).max(512),
+    model: z.string().max(200).optional(),
+  }).optional(),
 }).refine(
   (data) => data.messages || data.analyzeTask || data.getEcoActions || data.securityAudit || data.agentWorkflow || data.deepResearch || data.webSearch || data.generateImage || data.imageEdit || data.decodeImage,
   { message: "Either messages or a special mode (analyzeTask, getEcoActions, securityAudit, agentWorkflow, deepResearch, webSearch, generateImage, imageEdit, decodeImage) must be provided" }

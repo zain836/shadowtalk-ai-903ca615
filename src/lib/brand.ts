@@ -7,6 +7,7 @@ export const BRAND = {
   name: "ShadowTalk",
   fullName: "ShadowTalk AI",
   domain: "shadowtalk-ai.com",
+  founder: "Zain",
   /** Memorable mnemonic — use consistently */
   mnemonic: "Think AI. Think ShadowTalk.",
   tagline: "The agentic AI workspace that gets work done.",
@@ -14,6 +15,60 @@ export const BRAND = {
     "Plan it. Run it. Ship it. One workspace for agents, tools, and privacy when you need it.",
   manifesto:
     "AI should execute — not just chat. ShadowTalk is where goals become missions, tools chain together, and you stay in control.",
+  /** Landing hero — bold, memorable, still honest about what we ship */
+  heroHeadline: ["The Agentic AI", "That Finishes Your Work"],
+  heroSubtitle:
+    "Stop renting tab chaos from chat-only bots. ShadowTalk plans missions, runs 30+ tools, and ships deliverables — with you in the loop when it matters.",
+  heroBadge: "Built for builders who are done with “just chatting”",
+} as const;
+
+/** Section headlines & subcopy for the home page */
+export const LANDING_COPY = {
+  manifesto: {
+    kicker: BRAND.mnemonic,
+    title: ["When someone says AI,", "you should think ShadowTalk."],
+    body: "Other tools answer. ShadowTalk executes — agents, missions, vault, voice, and thirty tools in one neural workspace. Once you feel the difference, generic chat feels like yesterday.",
+    traction: "Join creators who stopped juggling five apps for one goal.",
+  },
+  comparison: {
+    badge: "Why teams switch",
+    title: ["Forget the tab circus.", "Remember ShadowTalk."],
+    subtitle:
+      "ChatGPT talks. Claude drafts. ShadowTalk runs the whole playbook — agents, tools, missions, and privacy on your terms.",
+  },
+  features: {
+    badge: "One brain. Every tool.",
+    title: ["Everything you wished", "one AI could do."],
+    subtitle:
+      "From Mission Control to on-device Gemma — this is the workspace founders reach for when “open another chat tab” is no longer enough.",
+  },
+  pricing: {
+    badge: "Invest in execution, not subscriptions",
+    title: ["Elite power.", "Without the $200 tax."],
+    subtitle:
+      "More agents, more tools, more control — at tiers that respect your budget. Start free. Scale when ShadowTalk becomes your default.",
+  },
+  testimonials: {
+    badge: "Early believers",
+    title: ["The vibe is real", "even before the stars are."],
+    subtitle:
+      "We're building in public with founders who already treat ShadowTalk as their command center — honest feedback, no fake quotes.",
+  },
+  community: {
+    badge: "ShadowTalk collective",
+    title: ["Build beside people", "who ship with AI."],
+    subtitle:
+      "Creators, coders, and operators who chose execution over endless prompts — and who help shape what ShadowTalk becomes next.",
+  },
+  faq: {
+    badge: "Still thinking?",
+    title: ["Questions fade.", "Momentum doesn't."],
+    subtitle:
+      "Everything you need to know before ShadowTalk becomes the name you say when someone asks which AI you use.",
+  },
+  founder: {
+    line: "Crafted by a founder obsessed with agentic AI that actually ships — not slide decks.",
+  },
 } as const;
 
 /** Real traction — sync with productClaims COMMUNITY_METRICS */
@@ -57,6 +112,8 @@ export const BRAND_HOOKS = [
   "ChatGPT talks. ShadowTalk executes.",
   "One workspace. Thirty tools. Zero tab chaos.",
   "Think AI. Think ShadowTalk.",
+  "The workspace that makes other AIs feel like drafts.",
+  "Built for the moment you stop accepting chat-only AI.",
 ] as const;
 
 export const CHAT_WELCOME_LINES = [

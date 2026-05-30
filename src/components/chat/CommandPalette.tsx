@@ -12,14 +12,14 @@ import {
 } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import {
-  Search, Image, FileText, Brain, Mic, Code, Shield, 
+  Search, Image, FileText, Brain, Mic, AudioLines, Code, Shield, 
   Sparkles, Globe, Bot, Zap, Camera, Calendar, GamepadIcon,
   Eye, Folder, MessageSquare, Settings, Moon, Sun, LogOut,
   Users, Keyboard, ArrowRight, Star, Clock, Flame, Compass,
   BarChart3, Palette, Key, Activity, BookOpen, Database,
   GitBranch, Sliders, Lock, Target, Leaf, Navigation, Wand2,
   Rocket, Cpu, PenTool, LayoutDashboard, UserPlus, Mail,
-  HardDrive, Layers, BrainCircuit, Cog, FileCode, Presentation
+  HardDrive, Layers, BrainCircuit, Cog, FileCode
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";

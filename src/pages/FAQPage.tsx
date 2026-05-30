@@ -28,41 +28,6 @@ const CATEGORY_ICONS: Record<string, any> = {
   technical: Code,
 };
 
-// Fallback FAQ data when DB is empty
-const FALLBACK_CATEGORIES = [
-  {
-    icon: Zap, title: "General",
-    questions: [
-      { q: "What is ShadowTalk AI?", a: "ShadowTalk AI is a privacy-first AI assistant for developers, creators, and teams. It pairs cloud models (Gemini, GPT-5) with optional on-device inference using Google's Gemma model via WebGPU." },
-      { q: "How does the AI work?", a: "By default, ShadowTalk routes chat to cloud models (Google Gemini, OpenAI GPT-5) through a secure backend. You can also opt in to download Gemma and run it fully on your device." },
-      { q: "Is my data safe with ShadowTalk AI?", a: "Conversations are encrypted in transit. When you enable the optional on-device Gemma model, those chats never leave your machine — they run locally with zero network calls." },
-      { q: "Can I use ShadowTalk AI offline?", a: "Yes — open Settings → On-Device AI to download a Gemma model. After the one-time download (~220 MB to 2.6 GB depending on size), the model runs offline in your browser. Best performance on Chrome/Edge with WebGPU; a slower CPU fallback works elsewhere." }
-    ]
-  },
-  {
-    icon: CreditCard, title: "Billing & Pricing",
-    questions: [
-      { q: "What plans are available?", a: "We offer Free, Pro, Premium, and Elite plans. Each tier provides increasing features and capabilities." },
-      { q: "Can I cancel my subscription anytime?", a: "Absolutely! You can cancel your subscription at any time from your account settings." },
-      { q: "Do you offer refunds?", a: "We offer a 14-day money-back guarantee for all paid plans." }
-    ]
-  },
-  {
-    icon: Shield, title: "Privacy & Security",
-    questions: [
-      { q: "How is my data protected?", a: "We use end-to-end encryption for all communications, secure cloud infrastructure, and follow industry best practices." },
-      { q: "Do you train on user data?", a: "No, we do not use your conversations to train our AI models. Your data remains private." }
-    ]
-  },
-  {
-    icon: Code, title: "Technical & API",
-    questions: [
-      { q: "Is there an API available?", a: "Yes! Pro and higher plans include API access for building custom integrations." },
-      { q: "Are there rate limits?", a: "Yes, rate limits depend on your plan. Check our API documentation for details." }
-    ]
-  }
-];
-
 const FAQPage = () => {
   const { items: dbItems, isLoading } = useFAQItems();
 
@@ -83,7 +48,7 @@ const FAQPage = () => {
         title: cat.charAt(0).toUpperCase() + cat.slice(1),
         questions: items.map((item: any) => ({ q: item.question, a: item.answer })),
       }))
-    : FALLBACK_CATEGORIES;
+    : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -117,6 +82,10 @@ const FAQPage = () => {
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
+          ) : faqCategories.length === 0 ? (
+            <p className="text-center text-muted-foreground glass-subtle rounded-xl p-8">
+              No FAQ entries published yet. Check back soon or contact support.
+            </p>
           ) : (
             faqCategories.map((category, catIndex) => (
               <motion.div key={catIndex} custom={catIndex} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}>

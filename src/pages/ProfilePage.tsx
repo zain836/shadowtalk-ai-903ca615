@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -46,8 +46,19 @@ interface Profile {
   created_at?: string;
 }
 
+const PROFILE_TABS = new Set([
+  "profile",
+  "activity",
+  "notifications",
+  "security",
+  "linked",
+  "preferences",
+  "billing",
+]);
+
 const ProfilePage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, userPlan, subscribed, subscriptionEnd, signOut } = useAuth();
   const { toast } = useToast();
 
@@ -207,7 +218,14 @@ const ProfilePage = () => {
         )}
 
         {/* Tabs */}
-        <Tabs defaultValue="profile" className="space-y-6">
+        <Tabs
+          value={(() => {
+            const tab = searchParams.get("tab") || "profile";
+            return PROFILE_TABS.has(tab) ? tab : "profile";
+          })()}
+          onValueChange={(tab) => setSearchParams({ tab }, { replace: true })}
+          className="space-y-6"
+        >
           <TabsList className="grid grid-cols-7 w-full max-w-2xl mx-auto bg-muted/50 backdrop-blur-sm">
             <TabsTrigger value="profile" className="gap-1 text-xs">
               <User className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Profile</span>

@@ -188,6 +188,31 @@ export function useCustomApiKeys() {
     [toast, refresh],
   );
 
+  const switchToPlatformDefault = useCallback(async () => {
+    setAiConfig(DEFAULT_AI_CONFIG);
+    if (!user) return true;
+    try {
+      const now = new Date().toISOString();
+      await supabase.from("user_settings").upsert(
+        {
+          user_id: user.id,
+          setting_key: "ai_config",
+          setting_value: { preferredProvider: null, useCustomKey: false },
+          updated_at: now,
+        },
+        { onConflict: "user_id,setting_key" },
+      );
+      return true;
+    } catch (e) {
+      toast({
+        title: "Could not switch provider",
+        description: e instanceof Error ? e.message : "Try again",
+        variant: "destructive",
+      });
+      return false;
+    }
+  }, [user, toast]);
+
   const setDefault = useCallback(
     async (provider: AiProviderId) => {
       try {
@@ -222,6 +247,7 @@ export function useCustomApiKeys() {
     verifyAndSave,
     removeKey,
     setDefault,
+    switchToPlatformDefault,
     refresh,
   };
 }

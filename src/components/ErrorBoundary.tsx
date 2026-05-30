@@ -65,6 +65,24 @@
      window.location.reload();
    };
  
+  handleClearCacheAndReload = async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+
+      if (typeof caches !== 'undefined') {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+    } catch (e) {
+      console.error('[ErrorBoundary] Failed to clear cache:', e);
+    } finally {
+      window.location.reload();
+    }
+  };
+
    handleGoHome = () => {
      window.location.href = '/';
    };
@@ -112,6 +130,10 @@
                  <RefreshCw className="w-4 h-4 mr-2" />
                  Refresh Page
                </Button>
+              <Button onClick={this.handleClearCacheAndReload} variant="outline">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Clear Cache
+              </Button>
                <Button onClick={this.handleGoHome} variant="outline">
                  <Home className="w-4 h-4 mr-2" />
                  Go Home

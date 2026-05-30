@@ -46,15 +46,19 @@ const ContactPage = () => {
     setIsSubmitting(true);
     
     try {
-      const { error } = await supabase.functions.invoke("send-contact-email", {
+      const { data, error } = await supabase.functions.invoke("send-contact-email", {
         body: { ...formData, source: "Contact Page" },
       });
       if (error) throw error;
+      if (data && typeof data === "object" && "error" in data && data.error) {
+        throw new Error(String(data.error));
+      }
       toast.success("Message sent successfully! We'll get back to you soon.");
       setFormData({ name: "", email: "", subject: "", message: "" });
     } catch (error) {
       console.error("Contact form error:", error);
-      toast.error("Failed to send message. Please try again or email us directly at shadowtalk68@gmail.com");
+      const msg = error instanceof Error ? error.message : "Failed to send message.";
+      toast.error(msg.includes("email") ? msg : `${msg} You can also email shadowtalk68@gmail.com`);
     } finally {
       setIsSubmitting(false);
     }

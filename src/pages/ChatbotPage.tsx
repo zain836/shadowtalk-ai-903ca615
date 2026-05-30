@@ -1,16 +1,16 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ChatMode } from "@/components/chat/ModeSelector";
 import { AIProvider } from "@/components/chat/ProviderSelector";
 import { ChatHeader } from "@/components/chat/ChatHeader";
+import { ChatToolbar } from "@/components/chat/ChatToolbar";
 import { ChatIconRail } from "@/components/chat/ChatIconRail";
 import { ChatShadowSidebar } from "@/components/chat/ChatShadowSidebar";
-import { RainbowEdgeFrame } from "@/components/chat/RainbowEdgeFrame";
-import { ShadowPulseOrb } from "@/components/chat/ShadowPulseOrb";
+import { ShadowTalkOrb } from "@/components/chat/ShadowTalkOrb";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
@@ -39,6 +39,21 @@ import { useIntelligenceHub } from "@/hooks/useIntelligenceHub";
 import { useGemmaOffline } from "@/hooks/useGemmaOffline";
 import { useCustomApiKeys } from "@/hooks/useCustomApiKeys";
 import { stringifyChatBody } from "@/lib/chatRequest";
+import { ByokProviderKeyDialog } from "@/components/chat/ByokProviderKeyDialog";
+import {
+  buildChatProviderPayload,
+  hasStoredKeyForProvider,
+  resolveActiveUiProvider,
+} from "@/lib/chatProviderBridge";
+import { loadCustomAiConfig, saveCustomAiConfig } from "@/lib/customApiKeys";
+import {
+  getGuestArchivedIds,
+  isConversationArchived,
+  setGuestArchivedIds,
+} from "@/lib/chatArchive";
+import { CHAT_COMMAND_NAV_ROUTES } from "@/lib/chatCommandRoutes";
+import { useChatSpeech } from "@/hooks/useChatSpeech";
+import { OfflineToolsPanel } from "@/components/chat/OfflineToolsPanel";
 import { useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
 // Types
 interface Message { 
@@ -49,7 +64,12 @@ interface Message {
   attachment?: { type: 'image' | 'file'; data: string; name: string; mimeType: string };
   imageUrl?: string;
 }
-type Conversation = { id: string; title: string; created_at: string };
+type Conversation = {
+  id: string;
+  title: string;
+  created_at: string;
+  archived_at?: string | null;
+};
 type Personality = "friendly" | "sarcastic" | "professional" | "creative" | "meticulous" | "curious" | "diplomatic" | "witty" | "pragmatic" | "inquisitive" | "spicy";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -62,6 +82,7 @@ function displayStoredText(raw: string): string {
 
 const ChatbotPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, userPlan, signOut, checkSubscription, isOffline, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
@@ -72,7 +93,8 @@ const ChatbotPage = () => {
   const { getOfflineSession } = useOfflineAuth();
   const toolOrchestrator = useToolOrchestrator();
   const gemmaOffline = useGemmaOffline();
-  const { aiConfig, hasVerifiedKey } = useCustomApiKeys();
+  const { aiConfig, hasVerifiedKey, keys, switchToPlatformDefault, setDefault, refresh: refreshApiKeys } =
+    useCustomApiKeys();
   
   // State
   const [message, setMessage] = useState("");
@@ -84,10 +106,11 @@ const ChatbotPage = () => {
   const [personality, setPersonality] = useState<Personality>("friendly");
   const [chatMode, setChatMode] = useState<ChatMode>("general");
   const [aiProvider, setAiProvider] = useState<AIProvider>("lovable");
+  const [byokDialogOpen, setByokDialogOpen] = useState(false);
+  const [pendingByokProvider, setPendingByokProvider] = useState<AIProvider | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
+  const { isSpeaking, speakingMessageId, speakMessage } = useChatSpeech();
   const [selectedFile, setSelectedFile] = useState<{ type: 'image' | 'file'; data: string; name: string; mimeType: string } | null>(null);
   
   // Modals
@@ -98,12 +121,66 @@ const ChatbotPage = () => {
   const [showShadowBrowser, setShowShadowBrowser] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showMissionControl, setShowMissionControl] = useState(false);
+  const [showOfflineTools, setShowOfflineTools] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
-  
+  const [guestArchivedIds, setGuestArchivedIdsState] = useState<Set<string>>(() =>
+    getGuestArchivedIds(),
+  );
+
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useGeoLocation();
+
+  useEffect(() => {
+    if (keys.length === 0 && !aiConfig.useCustomKey && loadCustomAiConfig().usePlatformDefault) return;
+    setAiProvider(resolveActiveUiProvider(keys, aiConfig));
+  }, [keys, aiConfig.useCustomKey, aiConfig.preferredProvider]);
+
+  const hasKeyForProvider = useCallback(
+    (p: AIProvider) => hasStoredKeyForProvider(p, keys),
+    [keys],
+  );
+
+  const handleProviderChange = useCallback(
+    async (next: AIProvider) => {
+      if (next === "lovable") {
+        await switchToPlatformDefault();
+        saveCustomAiConfig({ ...loadCustomAiConfig(), usePlatformDefault: true, apiKey: "" });
+        setAiProvider("lovable");
+        return;
+      }
+
+      if (!hasStoredKeyForProvider(next, keys)) {
+        setPendingByokProvider(next);
+        setByokDialogOpen(true);
+        return;
+      }
+
+      setAiProvider(next);
+      const serverId = next === "gemini" ? "google" : next === "openrouter" ? "openrouter" : null;
+      if (serverId && keys.some((k) => k.provider === serverId && k.verified_at)) {
+        await setDefault(serverId);
+      }
+    },
+    [keys, setDefault, switchToPlatformDefault],
+  );
+
+  const handleByokSaved = useCallback(
+    async (saved: AIProvider) => {
+      setAiProvider(saved);
+      await refreshApiKeys();
+      setPendingByokProvider(null);
+    },
+    [refreshApiKeys],
+  );
+
+  useEffect(() => {
+    const prompt = searchParams.get("q");
+    if (prompt?.trim()) {
+      setMessage(prompt.trim());
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const offlineSession = getOfflineSession();
@@ -136,6 +213,9 @@ const ChatbotPage = () => {
     }
   }, [authLoading, user, offlineSession, isOffline, navigate]);
 
+  const conversationIsArchived = (conv: Conversation) =>
+    isConversationArchived(conv.id, conv.archived_at, guestArchivedIds);
+
   const loadConversations = async () => {
     if (!user) return;
     const { data, error } = await supabase
@@ -148,11 +228,15 @@ const ChatbotPage = () => {
       const rows = data.map((c) => ({
         ...c,
         title: displayStoredText(c.title || 'Untitled'),
+        archived_at: (c as Conversation).archived_at ?? null,
       }));
       setConversations(rows);
-      if (rows.length > 0 && !currentConversationId) {
-        loadConversation(rows[0].id);
-      } else if (rows.length === 0) {
+      const active = rows.filter(
+        (c) => !isConversationArchived(c.id, c.archived_at, guestArchivedIds),
+      );
+      if (active.length > 0 && !currentConversationId) {
+        loadConversation(active[0].id);
+      } else if (active.length === 0) {
         setMessages([{ id: 'welcome', type: 'ai', content: getWelcomeMessage(), timestamp: new Date() }]);
       }
     }
@@ -179,6 +263,230 @@ const ChatbotPage = () => {
 
   const getWelcomeMessage = () => {
     return "👋 Welcome back! Your neural workspace is ready.";
+  };
+
+  const welcomeMessage = (): Message => ({
+    id: "welcome",
+    type: "ai",
+    content: getWelcomeMessage(),
+    timestamp: new Date(),
+  });
+
+  const isGuestConversationId = (id: string | null) =>
+    !!id && (id.startsWith("guest-") || !user);
+
+  const resetToNewChat = () => {
+    setCurrentConversationId(null);
+    setMessages([welcomeMessage()]);
+    setMessage("");
+    setSelectedFile(null);
+  };
+
+  const handleNewChat = () => {
+    resetToNewChat();
+    setShowSidebar(false);
+    toast({ title: "New chat", description: "Started a fresh conversation." });
+  };
+
+  const handleClearCurrentChat = async () => {
+    const convId = currentConversationId;
+    if (!convId) {
+      resetToNewChat();
+      return;
+    }
+
+    if (isGuestConversationId(convId)) {
+      resetToNewChat();
+      setConversations((prev) => prev.filter((c) => c.id !== convId));
+      const guestConvId = `guest-${Date.now()}`;
+      setCurrentConversationId(guestConvId);
+      setConversations([{ id: guestConvId, title: "Guest Conversation", created_at: new Date().toISOString() }]);
+      toast({ title: "Chat cleared" });
+      return;
+    }
+
+    if (!user) return;
+
+    const { error: msgError } = await supabase
+      .from("messages")
+      .delete()
+      .eq("conversation_id", convId)
+      .eq("user_id", user.id);
+
+    if (msgError) {
+      const { error: convError } = await supabase
+        .from("conversations")
+        .delete()
+        .eq("id", convId)
+        .eq("user_id", user.id);
+      if (convError) {
+        toast({ title: "Could not clear chat", description: convError.message, variant: "destructive" });
+        return;
+      }
+      setConversations((prev) => prev.filter((c) => c.id !== convId));
+      resetToNewChat();
+    } else {
+      await supabase
+        .from("conversations")
+        .update({ title: "New Chat", updated_at: new Date().toISOString() })
+        .eq("id", convId)
+        .eq("user_id", user.id);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === convId ? { ...c, title: "New Chat" } : c)),
+      );
+      setMessages([welcomeMessage()]);
+    }
+
+    toast({ title: "Chat cleared", description: "Messages in this conversation were removed." });
+    setShowSidebar(false);
+  };
+
+  const handleDeleteConversation = async (conversationId: string) => {
+    if (isGuestConversationId(conversationId)) {
+      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+      if (currentConversationId === conversationId) resetToNewChat();
+      return;
+    }
+
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("conversations")
+      .delete()
+      .eq("id", conversationId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    const wasActive = currentConversationId === conversationId;
+    setConversations((prev) => {
+      const next = prev.filter((c) => c.id !== conversationId);
+      if (wasActive) {
+        if (next.length > 0) {
+          void loadConversation(next[0].id);
+        } else {
+          resetToNewChat();
+        }
+      }
+      return next;
+    });
+    toast({ title: "Conversation deleted" });
+  };
+
+  const switchAfterArchive = (archivedId: string, guestArchiveSet = guestArchivedIds) => {
+    if (currentConversationId !== archivedId) return;
+    const active = conversations.filter(
+      (c) =>
+        c.id !== archivedId &&
+        !isConversationArchived(c.id, c.archived_at, guestArchiveSet),
+    );
+    if (active.length > 0) {
+      void loadConversation(active[0].id);
+    } else {
+      resetToNewChat();
+    }
+  };
+
+  const handleArchiveConversation = async (conversationId: string) => {
+    const archivedAt = new Date().toISOString();
+
+    if (isGuestConversationId(conversationId)) {
+      const next = new Set(guestArchivedIds);
+      next.add(conversationId);
+      setGuestArchivedIdsState(next);
+      setGuestArchivedIds(next);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, archived_at: archivedAt } : c)),
+      );
+      switchAfterArchive(conversationId, next);
+      toast({ title: "Chat archived", description: "Find it under Archived in history." });
+      return;
+    }
+
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("conversations")
+      .update({ archived_at: archivedAt })
+      .eq("id", conversationId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({ title: "Could not archive", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    setConversations((prev) =>
+      prev.map((c) => (c.id === conversationId ? { ...c, archived_at: archivedAt } : c)),
+    );
+    switchAfterArchive(conversationId);
+    toast({ title: "Chat archived", description: "Find it under Archived in history." });
+  };
+
+  const handleUnarchiveConversation = async (conversationId: string) => {
+    if (isGuestConversationId(conversationId)) {
+      const next = new Set(guestArchivedIds);
+      next.delete(conversationId);
+      setGuestArchivedIdsState(next);
+      setGuestArchivedIds(next);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, archived_at: null } : c)),
+      );
+      toast({ title: "Chat restored", description: "Moved back to your active chats." });
+      return;
+    }
+
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("conversations")
+      .update({ archived_at: null })
+      .eq("id", conversationId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({ title: "Could not restore", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    setConversations((prev) =>
+      prev.map((c) => (c.id === conversationId ? { ...c, archived_at: null } : c)),
+    );
+    toast({ title: "Chat restored", description: "Moved back to your active chats." });
+  };
+
+  const handleClearAllChats = async () => {
+    if (!user) {
+      const guestConvId = `guest-${Date.now()}`;
+      setConversations([{ id: guestConvId, title: "Guest Conversation", created_at: new Date().toISOString() }]);
+      setCurrentConversationId(guestConvId);
+      setMessages([
+        {
+          id: "welcome",
+          type: "ai",
+          content: "👋 Welcome to ShadowTalk AI! Your neural workspace is ready for guest access.",
+          timestamp: new Date(),
+        },
+      ]);
+      setShowSidebar(false);
+      toast({ title: "All chats cleared" });
+      return;
+    }
+
+    const { error } = await supabase.from("conversations").delete().eq("user_id", user.id);
+
+    if (error) {
+      toast({ title: "Could not delete chats", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    setConversations([]);
+    resetToNewChat();
+    setShowSidebar(false);
+    toast({ title: "All chats deleted", description: "Your conversation history was cleared." });
   };
 
   const ensureConversation = async (): Promise<string | null> => {
@@ -220,37 +528,54 @@ const ChatbotPage = () => {
     return data;
   };
 
-  const handleSendMessage = async () => {
-    if ((!message.trim() && !selectedFile) || isLoading) return;
+  const runChatCompletion = useCallback(
+    async (
+      chatMessages: Array<{ role: string; content: string }>,
+      conversationId: string,
+    ) => {
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
 
-    const conversationId = user ? await ensureConversation() : currentConversationId;
-    if (!conversationId) return;
-
-    const msgContent = message;
-    const userMessage: Message = { id: crypto.randomUUID(), type: "user", content: msgContent, timestamp: new Date(), attachment: selectedFile || undefined };
-    setMessages(prev => [...prev, userMessage]);
-    setMessage(""); setSelectedFile(null); setIsLoading(true);
-    if (user) await saveMessage(msgContent, 'user', conversationId);
-
-    try {
       const { data: { session } } = await supabase.auth.getSession();
-      const chatMessages = messages.filter(m => m.id !== 'welcome').map(m => ({ role: m.type === "user" ? "user" : "assistant", content: m.content }));
-      chatMessages.push({ role: "user", content: msgContent });
-
       const resp = await fetch(CHAT_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        signal: controller.signal,
         body: stringifyChatBody({
           messages: chatMessages,
           personality,
           mode: chatMode,
-          ...(aiConfig.useCustomKey && aiConfig.preferredProvider
-            ? { useCustomApiKey: true, aiProvider: aiConfig.preferredProvider }
-            : {}),
+          ...buildChatProviderPayload(aiProvider, aiConfig, keys),
         }),
       });
 
-      if (!resp.ok) throw new Error("Failed");
+      if (!resp.ok) {
+        let detail = "Chat request failed";
+        try {
+          const errJson = await resp.json();
+          detail = typeof errJson.error === "string" ? errJson.error : detail;
+        } catch {
+          detail = (await resp.text().catch(() => "")) || detail;
+        }
+        throw new Error(detail);
+      }
+
+      const contentType = resp.headers.get("content-type") || "";
+      if (!contentType.includes("text/event-stream")) {
+        let detail = "Unexpected response from chat service";
+        try {
+          const json = await resp.json();
+          detail = typeof json.error === "string" ? json.error : detail;
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail);
+      }
+
       const reader = resp.body?.getReader();
       const decoder = new TextDecoder();
       const aiMessageId = crypto.randomUUID();
@@ -260,28 +585,140 @@ const ChatbotPage = () => {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        const lines = chunk.split("\n");
         for (const line of lines) {
-          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          if (line.startsWith("data: ") && line !== "data: [DONE]") {
             try {
               const data = JSON.parse(line.slice(6));
               const delta = data.choices?.[0]?.delta?.content;
               if (delta) {
                 assistantContent += delta;
-                setMessages(prev => {
-                  const exists = prev.find(m => m.id === aiMessageId);
-                  if (exists) return prev.map(m => m.id === aiMessageId ? { ...m, content: assistantContent } : m);
-                  return [...prev, { id: aiMessageId, type: 'ai', content: assistantContent, timestamp: new Date() }];
+                setMessages((prev) => {
+                  const exists = prev.find((m) => m.id === aiMessageId);
+                  if (exists) {
+                    return prev.map((m) =>
+                      m.id === aiMessageId ? { ...m, content: assistantContent } : m,
+                    );
+                  }
+                  return [
+                    ...prev,
+                    { id: aiMessageId, type: "ai", content: assistantContent, timestamp: new Date() },
+                  ];
                 });
               }
-            } catch {}
+            } catch {
+              /* ignore malformed SSE chunk */
+            }
           }
         }
       }
-      if (assistantContent && user) await saveMessage(assistantContent, 'assistant', conversationId);
-    } catch {
-      setMessages(prev => [...prev, { id: crypto.randomUUID(), type: "ai", content: "Error connecting to neural host.", timestamp: new Date() }]);
-    } finally { setIsLoading(false); }
+
+      if (assistantContent && user) {
+        await saveMessage(assistantContent, "assistant", conversationId);
+      }
+    },
+    [aiProvider, aiConfig, keys, chatMode, personality, user],
+  );
+
+  const handleStopGeneration = () => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsLoading(false);
+    toast({ title: "Stopped", description: "Generation cancelled." });
+  };
+
+  const handleEditMessage = async (index: number, newContent: string) => {
+    const trimmed = newContent.trim();
+    if (!trimmed) return;
+    const target = messages[index];
+    if (!target || target.type !== "user") return;
+
+    setMessages((prev) =>
+      prev.map((m, i) => (i === index ? { ...m, content: trimmed } : m)),
+    );
+
+    if (user && currentConversationId && !isGuestConversationId(currentConversationId)) {
+      await supabase
+        .from("messages")
+        .update({ content: trimmed })
+        .eq("id", target.id)
+        .eq("user_id", user.id);
+    }
+    toast({ title: "Message updated" });
+  };
+
+  const handleRegenerateMessage = async (index: number) => {
+    const target = messages[index];
+    if (!target || target.type !== "ai" || isLoading) return;
+
+    const prior = messages.slice(0, index);
+    const chatMessages = prior
+      .filter((m) => m.id !== "welcome")
+      .map((m) => ({
+        role: m.type === "user" ? "user" : "assistant",
+        content: m.content,
+      }));
+
+    if (chatMessages.length === 0) return;
+
+    const conversationId = user ? await ensureConversation() : currentConversationId;
+    if (!conversationId) return;
+
+    setMessages(prior);
+    setIsLoading(true);
+
+    try {
+      await runChatCompletion(chatMessages, conversationId);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      const msg = err instanceof Error ? err.message : "Regeneration failed.";
+      toast({ title: "Regeneration failed", description: msg, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if ((!message.trim() && !selectedFile) || isLoading) return;
+
+    const conversationId = user ? await ensureConversation() : currentConversationId;
+    if (!conversationId) return;
+
+    const msgContent = message;
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      type: "user",
+      content: msgContent,
+      timestamp: new Date(),
+      attachment: selectedFile || undefined,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setMessage("");
+    setSelectedFile(null);
+    setIsLoading(true);
+    if (user) await saveMessage(msgContent, "user", conversationId);
+
+    const chatMessages = messages
+      .filter((m) => m.id !== "welcome")
+      .map((m) => ({
+        role: m.type === "user" ? "user" : "assistant",
+        content: m.content,
+      }));
+    chatMessages.push({ role: "user", content: msgContent });
+
+    try {
+      await runChatCompletion(chatMessages, conversationId);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      const msg = err instanceof Error ? err.message : "Error connecting to chat service.";
+      toast({ title: "Message failed", description: msg, variant: "destructive" });
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), type: "ai", content: msg, timestamp: new Date() },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (authLoading) {
@@ -296,7 +733,8 @@ const ChatbotPage = () => {
     return null;
   }
 
-  const isEmptyChat = messages.length <= 1;
+  const isEmptyChat = messages.filter((m) => m.id !== "welcome").length === 0;
+  const hasActiveChat = messages.some((m) => m.id !== "welcome");
   const userDisplayName = user?.user_metadata?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "there";
   const userInitials = user?.email ? user.email.charAt(0).toUpperCase() : "G";
 
@@ -330,10 +768,16 @@ const ChatbotPage = () => {
 
   const handleCommandAction = (action: string) => {
     setShowCommandPalette(false);
+
+    const navPath = CHAT_COMMAND_NAV_ROUTES[action];
+    if (navPath) {
+      navigate(navPath);
+      return;
+    }
+
     switch (action) {
       case "new-chat":
-        setCurrentConversationId(null);
-        setMessages([]);
+        handleNewChat();
         return;
       case "deep-research":
         setShowDeepResearch(true);
@@ -347,21 +791,41 @@ const ChatbotPage = () => {
       case "browser":
         setShowShadowBrowser(true);
         return;
-      case "analytics":
-        navigate("/analytics");
-        return;
-      case "custom-instructions":
-      case "gemini-analytics":
-        navigate("/profile");
-        return;
       case "missions":
+      case "agentic":
+      case "cognitive-loop":
         setShowMissionControl(true);
         return;
-      case "vault":
-        navigate("/vault");
+      case "offline-tools":
+      case "offline":
+        setShowOfflineTools(true);
+        return;
+      case "vision":
+        setShowCommandPalette(true);
+        return;
+      case "bunker": {
+        const enabled = localStorage.getItem("shadowtalk_bunker_mode") === "true";
+        localStorage.setItem("shadowtalk_bunker_mode", enabled ? "false" : "true");
+        window.dispatchEvent(
+          new CustomEvent("shadowtalk-bunker-changed", { detail: { enabled: !enabled } }),
+        );
+        toast({
+          title: !enabled ? "Bunker mode enabled" : "Bunker mode disabled",
+          description: !enabled
+            ? "Background model downloads can run when configured in Profile."
+            : "Background downloads paused.",
+        });
+        return;
+      }
+      case "wordle":
+        setMessage("Let's play Wordle — pick a 5-letter word and give me hints.");
+        toast({ title: "Wordle", description: "Prompt added to the chat input." });
         return;
       default:
-        return;
+        toast({
+          title: "Try the chat tools menu",
+          description: "Open Tools (⊞) in the header for more actions.",
+        });
     }
   };
 
@@ -374,48 +838,95 @@ const ChatbotPage = () => {
     isListening,
     onToggleVoice: () => setShowShadowTalkLive(true),
     onOpenImageGenerator: () => setShowImageGenerator(true),
-    onStopGeneration: () => {},
+    onStopGeneration: handleStopGeneration,
     selectedFile,
     onFileSelect: setSelectedFile,
     chatMode,
     onModeChange: setChatMode,
     personality,
-    layout: "shadow-pulse" as const,
+    layout: "gemini" as const,
     aiProvider,
-    onProviderChange: setAiProvider,
+    onProviderChange: handleProviderChange,
+    hasKeyForProvider,
   };
 
   return (
-    <RainbowEdgeFrame>
+    <div className="shadowtalk-chat-shell min-h-screen neural-bg">
+      <div className="shadowtalk-chat-glow" aria-hidden />
       <motion.div
-        className="flex h-screen w-full relative overflow-hidden"
+        className="shadowtalk-chat-main flex h-screen w-full relative overflow-hidden"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
         <ChatShadowSidebar
           userInitials={userInitials}
           userDisplayName={userDisplayName}
-          onNewChat={() => {
-            setCurrentConversationId(null);
-            setMessages([]);
-          }}
+          onNewChat={handleNewChat}
+          onOpenHistory={() => setShowSidebar(true)}
         />
         <ChatIconRail
           userInitials={userInitials}
-          onNewChat={() => { setCurrentConversationId(null); setMessages([]); }}
+          onNewChat={handleNewChat}
           onOpenHistory={() => setShowSidebar(true)}
           onOpenTools={() => setToolsMenuOpen(true)}
           onOpenSettings={() => navigate("/profile")}
         />
         <AnimatePresence>
           {showSidebar && (
-            <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} className="fixed left-0 top-0 bottom-0 z-50 md:left-[240px]">
-              <ConversationSidebar conversations={conversations} currentConversationId={currentConversationId} onCreateNew={() => { setCurrentConversationId(null); setMessages([]); setShowSidebar(false); }} onSelect={(id) => { loadConversation(id); setShowSidebar(false); }} onDelete={() => {}} onClearAll={() => {}} />
-            </motion.div>
+            <>
+              <motion.button
+                type="button"
+                aria-label="Close history"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm md:left-[240px]"
+                onClick={() => setShowSidebar(false)}
+              />
+              <motion.div
+                initial={{ x: -280 }}
+                animate={{ x: 0 }}
+                exit={{ x: -280 }}
+                className="fixed left-0 top-0 bottom-0 z-50 md:left-[240px]"
+              >
+                <ConversationSidebar
+                  conversations={conversations}
+                  currentConversationId={currentConversationId}
+                  isArchived={conversationIsArchived}
+                  onCreateNew={handleNewChat}
+                  onSelect={(id) => {
+                    loadConversation(id);
+                    setShowSidebar(false);
+                  }}
+                  onDelete={handleDeleteConversation}
+                  onArchive={handleArchiveConversation}
+                  onUnarchive={handleUnarchiveConversation}
+                  onClearAll={handleClearAllChats}
+                  onClearCurrent={handleClearCurrentChat}
+                  onOpenSettings={() => {
+                    setShowSidebar(false);
+                    navigate("/profile");
+                  }}
+                  onOpenWorkspace={() => {
+                    setShowSidebar(false);
+                    navigate("/workspace");
+                  }}
+                  onClose={() => setShowSidebar(false)}
+                />
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
-        <div className="flex-1 flex flex-col min-w-0 bg-black">
-          <p className="shadow-pulse-top-label hidden md:block shrink-0">Shadow Pulse</p>
+        <div className="flex-1 flex flex-col min-w-0 bg-background/40 backdrop-blur-[2px]">
+          <p className="shadowtalk-chat-top-label hidden md:block">ShadowTalk AI</p>
+          <ChatToolbar
+            hasActiveChat={hasActiveChat}
+            conversationCount={conversations.length}
+            onNewChat={handleNewChat}
+            onOpenHistory={() => setShowSidebar(true)}
+            onClearChat={handleClearCurrentChat}
+            onDeleteAllChats={handleClearAllChats}
+          />
           <ChatHeader
             variant="minimal"
             userPlan={userPlan}
@@ -434,6 +945,7 @@ const ChatbotPage = () => {
             onOpenGeminiAnalytics={() => navigate("/profile")}
             onOpenCanvas={() => navigate("/workspace")}
             onOpenDeepResearch={() => setShowDeepResearch(true)}
+            onOpenGoogleIntegration={() => navigate("/profile?tab=linked")}
             onOpenAgenticRunner={() => setShowMissionControl(true)}
             onOpenVisualReasoning={() => setShowCommandPalette(true)}
             onOpenCreativeSynthesis={() => navigate("/studio")}
@@ -441,7 +953,8 @@ const ChatbotPage = () => {
             onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
             onOpenBrowser={() => setShowShadowBrowser(true)}
             aiProvider={aiProvider}
-            onProviderChange={setAiProvider}
+            onProviderChange={handleProviderChange}
+            hasKeyForProvider={hasKeyForProvider}
             maxChats="∞"
             dailyChats={dailyChats}
             toolsMenuOpen={toolsMenuOpen}
@@ -454,18 +967,20 @@ const ChatbotPage = () => {
                   key="home"
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="shadow-pulse-empty"
+                  className="shadowtalk-chat-empty"
                 >
-                  <ShadowPulseOrb />
-                  <h1 className="shadow-pulse-greeting">Hello, {userDisplayName}</h1>
-                  <p className="shadow-pulse-tagline">ShadowTalk Intelligence</p>
+                  <ShadowTalkOrb />
+                  <h1 className="shadowtalk-chat-greeting">
+                    Hello, <span className="gradient-text">{userDisplayName}</span>
+                  </h1>
+                  <p className="shadowtalk-chat-tagline">Think AI. Think ShadowTalk.</p>
                   {hasVerifiedKey && aiConfig.useCustomKey && (
-                    <p className="text-[10px] text-white/30 mt-2 tracking-wide">
+                    <p className="text-[10px] text-muted-foreground/60 mt-2 tracking-wide">
                       {aiConfig.preferredProvider} API connected
                     </p>
                   )}
-                  <div className="shadow-pulse-input-wrap w-full">
-                    <div className="shadow-pulse-input-inner">
+                  <div className="shadowtalk-chat-input-shell w-full">
+                    <div className="shadowtalk-chat-input-inner">
                       <ChatInput {...chatInputProps} isEmptyState />
                     </div>
                   </div>
@@ -481,23 +996,35 @@ const ChatbotPage = () => {
                     speakingMessageId={speakingMessageId}
                     isSpeaking={isSpeaking}
                     onSelectPrompt={setMessage}
-                    onEdit={() => {}}
-                    onRegenerate={() => {}}
-                    onTextToSpeech={() => {}}
-                    onOpenCodeCanvas={() => {}}
-                    onOpenIDE={() => {}}
-                    onOpenInBrowser={() => { setShowShadowBrowser(true); }}
+                    onEdit={handleEditMessage}
+                    onRegenerate={handleRegenerateMessage}
+                    onTextToSpeech={speakMessage}
+                    onOpenCodeCanvas={(code) => {
+                      setMessage(`\`\`\`\n${code}\n\`\`\``);
+                      navigate("/workspace");
+                    }}
+                    onOpenIDE={(code, language) => {
+                      sessionStorage.setItem(
+                        "shadowtalk_ide_payload",
+                        JSON.stringify({ code, language }),
+                      );
+                      navigate("/workspace");
+                    }}
+                    onOpenInBrowser={(url) => {
+                      if (url) window.open(url, "_blank", "noopener,noreferrer");
+                      else setShowShadowBrowser(true);
+                    }}
                     messagesEndRef={messagesEndRef}
-                    layout="shadow-pulse"
+                    layout="gemini"
                   />
                 </div>
               )}
             </AnimatePresence>
           </div>
           {!isEmptyChat && (
-            <div className="px-4 pb-6 pt-2 max-w-3xl mx-auto w-full">
-              <div className="shadow-pulse-input-wrap w-full">
-                <div className="shadow-pulse-input-inner">
+            <div className="shadowtalk-chat-input-dock">
+              <div className="shadowtalk-chat-input-shell w-full">
+                <div className="shadowtalk-chat-input-inner">
                   <ChatInput {...chatInputProps} />
                 </div>
               </div>
@@ -506,6 +1033,17 @@ const ChatbotPage = () => {
         </div>
       {showImageGenerator && <ImageGenerator onClose={() => setShowImageGenerator(false)} onImageGenerated={(url) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: '🎨 Generated image', timestamp: new Date(), imageUrl: url }])} />}
       {showDeepResearch && <DeepResearchPanel isOpen={showDeepResearch} onClose={() => setShowDeepResearch(false)} onInsertToChat={(c) => setMessages(prev => [...prev, { id: crypto.randomUUID(), type: 'ai', content: c, timestamp: new Date() }])} />}
+      {showOfflineTools && (
+        <OfflineToolsPanel
+          isOpen={showOfflineTools}
+          onClose={() => setShowOfflineTools(false)}
+          onInsertToChat={(text) => {
+            setMessage(text);
+            setShowOfflineTools(false);
+            toast({ title: "Inserted into chat", description: "Edit the prompt and send when ready." });
+          }}
+        />
+      )}
       <CommandPalette open={showCommandPalette} onOpenChange={setShowCommandPalette} onAction={handleCommandAction} />
       {showMissionControl && (
         <MissionControl
@@ -538,8 +1076,14 @@ const ChatbotPage = () => {
           />
         </Suspense>
       )}
+      <ByokProviderKeyDialog
+        open={byokDialogOpen}
+        onOpenChange={setByokDialogOpen}
+        provider={pendingByokProvider}
+        onSaved={handleByokSaved}
+      />
       </motion.div>
-    </RainbowEdgeFrame>
+    </div>
   );
 };
 export default ChatbotPage;

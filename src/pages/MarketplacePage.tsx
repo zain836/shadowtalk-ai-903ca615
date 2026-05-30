@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Star, Download, Users, Bot, FileText, TrendingUp, Shield, Zap, Code, Loader2, Check } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import type { LucideIcon } from "lucide-react";
 
@@ -15,6 +16,7 @@ const iconMap: Record<string, LucideIcon> = {
 };
 
 const MarketplacePage = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const { agents, installedIds, loading, installingId, installAgent, uninstallAgent } = useMarketplace();
 
@@ -170,7 +172,7 @@ const MarketplacePage = () => {
             <p className="text-muted-foreground mb-4 max-w-lg mx-auto">
               Create agents and scripts, publish them to the marketplace, and earn 80% of every sale. Join the creator economy.
             </p>
-            <Button>Start Building</Button>
+            <Button onClick={() => navigate("/developers")}>Start Building</Button>
           </CardContent>
         </Card>
       </div>

@@ -25,9 +25,9 @@ describe('MessageBubble', () => {
     onOpenCodeCanvas: vi.fn(),
   };
 
-  it('renders with layout shadow-pulse without throwing', () => {
+  it('renders with layout gemini without throwing', () => {
     const { container } = render(
-      <MessageBubble {...baseProps} layout="shadow-pulse" />,
+      <MessageBubble {...baseProps} layout="gemini" />,
     );
     expect(container.textContent).toContain('Hello from ShadowTalk');
   });

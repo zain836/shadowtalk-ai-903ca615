@@ -1,6 +1,10 @@
-import { HelpCircle, Mail, MessageCircle, ArrowRight } from "lucide-react";
+import { HelpCircle, Mail, MessageCircle, Loader2 } from "lucide-react";
 import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
+import { LANDING_COPY } from "@/lib/brand";
+import { useLandingMotion } from "@/hooks/use-landing-motion";
+import LandingAmbientOrb from "@/components/landing/LandingAmbientOrb";
+import { useFAQItems } from "@/hooks/useCMSContent";
 import {
   Accordion,
   AccordionContent,
@@ -25,137 +29,120 @@ const faqVariants = {
 const FAQSection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
+  const { items: dbItems, isLoading } = useFAQItems();
+  const { variants, viewport, isMobile, hoverLift } = useLandingMotion();
 
-  const faqs = [
-    {
-      question: "What is agentic AI in ShadowTalk?",
-      answer: "Agentic AI means you give a goal and ShadowTalk plans multi-step work, runs integrated tools (research, code, calendar, vault, and more), and reports back — with optional human approval before each action. Use the Agentic Task Runner or Mission Control from the chat workspace.",
-      category: "General",
-    },
-    {
-      question: "How does the AI chatbot work?",
-      answer: "Chat uses cloud models (Gemini and others) by default for power and speed. You can also trigger 30+ tools from natural language, open the Agentic Task Runner, or switch to optional on-device Gemma when you've downloaded it in Settings.",
-      category: "General",
-    },
-    {
-      question: "Can I use it offline?",
-      answer: "Yes, optionally. Download the Gemma on-device model in Settings → On-Device AI to run inference locally via WebGPU (best on Chrome/Edge). Cloud chat and agents need internet; local mode is opt-in for privacy-sensitive work.",
-      category: "Features",
-    },
-    {
-      question: "Is my data secure and private?",
-      answer: "ShadowTalk is privacy-aware: encrypted Stealth Vault, privacy score tools, and optional on-device AI so sensitive work can stay local. Cloud features process data on secure infrastructure — you control when to use local vs cloud modes.",
-      category: "Security",
-    },
-    {
-      question: "What programming languages does it support?",
-      answer: "Our AI supports all major programming languages including Python, JavaScript, Java, C++, Go, Rust, and many more. It can generate, debug, and optimize code in any language you work with.",
-      category: "Features",
-    },
-    {
-      question: "Can I cancel my subscription anytime?",
-      answer: "Yes, you can cancel your subscription at any time. There are no cancellation fees, and you'll continue to have access to your plan features until the end of your billing period.",
-      category: "Billing",
-    },
-    {
-      question: "Do you offer refunds?",
-      answer: "We offer a 30-day money-back guarantee for all paid plans. If you're not satisfied within the first 30 days, contact our support team for a full refund.",
-      category: "Billing",
-    },
-    {
-      question: "How do I upgrade or downgrade my plan?",
-      answer: "You can change your plan anytime from your account settings. Upgrades take effect immediately, while downgrades apply at the start of your next billing cycle.",
-      category: "Billing",
-    },
-    {
-      question: "Is there an API available?",
-      answer: "Yes! Elite plan users get access to our REST API, allowing you to integrate our AI capabilities into your own applications and workflows.",
-      category: "Features",
-    },
-  ];
+  const faqs = useMemo(
+    () =>
+      dbItems.map((item) => ({
+        question: item.question,
+        answer: item.answer,
+        category:
+          item.category?.charAt(0).toUpperCase() + (item.category?.slice(1) || "general"),
+      })),
+    [dbItems]
+  );
 
   const categoryColors: Record<string, string> = {
     General: "bg-primary/10 text-primary",
     Features: "bg-secondary/10 text-secondary",
     Security: "bg-success/10 text-success",
     Billing: "bg-warning/10 text-warning",
+    Technical: "bg-accent/10 text-accent",
+    Privacy: "bg-success/10 text-success",
   };
 
   return (
-    <section id="faq" ref={sectionRef} className="py-28 bg-muted/10 relative overflow-hidden">
-      {/* Ambient */}
+    <section id="faq" ref={sectionRef} className="py-16 sm:py-28 bg-muted/10 relative overflow-hidden">
       <div className="absolute inset-0 bg-grid-dense opacity-20" />
-      <motion.div
-        animate={isInView ? { x: [0, 30, 0], opacity: [0.03, 0.06, 0.03] } : {}}
-        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/2 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[150px]"
+      <LandingAmbientOrb
+        className={`absolute top-1/2 right-0 ${
+          isMobile ? "w-[280px] h-[280px] blur-[80px]" : "w-[500px] h-[500px] blur-[150px]"
+        } bg-accent/5 rounded-full`}
+        animate={isInView ? { x: [0, 20, 0], opacity: [0.03, 0.06, 0.03] } : undefined}
+        duration={12}
       />
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="grid lg:grid-cols-5 gap-12 max-w-6xl mx-auto">
-          {/* Left side - header */}
+        <div className="grid lg:grid-cols-5 gap-8 sm:gap-12 max-w-6xl mx-auto">
           <div className="lg:col-span-2 lg:sticky lg:top-24 lg:self-start">
             <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.9 }}
-              whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ type: "spring", stiffness: 200 }}
-              className="inline-flex items-center space-x-2 glass-subtle rounded-full px-5 py-2 mb-8"
+              variants={variants.fadeSlideUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              className="inline-flex items-center space-x-2 glass-subtle rounded-full px-4 py-2 sm:px-5 sm:py-2 mb-6 sm:mb-8"
             >
-              <HelpCircle className="h-4 w-4 text-accent" />
-              <span className="text-sm text-muted-foreground font-medium">Help Center</span>
+              <HelpCircle className="h-4 w-4 text-accent shrink-0" />
+              <span className="text-xs sm:text-sm text-muted-foreground font-medium">{LANDING_COPY.faq.badge}</span>
             </motion.div>
 
             <motion.h2
-              initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
-              whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1, duration: 0.7 }}
-              className="text-4xl md:text-5xl font-bold mb-6 tracking-tight"
+              variants={variants.fadeSlideUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              className="text-3xl sm:text-4xl md:text-5xl font-bold mb-5 sm:mb-6 tracking-tight leading-tight"
             >
-              Frequently Asked{" "}
-              <span className="gradient-text">Questions</span>
+              {LANDING_COPY.faq.title[0]}{" "}
+              <span className="gradient-text">{LANDING_COPY.faq.title[1]}</span>
             </motion.h2>
 
             <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="text-muted-foreground mb-8 leading-relaxed"
+              variants={variants.fadeSlideUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              className="text-muted-foreground mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base"
             >
-              Everything you need to know about ShadowTalk AI. Can't find what you're looking for?
+              {LANDING_COPY.faq.subtitle}
             </motion.p>
 
             {/* Contact CTA */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="glass-subtle rounded-2xl p-6 space-y-4"
+              variants={variants.scaleFadeIn}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              whileHover={hoverLift}
+              className="glass-subtle rounded-2xl p-5 sm:p-6 space-y-4"
             >
               <h3 className="font-semibold">Still have questions?</h3>
               <p className="text-sm text-muted-foreground">
                 We aim to reply within one business day. Premium and Elite plans get priority queue handling.
               </p>
               <div className="flex flex-col gap-2">
-                <Button size="sm" className="btn-glow justify-start gap-2" asChild>
-                  <a href="mailto:shadowtalk68@gmail.com">
-                    <Mail className="h-4 w-4" />
-                    Email Support
-                  </a>
-                </Button>
-                <Button variant="outline" size="sm" className="justify-start gap-2">
-                  <MessageCircle className="h-4 w-4" />
-                  Live Chat
-                </Button>
+                <motion.div whileHover={hoverLift} whileTap={{ scale: 0.98 }}>
+                  <Button size="sm" className="btn-glow justify-start gap-2 w-full" asChild>
+                    <a href="mailto:shadowtalk68@gmail.com">
+                      <Mail className="h-4 w-4" />
+                      Email Support
+                    </a>
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={hoverLift} whileTap={{ scale: 0.98 }}>
+                  <Button variant="outline" size="sm" className="justify-start gap-2 w-full">
+                    <MessageCircle className="h-4 w-4" />
+                    Live Chat
+                  </Button>
+                </motion.div>
               </div>
             </motion.div>
           </div>
 
           {/* Right side - FAQ accordion */}
           <div className="lg:col-span-3">
+            {isLoading && (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {!isLoading && faqs.length === 0 && (
+              <p className="text-sm text-muted-foreground glass-subtle rounded-xl p-6">
+                FAQs are managed in the admin CMS. Visit the full{" "}
+                <a href="/faq" className="text-primary underline">FAQ page</a> or contact support.
+              </p>
+            )}
             <Accordion type="single" collapsible className="space-y-3">
               {faqs.map((faq, index) => (
                 <motion.div
@@ -164,7 +151,7 @@ const FAQSection = () => {
                   variants={faqVariants}
                   initial="hidden"
                   whileInView="visible"
-                  viewport={{ once: true, margin: "-30px" }}
+                  viewport={viewport}
                 >
                   <AccordionItem
                     value={`item-${index}`}
