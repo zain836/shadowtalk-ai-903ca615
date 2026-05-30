@@ -1,105 +1,161 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Crown, Zap, Lock, Check, ArrowRight, Sparkles } from "lucide-react";
-import { SUBSCRIPTION_TIERS } from "@/lib/monetization";
+import { Check, ArrowRight, Sparkles, Zap } from "lucide-react";
+import {
+  getPlanPsychology,
+  getRiskReversalBullets,
+  getSocialProofLine,
+  getValueAnchorLine,
+  MONTHLY_PLANS,
+  RECOMMENDED_MONTHLY_PLAN,
+  type MonthlyPlanId,
+} from "@/lib/conversionPsychology";
+import { usePlatformMetrics } from "@/hooks/usePlatformMetrics";
 
 interface UpgradePromptProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   feature?: string;
-  requiredPlan?: string;
+  requiredPlan?: MonthlyPlanId;
   limitReached?: boolean;
 }
 
-export function UpgradePrompt({ 
-  open, 
-  onOpenChange, 
+function UpgradePromptBody({
+  onOpenChange,
   feature = "this feature",
-  requiredPlan = "Pro",
-  limitReached = false
-}: UpgradePromptProps) {
+  requiredPlan = "pro",
+  limitReached = false,
+}: Omit<UpgradePromptProps, "open">) {
   const navigate = useNavigate();
+  const { totalUsers, isLoading } = usePlatformMetrics();
+  const recommended = RECOMMENDED_MONTHLY_PLAN;
+  const highlight = getPlanPsychology(recommended);
 
-  const handleUpgrade = () => {
+  const handleSelect = (planId: MonthlyPlanId) => {
     onOpenChange(false);
-    navigate('/founder-access');
+    navigate(`/founder-access?plan=${planId}`);
   };
 
-  const eliteTier = SUBSCRIPTION_TIERS.find(t => t.id === 'elite');
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+    <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-primary/60 flex items-center justify-center">
-              {limitReached ? <Zap className="w-5 h-5 text-primary-foreground" /> : <Lock className="w-5 h-5 text-primary-foreground" />}
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-primary" />
             </div>
             <Badge variant="secondary" className="bg-primary/10 text-primary">
-              {requiredPlan}+ Required
+              Monthly · Cancel anytime
             </Badge>
           </div>
-          <DialogTitle className="text-xl">
-            {limitReached ? "Daily Limit Reached" : `Unlock ${feature}`}
+          <DialogTitle className="text-xl pr-6">
+            {limitReached ? "Keep the conversation going" : `Unlock ${feature}`}
           </DialogTitle>
           <DialogDescription>
-            {limitReached 
-              ? "You've used all your free credits for today. Upgrade for unlimited access!"
-              : `${feature} is available for ${requiredPlan} subscribers and above.`
-            }
+            {limitReached
+              ? "Free tier resets at midnight. Pro and Premium remove daily caps so you never stop mid-flow."
+              : `${feature} works best without limits. Pick a monthly plan — most teams start on Premium.`}
           </DialogDescription>
+          {!isLoading && (
+            <p className="text-xs text-muted-foreground pt-1">{getSocialProofLine(totalUsers)}</p>
+          )}
         </DialogHeader>
 
-        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Crown className="w-5 h-5 text-amber-500" />
-                <span className="font-semibold">Elite Founding Member</span>
-              </div>
-              <div className="text-right">
-                <span className="text-2xl font-bold text-primary">$39.99</span>
-                <span className="text-xs text-muted-foreground block">one-time</span>
-              </div>
-            </div>
-            
-            <div className="space-y-2 mb-4">
-              {eliteTier?.features.slice(0, 5).map((feature, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-success shrink-0" />
-                  <span>{feature}</span>
-                </div>
-              ))}
-              <div className="text-xs text-muted-foreground pl-6">
-                +{(eliteTier?.features.length || 0) - 5} more features...
-              </div>
-            </div>
+        <div className="grid gap-3">
+          {MONTHLY_PLANS.map((planId) => {
+            const plan = getPlanPsychology(planId);
+            const isRecommended = planId === recommended;
+            const isRequired = planId === requiredPlan || planHierarchy(planId) >= planHierarchy(requiredPlan);
 
-            <Button 
-              className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80" 
-              onClick={handleUpgrade}
-            >
-              <Sparkles className="w-4 h-4" />
-              Claim Founding Member Access
-              <ArrowRight className="w-4 h-4" />
-            </Button>
+            return (
+              <Card
+                key={planId}
+                className={`cursor-pointer transition-all hover:border-primary/40 ${
+                  isRecommended ? "ring-2 ring-primary/50 border-primary/30" : "border-border/50"
+                }`}
+                onClick={() => handleSelect(planId)}
+              >
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{plan.name}</span>
+                        {isRecommended && (
+                          <Badge className="text-[10px] h-5">Most chosen</Badge>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {getValueAnchorLine(planId)}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-xl font-bold">${plan.price}</span>
+                      <span className="text-xs text-muted-foreground">/mo</span>
+                      <p className="text-[10px] text-primary">{plan.daily}/day</p>
+                    </div>
+                  </div>
+                  <ul className="space-y-1 mb-3">
+                    {plan.topFeatures.map((f) => (
+                      <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <Check className="h-3.5 w-3.5 text-success shrink-0 mt-0.5" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    size="sm"
+                    className={`w-full gap-1.5 ${isRecommended ? "btn-glow" : ""}`}
+                    variant={isRecommended ? "default" : "outline"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelect(planId);
+                    }}
+                  >
+                    {isRequired ? `Get ${plan.name}` : `Choose ${plan.name}`}
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        <Card className="border-dashed bg-muted/20">
+          <CardContent className="pt-3 pb-3">
+            <p className="text-xs font-medium mb-2 flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5 text-amber-500" />
+              Why {highlight.name}? ({highlight.comparison})
+            </p>
+            <ul className="grid grid-cols-2 gap-1">
+              {getRiskReversalBullets().map((b) => (
+                <li key={b} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <Check className="h-3 w-3 text-success shrink-0" />
+                  {b}
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
+    </DialogContent>
+  );
+}
 
-        <p className="text-xs text-center text-muted-foreground">
-          Limited founding member slots available • Lifetime access
-        </p>
-      </DialogContent>
+export function UpgradePrompt({ open, onOpenChange, ...props }: UpgradePromptProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {open ? <UpgradePromptBody onOpenChange={onOpenChange} {...props} /> : null}
     </Dialog>
   );
+}
+
+function planHierarchy(id: MonthlyPlanId): number {
+  return { pro: 1, premium: 2, elite: 3 }[id];
 }

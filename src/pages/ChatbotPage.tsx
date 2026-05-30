@@ -55,6 +55,10 @@ import { CHAT_COMMAND_NAV_ROUTES } from "@/lib/chatCommandRoutes";
 import { useChatSpeech } from "@/hooks/useChatSpeech";
 import { OfflineToolsPanel } from "@/components/chat/OfflineToolsPanel";
 import { useAutoBrowse } from "@/components/chat/BrowseActivityPanel";
+import { ChatUpgradeNudge } from "@/components/monetization/ChatUpgradeNudge";
+import { UpgradePrompt } from "@/components/monetization/UpgradePrompt";
+import { useSubscriptionNudge } from "@/hooks/useSubscriptionNudge";
+import { getDailyMessageCount, incrementDailyMessageCount } from "@/lib/dailyMessageCounter";
 // Types
 interface Message { 
   id: string; 
@@ -87,7 +91,7 @@ const ChatbotPage = () => {
   const { toast } = useToast();
   
   // Hooks
-  const { checkAccess, isElite } = useFeatureGating();
+  const { checkAccess, isElite, isProOrHigher } = useFeatureGating();
   const { requestPermission } = usePushNotifications();
   const { trackChatMessage, trackConversationCreated } = useUsageTracking();
   const { getOfflineSession } = useOfflineAuth();
@@ -100,8 +104,14 @@ const ChatbotPage = () => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [dailyChats, setDailyChats] = useState(0);
+  const [dailyChats, setDailyChats] = useState(() => getDailyMessageCount());
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const nudge = useSubscriptionNudge(
+    dailyChats,
+    conversations.filter((c) => !c.archived_at).length,
+  );
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [personality, setPersonality] = useState<Personality>("friendly");
   const [chatMode, setChatMode] = useState<ChatMode>("general");
@@ -681,6 +691,16 @@ const ChatbotPage = () => {
   const handleSendMessage = async () => {
     if ((!message.trim() && !selectedFile) || isLoading) return;
 
+    if (!isProOrHigher && nudge.shouldBlockSend) {
+      setUpgradeOpen(true);
+      toast({
+        title: "Daily limit reached",
+        description: "Upgrade to Pro ($5/mo) or Premium ($15/mo) for unlimited messages.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const conversationId = user ? await ensureConversation() : currentConversationId;
     if (!conversationId) return;
 
@@ -697,6 +717,10 @@ const ChatbotPage = () => {
     setSelectedFile(null);
     setIsLoading(true);
     if (user) await saveMessage(msgContent, "user", conversationId);
+
+    if (!isProOrHigher) {
+      setDailyChats(incrementDailyMessageCount());
+    }
 
     const chatMessages = messages
       .filter((m) => m.id !== "welcome")
@@ -959,6 +983,22 @@ const ChatbotPage = () => {
             dailyChats={dailyChats}
             toolsMenuOpen={toolsMenuOpen}
             onToolsMenuOpenChange={setToolsMenuOpen}
+          />
+          <ChatUpgradeNudge
+            open={nudge.shouldShowBanner && !nudgeDismissed}
+            intensity={nudge.intensity}
+            headline={nudge.headline}
+            subline={nudge.subline}
+            used={nudge.used}
+            limit={nudge.limit}
+            recommendedPlan={nudge.recommendedPlan}
+            onDismiss={() => setNudgeDismissed(true)}
+          />
+          <UpgradePrompt
+            open={upgradeOpen}
+            onOpenChange={setUpgradeOpen}
+            limitReached={nudge.shouldBlockSend}
+            requiredPlan="pro"
           />
           <div className={`flex-1 overflow-hidden relative flex flex-col ${isEmptyChat ? "justify-center" : ""}`}>
             <AnimatePresence mode="wait">

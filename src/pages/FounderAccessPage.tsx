@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { 
   Shield, Copy, Check, MessageCircle, 
   Zap, Lock, Plane, Bot, Palette, Crown, Globe, 
@@ -26,11 +26,21 @@ import {
 } from "@/lib/monetization";
 import Navigation from "@/components/Navigation";
 
+const VALID_PLAN_IDS = new Set(["free", "pro", "premium", "elite", "lifetime"]);
+
 const FounderAccessPage = () => {
   const { toast } = useToast();
   const { userPlan } = useAuth();
+  const [searchParams] = useSearchParams();
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [selectedTier, setSelectedTier] = useState<string>("elite");
+  const [selectedTier, setSelectedTier] = useState<string>("premium");
+
+  useEffect(() => {
+    const plan = searchParams.get("plan")?.toLowerCase();
+    if (plan && VALID_PLAN_IDS.has(plan)) {
+      setSelectedTier(plan);
+    }
+  }, [searchParams]);
   const [activePaymentMethod, setActivePaymentMethod] = useState<string>("bank");
 
   const slotsRemaining = LIFETIME_DEAL.slotsRemaining;

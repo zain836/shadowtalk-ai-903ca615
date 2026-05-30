@@ -6,6 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
 import { PLAN_DETAILS } from "@/lib/stripe";
+import {
+  dailyPrice,
+  getRiskReversalBullets,
+  getSocialProofLine,
+  getValueAnchorLine,
+} from "@/lib/conversionPsychology";
+import { usePlatformMetrics } from "@/hooks/usePlatformMetrics";
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { LANDING_COPY } from "@/lib/brand";
@@ -30,20 +37,22 @@ const cardVariants = {
 const PricingSection = () => {
   const navigate = useNavigate();
   const { userPlan } = useAuth();
+  const { totalUsers, isLoading: metricsLoading } = usePlatformMetrics();
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
   const { hoverLift, variants, viewport, isMobile } = useLandingMotion();
 
   const handleSubscription = (planName: string) => {
     if (planName === "Free") { navigate('/chatbot'); return; }
-    navigate('/founder-access');
+    const planId = planName.toLowerCase();
+    navigate(planId === "free" ? "/founder-access" : `/founder-access?plan=${planId}`);
   };
 
   const plans = [
-    { name: "Free", price: "$0", period: "", description: "Get started — no credit card required", icon: Zap, popular: false, highlight: false, features: PLAN_DETAILS.free.features, comparison: "Same price as ChatGPT Free", cta: "Start Free", variant: "outline" },
-    { name: "Pro", price: `$${PLAN_DETAILS.pro.price}`, period: "/month", description: "For power users who want offline AI", icon: Star, popular: false, highlight: false, features: PLAN_DETAILS.pro.features, comparison: "Compare features, not just price", cta: "Upgrade to Pro", variant: "default" },
-    { name: "Premium", price: `$${PLAN_DETAILS.premium.price}`, period: "/month", description: "Most popular tier", icon: Rocket, popular: true, highlight: true, features: PLAN_DETAILS.premium.features, comparison: "More features than ChatGPT Plus", cta: "Go Premium", variant: "default" },
-    { name: "Elite", price: `$${PLAN_DETAILS.elite.price}`, period: "/month", description: "75% cheaper than ChatGPT Pro ($200/mo)", icon: Crown, popular: false, highlight: false, features: PLAN_DETAILS.elite.features, comparison: "ChatGPT Pro = $200/mo", cta: "Go Elite", variant: "secondary" },
+    { name: "Free", price: "$0", period: "", daily: "", description: "Try everything — no card required", icon: Zap, popular: false, highlight: false, features: PLAN_DETAILS.free.features, comparison: "ChatGPT Free blocks tools. We don't.", cta: "Start Free", variant: "outline" as const },
+    { name: "Pro", price: `$${PLAN_DETAILS.pro.price}`, period: "/month", daily: dailyPrice(PLAN_DETAILS.pro.price), description: "Unlimited messages · best for daily drivers", icon: Star, popular: false, highlight: false, features: PLAN_DETAILS.pro.features, comparison: getValueAnchorLine("pro"), cta: "Start Pro — $5/mo", variant: "outline" as const },
+    { name: "Premium", price: `$${PLAN_DETAILS.premium.price}`, period: "/month", daily: dailyPrice(PLAN_DETAILS.premium.price), description: "Most teams pick this · agentic workflows included", icon: Rocket, popular: true, highlight: true, features: PLAN_DETAILS.premium.features, comparison: getValueAnchorLine("premium"), cta: "Go Premium — $15/mo", variant: "default" as const },
+    { name: "Elite", price: `$${PLAN_DETAILS.elite.price}`, period: "/month", daily: dailyPrice(PLAN_DETAILS.elite.price), description: "Everything + white-label & phone support", icon: Crown, popular: false, highlight: false, features: PLAN_DETAILS.elite.features, comparison: getValueAnchorLine("elite"), cta: "Go Elite — $20/mo", variant: "secondary" as const },
   ];
 
   const getCurrentPlanBadge = (planName: string) => {
@@ -74,12 +83,21 @@ const PricingSection = () => {
               <span className="gradient-text">{LANDING_COPY.pricing.title[1]}</span>
             </>
           }
-          subtitle={LANDING_COPY.pricing.subtitle}
+          subtitle={
+            <>
+              {LANDING_COPY.pricing.subtitle}
+              {!metricsLoading && (
+                <span className="block mt-2 text-xs text-primary/80 font-medium">
+                  {getSocialProofLine(totalUsers)}
+                </span>
+              )}
+            </>
+          }
           className="mb-10 sm:mb-14"
         />
 
         <div className="text-center mb-12 sm:mb-16">
-          {/* Lifetime Deal Banner */}
+          {/* Lifetime alternative — anchors monthly as the default path */}
           <motion.div
             variants={variants.scaleFadeIn}
             initial="hidden"
@@ -88,13 +106,13 @@ const PricingSection = () => {
             whileHover={hoverLift}
             className="inline-flex items-center space-x-3 glass-subtle border-warning/20 rounded-xl px-4 sm:px-6 py-3 sm:py-4 mb-6"
           >
-            <Timer className="h-6 w-6 text-warning animate-pulse" />
+            <Timer className="h-6 w-6 text-warning" />
             <div className="text-left">
-              <span className="text-sm font-bold text-warning">🔥 TONIGHT ONLY: $99 Lifetime Deal</span>
+              <span className="text-sm font-bold text-warning">Prefer one payment? $99 lifetime</span>
               <p className="text-xs text-muted-foreground">
-                First 100 users get EVERYTHING forever.{" "}
+                Or stay flexible with Premium at $15/mo — cancel anytime.{" "}
                 <Button variant="link" className="text-warning p-0 h-auto text-xs" onClick={() => navigate('/lifetime-deal')}>
-                  Claim Now →
+                  See lifetime →
                 </Button>
               </p>
             </div>
@@ -162,6 +180,9 @@ const PricingSection = () => {
                       <span className="text-3xl font-bold gradient-text">{plan.price}</span>
                       <span className="text-muted-foreground ml-1 text-sm">{plan.period}</span>
                     </div>
+                    {"daily" in plan && plan.daily && (
+                      <p className="text-[11px] text-primary mt-1 font-medium">{plan.daily}/day</p>
+                    )}
                   </div>
 
                   <motion.div
@@ -306,10 +327,10 @@ const PricingSection = () => {
           className="text-center mt-12"
         >
           <p className="text-sm text-muted-foreground mb-4">
-            30-day money-back guarantee · Cancel anytime · Secure payment
+            Most builders choose <span className="text-foreground font-medium">Premium ($15/mo)</span> for unlimited messages + Mission Control
           </p>
           <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-5 text-xs text-muted-foreground">
-            {["No setup fees", "Instant activation", "Client-side encryption", "GDPR principles applied"].map((label, i) => (
+            {getRiskReversalBullets().map((label, i) => (
               <motion.span
                 key={label}
                 custom={i}
