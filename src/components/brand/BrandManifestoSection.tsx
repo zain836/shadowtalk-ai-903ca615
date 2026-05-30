@@ -61,10 +61,9 @@ const BrandManifestoSection = () => {
             viewport={viewport}
             className="mt-4 text-sm text-muted-foreground/80"
           >
-            {LANDING_COPY.manifesto.traction}
-            {" · "}
+            {LANDING_COPY.manifesto.traction} ·{" "}
             {metrics.isLoading
-              ? "Loading live metrics…"
+              ? "…"
               : `${formatTractionUsers(metrics.totalUsers)} · ${formatTractionDaily(metrics.dailyActiveUsers)}`}
           </motion.p>
         </div>
