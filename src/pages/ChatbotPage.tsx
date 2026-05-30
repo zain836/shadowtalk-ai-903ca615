@@ -10,8 +10,7 @@ import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatToolbar } from "@/components/chat/ChatToolbar";
 import { ChatIconRail } from "@/components/chat/ChatIconRail";
 import { ChatShadowSidebar } from "@/components/chat/ChatShadowSidebar";
-import { RainbowEdgeFrame } from "@/components/chat/RainbowEdgeFrame";
-import { ShadowPulseOrb } from "@/components/chat/ShadowPulseOrb";
+import { ShadowTalkOrb } from "@/components/chat/ShadowTalkOrb";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ConversationSidebar } from "@/components/chat/ConversationSidebar";
@@ -547,15 +546,16 @@ const ChatbotPage = () => {
     chatMode,
     onModeChange: setChatMode,
     personality,
-    layout: "shadow-pulse" as const,
+    layout: "gemini" as const,
     aiProvider,
     onProviderChange: setAiProvider,
   };
 
   return (
-    <RainbowEdgeFrame>
+    <div className="shadowtalk-chat-shell min-h-screen neural-bg">
+      <div className="shadowtalk-chat-glow" aria-hidden />
       <motion.div
-        className="flex h-screen w-full relative overflow-hidden"
+        className="shadowtalk-chat-main flex h-screen w-full relative overflow-hidden"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
@@ -581,7 +581,7 @@ const ChatbotPage = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-40 bg-black/60 md:left-[240px]"
+                className="fixed inset-0 z-40 bg-background/70 backdrop-blur-sm md:left-[240px]"
                 onClick={() => setShowSidebar(false)}
               />
               <motion.div
@@ -607,8 +607,8 @@ const ChatbotPage = () => {
             </>
           )}
         </AnimatePresence>
-        <div className="flex-1 flex flex-col min-w-0 bg-black">
-          <p className="shadow-pulse-top-label hidden md:block shrink-0">Shadow Pulse</p>
+        <div className="flex-1 flex flex-col min-w-0 bg-background/40 backdrop-blur-[2px]">
+          <p className="shadowtalk-chat-top-label hidden md:block">ShadowTalk AI</p>
           <ChatToolbar
             hasActiveChat={hasActiveChat}
             conversationCount={conversations.length}
@@ -655,18 +655,20 @@ const ChatbotPage = () => {
                   key="home"
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="shadow-pulse-empty"
+                  className="shadowtalk-chat-empty"
                 >
-                  <ShadowPulseOrb />
-                  <h1 className="shadow-pulse-greeting">Hello, {userDisplayName}</h1>
-                  <p className="shadow-pulse-tagline">ShadowTalk Intelligence</p>
+                  <ShadowTalkOrb />
+                  <h1 className="shadowtalk-chat-greeting">
+                    Hello, <span className="gradient-text">{userDisplayName}</span>
+                  </h1>
+                  <p className="shadowtalk-chat-tagline">Think AI. Think ShadowTalk.</p>
                   {hasVerifiedKey && aiConfig.useCustomKey && (
-                    <p className="text-[10px] text-white/30 mt-2 tracking-wide">
+                    <p className="text-[10px] text-muted-foreground/60 mt-2 tracking-wide">
                       {aiConfig.preferredProvider} API connected
                     </p>
                   )}
-                  <div className="shadow-pulse-input-wrap w-full">
-                    <div className="shadow-pulse-input-inner">
+                  <div className="shadowtalk-chat-input-shell w-full">
+                    <div className="shadowtalk-chat-input-inner">
                       <ChatInput {...chatInputProps} isEmptyState />
                     </div>
                   </div>
@@ -689,16 +691,16 @@ const ChatbotPage = () => {
                     onOpenIDE={() => {}}
                     onOpenInBrowser={() => { setShowShadowBrowser(true); }}
                     messagesEndRef={messagesEndRef}
-                    layout="shadow-pulse"
+                    layout="gemini"
                   />
                 </div>
               )}
             </AnimatePresence>
           </div>
           {!isEmptyChat && (
-            <div className="px-4 pb-6 pt-2 max-w-3xl mx-auto w-full">
-              <div className="shadow-pulse-input-wrap w-full">
-                <div className="shadow-pulse-input-inner">
+            <div className="shadowtalk-chat-input-dock">
+              <div className="shadowtalk-chat-input-shell w-full">
+                <div className="shadowtalk-chat-input-inner">
                   <ChatInput {...chatInputProps} />
                 </div>
               </div>
@@ -740,7 +742,7 @@ const ChatbotPage = () => {
         </Suspense>
       )}
       </motion.div>
-    </RainbowEdgeFrame>
+    </div>
   );
 };
 export default ChatbotPage;
