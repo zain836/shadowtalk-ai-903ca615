@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -75,6 +75,7 @@ function displayStoredText(raw: string): string {
 
 const ChatbotPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, userPlan, signOut, checkSubscription, isOffline, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
@@ -120,6 +121,13 @@ const ChatbotPage = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useGeoLocation();
+
+  useEffect(() => {
+    const prompt = searchParams.get("q");
+    if (prompt?.trim()) {
+      setMessage(prompt.trim());
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const offlineSession = getOfflineSession();

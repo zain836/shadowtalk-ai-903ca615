@@ -17,9 +17,11 @@ import {
   ArrowRight
 } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { getHelpArticleRoute } from "@/lib/helpArticleRoutes";
 
 const HelpCenterPage = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
 
   const categories = [
@@ -151,7 +153,11 @@ const HelpCenterPage = () => {
           <h2 className="text-2xl font-bold mb-8">Popular Articles</h2>
           <div className="space-y-4">
             {popularArticles.map((article, index) => (
-              <Card key={index} className="hover:border-primary/50 transition-colors cursor-pointer">
+              <Card
+                key={index}
+                className="hover:border-primary/50 transition-colors cursor-pointer"
+                onClick={() => navigate(getHelpArticleRoute(article.title))}
+              >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="p-2 bg-primary/10 rounded-lg">
