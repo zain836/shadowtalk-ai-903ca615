@@ -1,6 +1,9 @@
 import { HelpCircle, Mail, MessageCircle, ArrowRight } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
+import { LANDING_COPY } from "@/lib/brand";
+import { useLandingMotion } from "@/hooks/use-landing-motion";
+import LandingAmbientOrb from "@/components/landing/LandingAmbientOrb";
 import {
   Accordion,
   AccordionContent,
@@ -25,6 +28,7 @@ const faqVariants = {
 const FAQSection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
+  const { variants, viewport, isMobile, hoverLift } = useLandingMotion();
 
   const faqs = [
     {
@@ -82,74 +86,79 @@ const FAQSection = () => {
   };
 
   return (
-    <section id="faq" ref={sectionRef} className="py-28 bg-muted/10 relative overflow-hidden">
-      {/* Ambient */}
+    <section id="faq" ref={sectionRef} className="py-16 sm:py-28 bg-muted/10 relative overflow-hidden">
       <div className="absolute inset-0 bg-grid-dense opacity-20" />
-      <motion.div
-        animate={isInView ? { x: [0, 30, 0], opacity: [0.03, 0.06, 0.03] } : {}}
-        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/2 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[150px]"
+      <LandingAmbientOrb
+        className={`absolute top-1/2 right-0 ${
+          isMobile ? "w-[280px] h-[280px] blur-[80px]" : "w-[500px] h-[500px] blur-[150px]"
+        } bg-accent/5 rounded-full`}
+        animate={isInView ? { x: [0, 20, 0], opacity: [0.03, 0.06, 0.03] } : undefined}
+        duration={12}
       />
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="grid lg:grid-cols-5 gap-12 max-w-6xl mx-auto">
-          {/* Left side - header */}
+        <div className="grid lg:grid-cols-5 gap-8 sm:gap-12 max-w-6xl mx-auto">
           <div className="lg:col-span-2 lg:sticky lg:top-24 lg:self-start">
             <motion.div
-              initial={{ opacity: 0, y: 20, scale: 0.9 }}
-              whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ type: "spring", stiffness: 200 }}
-              className="inline-flex items-center space-x-2 glass-subtle rounded-full px-5 py-2 mb-8"
+              variants={variants.fadeSlideUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              className="inline-flex items-center space-x-2 glass-subtle rounded-full px-4 py-2 sm:px-5 sm:py-2 mb-6 sm:mb-8"
             >
-              <HelpCircle className="h-4 w-4 text-accent" />
-              <span className="text-sm text-muted-foreground font-medium">Help Center</span>
+              <HelpCircle className="h-4 w-4 text-accent shrink-0" />
+              <span className="text-xs sm:text-sm text-muted-foreground font-medium">{LANDING_COPY.faq.badge}</span>
             </motion.div>
 
             <motion.h2
-              initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
-              whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1, duration: 0.7 }}
-              className="text-4xl md:text-5xl font-bold mb-6 tracking-tight"
+              variants={variants.fadeSlideUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              className="text-3xl sm:text-4xl md:text-5xl font-bold mb-5 sm:mb-6 tracking-tight leading-tight"
             >
-              Frequently Asked{" "}
-              <span className="gradient-text">Questions</span>
+              {LANDING_COPY.faq.title[0]}{" "}
+              <span className="gradient-text">{LANDING_COPY.faq.title[1]}</span>
             </motion.h2>
 
             <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="text-muted-foreground mb-8 leading-relaxed"
+              variants={variants.fadeSlideUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              className="text-muted-foreground mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base"
             >
-              Everything you need to know about ShadowTalk AI. Can't find what you're looking for?
+              {LANDING_COPY.faq.subtitle}
             </motion.p>
 
             {/* Contact CTA */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="glass-subtle rounded-2xl p-6 space-y-4"
+              variants={variants.scaleFadeIn}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              whileHover={hoverLift}
+              className="glass-subtle rounded-2xl p-5 sm:p-6 space-y-4"
             >
               <h3 className="font-semibold">Still have questions?</h3>
               <p className="text-sm text-muted-foreground">
                 We aim to reply within one business day. Premium and Elite plans get priority queue handling.
               </p>
               <div className="flex flex-col gap-2">
-                <Button size="sm" className="btn-glow justify-start gap-2" asChild>
-                  <a href="mailto:shadowtalk68@gmail.com">
-                    <Mail className="h-4 w-4" />
-                    Email Support
-                  </a>
-                </Button>
-                <Button variant="outline" size="sm" className="justify-start gap-2">
-                  <MessageCircle className="h-4 w-4" />
-                  Live Chat
-                </Button>
+                <motion.div whileHover={hoverLift} whileTap={{ scale: 0.98 }}>
+                  <Button size="sm" className="btn-glow justify-start gap-2 w-full" asChild>
+                    <a href="mailto:shadowtalk68@gmail.com">
+                      <Mail className="h-4 w-4" />
+                      Email Support
+                    </a>
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={hoverLift} whileTap={{ scale: 0.98 }}>
+                  <Button variant="outline" size="sm" className="justify-start gap-2 w-full">
+                    <MessageCircle className="h-4 w-4" />
+                    Live Chat
+                  </Button>
+                </motion.div>
               </div>
             </motion.div>
           </div>
@@ -164,7 +173,7 @@ const FAQSection = () => {
                   variants={faqVariants}
                   initial="hidden"
                   whileInView="visible"
-                  viewport={{ once: true, margin: "-30px" }}
+                  viewport={viewport}
                 >
                   <AccordionItem
                     value={`item-${index}`}

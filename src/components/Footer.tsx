@@ -2,9 +2,15 @@ import { Bot, Github, Twitter, Linkedin, Mail, Globe, Shield, FileText, ArrowUpR
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import NewsletterSubscription from "./NewsletterSubscription";
-import { BRAND } from "@/lib/brand";
+import { BRAND, LANDING_COPY } from "@/lib/brand";
+import { useLandingMotionContext } from "@/components/landing/LandingMotionProvider";
+import LandingAnimate from "@/components/landing/LandingAnimate";
+import LandingStagger from "@/components/landing/LandingStagger";
+import LandingAmbientOrb from "@/components/landing/LandingAmbientOrb";
 
 const Footer = () => {
+  const { hoverLift, isMobile, profile } = useLandingMotionContext();
+
   const footerSections = [
     {
       title: "Product",
@@ -67,105 +73,106 @@ const Footer = () => {
 
   return (
     <footer className="relative overflow-hidden border-t border-border/50">
-      {/* Ambient gradient */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-primary/3 rounded-full blur-[150px]" />
+      <LandingAmbientOrb
+        className={`absolute bottom-0 left-1/2 -translate-x-1/2 ${
+          isMobile ? "w-[400px] h-[160px] blur-[80px]" : "w-[800px] h-[300px] blur-[150px]"
+        } bg-primary/5 rounded-full`}
+        animate={{ opacity: [0.03, 0.08, 0.03] }}
+        duration={10}
+      />
 
-      <div className="container mx-auto px-4 py-16 relative z-10">
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-10 mb-14">
-          {/* Brand */}
-          <div className="lg:col-span-2">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="flex items-center space-x-2.5 mb-6"
-            >
+      <div className="container mx-auto px-4 py-12 sm:py-16 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-8 sm:gap-10 mb-12 sm:mb-14">
+          <LandingAnimate preset="slideLeft" className="lg:col-span-2">
+            <div className="flex items-center space-x-2.5 mb-5 sm:mb-6">
               <div className="relative">
                 <Bot className="h-7 w-7 text-primary" />
-                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-accent rounded-full pulse-dot" />
+                <motion.div
+                  className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-accent rounded-full pulse-dot"
+                  animate={profile.reduced ? undefined : { scale: [1, 1.3, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
               </div>
-              <span className="text-lg font-bold gradient-text">ShadowTalk AI</span>
-            </motion.div>
-            <p className="text-sm text-muted-foreground mb-6 leading-relaxed max-w-xs">
-              AI-powered productivity with privacy-focused features. Optional offline mode for creators, coders & CEOs.
-            </p>
-
-            {/* Socials */}
-            <div className="flex items-center gap-2">
-              {socials.map((s, i) => (
-                <motion.a
-                  key={i}
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={s.label}
-                  whileHover={{ y: -3, scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-9 h-9 rounded-lg glass-subtle flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors"
-                >
-                  <s.icon className="h-4 w-4" />
-                </motion.a>
-              ))}
+              <span className="text-lg font-bold gradient-text">{BRAND.fullName}</span>
             </div>
-          </div>
+            <p className="text-sm text-muted-foreground mb-2 leading-relaxed max-w-xs">{BRAND.shortPitch}</p>
+            <p className="text-xs text-muted-foreground/80 mb-5 max-w-xs">{LANDING_COPY.founder.line}</p>
+            <LandingStagger className="flex items-center gap-2">
+              {socials.map((s, i) => (
+                <LandingAnimate key={s.label} preset="pop" index={i} as="div">
+                  <motion.a
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={s.label}
+                    whileHover={hoverLift}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-9 h-9 rounded-lg glass-subtle flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors"
+                  >
+                    <s.icon className="h-4 w-4" />
+                  </motion.a>
+                </LandingAnimate>
+              ))}
+            </LandingStagger>
+          </LandingAnimate>
 
-          {/* Link columns */}
           {footerSections.map((section, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05 }}
-            >
-              <h3 className="font-semibold text-sm mb-4 text-foreground">{section.title}</h3>
-              <ul className="space-y-2.5">
+            <LandingAnimate key={section.title} preset="card" index={i}>
+              <h3 className="font-semibold text-sm mb-3 sm:mb-4 text-foreground">{section.title}</h3>
+              <LandingStagger as="ul" className="space-y-2 sm:space-y-2.5">
                 {section.links.map((link, j) => (
-                  <li key={j}>
+                  <LandingAnimate key={link.name} preset="slideLeft" index={j} as="li">
                     <Link
                       to={link.href}
                       className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1 group"
                     >
-                      {link.name}
-                      <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <motion.span whileHover={{ x: 2 }} className="inline-flex items-center gap-1">
+                        {link.name}
+                        <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </motion.span>
                     </Link>
-                  </li>
+                  </LandingAnimate>
                 ))}
-              </ul>
-            </motion.div>
+              </LandingStagger>
+            </LandingAnimate>
           ))}
         </div>
 
-        {/* Newsletter */}
-        <div className="mb-10">
+        <LandingAnimate preset="fadeUp" className="mb-8 sm:mb-10">
           <NewsletterSubscription />
-        </div>
+        </LandingAnimate>
 
-        {/* Bottom */}
-        <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-border/50 gap-4">
-          <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-            <span>© 2026 ShadowTalk AI. All rights reserved.</span>
-            <div className="hidden md:flex items-center gap-4">
-              <span className="flex items-center gap-1.5">
-                <Shield className="h-3.5 w-3.5 text-success" />
-                SOC 2
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Globe className="h-3.5 w-3.5 text-primary" />
-                Global CDN
-              </span>
-              <span className="flex items-center gap-1.5">
-                <FileText className="h-3.5 w-3.5 text-accent" />
-                GDPR
-              </span>
-            </div>
+        <LandingAnimate preset="fadeUp">
+          <div className="flex flex-col md:flex-row items-center justify-between pt-6 sm:pt-8 border-t border-border/50 gap-4">
+            <LandingStagger className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-muted-foreground">
+              <LandingAnimate preset="fadeUp" index={0} as="span">
+                © 2026 {BRAND.fullName}. All rights reserved.
+              </LandingAnimate>
+              <div className="hidden md:flex items-center gap-4">
+                {[
+                  { icon: Shield, text: "SOC 2" },
+                  { icon: Globe, text: "Global CDN" },
+                  { icon: FileText, text: "GDPR" },
+                ].map((badge, i) => (
+                  <LandingAnimate key={badge.text} preset="pop" index={i + 1} as="span">
+                    <span className="flex items-center gap-1.5">
+                      <badge.icon className="h-3.5 w-3.5 text-primary" />
+                      {badge.text}
+                    </span>
+                  </LandingAnimate>
+                ))}
+              </div>
+            </LandingStagger>
+            <motion.div
+              className="flex items-center gap-2 text-xs text-muted-foreground"
+              animate={profile.reduced ? undefined : { opacity: [0.7, 1, 0.7] }}
+              transition={{ duration: 3, repeat: Infinity }}
+            >
+              <div className="w-1.5 h-1.5 bg-success rounded-full pulse-dot" />
+              <span>All systems operational</span>
+            </motion.div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-1.5 h-1.5 bg-success rounded-full pulse-dot" />
-            <span>All systems operational</span>
-          </div>
-        </div>
+        </LandingAnimate>
       </div>
     </footer>
   );

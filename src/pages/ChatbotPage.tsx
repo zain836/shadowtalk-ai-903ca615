@@ -39,6 +39,13 @@ import { useIntelligenceHub } from "@/hooks/useIntelligenceHub";
 import { useGemmaOffline } from "@/hooks/useGemmaOffline";
 import { useCustomApiKeys } from "@/hooks/useCustomApiKeys";
 import { stringifyChatBody } from "@/lib/chatRequest";
+import { ByokProviderKeyDialog } from "@/components/chat/ByokProviderKeyDialog";
+import {
+  buildChatProviderPayload,
+  hasStoredKeyForProvider,
+  resolveActiveUiProvider,
+} from "@/lib/chatProviderBridge";
+import { loadCustomAiConfig, saveCustomAiConfig } from "@/lib/customApiKeys";
 import {
   getGuestArchivedIds,
   isConversationArchived,
@@ -86,7 +93,8 @@ const ChatbotPage = () => {
   const { getOfflineSession } = useOfflineAuth();
   const toolOrchestrator = useToolOrchestrator();
   const gemmaOffline = useGemmaOffline();
-  const { aiConfig, hasVerifiedKey } = useCustomApiKeys();
+  const { aiConfig, hasVerifiedKey, keys, switchToPlatformDefault, setDefault, refresh: refreshApiKeys } =
+    useCustomApiKeys();
   
   // State
   const [message, setMessage] = useState("");
@@ -98,6 +106,8 @@ const ChatbotPage = () => {
   const [personality, setPersonality] = useState<Personality>("friendly");
   const [chatMode, setChatMode] = useState<ChatMode>("general");
   const [aiProvider, setAiProvider] = useState<AIProvider>("lovable");
+  const [byokDialogOpen, setByokDialogOpen] = useState(false);
+  const [pendingByokProvider, setPendingByokProvider] = useState<AIProvider | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const { isSpeaking, speakingMessageId, speakMessage } = useChatSpeech();
@@ -121,6 +131,49 @@ const ChatbotPage = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useGeoLocation();
+
+  useEffect(() => {
+    if (keys.length === 0 && !aiConfig.useCustomKey && loadCustomAiConfig().usePlatformDefault) return;
+    setAiProvider(resolveActiveUiProvider(keys, aiConfig));
+  }, [keys, aiConfig.useCustomKey, aiConfig.preferredProvider]);
+
+  const hasKeyForProvider = useCallback(
+    (p: AIProvider) => hasStoredKeyForProvider(p, keys),
+    [keys],
+  );
+
+  const handleProviderChange = useCallback(
+    async (next: AIProvider) => {
+      if (next === "lovable") {
+        await switchToPlatformDefault();
+        saveCustomAiConfig({ ...loadCustomAiConfig(), usePlatformDefault: true, apiKey: "" });
+        setAiProvider("lovable");
+        return;
+      }
+
+      if (!hasStoredKeyForProvider(next, keys)) {
+        setPendingByokProvider(next);
+        setByokDialogOpen(true);
+        return;
+      }
+
+      setAiProvider(next);
+      const serverId = next === "gemini" ? "google" : next === "openrouter" ? "openrouter" : null;
+      if (serverId && keys.some((k) => k.provider === serverId && k.verified_at)) {
+        await setDefault(serverId);
+      }
+    },
+    [keys, setDefault, switchToPlatformDefault],
+  );
+
+  const handleByokSaved = useCallback(
+    async (saved: AIProvider) => {
+      setAiProvider(saved);
+      await refreshApiKeys();
+      setPendingByokProvider(null);
+    },
+    [refreshApiKeys],
+  );
 
   useEffect(() => {
     const prompt = searchParams.get("q");
@@ -496,9 +549,7 @@ const ChatbotPage = () => {
           messages: chatMessages,
           personality,
           mode: chatMode,
-          ...(aiConfig.useCustomKey && aiConfig.preferredProvider
-            ? { useCustomApiKey: true, aiProvider: aiConfig.preferredProvider }
-            : {}),
+          ...buildChatProviderPayload(aiProvider, aiConfig, keys),
         }),
       });
 
@@ -566,7 +617,7 @@ const ChatbotPage = () => {
         await saveMessage(assistantContent, "assistant", conversationId);
       }
     },
-    [aiConfig.preferredProvider, aiConfig.useCustomKey, chatMode, personality, user],
+    [aiProvider, aiConfig, keys, chatMode, personality, user],
   );
 
   const handleStopGeneration = () => {
@@ -795,7 +846,8 @@ const ChatbotPage = () => {
     personality,
     layout: "gemini" as const,
     aiProvider,
-    onProviderChange: setAiProvider,
+    onProviderChange: handleProviderChange,
+    hasKeyForProvider,
   };
 
   return (
@@ -901,7 +953,8 @@ const ChatbotPage = () => {
             onOpenShadowTalkLive={() => setShowShadowTalkLive(true)}
             onOpenBrowser={() => setShowShadowBrowser(true)}
             aiProvider={aiProvider}
-            onProviderChange={setAiProvider}
+            onProviderChange={handleProviderChange}
+            hasKeyForProvider={hasKeyForProvider}
             maxChats="∞"
             dailyChats={dailyChats}
             toolsMenuOpen={toolsMenuOpen}
@@ -1023,6 +1076,12 @@ const ChatbotPage = () => {
           />
         </Suspense>
       )}
+      <ByokProviderKeyDialog
+        open={byokDialogOpen}
+        onOpenChange={setByokDialogOpen}
+        provider={pendingByokProvider}
+        onSaved={handleByokSaved}
+      />
       </motion.div>
     </div>
   );
