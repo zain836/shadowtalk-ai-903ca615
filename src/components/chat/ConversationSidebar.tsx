@@ -48,6 +48,7 @@ interface ConversationSidebarProps {
   onClearAll: () => void;
   onClearCurrent?: () => void;
   onOpenSettings: () => void;
+  onOpenWorkspace?: () => void;
   onClose?: () => void;
 }
 
@@ -63,6 +64,7 @@ export const ConversationSidebar = ({
   onClearAll,
   onClearCurrent,
   onOpenSettings,
+  onOpenWorkspace,
 }: ConversationSidebarProps) => {
   const [search, setSearch] = useState("");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -151,10 +153,14 @@ export const ConversationSidebar = ({
                 </span>
                 <BookOpen className="h-3 w-3 text-muted-foreground/30" />
               </div>
-              <div className="px-3 py-2 rounded-full bg-primary/10 border border-primary/20 flex items-center gap-3 cursor-pointer hover:bg-primary/15 transition-all">
+              <button
+                type="button"
+                onClick={onOpenWorkspace}
+                className="w-full px-3 py-2 rounded-full bg-primary/10 border border-primary/20 flex items-center gap-3 cursor-pointer hover:bg-primary/15 transition-all text-left"
+              >
                 <Layers className="h-4 w-4 text-primary" />
                 <span className="text-[13px] font-medium text-foreground/90">Project Workspace</span>
-              </div>
+              </button>
             </div>
           )}
 
