@@ -4,6 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
+import { LANDING_COPY } from "@/lib/brand";
+import { useLandingMotion } from "@/hooks/use-landing-motion";
+import LandingSectionHeader from "@/components/landing/LandingSectionHeader";
 
 const competitorCardVariants = {
   hidden: { opacity: 0, y: 40, rotateX: 8 },
@@ -35,6 +38,7 @@ const tableRowVariants = {
 const CompetitiveComparison = () => {
   const tableRef = useRef(null);
   const tableInView = useInView(tableRef, { once: true, margin: "-80px" });
+  const { hoverLift } = useLandingMotion();
 
   const detailedComparisons = [
     {
@@ -98,40 +102,19 @@ const CompetitiveComparison = () => {
   ];
 
   return (
-    <section className="py-24 bg-card/30">
+    <section className="py-16 sm:py-24 bg-card/30">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ type: "spring", stiffness: 300 }}
-          >
-            <Badge variant="outline" className="mb-4 px-4 py-1.5 text-sm border-primary/50 text-primary">
-              <Sparkles className="h-3.5 w-3.5 mr-2" />
-              Agentic AI Workspace
-            </Badge>
-          </motion.div>
-          <motion.h2
-            initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
-            whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7 }}
-            className="text-4xl md:text-5xl font-bold mb-6"
-          >
-            Why Creators & CEOs Are{" "}
-            <span className="gradient-text">Switching to ShadowTalk</span>
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.15, duration: 0.6 }}
-            className="text-xl text-muted-foreground max-w-3xl mx-auto"
-          >
-            Teams are moving from chat-only bots to <strong className="text-foreground">agentic AI</strong> that plans, runs tools, and finishes work — with optional privacy controls when data sensitivity matters.
-          </motion.p>
-        </div>
+        <LandingSectionHeader
+          badge={LANDING_COPY.comparison.badge}
+          badgeIcon={Sparkles}
+          title={
+            <>
+              {LANDING_COPY.comparison.title[0]}{" "}
+              <span className="gradient-text">{LANDING_COPY.comparison.title[1]}</span>
+            </>
+          }
+          subtitle={LANDING_COPY.comparison.subtitle}
+        />
 
         {/* Competitor Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16 max-w-5xl mx-auto" style={{ perspective: "1000px" }}>
@@ -143,11 +126,7 @@ const CompetitiveComparison = () => {
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
-              whileHover={{
-                y: -10,
-                scale: 1.03,
-                transition: { type: "spring", stiffness: 300, damping: 20 },
-              }}
+              whileHover={hoverLift}
             >
               <Card className="h-full border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-[0_10px_40px_-15px_hsl(var(--primary)/0.2)]">
                 <CardContent className="p-6">
@@ -215,11 +194,7 @@ const CompetitiveComparison = () => {
                 whileInView={{ opacity: 1, y: 0, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1, type: "spring", stiffness: 200 }}
-                whileHover={{
-                  y: -5,
-                  scale: 1.05,
-                  transition: { type: "spring", stiffness: 400 },
-                }}
+                whileHover={hoverLift}
               >
                 <Card className="border-primary/20 bg-primary/5 text-center hover:border-primary/40 transition-colors hover:shadow-[0_5px_20px_-10px_hsl(var(--primary)/0.3)]">
                   <CardContent className="p-4">
@@ -258,11 +233,7 @@ const CompetitiveComparison = () => {
                 variants={tableRowVariants}
                 initial="hidden"
                 animate={tableInView ? "visible" : "hidden"}
-                whileHover={{
-                  scale: 1.01,
-                  x: 4,
-                  transition: { type: "spring", stiffness: 400 },
-                }}
+                whileHover={hoverLift}
               >
                 <Card className="border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-[0_4px_20px_-8px_hsl(var(--primary)/0.15)]">
                   <CardContent className="p-4 grid grid-cols-3 gap-4 items-center">

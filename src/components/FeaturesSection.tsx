@@ -2,7 +2,10 @@ import { Code, Wifi, Brain, Shield, Zap, Download, ArrowUpRight, Bot, Target } f
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { BRAND } from "@/lib/brand";
+import { LANDING_COPY } from "@/lib/brand";
+import { useLandingMotion } from "@/hooks/use-landing-motion";
+import LandingSectionHeader from "@/components/landing/LandingSectionHeader";
+import LandingAmbientOrb from "@/components/landing/LandingAmbientOrb";
 
 const cardVariants = {
   hidden: { opacity: 0, y: 50, scale: 0.95 },
@@ -37,6 +40,7 @@ const FeaturesSection = () => {
   const navigate = useNavigate();
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
+  const { hoverLift, variants, viewport, isMobile } = useLandingMotion();
 
   const features = [
     {
@@ -114,53 +118,29 @@ const FeaturesSection = () => {
   ];
 
   return (
-    <section id="features" ref={sectionRef} className="py-28 bg-background relative overflow-hidden">
-      {/* Ambient background */}
-      <div className="absolute inset-0 bg-grid-dense opacity-40"></div>
-      <motion.div
-        animate={isInView ? { scale: [1, 1.2, 1], opacity: [0.05, 0.1, 0.05] } : {}}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px]"
+    <section id="features" ref={sectionRef} className="py-16 sm:py-28 bg-background relative overflow-hidden">
+      <div className="absolute inset-0 bg-grid-dense opacity-40" />
+      <LandingAmbientOrb
+        className={`absolute top-0 left-1/2 -translate-x-1/2 ${
+          isMobile ? "w-[400px] h-[200px] blur-[80px]" : "w-[800px] h-[400px] blur-[120px]"
+        } bg-primary/5 rounded-full`}
+        animate={isInView ? { scale: [1, 1.15, 1], opacity: [0.05, 0.1, 0.05] } : undefined}
+        duration={8}
       />
 
       <div className="container mx-auto px-4 relative z-10">
-        {/* Header */}
-        <div className="text-center mb-20">
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            whileInView={{ opacity: 1, y: 0, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ type: "spring", stiffness: 200 }}
-            className="inline-flex items-center space-x-2 glass-subtle rounded-full px-5 py-2 mb-8"
-          >
-            <motion.div
-              animate={{ rotate: [0, 15, -15, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <Zap className="h-4 w-4 text-primary" />
-            </motion.div>
-            <span className="text-sm text-muted-foreground font-medium">Agentic AI Workspace</span>
-          </motion.div>
-          <motion.h2
-            initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
-            whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1, duration: 0.7 }}
-            className="text-4xl md:text-6xl font-bold mb-6 tracking-tight"
-          >
-            Agents That Execute.{" "}
-            <span className="gradient-text">One Platform.</span>
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="text-lg text-muted-foreground max-w-2xl mx-auto"
-          >
-            From multi-step task runners to mission control — ship real work, not just chat replies. Privacy-aware tools when you need them.
-          </motion.p>
-        </div>
+        <LandingSectionHeader
+          badge={LANDING_COPY.features.badge}
+          badgeIcon={Zap}
+          title={
+            <>
+              {LANDING_COPY.features.title[0]}{" "}
+              <span className="gradient-text">{LANDING_COPY.features.title[1]}</span>
+            </>
+          }
+          subtitle={LANDING_COPY.features.subtitle}
+          className="mb-12 sm:mb-20"
+        />
 
         {/* Bento Grid - responsive with no overlap on mobile */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 max-w-5xl mx-auto px-1">
@@ -168,15 +148,11 @@ const FeaturesSection = () => {
             <motion.div
               key={index}
               custom={index}
-              variants={cardVariants}
+              variants={variants.cardReveal}
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true, margin: "-50px" }}
-              whileHover={{
-                y: -8,
-                scale: 1.02,
-                transition: { type: "spring", stiffness: 400, damping: 20 },
-              }}
+              viewport={viewport}
+              whileHover={hoverLift}
               role="button"
               tabIndex={0}
               onClick={() => feature.href && navigate(feature.href)}
@@ -232,11 +208,7 @@ const FeaturesSection = () => {
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
-              whileHover={{
-                y: -5,
-                scale: 1.05,
-                transition: { type: "spring", stiffness: 400 },
-              }}
+              whileHover={hoverLift}
               className="text-center glass-subtle rounded-xl p-5 cursor-default"
             >
               <div className="text-2xl md:text-3xl font-bold gradient-text mb-1">{stat.value}</div>
@@ -260,11 +232,7 @@ const FeaturesSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.3 + i * 0.08 }}
-              whileHover={{
-                scale: 1.1,
-                y: -3,
-                transition: { type: "spring", stiffness: 400 },
-              }}
+              whileHover={hoverLift}
               className="glass-subtle rounded-lg px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors trust-badge cursor-default"
             >
               {badge}

@@ -4,6 +4,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
+import { LANDING_COPY } from "@/lib/brand";
+import { useLandingMotion } from "@/hooks/use-landing-motion";
+import LandingSectionHeader from "@/components/landing/LandingSectionHeader";
+import LandingAmbientOrb from "@/components/landing/LandingAmbientOrb";
 
 const statVariants = {
   hidden: { opacity: 0, scale: 0.8, y: 30 },
@@ -23,6 +27,7 @@ const statVariants = {
 const CommunitySection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
+  const { hoverLift, variants, viewport, isMobile } = useLandingMotion();
 
   const statIcons = [Users, Activity, Star, MessageSquare];
   const communityStats = COMMUNITY_HIGHLIGHTS.map((item, i) => ({
@@ -51,47 +56,28 @@ const CommunitySection = () => {
   ];
 
   return (
-    <section id="community" ref={sectionRef} className="py-28 bg-background relative overflow-hidden">
+    <section id="community" ref={sectionRef} className="py-16 sm:py-28 bg-background relative overflow-hidden">
       <div className="absolute inset-0 bg-grid-dense opacity-25" />
-      <motion.div
-        animate={isInView ? { scale: [1, 1.2, 1], opacity: [0.03, 0.07, 0.03] } : {}}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/4 right-1/4 w-[600px] h-[400px] bg-accent/5 rounded-full blur-[150px]"
+      <LandingAmbientOrb
+        className={`absolute top-1/4 right-1/4 ${
+          isMobile ? "w-[360px] h-[220px] blur-[80px]" : "w-[600px] h-[400px] blur-[150px]"
+        } bg-accent/5 rounded-full`}
+        animate={isInView ? { scale: [1, 1.15, 1], opacity: [0.03, 0.07, 0.03] } : undefined}
+        duration={10}
       />
 
       <div className="container mx-auto px-4 relative z-10">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            whileInView={{ opacity: 1, y: 0, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ type: "spring", stiffness: 200 }}
-            className="inline-flex items-center space-x-2 glass-subtle rounded-full px-5 py-2 mb-8"
-          >
-            <Users className="h-4 w-4 text-primary" />
-            <span className="text-sm text-muted-foreground font-medium">Join the Community</span>
-          </motion.div>
-          <motion.h2
-            initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
-            whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1, duration: 0.7 }}
-            className="text-4xl md:text-6xl font-bold mb-6 tracking-tight"
-          >
-            Connect with{" "}
-            <span className="gradient-text">Fellow Creators</span>
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="text-lg text-muted-foreground max-w-2xl mx-auto"
-          >
-            Join thousands of developers, creators, and AI enthusiasts building amazing things together.
-          </motion.p>
-        </div>
+        <LandingSectionHeader
+          badge={LANDING_COPY.community.badge}
+          badgeIcon={Users}
+          title={
+            <>
+              {LANDING_COPY.community.title[0]}{" "}
+              <span className="gradient-text">{LANDING_COPY.community.title[1]}</span>
+            </>
+          }
+          subtitle={LANDING_COPY.community.subtitle}
+        />
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16 max-w-4xl mx-auto">
@@ -99,11 +85,11 @@ const CommunitySection = () => {
             <motion.div
               key={i}
               custom={i}
-              variants={statVariants}
+              variants={variants.cardReveal}
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true }}
-              whileHover={{ y: -8, scale: 1.05, transition: { type: "spring", stiffness: 400 } }}
+              viewport={viewport}
+              whileHover={hoverLift}
             >
               <Card className="border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-[0_10px_40px_-15px_hsl(var(--primary)/0.15)] group overflow-hidden relative">
                 <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
