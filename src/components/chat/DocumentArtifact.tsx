@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useToast } from '@/hooks/use-toast';
+import { downloadAsWordDoc } from '@/lib/kimiDocumentGeneration';
+import { DOCUMENT_PROSE_CLASS, polishProfessionalMarkdown } from '@/lib/professionalDocument';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -56,7 +58,7 @@ const readingTime = (text: string): number => {
 export const DocumentArtifact: React.FC<DocumentArtifactProps> = ({ title, content, type }) => {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
-  const [editedContent, setEditedContent] = useState(content);
+  const [editedContent, setEditedContent] = useState(() => polishProfessionalMarkdown(content, { tone: 'professional' }));
   const [isExpanded, setIsExpanded] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showTOC, setShowTOC] = useState(false);
@@ -262,6 +264,9 @@ export const DocumentArtifact: React.FC<DocumentArtifactProps> = ({ title, conte
                   <button onClick={handleDownloadTxt} className="w-full text-left px-3 py-2 text-xs hover:bg-muted/50 transition-colors flex items-center gap-2">
                     <FileText className="h-3 w-3" /> Plain Text (.txt)
                   </button>
+                  <button onClick={() => { downloadAsWordDoc(editedContent, title.replace(/\s+/g, '_').toLowerCase()); toast({ title: 'Downloaded as Word' }); }} className="w-full text-left px-3 py-2 text-xs hover:bg-muted/50 transition-colors flex items-center gap-2">
+                    <FileDown className="h-3 w-3" /> Word (.doc)
+                  </button>
                   <button onClick={handleDownloadPdf} disabled={isExporting} className="w-full text-left px-3 py-2 text-xs hover:bg-muted/50 transition-colors flex items-center gap-2 rounded-b-lg">
                     <FileDown className="h-3 w-3" /> PDF Document
                   </button>
@@ -325,23 +330,9 @@ export const DocumentArtifact: React.FC<DocumentArtifactProps> = ({ title, conte
             {editedContent}
           </pre>
         ) : (
-          <div ref={docRef} className="px-6 py-6 sm:px-8 sm:py-8">
+          <div ref={docRef} className="px-4 py-4 sm:px-6"><div className="bg-white dark:bg-neutral-900 border border-border/40 rounded-sm shadow-md px-6 py-8 sm:px-10 max-w-[8.5in] mx-auto">
             {/* Document page styling */}
-            <div className="prose prose-sm dark:prose-invert max-w-none
-              prose-headings:text-foreground prose-headings:font-bold prose-headings:tracking-tight
-              prose-h1:text-xl prose-h1:border-b prose-h1:border-border/30 prose-h1:pb-3 prose-h1:mb-4
-              prose-h2:text-base prose-h2:mt-8 prose-h2:mb-3 prose-h2:first:mt-0
-              prose-h3:text-sm prose-h3:mt-5
-              prose-p:text-foreground/85 prose-p:leading-[1.8] prose-p:my-3
-              prose-strong:text-foreground prose-strong:font-semibold
-              prose-li:text-foreground/85 prose-li:leading-relaxed prose-li:my-0.5
-              prose-a:text-primary prose-a:font-medium prose-a:underline prose-a:underline-offset-2
-              prose-blockquote:border-l-primary/40 prose-blockquote:bg-primary/5 prose-blockquote:rounded-r-lg prose-blockquote:py-1 prose-blockquote:not-italic
-              prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-[13px] prose-code:font-medium prose-code:before:content-none prose-code:after:content-none
-              prose-table:my-4 prose-th:bg-muted/40 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2
-              prose-hr:border-border/30 prose-hr:my-6
-              prose-img:rounded-lg prose-img:shadow-lg
-            ">
+            <div className={DOCUMENT_PROSE_CLASS}>
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
@@ -370,6 +361,7 @@ export const DocumentArtifact: React.FC<DocumentArtifactProps> = ({ title, conte
               >
                 {editedContent}
               </ReactMarkdown>
+            </div>
             </div>
 
             {/* Document footer */}
@@ -464,7 +456,7 @@ export function detectDocumentArtifact(content: string): { isDocument: boolean; 
         isDocument: true,
         title: title.length > 60 ? title.slice(0, 57) + '...' : title,
         type: pattern.type,
-        documentContent: content,
+        documentContent: polishProfessionalMarkdown(content, { tone: 'professional' }),
       };
     }
   }
@@ -476,7 +468,7 @@ export function detectDocumentArtifact(content: string): { isDocument: boolean; 
       isDocument: true,
       title: titleMatch ? titleMatch[1].replace(/\*\*/g, '').slice(0, 60) : 'Generated Document',
       type: 'document',
-      documentContent: content,
+      documentContent: polishProfessionalMarkdown(content, { tone: 'professional' }),
     };
   }
 

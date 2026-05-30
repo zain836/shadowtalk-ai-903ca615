@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import { requireAuth } from "../_shared/auth.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
 serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -13,19 +15,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-    if (!token) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const auth = await requireAuth(req, corsHeaders);
+    if (!auth.authenticated) return auth.response;
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const { userId } = auth;
 
     const { action, params } = await req.json();
 
@@ -33,7 +26,7 @@ serve(async (req) => {
     const { data: tokenData, error: tokenError } = await supabase
       .from("oauth_tokens")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("provider", "google")
       .single();
 

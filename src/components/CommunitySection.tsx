@@ -1,20 +1,35 @@
-import { Users, MessageSquare, Star, Calendar, ArrowUpRight, Zap, Globe, Loader2 } from "lucide-react";
+import {
+  Users,
+  MessageSquare,
+  Star,
+  Activity,
+  Calendar,
+  ArrowUpRight,
+  Zap,
+  Globe,
+  Loader2,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion, useInView } from "framer-motion";
 import { useMemo, useRef } from "react";
+import { LANDING_COPY } from "@/lib/brand";
+import { useLandingMotion } from "@/hooks/use-landing-motion";
+import LandingSectionHeader from "@/components/landing/LandingSectionHeader";
+import LandingAmbientOrb from "@/components/landing/LandingAmbientOrb";
 import { buildCommunityHighlights, usePlatformMetrics } from "@/hooks/usePlatformMetrics";
 import { useCommunityEvents } from "@/hooks/useCMSContent";
 
 const CommunitySection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
+  const { hoverLift, variants, viewport, isMobile } = useLandingMotion();
   const metrics = usePlatformMetrics();
   const { events, isLoading: eventsLoading } = useCommunityEvents();
 
   const communityStats = useMemo(() => {
     const highlights = buildCommunityHighlights(metrics);
-    const statIcons = [Users, MessageSquare, Star, Calendar];
+    const statIcons = [Users, Activity, Star, MessageSquare];
     const gradients = [
       "from-primary/20 to-primary/5",
       "from-secondary/20 to-secondary/5",
@@ -37,57 +52,39 @@ const CommunitySection = () => {
   ];
 
   return (
-    <section id="community" ref={sectionRef} className="py-28 bg-background relative overflow-hidden">
+    <section id="community" ref={sectionRef} className="py-16 sm:py-28 bg-background relative overflow-hidden">
       <div className="absolute inset-0 bg-grid-dense opacity-25" />
-      <motion.div
-        animate={isInView ? { scale: [1, 1.2, 1], opacity: [0.03, 0.07, 0.03] } : {}}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/4 right-1/4 w-[600px] h-[400px] bg-accent/5 rounded-full blur-[150px]"
+      <LandingAmbientOrb
+        className={`absolute top-1/4 right-1/4 ${
+          isMobile ? "w-[360px] h-[220px] blur-[80px]" : "w-[600px] h-[400px] blur-[150px]"
+        } bg-accent/5 rounded-full`}
+        animate={isInView ? { scale: [1, 1.15, 1], opacity: [0.03, 0.07, 0.03] } : undefined}
+        duration={10}
       />
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="text-center mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            whileInView={{ opacity: 1, y: 0, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ type: "spring", stiffness: 200 }}
-            className="inline-flex items-center space-x-2 glass-subtle rounded-full px-5 py-2 mb-6"
-          >
-            <Users className="h-4 w-4 text-accent" />
-            <span className="text-sm text-muted-foreground font-medium">Join Our Community</span>
-          </motion.div>
-
-          <motion.h2
-            initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
-            whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1, duration: 0.7 }}
-            className="text-4xl md:text-5xl font-bold mb-6 tracking-tight"
-          >
-            Connect with <span className="gradient-text">fellow builders</span>
-          </motion.h2>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="text-xl text-muted-foreground max-w-2xl mx-auto"
-          >
-            Join a growing community of builders — stats below are pulled live from the platform.
-          </motion.p>
-        </div>
+        <LandingSectionHeader
+          badge={LANDING_COPY.community.badge}
+          badgeIcon={Users}
+          title={
+            <>
+              {LANDING_COPY.community.title[0]}{" "}
+              <span className="gradient-text">{LANDING_COPY.community.title[1]}</span>
+            </>
+          }
+          subtitle={LANDING_COPY.community.subtitle}
+        />
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16 max-w-4xl mx-auto">
           {communityStats.map((stat, i) => (
             <motion.div
               key={stat.label}
-              initial={{ opacity: 0, scale: 0.8, y: 30 }}
-              whileInView={{ opacity: 1, scale: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1, duration: 0.5, type: "spring", stiffness: 200 }}
-              whileHover={{ y: -6, transition: { type: "spring", stiffness: 400 } }}
+              custom={i}
+              variants={variants.cardReveal}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              whileHover={hoverLift}
             >
               <Card className="border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-[0_10px_40px_-15px_hsl(var(--primary)/0.15)] group overflow-hidden relative">
                 <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
@@ -100,7 +97,11 @@ const CommunitySection = () => {
                     <stat.icon className="h-5 w-5 text-primary" />
                   </motion.div>
                   <div className="text-2xl font-bold gradient-text mb-1">
-                    {metrics.isLoading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : stat.value}
+                    {metrics.isLoading ? (
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    ) : (
+                      stat.value
+                    )}
                   </div>
                   <div className="text-xs font-medium text-foreground/80">{stat.label}</div>
                   <p className="text-[10px] text-muted-foreground mt-1 leading-snug">{stat.description}</p>
@@ -113,9 +114,10 @@ const CommunitySection = () => {
         <div className="grid lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
           <div>
             <motion.h3
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              variants={variants.fadeSlideUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
               className="text-2xl font-bold mb-6"
             >
               Why Join?
@@ -124,11 +126,12 @@ const CommunitySection = () => {
               {benefits.map((b, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  whileHover={{ x: 4 }}
+                  custom={i}
+                  variants={variants.cardReveal}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={viewport}
+                  whileHover={hoverLift}
                   className="flex items-start gap-4 glass-subtle rounded-xl p-4 group cursor-default"
                 >
                   <div className={`w-10 h-10 ${b.bg} rounded-xl flex items-center justify-center shrink-0`}>
@@ -143,24 +146,29 @@ const CommunitySection = () => {
               ))}
             </div>
             <div className="flex gap-3">
-              <Button className="btn-glow" asChild>
-                <a href="https://discord.gg/shadowtalkai" target="_blank" rel="noopener noreferrer">
-                  Join Discord
-                </a>
-              </Button>
-              <Button variant="outline" asChild>
-                <a href="https://twitter.com/shadowtalkai" target="_blank" rel="noopener noreferrer">
-                  Follow on X
-                </a>
-              </Button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+                <Button className="btn-glow" asChild>
+                  <a href="https://discord.gg/shadowtalkai" target="_blank" rel="noopener noreferrer">
+                    Join Discord
+                  </a>
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+                <Button variant="outline" asChild>
+                  <a href="https://twitter.com/shadowtalkai" target="_blank" rel="noopener noreferrer">
+                    Follow on X
+                  </a>
+                </Button>
+              </motion.div>
             </div>
           </div>
 
           <div>
             <motion.h3
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              variants={variants.fadeSlideUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
               className="text-2xl font-bold mb-6"
             >
               Upcoming Events
@@ -183,7 +191,7 @@ const CommunitySection = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1, duration: 0.5 }}
-                  whileHover={{ y: -4 }}
+                  whileHover={hoverLift}
                 >
                   <Card className="border-border/50 hover:border-primary/20 transition-all duration-300 hover:shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.15)] group">
                     <CardContent className="p-5">

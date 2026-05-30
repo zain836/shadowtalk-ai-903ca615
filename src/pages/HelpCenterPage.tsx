@@ -20,6 +20,7 @@ import {
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDocsPages } from "@/hooks/useCMSContent";
+import { getHelpArticleRoute } from "@/lib/helpArticleRoutes";
 
 const CATEGORY_META: Record<
   string,
@@ -113,6 +114,9 @@ const HelpCenterPage = () => {
     }));
   }, [pages, searchQuery]);
 
+  const articleHref = (article: { title: string; slug: string }) =>
+    article.slug ? `/docs/${article.slug}` : getHelpArticleRoute(article.title);
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -192,7 +196,7 @@ const HelpCenterPage = () => {
           ) : (
             <div className="space-y-4">
               {popularArticles.map((article) => (
-                <Link key={article.slug} to={`/docs/${article.slug}`}>
+                <Link key={article.slug || article.title} to={articleHref(article)}>
                   <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                     <CardContent className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-4">

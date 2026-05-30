@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { 
   Bot, ArrowLeft, LogOut, Settings, Download, Lock, Crown, Star, Zap, Menu, 
-  Search, Image, Play, Eye, Wand2, Compass, FileText, Mic, MoreVertical,
+  Search, Image, Play, Eye, Wand2, Compass, FileText, Mic, AudioLines, MoreVertical,
   LayoutGrid, Sparkles, MessageCircle, Briefcase, Heart, Laugh, Lightbulb,
-  Scale, Target, HelpCircle, Share2, Plus, Pin
+  Scale, Target, HelpCircle, Share2, Plus, Pin, Mail
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/AuthProvider";
+import { BunkerModeToggle } from "./BunkerModeToggle";
 import {
   Select,
   SelectContent,
@@ -70,15 +71,17 @@ interface ChatHeaderProps {
   onOpenGeminiAnalytics: () => void;
   onOpenCanvas: (type: "document" | "code") => void;
   onOpenDeepResearch: () => void;
+  onOpenGoogleIntegration?: () => void;
+  onOpenImageGenerator: () => void;
+  onOpenShadowTalkLive: () => void;
   onOpenAgenticRunner: () => void;
   onOpenVisualReasoning: () => void;
   onOpenCreativeSynthesis: () => void;
-  onOpenImageGenerator: () => void;
-  onOpenShadowTalkLive: () => void;
   onOpenOfflineTools?: () => void;
   onOpenBrowser: () => void;
   aiProvider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
+  hasKeyForProvider?: (provider: AIProvider) => boolean;
   maxChats: string;
   dailyChats: number;
   variant?: "full" | "minimal";
@@ -90,6 +93,7 @@ const ToolsHubMenu = ({
   open,
   onOpenChange,
   onOpenDeepResearch,
+  onOpenGoogleIntegration,
   onOpenAgenticRunner,
   onOpenVisualReasoning,
   onOpenCreativeSynthesis,
@@ -100,6 +104,7 @@ const ToolsHubMenu = ({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onOpenDeepResearch: () => void;
+  onOpenGoogleIntegration?: () => void;
   onOpenAgenticRunner: () => void;
   onOpenVisualReasoning: () => void;
   onOpenCreativeSynthesis: () => void;
@@ -123,6 +128,10 @@ const ToolsHubMenu = ({
         <DropdownMenuItem onClick={onOpenDeepResearch} className="flex-col items-start gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all cursor-pointer">
           <Search className="h-4 w-4 text-blue-400" />
           <span className="text-[12px] font-semibold">Deep Research</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onOpenGoogleIntegration} className="flex-col items-start gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all cursor-pointer">
+          <Mail className="h-4 w-4 text-red-400" />
+          <span className="text-[12px] font-semibold">Google Workspace</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onOpenAgenticRunner} className="flex-col items-start gap-2 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all cursor-pointer">
           <Play className="h-4 w-4 text-green-400" />
@@ -180,6 +189,7 @@ export const ChatHeader = ({
   onOpenGeminiAnalytics,
   onOpenCanvas,
   onOpenDeepResearch,
+  onOpenGoogleIntegration,
   onOpenAgenticRunner,
   onOpenVisualReasoning,
   onOpenCreativeSynthesis,
@@ -188,6 +198,7 @@ export const ChatHeader = ({
   onOpenBrowser,
   aiProvider,
   onProviderChange,
+  hasKeyForProvider,
   variant = "full",
   toolsMenuOpen,
   onToolsMenuOpenChange,
@@ -201,36 +212,28 @@ export const ChatHeader = ({
   if (variant === "minimal") {
     return (
       <>
-        <div className="flex items-center justify-between px-4 py-3 md:px-6 bg-transparent relative z-20 shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center justify-between px-4 py-3 md:px-8 bg-transparent relative z-20 shrink-0">
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={onToggleSidebar}
-              className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/20 md:hidden shrink-0"
+              className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/20 md:hidden"
               aria-label="Menu"
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <ProviderSelector provider={aiProvider} onProviderChange={onProviderChange} />
             <Button
               variant="ghost"
               size="icon"
               onClick={() => onToolsMenuOpenChange?.(true)}
-              className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/20 md:hidden shrink-0"
+              className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/20 md:hidden"
               aria-label="Tools"
             >
               <LayoutGrid className="h-5 w-5 text-primary" />
             </Button>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Badge
-              variant="outline"
-              className="hidden sm:flex h-8 px-3 rounded-full border-primary/25 bg-primary/5 text-primary/90 text-[11px] font-medium gap-1.5"
-            >
-              <Lock className="h-3 w-3" />
-              E2EE
-            </Badge>
+          <div className="flex items-center gap-2">
             {showUpgrade && (
               <Button
                 onClick={() => navigate("/pricing")}
@@ -240,38 +243,13 @@ export const ChatHeader = ({
                 Upgrade
               </Button>
             )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-secondary/80 text-xs font-bold text-primary-foreground shadow-md ring-1 ring-border/30"
-                  aria-label="Account"
-                >
-                  {userInitials}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 p-2 bg-card/95 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-2xl">
-                <DropdownMenuItem onClick={onManageSubscription} className="gap-3 rounded-xl py-2.5">
-                  <Crown className="h-4 w-4 text-amber-400" />
-                  <span className="text-sm font-medium">Subscription</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onOpenGeminiAnalytics} className="gap-3 rounded-xl py-2.5">
-                  <Settings className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-border/40" />
-                <DropdownMenuItem onClick={onSignOut} className="gap-3 rounded-xl py-2.5 text-destructive focus:text-destructive">
-                  <LogOut className="h-4 w-4" />
-                  <span className="text-sm font-medium">Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
         <ToolsHubMenu
           open={toolsMenuOpen}
           onOpenChange={onToolsMenuOpenChange}
           onOpenDeepResearch={onOpenDeepResearch}
+          onOpenGoogleIntegration={onOpenGoogleIntegration}
           onOpenAgenticRunner={onOpenAgenticRunner}
           onOpenVisualReasoning={onOpenVisualReasoning}
           onOpenCreativeSynthesis={onOpenCreativeSynthesis}
@@ -298,7 +276,13 @@ export const ChatHeader = ({
         
         <div className="hidden xs:block h-4 w-px bg-white/10 mx-1" />
         
-        <ProviderSelector provider={aiProvider} onProviderChange={onProviderChange} />
+        <ProviderSelector
+          provider={aiProvider}
+          onProviderChange={onProviderChange}
+          hasKeyForProvider={hasKeyForProvider}
+        />
+        <div className="hidden xs:block h-4 w-px bg-white/10 mx-1" />
+        <BunkerModeToggle />
       </div>
 
       {/* Right: Tools & User */}

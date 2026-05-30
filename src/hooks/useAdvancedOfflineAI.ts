@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useHardwareCapabilities } from './useHardwareCapabilities';
 import { useOfflineRAG } from './useOfflineRAG';
 import { useBusinessMemory } from './useBusinessMemory';
+import { SHADOWTALK_SELF_KNOWLEDGE_BRIEF } from '@/lib/shadowTalkProductKnowledge';
 
 interface WebLLMMessage {
   role: 'system' | 'user' | 'assistant';

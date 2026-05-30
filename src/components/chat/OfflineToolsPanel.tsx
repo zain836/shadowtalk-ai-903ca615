@@ -53,8 +53,13 @@ export const OfflineToolsPanel = ({ isOpen, onClose, onInsertToChat }: OfflineTo
   const [translatedResult, setTranslatedResult] = useState<string | null>(null);
   const [codeToRun, setCodeToRun] = useState("console.log('Hello, World!');");
   const [codeLanguage, setCodeLanguage] = useState<"javascript" | "python">("javascript");
+  const [templateCategory, setTemplateCategory] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const filteredTemplates = templateCategory
+    ? templates.templates.filter((t) => t.category === templateCategory)
+    : templates.templates;
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -230,8 +235,8 @@ export const OfflineToolsPanel = ({ isOpen, onClose, onInsertToChat }: OfflineTo
 
                   <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
                     <p className="text-xs text-muted-foreground">
-                      <strong>🛡️ Zero-Server Promise:</strong> All processing happens on your device. 
-                      Your data never leaves your browser. Perfect for sensitive documents and private conversations.
+                      <strong>🛡️ Local processing:</strong> In offline mode, inference runs in your browser.
+                      Prompts for that session are not sent to ShadowTalk servers. Perfect for sensitive documents.
                     </p>
                   </div>
                 </CardContent>
@@ -554,9 +559,11 @@ export const OfflineToolsPanel = ({ isOpen, onClose, onInsertToChat }: OfflineTo
                     {templates.categories.map(cat => (
                       <Badge 
                         key={cat}
-                        variant="outline" 
+                        variant={templateCategory === cat ? "default" : "outline"}
                         className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                        onClick={() => {}}
+                        onClick={() =>
+                          setTemplateCategory((prev) => (prev === cat ? null : cat))
+                        }
                       >
                         {cat}
                       </Badge>
@@ -564,7 +571,7 @@ export const OfflineToolsPanel = ({ isOpen, onClose, onInsertToChat }: OfflineTo
                   </div>
                   
                   <div className="grid gap-3">
-                    {templates.templates.slice(0, 8).map(template => (
+                    {filteredTemplates.slice(0, 8).map(template => (
                       <div 
                         key={template.id}
                         className="p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"

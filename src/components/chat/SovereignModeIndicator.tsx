@@ -1,4 +1,4 @@
-import { Wifi, WifiOff, Loader2, Shield, Download, Brain } from "lucide-react";
+import { WifiOff, Loader2, Brain } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -6,7 +6,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useRobustOfflineAI } from "@/hooks/useRobustOfflineAI";
+import { useSovereignAI } from "@/hooks/useSovereignAI";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 
@@ -16,15 +16,12 @@ export const SovereignModeIndicator = () => {
     isLoading, 
     loadProgress,
     activeModel,
-    isBackgroundDownloading,
-    backgroundProgress,
-    hasCachedModel,
-    recommendedModel,
-  } = useRobustOfflineAI();
+    availableModels,
+  } = useSovereignAI();
   
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const hasCachedModel = availableModels.some(m => m.tier === 'standard');
 
-  // Listen for online/offline changes
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -38,30 +35,6 @@ export const SovereignModeIndicator = () => {
     };
   }, []);
 
-  // Show background download progress when online
-  if (!isOffline && isBackgroundDownloading) {
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge 
-              variant="secondary" 
-              className="gap-1.5 px-2 py-1 text-xs cursor-default bg-blue-500/15 border-blue-500/40 text-blue-500"
-            >
-              <Download className="h-3 w-3 animate-pulse" />
-              <span className="hidden sm:inline">{backgroundProgress}%</span>
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>📥 Auto-downloading {recommendedModel?.name || 'AI model'} for offline use</p>
-            <p className="text-xs text-muted-foreground">Works offline: reasoning, code, math</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
-
-  // Show loading indicator when preparing offline AI
   if (isLoading) {
     return (
       <TooltipProvider>
@@ -76,14 +49,13 @@ export const SovereignModeIndicator = () => {
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            Loading local AI engine... {loadProgress}%
+            Initializing Sovereign AI... {loadProgress}%
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
     );
   }
 
-  // Show offline mode indicator
   if (isOffline) {
     return (
       <TooltipProvider>
@@ -99,12 +71,7 @@ export const SovereignModeIndicator = () => {
               {isReady ? (
                 <>
                   <Brain className="h-3 w-3" />
-                  <span className="hidden sm:inline">Offline AI</span>
-                </>
-              ) : hasCachedModel ? (
-                <>
-                  <WifiOff className="h-3 w-3" />
-                  <span className="hidden sm:inline">Loading...</span>
+                  <span className="hidden sm:inline">Sovereign AI</span>
                 </>
               ) : (
                 <>
@@ -116,10 +83,8 @@ export const SovereignModeIndicator = () => {
           </TooltipTrigger>
           <TooltipContent>
             {isReady 
-              ? `🧠 Using ${activeModel || 'Local AI'}. 100% private - reasoning, code, math.`
-              : hasCachedModel 
-                ? 'Offline - Local AI loading...'
-                : 'Offline - No local AI model available'
+              ? `🧠 Using ${activeModel?.name || 'Local AI'}. 100% private.`
+              : 'Offline - Local AI not loaded'
             }
           </TooltipContent>
         </Tooltip>
@@ -127,6 +92,5 @@ export const SovereignModeIndicator = () => {
     );
   }
 
-  // Don't show anything if online and not doing anything special
   return null;
 };

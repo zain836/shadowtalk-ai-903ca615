@@ -1,97 +1,156 @@
-# Welcome to your Lovable project
+# ShadowTalk AI
 
-## Project info
+**Think AI. Think ShadowTalk.**
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**The AI workspace that doesn't own you.**
 
-## How can I edit this code?
+ShadowTalk is the **agentic AI workspace** for people who are tired of chatbots that only talk. Plan missions, run 30+ tools from one sentence, approve agent steps when it matters, and ship real work — on **web, PWA, or desktop** — while **you** stay in control of your keys, data, and pace.
 
-There are several ways of editing your application.
+> *ChatGPT answers. ShadowTalk executes.*
 
-**Use Lovable**
+**[Launch ShadowTalk →](https://www.shadowtalk-ai.com)** · **[Open chat](https://www.shadowtalk-ai.com/chatbot)** · [Repository](https://github.com/zain836/shadowtalk-ai-903ca615)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## Why people switch
 
-**Use your preferred IDE**
+You've tried the big names. You've hit the paywalls, the rate limits, the "we updated our policy" emails. ShadowTalk is built for one thing: **make you dangerously productive without selling you out.**
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+| Others | ShadowTalk |
+|--------|------------|
+| Single-thread chat | **Mission Control** — multi-step autonomous runs |
+| Manual tool hopping | **30+ tools** from natural language |
+| Cloud-only | **Vault, BYOK, optional on-device Gemma** |
+| Browser tab | **Desktop app** with native files & notifications |
+| Platform credits only | **Your API keys, your bill** — Gemini, OpenRouter, Kimi |
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+| You get | What that means for you |
+|--------|-------------------------|
+| **One workspace, not ten tabs** | Chat, research, code, images, long-form docs, presentations, and mission-style agents—no tab circus. |
+| **Works when the internet doesn't** | Offline routing to on-device models where supported—you're not hostage to an outage banner. |
+| **Privacy that isn't marketing fluff** | Guest access, BYOK, and architecture that keeps keys **yours**. |
+| **Updates that find you** | Ship a release in admin—every user gets notified. |
 
-Follow these steps:
+> **Stop renting intelligence.** Own how you work, what you pay, and who sees your prompts.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+**1.5K+** creators · **104+** daily active users (and growing).
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+---
 
-# Step 3: Install the necessary dependencies.
-npm i
+## What ShadowTalk actually is
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+ShadowTalk is a **privacy-first, multimodal AI operating layer**—not a thin ChatGPT skin.
+
+- **Neural chat** with personalities, pro modes, and tool orchestration that feels like a team, not a toy.
+- **Bring-your-own-key (BYOK)** so power users aren't trapped in platform credits.
+- **Document & presentation studio** for client-ready output in minutes, not hours.
+- **Deep research, browser tools, and agent workflows** for people who execute—not just prompt.
+- **Admin control panel** for releases, broadcasts, users, and platform ops—built in, not bolted on.
+
+Under the hood: **React + Supabase edge functions**, routing to the platform gateway or **your** provider when BYOK is on. This repo is the real product—not a demo template.
+
+---
+
+## Built for people who refuse to fall behind
+
+If you're still copying prompts between five apps, you're already behind. ShadowTalk compresses the stack:
+
+1. **Sign in** (or try as guest).
+2. **Add your API key** if you want usage on your terms.
+3. **Work in one place**—chat, create, research, present.
+4. **Go offline** when you need to.
+5. **Get pinged** when we ship—so you're never the last to know.
+
+**[Open the app](https://www.shadowtalk-ai.com/chatbot)** — the workspace is live. The question isn't whether you need an AI OS. It's whether you'll keep funding someone else's roadmap.
+
+---
+
+## Start in 60 seconds
+
+```bash
+git clone https://github.com/zain836/shadowtalk-ai-903ca615.git
+cd shadowtalk-ai-903ca615
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Open [http://localhost:5173](http://localhost:5173) → **Enter ShadowTalk** on the homepage.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Desktop software
 
-**Use GitHub Codespaces**
+```bash
+npm run build
+npm run desktop:make
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+See [DESKTOP.md](./DESKTOP.md) for installers. Download builds: https://www.shadowtalk-ai.com/download
 
-## What technologies are used for this project?
+---
 
-This project is built with:
+## Stack
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **Frontend:** React, Vite, Tailwind, shadcn/ui
+- **Backend:** Supabase (auth, DB, edge functions)
+- **AI:** Multi-model chat, agents, BYOK (Gemini / OpenRouter / Kimi)
+- **Desktop:** Capacitor + Electron
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## For developers & operators
 
-## Production deployment (self-hosted)
+`.env` / `.env.local`:
 
-For a production deployment outside Lovable, you should:
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
+```
 
-1. Set required environment variables for the frontend (build-time):
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+```bash
+npm run build
+npm test
+```
 
-   The Vite config will refuse to build in production if these are missing.
+| Area | Path |
+|------|------|
+| Admin panel | `/admin` (requires `admin` in `user_roles`) |
+| Edge functions | `supabase/functions/` |
+| Migrations | `supabase/migrations/` |
+| BYOK routing | `supabase/functions/_shared/custom-ai-provider.ts` |
+| Update notifications | `notify-app-update`, `app_updates` table |
 
-2. Configure your Supabase project with the SQL migrations under `supabase/migrations` and set the service role and URL for edge functions.
+**Deploy:** run migrations, deploy `chat`, `notify-app-update`, `assign-admin-role`, and related functions; set `LOVABLE_API_KEY` and integration secrets in Supabase — never commit secrets.
 
-3. Configure secrets for payments and integrations in your hosting provider (not committed to the repo), such as:
-   - Stripe keys (publishable and secret)
-   - LemonSqueezy API keys and webhook secrets
-   - Any OAuth client IDs/secrets used by Google/Microsoft
+---
 
-4. Run the standard quality gates before deploying:
-   - `npm run lint`
-   - `npm run test`
-   - `npm run build`
+## Active branches
 
-Once these pass with your production environment variables, you can deploy the built assets (`dist/`) behind your preferred CDN or app hosting platform.
+| Branch | Focus |
+|--------|--------|
+| `main` | Production baseline |
+| `cursor/desktop-app-7adb` | Desktop (Capacitor + Electron) |
+| `cursor/custom-api-keys-7adb` | BYOK (Gemini / OpenRouter / Kimi) |
+| `cursor/update-notifications-7adb` | Auto update alerts + unified admin panel |
 
-## Can I connect a custom domain to my Lovable project?
+Open [Pull Requests](https://github.com/zain836/shadowtalk-ai-903ca615/pulls) for merge status.
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Links
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- **Live:** https://www.shadowtalk-ai.com
+- **Chat:** https://www.shadowtalk-ai.com/chatbot
+- **Download desktop:** https://www.shadowtalk-ai.com/download
+
+---
+
+## The bottom line
+
+Legacy AI tools were built to **capture** you. ShadowTalk was built so you can **command**—your models, your privacy, your pace—on web or desktop.
+
+**[shadowtalk-ai.com](https://www.shadowtalk-ai.com)** — use it before your workflow becomes someone else's product roadmap.
+
+---
+
+*ShadowTalk AI · Private repo. Contact the maintainer for licensing and distribution.*
+
+**Think AI. Think ShadowTalk.**

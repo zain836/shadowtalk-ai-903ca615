@@ -18,8 +18,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { motion, AnimatePresence } from "framer-motion";
+import { useLandingMotionContext } from "@/components/landing/LandingMotionProvider";
+import LandingStagger from "@/components/landing/LandingStagger";
+import LandingAnimate from "@/components/landing/LandingAnimate";
 
-const Navigation = () => {
+type NavigationProps = {
+  /** Enable entrance + hover motion on the marketing home page */
+  landingAnimated?: boolean;
+};
+
+const Navigation = ({ landingAnimated = false }: NavigationProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -27,6 +36,9 @@ const Navigation = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user } = useAuth();
+  const landingMotion = useLandingMotionContext();
+  const animate = landingAnimated || landingMotion.isLandingPage;
+  const { hoverLift, variants, viewport, profile } = landingMotion;
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isMac = /Macintosh/.test(navigator.userAgent);
@@ -89,6 +101,7 @@ const Navigation = () => {
     { name: "Mission Control", href: "/missioncontrol", icon: Target, isLink: true },
     { name: "Presentations", href: "/presentations", icon: Presentation, isLink: true },
     { name: "Developers", href: "/developers", icon: Terminal, isLink: true },
+    { name: "Desktop app", href: "/download", icon: Download, isLink: true },
     { name: "Privacy Score", href: "/privacy-score", icon: ShieldCheck, isLink: true },
     { name: t("nav.docs"), href: "/docs", icon: BookOpen, isLink: true },
     { name: t("nav.changelog"), href: "/changelog", icon: History, isLink: true },
@@ -115,39 +128,49 @@ const Navigation = () => {
     }
   };
 
-  return (
-    <>
-    <nav className="fixed top-0 left-0 right-0 z-50 glass-strong border-b border-border/50">
+  const navClassName = "fixed top-0 left-0 right-0 z-50 glass-strong border-b border-border/50";
+  const navInner = (
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div
+          <LandingAnimate
+            preset="fadeUp"
+            inView={false}
+            className="flex items-center gap-3"
+            as={animate ? "div" : "div"}
+          >
+            <motion.div
               className="flex items-center space-x-2.5 cursor-pointer flex-shrink-0 group"
-              onClick={() => navigate('/')}
+              onClick={() => navigate("/")}
+              whileHover={animate ? hoverLift : undefined}
             >
               <div className="relative">
                 <Bot className="h-7 w-7 text-primary transition-all duration-300 group-hover:drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]" />
-                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-accent rounded-full pulse-dot"></div>
+                <motion.div
+                  className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-accent rounded-full pulse-dot"
+                  animate={animate && !profile.reduced ? { scale: [1, 1.35, 1] } : undefined}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
               </div>
               <span className="text-lg font-semibold tracking-tight gradient-text hidden sm:inline whitespace-nowrap">
                 ShadowTalk AI
               </span>
-            </div>
+            </motion.div>
             {user && <WorkspaceSwitcher />}
-          </div>
+          </LandingAnimate>
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-0.5">
-            {primaryNavItems.map((item) => (
-              <button
-                key={item.name}
-                onClick={() => handleNavClick(item)}
-                className="flex items-center space-x-1.5 px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-lg transition-all duration-200 text-sm font-medium whitespace-nowrap"
-              >
-                <item.icon className="h-4 w-4" />
-                <span>{item.name}</span>
-              </button>
+          <LandingStagger className="hidden lg:flex items-center space-x-0.5" inView={false}>
+            {primaryNavItems.map((item, i) => (
+              <LandingAnimate key={item.name} preset="fadeUp" index={i} inView={false} as="div">
+                <motion.button
+                  onClick={() => handleNavClick(item)}
+                  whileHover={animate ? hoverLift : undefined}
+                  whileTap={animate ? { scale: 0.97 } : undefined}
+                  className="flex items-center space-x-1.5 px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-lg transition-all duration-200 text-sm font-medium whitespace-nowrap"
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.name}</span>
+                </motion.button>
+              </LandingAnimate>
             ))}
 
             <DropdownMenu>
@@ -173,75 +196,112 @@ const Navigation = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
+          </LandingStagger>
 
-          {/* CTA Buttons */}
-          <div className="hidden md:flex items-center space-x-1.5">
-            <TrustBadge />
-            <StealthKillSwitch />
-            <HardwarePassthrough />
+          <LandingStagger className="hidden md:flex items-center space-x-1.5" inView={false}>
+            <LandingAnimate preset="pop" index={0} inView={false} as="div">
+              <TrustBadge />
+            </LandingAnimate>
+            <LandingAnimate preset="pop" index={1} inView={false} as="div">
+              <StealthKillSwitch />
+            </LandingAnimate>
+            <LandingAnimate preset="pop" index={2} inView={false} as="div">
+              <HardwarePassthrough />
+            </LandingAnimate>
             {!isInstalled && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleInstallClick}
-                className="border-primary/40 text-primary hover:bg-primary/10 transition-all duration-200 gap-1.5"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Install App
-              </Button>
+              <LandingAnimate preset="fadeUp" inView={false} as="div">
+                <motion.div whileHover={animate ? hoverLift : undefined}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleInstallClick}
+                    className="border-primary/40 text-primary hover:bg-primary/10 transition-all duration-200 gap-1.5"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Install App
+                  </Button>
+                </motion.div>
+              </LandingAnimate>
             )}
-            <NotificationBell />
-            <LanguageSwitcher />
-            <FeedbackForm />
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-border/60 hover:border-primary/40 hover:bg-muted/30 transition-all duration-200"
-              onClick={() => navigate('/auth')}
-            >
-              {t("nav.login")}
-            </Button>
-            <Button
-              size="sm"
-              className="btn-glow"
-              onClick={() => navigate('/chatbot')}
-            >
-              {t("nav.tryFree")}
-            </Button>
-          </div>
+            <LandingAnimate preset="fadeUp" inView={false} as="div">
+              <NotificationBell />
+            </LandingAnimate>
+            <LandingAnimate preset="fadeUp" inView={false} as="div">
+              <LanguageSwitcher />
+            </LandingAnimate>
+            <LandingAnimate preset="fadeUp" inView={false} as="div">
+              <FeedbackForm />
+            </LandingAnimate>
+            <LandingAnimate preset="fadeUp" inView={false} as="div">
+              <motion.div whileHover={animate ? hoverLift : undefined}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-border/60 hover:border-primary/40 hover:bg-muted/30 transition-all duration-200"
+                  onClick={() => navigate("/auth")}
+                >
+                  {t("nav.login")}
+                </Button>
+              </motion.div>
+            </LandingAnimate>
+            <LandingAnimate preset="pop" inView={false} as="div">
+              <motion.div whileHover={animate ? hoverLift : undefined} whileTap={{ scale: 0.97 }}>
+                <Button size="sm" className="btn-glow" onClick={() => navigate("/chatbot")}>
+                  {t("nav.tryFree")}
+                </Button>
+              </motion.div>
+            </LandingAnimate>
+          </LandingStagger>
 
-          {/* Mobile Menu Button */}
-          <button
+          <motion.button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="lg:hidden p-2 text-foreground hover:bg-muted/40 rounded-lg transition-colors"
             aria-label="Toggle menu"
+            whileTap={animate ? { scale: 0.92 } : undefined}
           >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+            <AnimatePresence mode="wait" initial={false}>
+              {isMenuOpen ? (
+                <motion.span key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>
+                  <X className="h-6 w-6" />
+                </motion.span>
+              ) : (
+                <motion.span key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
+                  <Menu className="h-6 w-6" />
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
         </div>
 
-        {/* Mobile Menu */}
+        <AnimatePresence>
         {isMenuOpen && (
-          <div className="lg:hidden absolute top-16 left-0 right-0 glass-strong border-b border-border/50 shadow-lg animate-in slide-in-from-top-2 duration-200 max-h-[calc(100vh-4rem)] overflow-y-auto">
-            <div className="px-4 py-4 space-y-1">
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: profile.reduced ? 0.01 : 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="lg:hidden absolute top-16 left-0 right-0 glass-strong border-b border-border/50 shadow-lg overflow-hidden max-h-[calc(100vh-4rem)] overflow-y-auto"
+          >
+            <LandingStagger className="px-4 py-4 space-y-1" inView={false}>
               {user && (
                 <div className="pb-3 mb-3 border-b border-border/50">
                   <WorkspaceSwitcher />
                 </div>
               )}
-              {allNavItems.map((item) => (
-                <button
-                  key={item.name}
-                  onClick={() => {
-                    handleNavClick(item);
-                    setIsMenuOpen(false);
-                  }}
-                  className="flex items-center space-x-3 text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all w-full text-left px-3 py-2.5 rounded-lg"
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.name}</span>
-                </button>
+              {allNavItems.map((item, i) => (
+                <LandingAnimate key={item.name} preset="slideLeft" index={i} inView={false} as="div">
+                  <motion.button
+                    onClick={() => {
+                      handleNavClick(item);
+                      setIsMenuOpen(false);
+                    }}
+                    whileHover={animate ? { x: 4 } : undefined}
+                    className="flex items-center space-x-3 text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all w-full text-left px-3 py-2.5 rounded-lg"
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </motion.button>
+                </LandingAnimate>
               ))}
               <div className="flex flex-col space-y-2 pt-3 mt-3 border-t border-border/50">
                 {!isInstalled && (
@@ -284,16 +344,45 @@ const Navigation = () => {
                   {t("nav.tryFree")}
                 </Button>
               </div>
-            </div>
-          </div>
+            </LandingStagger>
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
-    </nav>
+  );
 
-    {/* iOS/Safari Install Guide Modal */}
+  return (
+    <>
+    {animate ? (
+      <motion.nav
+        className={navClassName}
+        initial="hidden"
+        animate="visible"
+        variants={variants.slideDown}
+      >
+        {navInner}
+      </motion.nav>
+    ) : (
+      <nav className={navClassName}>{navInner}</nav>
+    )}
+
+    <AnimatePresence>
     {showIOSGuide && (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowIOSGuide(false)}>
-        <div className="bg-background border border-border rounded-xl p-6 mx-4 max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        onClick={() => setShowIOSGuide(false)}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 24, scale: 0.94 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 16, scale: 0.96 }}
+          transition={{ type: "spring", stiffness: 320, damping: 28 }}
+          className="bg-background border border-border rounded-xl p-6 mx-4 max-w-sm shadow-xl"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex items-center gap-3 mb-4">
             <div className="bg-primary/15 rounded-full p-2.5">
               <Smartphone className="h-6 w-6 text-primary" />
@@ -344,9 +433,10 @@ const Navigation = () => {
             )}
           </div>
           <Button className="w-full mt-5" onClick={() => setShowIOSGuide(false)}>Got it</Button>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     )}
+    </AnimatePresence>
     </>
   );
 };

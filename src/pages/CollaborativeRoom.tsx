@@ -18,6 +18,7 @@ import { useRealtimePresence } from "@/hooks/useRealtimePresence";
 import { LiveCursors } from "@/components/collaboration/LiveCursors";
 import { MentionInput } from "@/components/collaboration/MentionInput";
 import { useCollaborativeAI } from "@/hooks/useCollaborativeAI";
+import { stringifyChatBody } from "@/lib/chatRequest";
 interface RoomMessage {
   id: string;
   room_id: string;
@@ -292,7 +293,7 @@ const CollaborativeRoom = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token}`
         },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           messages: chatMessages,
           personality: 'friendly',
           mode: 'general'

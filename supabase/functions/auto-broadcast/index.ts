@@ -1,18 +1,31 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import { requireAuth } from "../_shared/auth.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 const logStep = (step: string, details?: any) => {
   console.log(`[AUTO-BROADCAST] ${step}${details ? ` - ${JSON.stringify(details)}` : ''}`);
 };
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  if (req.method === "OPTIONS") {
+    return handleCorsOptions(origin);
+  }
+  const corsHeaders = getCorsHeaders(origin);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const webhookSecret = Deno.env.get("INTERNAL_WEBHOOK_SECRET") || "";
+  const provided = req.headers.get("x-internal-webhook-secret") || "";
+  if (!webhookSecret || provided !== webhookSecret) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const supabaseAdmin = createClient(

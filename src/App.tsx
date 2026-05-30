@@ -198,6 +198,8 @@ const App = () => {
   const [cmdOpen, setCmdOpen] = useState(false);
 
   useEffect(() => {
+    import("@/lib/shadowMode").then(({ initShadowMode }) => initShadowMode());
+
     // Check if user has seen boot screen this session
     const hasSeenBoot = sessionStorage.getItem('shadowtalk-booted');
     if (hasSeenBoot) {
@@ -235,7 +237,7 @@ const App = () => {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+        <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false} storageKey="shadowtalk-ui-theme">
           <TooltipProvider>
             <AuthProvider>
               <SecurityProvider>
@@ -251,7 +253,6 @@ const App = () => {
                  <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
                   <Suspense fallback={null}>
                     <OnboardingFlow />
-                    <VoiceCommandSystem />
                     <ShadowMemoryTracker />
                    <JourneyTracker />
                    <PWABanner />

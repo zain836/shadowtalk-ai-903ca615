@@ -1,3 +1,4 @@
+import { stringifyChatBody } from "@/lib/chatRequest";
  import { useState, useEffect } from "react";
  import { 
    Calendar, Clock, Plus, Trash2, Check, AlertCircle,
@@ -135,7 +136,7 @@
            "Content-Type": "application/json",
            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
          },
-         body: JSON.stringify({
+         body: stringifyChatBody({
            messages: [{ 
              role: "user", 
              content: `Create a daily schedule for: ${aiPrompt}

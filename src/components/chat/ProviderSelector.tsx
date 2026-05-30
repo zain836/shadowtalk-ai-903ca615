@@ -8,11 +8,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 
-export type AIProvider = "lovable" | "gemini";
+export type AIProvider = "lovable" | "gemini" | "openrouter" | "kimi";
 
 interface ProviderSelectorProps {
   provider: AIProvider;
   onProviderChange: (provider: AIProvider) => void;
+  /** When false, BYOK rows show “Add key” instead of Active */
+  hasKeyForProvider?: (provider: AIProvider) => boolean;
   disabled?: boolean;
   variant?: "header" | "inline";
 }
@@ -26,15 +28,39 @@ const providers = [
   },
   {
     value: "gemini" as const,
-    label: "ShadowTalk API (Gemini)",
-    description: "External API load-balancer",
+    label: "Google Gemini (BYOK)",
+    description: "Your Gemini API key",
     icon: <Key className="h-4 w-4 text-amber-400" />,
+  },
+  {
+    value: "openrouter" as const,
+    label: "OpenRouter (BYOK)",
+    description: "Your OpenRouter key",
+    icon: <Key className="h-4 w-4 text-blue-400" />,
+  },
+  {
+    value: "kimi" as const,
+    label: "Kimi / Moonshot (BYOK)",
+    description: "Your Moonshot API key",
+    icon: <Key className="h-4 w-4 text-violet-400" />,
   },
 ];
 
-export const ProviderSelector = ({ provider, onProviderChange, disabled, variant = "header" }: ProviderSelectorProps) => {
-  const currentProvider = providers.find(p => p.value === provider) || providers[0];
-  const shortLabel = currentProvider.value === "lovable" ? "Pro" : "Gemini";
+export const ProviderSelector = ({
+  provider,
+  onProviderChange,
+  hasKeyForProvider,
+  disabled,
+  variant = "header",
+}: ProviderSelectorProps) => {
+  const currentProvider = providers.find((p) => p.value === provider) || providers[0];
+  const shortLabels: Record<AIProvider, string> = {
+    lovable: "Pro",
+    gemini: "Gemini",
+    openrouter: "OpenRouter",
+    kimi: "Kimi",
+  };
+  const shortLabel = shortLabels[currentProvider.value];
 
   return (
     <DropdownMenu>
@@ -72,9 +98,15 @@ export const ProviderSelector = ({ provider, onProviderChange, disabled, variant
                 <div className="text-[11px] text-muted-foreground/60 font-normal leading-normal">{p.description}</div>
               </div>
             </div>
-            {provider === p.value && (
-              <Badge variant="secondary" className="text-[10px] bg-primary/10 border-primary/20 text-primary hover:bg-primary/15 font-semibold">Active</Badge>
-            )}
+            {provider === p.value ? (
+              <Badge variant="secondary" className="text-[10px] bg-primary/10 border-primary/20 text-primary hover:bg-primary/15 font-semibold">
+                Active
+              </Badge>
+            ) : p.value !== "lovable" && hasKeyForProvider && !hasKeyForProvider(p.value) ? (
+              <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-400/90 font-medium">
+                Add key
+              </Badge>
+            ) : null}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

@@ -47,6 +47,11 @@ interface MessageBubbleProps {
   onOpenIDE?: (code: string, language: string) => void;
   onLaunchWebsite?: (code: string, language: string) => void;
   onOpenInBrowser?: (url: string) => void;
+  layout?: 'default' | 'gemini' | 'shadow-pulse';
+  /** @deprecated Prefer `layout`. Kept for older ChatMessages that pass variant="neural". */
+  variant?: 'default' | 'neural';
+  onConfirmTool?: (messageId: string) => void;
+  onCancelTool?: (messageId: string) => void;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -63,10 +68,17 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onOpenIDE,
   onLaunchWebsite,
   onOpenInBrowser,
+  layout: layoutProp = 'default',
+  variant,
+  onConfirmTool,
+  onCancelTool,
 }) => {
   const { toast } = useToast();
   const isUser = message.type === 'user';
   const isWelcome = message.id === 'welcome';
+  const layout =
+    layoutProp !== 'default' || variant !== 'neural' ? layoutProp : 'gemini';
+  const isClean = layout === 'gemini' || layout === 'shadow-pulse';
 
   // Detect document artifacts in AI responses
   const documentArtifact = useMemo(() => {
@@ -88,33 +100,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         ease: [0.25, 0.46, 0.45, 0.94],
         delay: Math.min(index * 0.02, 0.1)
       }}
-      className={`group flex items-start gap-4 md:gap-6 py-4 ${isUser ? 'flex-row-reverse' : ''}`}
+      className={`group flex items-start gap-3 md:gap-4 py-3 ${isUser ? 'flex-row-reverse' : ''} ${isClean ? 'neural-message-row' : ''}`}
     >
       {/* Avatar */}
-      <div className={`w-8 h-8 sm:w-[36px] sm:h-[36px] rounded-full flex items-center justify-center shrink-0 transition-all duration-300 select-none ${
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 select-none ${
         isUser 
-          ? 'bg-[#1e1f20]/60 border border-border/15' 
+          ? isClean ? 'bg-[#2f2f2f]' : 'bg-[#1e1f20]/60 border border-border/15'
           : 'bg-transparent'
       }`}>
         {isUser 
-          ? <User className="h-5 w-5 text-muted-foreground/70" /> 
+          ? <User className="h-4 w-4 text-muted-foreground/80" /> 
           : (
-            <div className="relative flex items-center justify-center">
-              <motion.div
-                animate={{ 
-                  scale: [1, 1.15, 1],
-                  rotate: [0, 5, -5, 0],
-                  opacity: [0.8, 1, 0.8]
-                }}
-                transition={{ 
-                  duration: 4, 
-                  repeat: Infinity, 
-                  ease: "easeInOut" 
-                }}
-              >
-                <Sparkles className="h-7 w-7 text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]" />
-              </motion.div>
-            </div>
+            <Sparkles className={`h-5 w-5 ${isClean ? 'text-muted-foreground/60' : 'text-blue-400'}`} />
           )
         }
       </div>
@@ -151,11 +148,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         {/* Message bubble */}
         <div className={`w-full transition-all duration-300 ${
           isUser 
-            ? isNeural
-              ? 'bg-muted/25 border border-border/40 text-foreground rounded-[24px] rounded-tr-md px-5 py-3 shadow-sm max-w-max'
+            ? isClean
+              ? 'bg-[#2f2f2f] text-foreground rounded-[22px] rounded-br-md px-4 py-2.5 max-w-max'
               : 'bg-[#1e1f20]/45 border border-border/10 text-foreground rounded-[28px] rounded-tr-sm px-6 py-3.5 shadow-sm max-w-max'
-            : isNeural
-              ? 'neural-response-card article-response px-5 py-4'
+            : isClean
+              ? 'bg-transparent border-none shadow-none px-0 py-0.5 article-response'
               : 'bg-transparent border-none shadow-none px-0 py-1 article-response'
         }`}>
           {isUser ? (
@@ -310,6 +307,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             status={message.toolExecution.status}
             params={message.toolExecution.params}
             result={message.toolExecution.result}
+            onConfirm={onConfirmTool ? () => onConfirmTool(message.id) : undefined}
+            onCancel={onCancelTool ? () => onCancelTool(message.id) : undefined}
           />
         )}
 

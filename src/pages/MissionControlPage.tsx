@@ -1,8 +1,12 @@
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { MissionControl } from "@/components/chat/MissionControl";
+import { useSearchParams } from "react-router-dom";
 
 const MissionControlPage = () => {
+  const [searchParams] = useSearchParams();
+  const initialGoal = searchParams.get("goal") ?? undefined;
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -10,6 +14,7 @@ const MissionControlPage = () => {
         <MissionControl
           isOpen={true}
           onClose={() => window.history.back()}
+          initialGoal={initialGoal}
         />
       </div>
       <Footer />

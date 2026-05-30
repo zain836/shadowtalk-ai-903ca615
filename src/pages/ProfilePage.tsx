@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +28,8 @@ import { ProfileTab } from "@/components/profile/ProfileTab";
 import { ActivityTab } from "@/components/profile/ActivityTab";
 import { PreferencesTab } from "@/components/profile/PreferencesTab";
 import { LinkedAccountsTab } from "@/components/profile/LinkedAccountsTab";
+import { CustomApiKeysPanel } from "@/components/profile/CustomApiKeysPanel";
+import { AdminPanelLink } from "@/components/admin/AdminPanelLink";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle,
@@ -44,8 +46,19 @@ interface Profile {
   created_at?: string;
 }
 
+const PROFILE_TABS = new Set([
+  "profile",
+  "activity",
+  "notifications",
+  "security",
+  "linked",
+  "preferences",
+  "billing",
+]);
+
 const ProfilePage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, userPlan, subscribed, subscriptionEnd, signOut } = useAuth();
   const { toast } = useToast();
 
@@ -180,7 +193,8 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <ProfileHeader
+      <div className="mb-6"><AdminPanelLink /></div>
+            <ProfileHeader
         displayName={displayName}
         email={user?.email || ""}
         avatarUrl={avatarUrl}
@@ -204,7 +218,14 @@ const ProfilePage = () => {
         )}
 
         {/* Tabs */}
-        <Tabs defaultValue="profile" className="space-y-6">
+        <Tabs
+          value={(() => {
+            const tab = searchParams.get("tab") || "profile";
+            return PROFILE_TABS.has(tab) ? tab : "profile";
+          })()}
+          onValueChange={(tab) => setSearchParams({ tab }, { replace: true })}
+          className="space-y-6"
+        >
           <TabsList className="grid grid-cols-7 w-full max-w-2xl mx-auto bg-muted/50 backdrop-blur-sm">
             <TabsTrigger value="profile" className="gap-1 text-xs">
               <User className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Profile</span>
@@ -296,6 +317,8 @@ const ProfilePage = () => {
                   <TwoFactorSetup />
                 </CardContent>
               </Card>
+
+              <CustomApiKeysPanel />
 
               <Card className="glass border-border/50">
                 <CardHeader>

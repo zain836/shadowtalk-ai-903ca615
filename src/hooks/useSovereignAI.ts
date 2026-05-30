@@ -38,6 +38,8 @@ interface SovereignAIState {
   isWebGPUAvailable: boolean;
   isWASMFallback: boolean;
   encryptionEnabled: boolean;
+  isSovereignProtected: boolean; // True when at least one model is cached
+  isProactiveCaching: boolean;
   contextTokens: number;
   maxContextTokens: number;
 }
@@ -161,6 +163,15 @@ RULES:
 3. Use markdown for structured responses
 4. Be concise but comprehensive`;
 
+const FALLBACK_RESPONSES = {
+  greeting: "👋 Hello! I'm ShadowTalk AI operating in secure offline mode. How can I assist you today?",
+  help: "I'm running in offline mode. I can help with:\n• Document analysis (from your local vault)\n• Business strategy (from your memory)\n• Basic Q&A and calculations\n• Session-based chat memory",
+  default: "I'm currently in basic offline mode. For full AI reasoning, please download a local model or connect to the internet.",
+};
+
+const PROACTIVE_CACHE_KEY = 'shadowtalk_proactive_cache_attempted';
+const PROACTIVE_MODEL_ID = 'SmolLM2-135M-Instruct-q4f16_1-MLC';
+
 export const useSovereignAI = () => {
   const { capabilities } = useHardwareCapabilities();
   const { search: ragSearch, documentCount } = useOfflineRAG();
@@ -177,12 +188,15 @@ export const useSovereignAI = () => {
     isWebGPUAvailable: false,
     isWASMFallback: false,
     encryptionEnabled: true,
+    isSovereignProtected: false,
+    isProactiveCaching: false,
     contextTokens: 0,
     maxContextTokens: 4096,
   });
 
   const engineRef = useRef<any>(null);
   const initPromiseRef = useRef<Promise<boolean> | null>(null);
+  const proactiveAttemptedRef = useRef(false);
   const stateRef = useRef(state);
 
   // Keep refs in sync
@@ -190,7 +204,25 @@ export const useSovereignAI = () => {
     stateRef.current = state;
   }, [state]);
 
-  // Detect WebGPU availability
+  // Check protection status
+  const checkProtectionStatus = useCallback(async () => {
+    try {
+      const webllm = await import('@mlc-ai/web-llm');
+      let hasCached = false;
+      for (const model of SOVEREIGN_MODELS) {
+        if (await webllm.hasModelInCache(model.id)) {
+          hasCached = true;
+          break;
+        }
+      }
+      setState(prev => ({ ...prev, isSovereignProtected: hasCached }));
+      return hasCached;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Detect WebGPU availability and trigger proactive cache
   useEffect(() => {
     const detectRuntime = async () => {
       let webGPUAvailable = false;
@@ -215,6 +247,51 @@ export const useSovereignAI = () => {
     };
 
     detectRuntime();
+    checkProtectionStatus();
+
+    // Proactive Caching logic
+    const triggerProactiveCache = async () => {
+      if (proactiveAttemptedRef.current || !navigator.onLine) return;
+
+      const attempted = localStorage.getItem(PROACTIVE_CACHE_KEY);
+      if (attempted) {
+        proactiveAttemptedRef.current = true;
+        return;
+      }
+
+      const isProtected = await checkProtectionStatus();
+      if (isProtected) {
+        proactiveAttemptedRef.current = true;
+        localStorage.setItem(PROACTIVE_CACHE_KEY, 'true');
+        return;
+      }
+
+      console.log('[SovereignAI] Triggering proactive model pre-cache...');
+      proactiveAttemptedRef.current = true;
+      setState(prev => ({ ...prev, isProactiveCaching: true }));
+
+      try {
+        const webllm = await import('@mlc-ai/web-llm');
+        const engine = await webllm.CreateMLCEngine(PROACTIVE_MODEL_ID, {
+          initProgressCallback: (p) => {
+            console.log(`[SovereignAI] Pre-caching: ${Math.round(p.progress * 100)}%`);
+          }
+        });
+        await engine.unload();
+        console.log('[SovereignAI] Proactive cache complete. Sovereign Protection ACTIVE.');
+        localStorage.setItem(PROACTIVE_CACHE_KEY, 'true');
+        setState(prev => ({ ...prev, isProactiveCaching: false, isSovereignProtected: true }));
+      } catch (e) {
+        console.warn('[SovereignAI] Proactive cache failed:', e);
+        setState(prev => ({ ...prev, isProactiveCaching: false }));
+      }
+    };
+
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(() => triggerProactiveCache(), { timeout: 30000 });
+    } else {
+      setTimeout(triggerProactiveCache, 10000);
+    }
 
     // Listen for network changes
     const handleOnline = () => setState(prev => ({ ...prev, mode: 'hybrid' }));
@@ -526,11 +603,28 @@ Please try:
       temperature = 0.7,
     } = options || {};
 
+    const lastMessage = messages[messages.length - 1]?.content || '';
+
+    // If no WebGPU and no WASM (extremely rare) or generation fails, use fallback
+    if (!stateRef.current.isWebGPUAvailable && stateRef.current.isWASMFallback && !engineRef.current) {
+      const response = generateFallbackResponse(lastMessage);
+      if (onChunk) onChunk(response);
+      return response;
+    }
+
     // Ensure engine is ready
     if (!engineRef.current || !stateRef.current.isReady) {
-      const loaded = await initializeSovereignEngine();
-      if (!loaded || !engineRef.current) {
-        const errorMsg = "🔧 Initializing offline AI...";
+      // If we are currently offline, try to auto-initialize
+      if (stateRef.current.mode === 'stealth') {
+        const loaded = await initializeSovereignEngine();
+        if (!loaded || !engineRef.current) {
+          const response = generateFallbackResponse(lastMessage);
+          if (onChunk) onChunk(response);
+          return response;
+        }
+      } else {
+        // Online mode - usually we use cloud AI, but if called here we might want local
+        const errorMsg = "🔧 Local engine not initialized. Please enable Bunker Mode.";
         if (onChunk) onChunk(errorMsg);
         return errorMsg;
       }
@@ -617,6 +711,30 @@ Please try:
       }
     }
   }, []);
+
+  const generateFallbackResponse = (message: string): string => {
+    const low = message.toLowerCase();
+    if (low.match(/\b(hi|hello|hey|greetings)\b/)) return FALLBACK_RESPONSES.greeting;
+    if (low.match(/\b(help|assist|what can you do)\b/)) return FALLBACK_RESPONSES.help;
+
+    // Simple math
+    const mathMatch = message.match(/(\d+)\s*([+\-*/×÷])\s*(\d+)/);
+    if (mathMatch) {
+      const [, a, op, b] = mathMatch;
+      const n1 = parseFloat(a), n2 = parseFloat(b);
+      let res: number;
+      switch (op) {
+        case '+': res = n1 + n2; break;
+        case '-': res = n1 - n2; break;
+        case '*': case '×': res = n1 * n2; break;
+        case '/': case '÷': res = n2 !== 0 ? n1 / n2 : NaN; break;
+        default: res = NaN;
+      }
+      if (!isNaN(res)) return `🧮 **${n1} ${op} ${n2} = ${res}**`;
+    }
+
+    return FALLBACK_RESPONSES.default;
+  };
 
   // Clear context
   const clearContext = useCallback(() => {

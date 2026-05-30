@@ -1,7 +1,7 @@
 {
-  "name": "shadowtalk-ai",
+  "name": "shadowtalk-ai-desktop",
   "version": "1.0.0",
-  "description": "An Amazing Capacitor App",
+  "description": "ShadowTalk AI — desktop app (Electron)",
   "author": {
     "name": "",
     "email": ""

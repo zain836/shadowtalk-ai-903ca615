@@ -7,6 +7,9 @@ import { Settings, Globe, Palette, Monitor, Moon, Sun, Volume2 } from "lucide-re
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { OfflineAISettings } from "./OfflineAISettings";
+import { DesktopAppSettings } from "@/components/desktop/DesktopAppSettings";
+import { AutoImproveInsights } from "@/components/autoImprove/AutoImproveInsights";
+import { isLearningEnabled, setLearningEnabled } from "@/lib/autoImprove/learningConsent";
 
 const tabMotion = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.3 } };
 
@@ -15,9 +18,36 @@ export const PreferencesTab = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [compactMode, setCompactMode] = useState(false);
   const [language, setLanguage] = useState("en");
+  const [learningEnabled, setLearningEnabledState] = useState(isLearningEnabled());
 
   return (
     <motion.div {...tabMotion} className="space-y-6">
+      <AutoImproveInsights />
+
+      <Card className="glass border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5 text-primary" /> Adaptive learning
+          </CardTitle>
+          <CardDescription>On-device behavior learning (separate from analytics cookies)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between p-4 rounded-xl hover:bg-muted/30 transition-colors">
+            <div>
+              <p className="font-medium text-sm">Enable adaptive learning</p>
+              <p className="text-xs text-muted-foreground">Tune chat defaults from how you use ShadowTalk</p>
+            </div>
+            <Switch
+              checked={learningEnabled}
+              onCheckedChange={(v) => {
+                setLearningEnabled(v);
+                setLearningEnabledState(v);
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Appearance */}
       <Card className="glass border-border/50">
         <CardHeader>
@@ -34,17 +64,18 @@ export const PreferencesTab = () => {
               </div>
               <div>
                 <p className="font-medium text-sm">Theme</p>
-                <p className="text-xs text-muted-foreground">Choose your preferred color scheme</p>
+                <p className="text-xs text-muted-foreground">ShadowTalk uses the sovereign dark brand theme</p>
               </div>
             </div>
-            <Select value={theme} onValueChange={setTheme}>
+            <Select
+              value="dark"
+              onValueChange={() => setTheme("dark")}
+            >
               <SelectTrigger className="w-28 bg-muted/30">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="dark">Dark</SelectItem>
-                <SelectItem value="light">Light</SelectItem>
-                <SelectItem value="system">System</SelectItem>
+                <SelectItem value="dark">ShadowTalk Dark</SelectItem>
               </SelectContent>
             </Select>
           </div>

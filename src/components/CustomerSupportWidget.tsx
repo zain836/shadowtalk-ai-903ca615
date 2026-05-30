@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useProactiveAI } from "@/hooks/useProactiveAI";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   role: "user" | "assistant";
@@ -94,14 +95,17 @@ const CustomerSupportWidget = () => {
     recordInteraction(userMessage.slice(0, 50));
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
           },
             body: JSON.stringify({
             messages: [
@@ -126,7 +130,10 @@ Product context: ShadowTalk AI offers Free, Pro ($19/mo), Premium ($49/mo), and 
         }
       );
 
-      if (!response.ok) throw new Error("Failed to get response");
+      if (!response.ok) {
+        const t = await response.text().catch(() => "");
+        throw new Error(t || `Request failed (${response.status})`);
+      }
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No response body");

@@ -1,5 +1,10 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
+import { createMockSupabase } from './mocks/supabaseClient';
+
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: createMockSupabase(),
+}));
 
 // Mock matchMedia for components that use it
 Object.defineProperty(window, 'matchMedia', {
@@ -69,3 +74,15 @@ const localStorageMock = (() => {
 
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 Object.defineProperty(window, 'sessionStorage', { value: localStorageMock });
+
+// Mock import.meta.env for Supabase
+if (typeof process !== 'undefined') {
+  (globalThis as any).import = {
+    meta: {
+      env: {
+        VITE_SUPABASE_URL: 'https://test.supabase.co',
+        VITE_SUPABASE_PUBLISHABLE_KEY: 'test-key',
+      },
+    },
+  };
+}

@@ -1,12 +1,20 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.0497e2a81dfb4b9bb43730ee6b3f7741',
-  appName: 'shadowtalk-ai',
+  appId: 'com.shadowtalk.ai',
+  appName: 'ShadowTalk AI',
   webDir: 'dist',
+  // Bundled web assets for desktop/mobile — do not point at a remote dev URL in production.
   server: {
-    url: 'https://0497e2a8-1dfb-4b9b-b437-30ee6b3f7741.lovableproject.com?forceHideBadge=true',
-    cleartext: true
+    cleartext: true,
+    androidScheme: 'https',
+  },
+  electron: {
+    customUrlScheme: 'shadowtalk',
+    trayIconAndMenuEnabled: true,
+    splashScreenEnabled: true,
+    splashScreenImageName: 'splash.png',
+    backgroundColor: '#050508',
   },
   plugins: {
     SplashScreen: {

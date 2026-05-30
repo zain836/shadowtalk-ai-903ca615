@@ -220,10 +220,10 @@ const CommandCenterPage = () => {
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
-                  { icon: TrendingUp, label: "Trend Analysis", desc: "Real-time industry trends" },
-                  { icon: Search, label: "Deep Research", desc: "Multi-source intelligence" },
-                  { icon: Shield, label: "Risk Monitor", desc: "Threat & compliance alerts" },
-                  { icon: BarChart3, label: "Performance", desc: "KPI tracking & benchmarks" },
+                  { icon: TrendingUp, label: "Trend Analysis", desc: "Real-time industry trends", href: "/analytics" },
+                  { icon: Search, label: "Deep Research", desc: "Multi-source intelligence", href: "/research" },
+                  { icon: Shield, label: "Risk Monitor", desc: "Threat & compliance alerts", href: "/security-audit" },
+                  { icon: BarChart3, label: "Performance", desc: "KPI tracking & benchmarks", href: "/data-insights" },
                 ].map((widget, i) => (
                   <motion.div
                     key={widget.label}
@@ -232,7 +232,7 @@ const CommandCenterPage = () => {
                     transition={{ delay: 0.2 + i * 0.05 }}
                   >
                     <Card className="hover:border-primary/20 transition-all cursor-pointer"
-                      onClick={() => navigate("/chatbot")}
+                      onClick={() => navigate(widget.href)}
                     >
                       <CardContent className="p-4 text-center">
                         <widget.icon className="h-8 w-8 mx-auto text-primary/60 mb-2" />

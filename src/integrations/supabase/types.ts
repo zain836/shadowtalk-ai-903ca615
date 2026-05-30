@@ -583,6 +583,7 @@ export type Database = {
       }
       conversations: {
         Row: {
+          archived_at: string | null
           created_at: string
           id: string
           title: string | null
@@ -590,6 +591,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           id?: string
           title?: string | null
@@ -597,6 +599,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           id?: string
           title?: string | null

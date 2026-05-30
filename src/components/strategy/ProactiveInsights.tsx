@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { stringifyChatBody } from "@/lib/chatRequest";
 
 interface HypeTask {
   id: string;
@@ -66,7 +67,7 @@ export const ProactiveInsights = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
         },
-        body: JSON.stringify({
+        body: stringifyChatBody({
           messages: [{ role: "user", content: "Generate 5 proactive business growth insights for a privacy-first AI chat platform. For each, provide: title, description, urgency (low/medium/high/critical), impact score (1-100), category, and actionable next step. Format as JSON array." }],
           personality: "professional",
           mode: "general"

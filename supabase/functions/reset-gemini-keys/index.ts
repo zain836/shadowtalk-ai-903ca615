@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireAuth } from "../_shared/auth.ts";
+import { requireAdmin } from "../_shared/admin.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +14,11 @@ serve(async (req) => {
   }
 
   try {
+    const auth = await requireAuth(req, corsHeaders);
+    if (!auth.authenticated) return auth.response;
+    const adminResp = await requireAdmin(auth, corsHeaders);
+    if (adminResp) return adminResp;
+
     // Create Supabase client with service role
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

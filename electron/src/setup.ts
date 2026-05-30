@@ -224,8 +224,8 @@ export function setupContentSecurityPolicy(customScheme: string): void {
         ...details.responseHeaders,
         'Content-Security-Policy': [
           electronIsDev
-            ? `default-src ${customScheme}://* 'unsafe-inline' devtools://* 'unsafe-eval' data:`
-            : `default-src ${customScheme}://* 'unsafe-inline' data:`,
+            ? `default-src ${customScheme}://* 'unsafe-inline' devtools://* 'unsafe-eval' data: blob:; connect-src ${customScheme}://* https: wss: http://localhost:* http://127.0.0.1:* https://huggingface.co https://*.hf.co https://cdn.jsdelivr.net https://raw.githubusercontent.com https://*.supabase.co; img-src ${customScheme}://* https: data: blob:; media-src ${customScheme}://* https: blob:;`
+            : `default-src ${customScheme}://* 'unsafe-inline' data: blob:; connect-src ${customScheme}://* https://huggingface.co https://*.hf.co https://cdn.jsdelivr.net https://raw.githubusercontent.com https://*.supabase.co wss://*.supabase.co https://ai.gateway.lovable.dev; img-src ${customScheme}://* https: data: blob:; media-src ${customScheme}://* https: blob:;`,
         ],
       },
     });
